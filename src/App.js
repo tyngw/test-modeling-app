@@ -99,7 +99,8 @@ function App() {
         };
 
         // 新しいノードと既存のノードとの間で重なりをチェックし、調整
-        const adjustedNodes = checkOverlapAndAdjust(newRect, nodes);
+        let adjustedNodes = checkOverlapAndAdjust(newRect, nodes);
+        adjustedNodes = updateParentNodePosition(adjustedNodes, selectedNode.id);
 
         // 状態を更新
         setNodes(adjustedNodes);
@@ -240,9 +241,14 @@ function App() {
     }));
   }
 
+  function getNodeOfId(nodes, id){
+    return nodes.find(n => n.id === id);
+  }
+
   // ノードの位置を調整する関数
   function adjustNodePositions(nodes, draggedNodeId, droppedOverNode) {
-    let draggedNode = nodes.find(n => n.id === draggedNodeId);
+    // let draggedNode = nodes.find(n => n.id === draggedNodeId);
+    let draggedNode = getNodeOfId(nodes, draggedNodeId)
     const nodeWidth = calculateNodeWidth(draggedNode.text);
 
     console.log(`draggedNode.x: ${draggedNode.x}, droppedOverNode.x: ${droppedOverNode.x}`)
@@ -273,11 +279,57 @@ function App() {
     } while (overlap); // 重複がなくなるまでループ
 
     // 最終的な位置をドラッグされたノードに設定
-    const adjustedNodes = nodes.map(n => {
-      if (n.id === draggedNodeId) {
-        return { ...n, x: newX, y: newY };
+    const adjustedNodes = nodes.map(node => {
+      if (node.id === draggedNodeId) {
+        return { ...node, x: newX, y: newY };
       }
-      return n;
+      return node;
+    });
+
+    return adjustedNodes;
+  }
+
+  function updateParentNodePosition(nodes, parentId) {
+    let updatedNodes = [...nodes]; // 新しいノードリストのコピーを作成
+    const children = updatedNodes.filter(node => node.parentId === parentId);
+
+    if (children.length > 0) {
+      // 子ノードの中央のY座標を計算
+      const minY = Math.min(...children.map(node => node.y));
+      const maxY = Math.max(...children.map(node => node.y + nodeHeight));
+      const centerY = minY + ((maxY - minY) / 2);
+
+      // 親ノードのY座標を更新
+      updatedNodes = updatedNodes.map(node => {
+        if (node.id === parentId) {
+          return { ...node, y: centerY - (nodeHeight / 2) };
+        }
+        return node;
+      });
+
+      // 親ノードの親ノードがあれば、再帰的に位置を更新
+      const parentNode = updatedNodes.find(node => node.id === parentId);
+      if (parentNode && parentNode.parentId !== null) {
+        updatedNodes = updateParentNodePosition(updatedNodes, parentNode.parentId);
+        updatedNodes = resolveOverlap(updatedNodes, parentNode);
+      }
+    }
+
+    return updatedNodes; // 更新されたノードリストを返す
+  }
+
+  // 親ノードの位置更新後に他のノードとの重複を解消する関数
+  function resolveOverlap(nodes, updatedNode) {
+    let adjustedNodes = [...nodes];
+    // 親ノードの新しい位置に基づいて、他のノードとの重複がないかチェックし、必要に応じて下に移動
+    adjustedNodes.forEach((node, index) => {
+      if (node.id !== updatedNode.id && node.y >= updatedNode.y && node.y < updatedNode.y + nodeHeight) {
+        // 重複があれば、ノードを下に移動
+        const newY = updatedNode.y + nodeHeight + 10; // 10はマージン
+        adjustedNodes[index] = { ...node, y: newY };
+        // 再帰的にチェックを続ける
+        adjustedNodes = resolveOverlap(adjustedNodes, adjustedNodes[index]);
+      }
     });
 
     return adjustedNodes;
@@ -332,38 +384,38 @@ function App() {
     const handleTouchMove = (event) => {
       if (event.touches.length === 2) {
         event.preventDefault();
-  
+
         const touch1 = { x: event.touches[0].pageX, y: event.touches[0].pageY };
         const touch2 = { x: event.touches[1].pageX, y: event.touches[1].pageY };
-  
+
         const distance = Math.sqrt(Math.pow(touch2.x - touch1.x, 2) + Math.pow(touch2.y - touch1.y, 2));
-  
+
         if (lastDistanceRef.current !== null) {
           const zoomFactor = 0.01; // ズーム感度を調整
           const zoomChange = distance - lastDistanceRef.current;
-  
+
           let [x, y, width, height] = viewBox.split(' ').map(Number);
-  
+
           // ズームの変更を適用
           let newWidth = width - (zoomChange * zoomFactor * width);
           let newHeight = height - (zoomChange * zoomFactor * height);
-  
+
           // 新しいviewBoxの計算（ズームアウトの範囲拡大）
           let newX = x + (width - newWidth) / 2;
           let newY = y + (height - newHeight) / 2;
-  
+
           // viewBoxを更新してズームイン・アウト
           setViewBox(`${newX} ${newY} ${newWidth} ${newHeight}`);
         }
-  
+
         lastDistanceRef.current = distance;
       }
     };
-  
+
     document.addEventListener('touchmove', handleTouchMove, { passive: false });
     return () => document.removeEventListener('touchmove', handleTouchMove);
   }, [viewBox]);
-  
+
 
   const handleClickOutside = (e) => {
     if (!e.target.closest('.editable') && !e.target.classList.contains('node')) {
