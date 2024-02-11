@@ -77,9 +77,16 @@ function App() {
       if (e.key === 'Tab' && nodes.some(n => n.selected)) {
         e.preventDefault();
         const selectedNode = nodes.find(n => n.selected);
+        const childrenOfSelectedNode = nodes.filter(n => n.parentId === selectedNode.id);
         // 新しいノードの初期Y座標を設定
-        // let newChildY = selectedNode.y + nodeHeight + 10; // 10は追加のマージン
-        let newChildY = selectedNode.y
+        let newChildY;
+        if (childrenOfSelectedNode.length > 0) {
+          const maxYChild = childrenOfSelectedNode.reduce((prev, current) => (prev.y > current.y) ? prev : current);
+          newChildY = maxYChild.y + nodeHeight + 10; // 10はノード間のマージン
+        } else {
+          // 親ノードに子ノードがない場合は、親ノードの直下に配置
+          newChildY = selectedNode.y; // 10はノード間のマージン
+        }
 
         const newRect = {
           id: nodes.length + 1,
