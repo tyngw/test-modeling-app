@@ -71,7 +71,6 @@ function App() {
   };
 
   useEffect(() => {
-    // 新しいノード追加時の処理
     const handleKeyDown = (event) => {
       // キー操作による新しいノードの追加処理
       if (event.key === 'Tab' && nodes.some(n => n.selected)) {
@@ -101,8 +100,6 @@ function App() {
         const newNodes = [...nodes, newRect];
 
         // 新しいノードと既存のノードとの間で重なりをチェックし、調整
-        // let adjustedNodes = checkOverlapAndAdjust(newRect, nodes);
-        // adjustedNodes = updateParentNodePosition(adjustedNodes, selectedNode.id);
         let adjustedNodes = adjustNodePositions(newNodes)
 
         // 状態を更新
@@ -128,8 +125,6 @@ function App() {
             });
 
             // 削除されたノードの影響を受けるノードのY座標を調整
-            const deletedNodeHeight = nodeHeight + 10; // 10はノード間のマージンを表します
-            // const adjustedNodes = adjustNodePositionsAfterDeletion(newNodes, deletedNodeHeight, minY);
             const adjustedNodes = adjustNodePositions(newNodes)
 
             setNodes(adjustedNodes);
@@ -173,15 +168,14 @@ function App() {
     if (dragging !== null) {
       const dropX = e.clientX;
       const dropY = e.clientY;
-
+  
       const droppedOverNode = nodes.find(n => {
-        const width = calculateNodeWidth(n.text); // 幅を計算
-        // console.log(`dropX: ${dropX}, dropY: ${dropY}, Node ID: ${n.id}, Text: "${n.text}", Width: ${width}, dragging: ${dragging}}`);
+        const width = calculateNodeWidth(n.text); // Calculate width
         return dropX >= n.x && dropX <= n.x + width &&
           dropY >= n.y && dropY <= n.y + nodeHeight &&
           n.id !== dragging;
       });
-
+  
       if (droppedOverNode) {
         console.log(`droppedOverNode.id: ${droppedOverNode.id}`)
         let adjustedNodes = nodes.map(n => {
@@ -190,11 +184,10 @@ function App() {
           }
           return n;
         });
-
-        // 位置の調整を行う関数を呼び出し
-        adjustedNodes = oldAdjustNodePositions(adjustedNodes, dragging, droppedOverNode);
-        //adjustedNodes = adjustNodePositions(adjustedNodes)
-
+  
+        // Call the new adjustNodePositions function
+        adjustedNodes = adjustNodePositions([...adjustedNodes]);
+  
         setNodes(adjustedNodes);
       } else {
         setNodes(nodes.map(n => {
@@ -204,29 +197,16 @@ function App() {
           return n;
         }));
       }
-
+  
       setDragging(null);
     }
   };
-
-
-  function adjustNodePositionsAfterDeletion(nodes, deletedNodeHeight, minY) {
-    // 削除されたノードより下にあるノードのY座標を詰める
-    return nodes.map(node => ({
-      ...node,
-      y: node.y > minY ? node.y - deletedNodeHeight : node.y,
-    }));
-  }
 
   function getNodeOfId(nodes, id){
     return nodes.find(node => node.id === id);
   }
 
-  function getChildNodes(nodes, parentNodeId){
-
-  }
-
-  // ノードの位置を調整する(リファクタ後)
+  // ノードの位置を調整する
   function adjustNodePositions(nodes) {
     const nodeWidth = (node) => calculateNodeWidth(node.text);
     const sortedNodes = [...nodes].sort((a, b) => a.id - b.id);
@@ -284,95 +264,6 @@ function App() {
     });
   
     return sortedNodes;
-  }
-
-  // ノードの位置を調整する関数
-  function oldAdjustNodePositions(nodes, draggedNodeId, droppedOverNode) {
-    let draggedNode = getNodeOfId(nodes, draggedNodeId)
-    const nodeWidth = calculateNodeWidth(draggedNode.text);
-
-    console.log(`draggedNode.x: ${draggedNode.x}, droppedOverNode.x: ${droppedOverNode.x}`)
-
-    // ノードが重複しないように調整するための新しいX、Y座標を計算
-    let newX = droppedOverNode.x + parentXOffset;
-    let newY = droppedOverNode.y;
-
-    // 重複を避けるために、他のノードとの間に十分なスペースがあるか確認し、必要に応じて調整
-    let overlap;
-    do {
-      overlap = false;
-      for (const node of nodes) {
-        if (node.id !== draggedNodeId) {
-          const nodeWidthOther = calculateNodeWidth(node.text);
-          const overlapX = newX < node.x + nodeWidthOther && newX + nodeWidth > node.x;
-          const overlapY = newY < node.y + nodeHeight && newY + nodeHeight > node.y;
-
-          if (overlapX && overlapY) {
-            overlap = true;
-            // X座標とY座標を調整して重複を避ける
-            newX += 0; // 仮の調整値
-            newY += nodeHeight + 10; // 仮の調整値
-            break; // 1つでも重複が見つかれば、再計算のためにループを抜ける
-          }
-        }
-      }
-    } while (overlap); // 重複がなくなるまでループ
-
-    // 最終的な位置をドラッグされたノードに設定
-    const adjustedNodes = nodes.map(node => {
-      if (node.id === draggedNodeId) {
-        return { ...node, x: newX, y: newY };
-      }
-      return node;
-    });
-
-    return adjustedNodes;
-  }
-
-  function updateParentNodePosition(nodes, parentId) {
-    let updatedNodes = [...nodes]; // 新しいノードリストのコピーを作成
-    const children = updatedNodes.filter(node => node.parentId === parentId);
-
-    if (children.length > 0) {
-      // 子ノードの中央のY座標を計算
-      const minY = Math.min(...children.map(node => node.y));
-      const maxY = Math.max(...children.map(node => node.y + nodeHeight));
-      const centerY = minY + ((maxY - minY) / 2);
-
-      // 親ノードのY座標を更新
-      updatedNodes = updatedNodes.map(node => {
-        if (node.id === parentId) {
-          return { ...node, y: centerY - (nodeHeight / 2) };
-        }
-        return node;
-      });
-
-      // 親ノードの親ノードがあれば、再帰的に位置を更新
-      const parentNode = updatedNodes.find(node => node.id === parentId);
-      if (parentNode && parentNode.parentId !== null) {
-        updatedNodes = updateParentNodePosition(updatedNodes, parentNode.parentId);
-        updatedNodes = resolveOverlap(updatedNodes, parentNode);
-      }
-    }
-
-    return updatedNodes; // 更新されたノードリストを返す
-  }
-
-  // 親ノードの位置更新後に他のノードとの重複を解消する関数
-  function resolveOverlap(nodes, updatedNode) {
-    let adjustedNodes = [...nodes];
-    // 親ノードの新しい位置に基づいて、他のノードとの重複がないかチェックし、必要に応じて下に移動
-    adjustedNodes.forEach((node, index) => {
-      if (node.id !== updatedNode.id && node.y >= updatedNode.y && node.y < updatedNode.y + nodeHeight) {
-        // 重複があれば、ノードを下に移動
-        const newY = updatedNode.y + nodeHeight + 10; // 10はマージン
-        adjustedNodes[index] = { ...node, y: newY };
-        // 再帰的にチェックを続ける
-        adjustedNodes = resolveOverlap(adjustedNodes, adjustedNodes[index]);
-      }
-    });
-
-    return adjustedNodes;
   }
 
   useEffect(() => {
