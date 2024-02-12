@@ -3,7 +3,7 @@ import './App.css';
 
 function App() {
   const [nodes, setNodes] = useState([
-    { id: 1, text: 'Node 1', selected: false, x: 50, y: 50, parentId: null },
+    { id: 1, text: 'Node 1', selected: false, x: 50, y: 50, parentId: null, order: 0 },
   ]);
   const [editingId, setEditingId] = useState(null);
   const inputRef = useRef(null);
@@ -77,6 +77,7 @@ function App() {
         event.preventDefault();
         const selectedNode = nodes.find(n => n.selected);
         const childrenOfSelectedNode = nodes.filter(n => n.parentId === selectedNode.id);
+        const newOrder = childrenOfSelectedNode.length;
         // 新しいノードの初期Y座標を設定
         let newChildY;
         if (childrenOfSelectedNode.length > 0) {
@@ -95,6 +96,7 @@ function App() {
           x: selectedNode.x + parentXOffset,
           y: newChildY,
           parentId: selectedNode.id,
+          order: newOrder,
         };
 
         const newNodes = [...nodes, newRect];
@@ -104,6 +106,7 @@ function App() {
 
         // 状態を更新
         setNodes(adjustedNodes);
+        // setNodes([...adjustedNodes]);
       }
 
       if (event.key === 'Enter' && editingId === null && nodes.some(n => n.selected)) {
@@ -114,15 +117,31 @@ function App() {
         if (event.key === 'Delete' || event.key === 'Backspace') {
           const selectedNodeIds = nodes.filter(n => n.selected).map(n => n.id);
           if (selectedNodeIds.length > 0) {
+            const deletableNodeIds = selectedNodeIds.filter(id => {
+              const node = nodes.find(n => n.id === id);
+              return node.parentId !== null; // parentIdがnullでないノードだけを対象とする
+            });
             // 選択されたノードを除外して新しいノードのリストを作成
             let minY = Infinity;
             const newNodes = nodes.filter(n => {
-              if (selectedNodeIds.includes(n.id)) {
+              if (deletableNodeIds.includes(n.id)) {
                 minY = Math.min(minY, n.y); // 削除されるノードの最小Y座標を更新
                 return false;
               }
               return true;
             });
+
+            // 削除されたノードの親ノードIDを取得
+            const parentIdOfDeletedNode = nodes.find(n => selectedNodeIds.includes(n.id))?.parentId;
+
+            if (parentIdOfDeletedNode !== undefined) {
+              // 削除されたノードの後ろにあるノードのorderを更新
+              newNodes.forEach(node => {
+                if (node.parentId === parentIdOfDeletedNode && node.order > nodes.find(n => n.id === selectedNodeIds[0])?.order) {
+                  node.order -= 1;
+                }
+              });
+            }
 
             // 削除されたノードの影響を受けるノードのY座標を調整
             const adjustedNodes = adjustNodePositions(newNodes)
@@ -168,27 +187,39 @@ function App() {
     if (dragging !== null) {
       const dropX = e.clientX;
       const dropY = e.clientY;
-  
+
       const droppedOverNode = nodes.find(n => {
         const width = calculateNodeWidth(n.text); // Calculate width
         return dropX >= n.x && dropX <= n.x + width &&
           dropY >= n.y && dropY <= n.y + nodeHeight &&
           n.id !== dragging;
       });
-  
+
       if (droppedOverNode) {
         console.log(`droppedOverNode.id: ${droppedOverNode.id}`)
-        let adjustedNodes = nodes.map(n => {
+        const draggingNode = nodes.find(n => n.id === dragging);
+        const originalParentId = draggingNode.parentId;
+        const newParentId = droppedOverNode.id;
+
+        // ノードのorderを更新する前に、移動元の兄弟ノードのorderをデクリメント
+        let updatedNodes = nodes.map(n => ({
+          ...n,
+          order: n.parentId === originalParentId && n.order > draggingNode.order ? n.order - 1 : n.order,
+        }));
+
+        // 移動先の子ノードの数に基づいて新しいorderを計算
+        const siblings = updatedNodes.filter(n => n.parentId === newParentId);
+        const maxOrder = siblings.length > 0 ? Math.max(...siblings.map(n => n.order)) + 1 : 0;
+
+        // 移動したノードのparentIdとorderを更新
+        updatedNodes = updatedNodes.map(n => {
           if (n.id === dragging) {
-            return { ...n, parentId: droppedOverNode.id };
+            return { ...n, parentId: newParentId, order: maxOrder };
           }
           return n;
         });
-  
-        // Call the new adjustNodePositions function
-        adjustedNodes = adjustNodePositions([...adjustedNodes]);
-  
-        setNodes(adjustedNodes);
+
+        setNodes(updatedNodes);
       } else {
         setNodes(nodes.map(n => {
           if (n.id === dragging) {
@@ -197,73 +228,78 @@ function App() {
           return n;
         }));
       }
-  
+
       setDragging(null);
     }
   };
 
-  function getNodeOfId(nodes, id){
+  function getNodeOfId(nodes, id) {
     return nodes.find(node => node.id === id);
   }
 
+  function updateNodesPositionForOverlap(currentNodeId, x, y, nodes) {
+    const nodeMargin = 10; // ノード間のマージンを設定
+
+    const updatedNodes = nodes.map(node => {
+      // 自分自身のノードは除外
+      if (node.id === currentNodeId) {
+        return node;
+      }
+
+      const nodeRight = node.x + calculateNodeWidth(node.text); // ノードの右端
+      const nodeBottom = node.y + nodeHeight; // ノードの下端
+
+      // 指定された座標がノードの範囲内にあるかどうかをチェック
+      if (x < nodeRight && x + calculateNodeWidth(nodes.find(n => n.id === currentNodeId).text) > node.x &&
+        y < nodeBottom && y + nodeHeight > node.y) {
+        // 重複が検出された場合、y座標を更新
+        node.y = node.y +  nodeMargin + nodeHeight;
+        console.log(`重複検知 node.text:${node.text} ${node.x}, ${node.y}`)
+        return { ...node, y: node.y }; // y座標を更新 
+      }
+      
+      return node; // 重複がない場合はそのままのノードを返却
+    });
+
+    return updatedNodes; // 更新されたノードの配列を返却
+  }
+
+
   // ノードの位置を調整する
-  function adjustNodePositions(nodes) {
-    const nodeWidth = (node) => calculateNodeWidth(node.text);
-    const sortedNodes = [...nodes].sort((a, b) => a.id - b.id);
-    let maxY = 0;
-  
-    sortedNodes.forEach((node, index) => {
-      if (node.parentId !== null) {
-        const parentNode = sortedNodes.find(n => n.id === node.parentId);
-        if (parentNode) {
-          let newX = parentNode.x + parentXOffset;
-          let newY = parentNode.y;
-          let siblings = sortedNodes.filter(n => n.parentId === node.parentId);
-  
-          if (siblings.length > 1) {
-            siblings.sort((a, b) => a.y - b.y); // Sort siblings by their Y position
-            const lastSibling = siblings[siblings.indexOf(node) - 1];
-            if (lastSibling) {
-              newY = lastSibling.y + nodeHeight + 10; // Place below the last sibling
-            }
-          }
-  
-          // Check for overlap with other nodes and adjust
-          let overlap;
-          do {
-            overlap = sortedNodes.some(n => {
-              if (n.id !== node.id && n.parentId !== node.parentId) {
-                const nRight = n.x + nodeWidth(n);
-                const nodeRight = newX + nodeWidth(node);
-                const verticalOverlap = newY < n.y + nodeHeight && newY + nodeHeight > n.y;
-                return n.x < nodeRight && nRight > newX && verticalOverlap;
-              }
-              return false;
-            });
-  
-            if (overlap) {
-              newY += nodeHeight + 10; // Adjust Y to avoid overlap
-            }
-          } while (overlap);
-  
-          node.x = newX;
-          node.y = newY;
-        }
+  function adjustNodePositions(nodes, parentId = null, startX = 50, startY = 0) {
+    let currentY = startY;
+
+    // 現在の親ノードに属する子ノードをフィルタリング
+    const children = nodes.filter(node => node.parentId === parentId);
+
+    // orderに基づいて子ノードをソート
+    children.sort((a, b) => a.order - b.order);
+
+    // 子ノードを処理
+    children.forEach((child, index) => {
+      // X座標を設定
+      console.log(`${child.text}`)
+      if (index === 0){
+        currentY = 10;
       }
-      maxY = Math.max(maxY, node.y);
-    });
-  
-    // Adjust parent nodes based on children
-    sortedNodes.filter(n => n.parentId === null).forEach(parentNode => {
-      const children = sortedNodes.filter(n => n.parentId === parentNode.id);
-      if (children.length > 0) {
-        const minY = Math.min(...children.map(n => n.y));
-        const maxY = Math.max(...children.map(n => n.y + nodeHeight));
-        parentNode.y = minY + ((maxY - minY) / 2) - (nodeHeight / 2);
+      if (parentId !== null) {
+        const parentNode = nodes.find(node => node.id === parentId);
+        child.x = parentNode.x + parentXOffset;
+      } else {
+        child.x = startX;
       }
+
+      // Y座標を設定
+      nodes = updateNodesPositionForOverlap(child.id, child.x, currentY, nodes);
+
+      // 次のノードのためにY座標を更新
+      child.y += nodeHeight + 10;
+
+      // 子ノードがさらに子ノードを持つ場合は、再帰的に位置を調整
+      adjustNodePositions(nodes, child.id, child.x, 0);
     });
-  
-    return sortedNodes;
+
+    return nodes;
   }
 
   useEffect(() => {
@@ -366,6 +402,9 @@ function App() {
   };
 
   const selectNode = (id) => {
+    const selectedNode = nodes.find(n => n.id === id);
+    console.log(`Selected Node: id=${selectedNode.id}, x=${selectedNode.x}, y=${selectedNode.y}, parentId=${selectedNode.parentId}, order=${selectedNode.order}`);
+
     setNodes(nodes.map(n => ({
       ...n,
       selected: n.id === id
