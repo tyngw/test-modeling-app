@@ -253,53 +253,155 @@ function App() {
       if (x < nodeRight && x + calculateNodeWidth(nodes.find(n => n.id === currentNodeId).text) > node.x &&
         y < nodeBottom && y + nodeHeight > node.y) {
         // 重複が検出された場合、y座標を更新
-        node.y = node.y +  nodeMargin + nodeHeight;
+        node.y = node.y + nodeMargin + nodeHeight;
         console.log(`重複検知 node.text:${node.text} ${node.x}, ${node.y}`)
         return { ...node, y: node.y }; // y座標を更新 
       }
-      
+
       return node; // 重複がない場合はそのままのノードを返却
     });
 
     return updatedNodes; // 更新されたノードの配列を返却
   }
 
+  function isPositionForOverlap(currentNodeId, x, y, nodes) {
+
+    // 指定された座標に重複があるノードが存在するかどうかをチェック
+    return nodes.some(node => {
+      // 自分自身のノードは除外
+      if (node.id === currentNodeId) {
+        return false;
+      }
+
+      const nodeRight = node.x + calculateNodeWidth(node.text); // ノードの右端
+      const nodeBottom = node.y + nodeHeight; // ノードの下端
+
+      // console.log(`重複検知メソッド node.text:${node.text} ${x} ${node.x}, ${y} ${node.y} ${(x < nodeRight && x + calculateNodeWidth(nodes.find(n => n.id === currentNodeId).text) > node.x && y < nodeBottom && y + nodeHeight > node.y)}`)
+
+      // 指定された座標がノードの範囲内にあるかどうかをチェック
+      return (x < nodeRight && x + calculateNodeWidth(nodes.find(n => n.id === currentNodeId).text) > node.x &&
+        y < nodeBottom && y + nodeHeight > node.y);
+    });
+  }
+
 
   // ノードの位置を調整する
-  function adjustNodePositions(nodes, parentId = null, startX = 50, startY = 0) {
-    let currentY = startY;
+  function adjustNodePositions(nodes) {
+    let queue = []; // 待ち行列を初期化
+    let startY = 10; // 初期Y座標
+    let loop = 0;
 
-    // 現在の親ノードに属する子ノードをフィルタリング
-    const children = nodes.filter(node => node.parentId === parentId);
-
-    // orderに基づいて子ノードをソート
-    children.sort((a, b) => a.order - b.order);
-
-    // 子ノードを処理
-    children.forEach((child, index) => {
-      // X座標を設定
-      console.log(`${child.text}`)
-      if (index === 0){
-        currentY = 10;
-      }
-      if (parentId !== null) {
-        const parentNode = nodes.find(node => node.id === parentId);
-        child.x = parentNode.x + parentXOffset;
-      } else {
-        child.x = startX;
-      }
-
-      // Y座標を設定
-      nodes = updateNodesPositionForOverlap(child.id, child.x, currentY, nodes);
-
-      // 次のノードのためにY座標を更新
-      child.y += nodeHeight + 10;
-
-      // 子ノードがさらに子ノードを持つ場合は、再帰的に位置を調整
-      adjustNodePositions(nodes, child.id, child.x, 0);
+    // 最初に全てのルートノード（parentIdがnullのノード）を待ち行列に追加
+    nodes.filter(node => node.parentId === null).forEach(rootNode => {
+      queue.push({ node: rootNode, startX: 50, startY: startY });
+      startY += nodeHeight + 10; // ルートノード間の間隔
     });
 
-    return nodes;
+    while (queue.length > 0) {
+      let { node, startX, startY } = queue.shift(); // 待ち行列からノードを取り出す
+      let currentY = startY; // ここで各ノードごとにcurrentYをリセット
+      let childStartYs = [];
+
+      node.x = startX;
+      node.y = currentY;
+      loop += 1;
+
+      // 現在のノードに属する子ノードを処理
+      let children = nodes.filter(child => child.parentId === node.id).sort((a, b) => a.order - b.order);
+      children.forEach((child, index) => {
+        while (isPositionForOverlap(child.id, child.x, currentY, nodes)) {
+          console.log(`重複検知 ${child.text}`)
+          const overlappingNode = nodes.find(n =>
+            n.x < child.x + calculateNodeWidth(child.text) &&
+            n.x + calculateNodeWidth(n.text) > child.x &&
+            n.y < currentY + nodeHeight &&
+            n.y + nodeHeight > currentY &&
+            n.id !== child.id);
+
+          if (overlappingNode && shouldSkipOverlapAdjustment(child, overlappingNode, nodes)) {
+            break;
+          }
+          currentY += nodeHeight + 10;
+        }
+
+        function shouldSkipOverlapAdjustment(currentNode, overlappingNode, nodes) {
+          // currentNodeとoverlappingNodeの親ノードのorderを比較
+          const currentParent = nodes.find(n => n.id === currentNode.parentId);
+          const overlappingParent = nodes.find(n => n.id === overlappingNode.parentId);
+
+          if (currentParent && overlappingParent && currentParent.order < overlappingParent.order) {
+            return true; // スキップ
+          }
+          return false; // 加算
+        }
+        console.log(`${child.text} index= ${index} Height: ${currentY} loop=${loop}`);
+        child.x = node.x + 200; // X座標のオフセットを設定
+        child.y = currentY;
+        childStartYs.push(currentY);
+
+        // 子ノードがさらに子ノードを持つ場合、待ち行列に追加
+        //queue.push({ node: child, startX: child.x, startY: currentY + nodeHeight + 10 }); // 子ノードごとにstartYを更新
+        queue.push({ node: child, startX: child.x, startY: currentY }); // 子ノードごとにstartYを更新
+      });
+
+      // 子ノードが存在する場合、親ノードのY座標を更新
+      if (children.length > 0) {
+        const minY = Math.min(...childStartYs);
+        const maxY = Math.max(...childStartYs.map(y => y + nodeHeight));
+        node.y = minY + ((maxY - minY) / 2) - (nodeHeight / 2); // 子ノード群の中央に親ノードを配置
+        if (isPositionForOverlap(node.id, node.x, node.y, nodes)) {
+          // 重複が検出された場合、このノードより下にある全てのノードのY座標を調整
+          console.log(`親移動後、重複検知`)
+          // 親ノードより下にある全ノードのY座標を調整
+          const shiftY = nodeHeight + 10; // 調整するY座標の量
+          nodes = nodes.map(n => {
+            console.log(`node.id: ${node.id},  n.parentId: ${n.parentId}`)
+            if (n.y > node.y && node.id !== n.parentId) { // 現在の親ノードより下にあるノードのみ対象
+              return { ...n, y: n.y + shiftY };
+            }
+            return n;
+          });
+        }
+      }
+    }
+    return nodes; // 更新されたノードの配列を返却
+  }
+
+  function adjustNodePositions2(nodes) {
+    let queue = []; // 待ち行列を初期化
+    let startY = 10; // 初期Y座標
+    let currentY = 0;
+
+    // 最初に全てのルートノード（parentIdがnullのノード）を待ち行列に追加
+    nodes.filter(node => node.parentId === null).forEach(rootNode => {
+      queue.push({ node: rootNode, startX: 50, startY: startY });
+      startY += nodeHeight + 10;
+    });
+
+    while (queue.length > 0) {
+      let { node, startX, startY } = queue.shift(); // 待ち行列からノードを取り出す
+      // let currentY = startY;
+      node.x = startX;
+      node.y = currentY;
+
+      // 現在のノードに属する子ノードを処理
+      let children = nodes.filter(child => child.parentId === node.id).sort((a, b) => a.order - b.order);
+      children.forEach((child, index) => {
+        if (index > 0) {
+          currentY += nodeHeight + 10;
+        }
+        console.log(`${child.text} index= ${index} Height= ${currentY}`)
+
+        // 子ノードの位置を設定
+        child.x = node.x + 200; // X座標のオフセットを適当に設定
+        child.y = currentY;
+
+        // 子ノードがさらに子ノードを持つ場合、待ち行列に追加
+        queue.push({ node: child, startX: child.x, startY: child.y });
+      });
+    }
+
+    return nodes; // 更新されたノードの配列を返却
   }
 
   useEffect(() => {
