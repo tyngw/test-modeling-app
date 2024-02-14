@@ -12,7 +12,7 @@ function App() {
 
   // ウィンドウサイズとviewBoxのステート
   const windowSize = useWindowSize();
-  const [viewBox, setViewBox] = useState('0 0 800 600');
+  const [viewBox, setViewBox] = useState(`0 0 ${windowSize.width} ${windowSize.height}`);
   const lastDistanceRef = useRef(null); // 最後の距離を格納するためのref
 
   const nodeHeight = 50;
