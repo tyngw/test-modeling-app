@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { calculateNodeWidth, calculateTextWidth, wrapText } from './util/TextUtilities';
+import { useWindowSize, calculateCanvasSize } from './util/LayoutUtilities';
 import './App.css';
 
 function App() {
@@ -10,7 +11,7 @@ function App() {
   const inputRef = useRef(null);
 
   // ウィンドウサイズとviewBoxのステート
-  const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+  const windowSize = useWindowSize();
   const [viewBox, setViewBox] = useState('0 0 800 600');
   const lastDistanceRef = useRef(null); // 最後の距離を格納するためのref
 
@@ -23,6 +24,9 @@ function App() {
   const [dragging, setDragging] = useState(null);
   const [startPosition, setStartPosition] = useState({ x: 0, y: 0 });
   const [originalPosition, setOriginalPosition] = useState({ x: 0, y: 0 });
+
+  // ノードがキャンバスサイズを超えた場合に備えて、キャンバスの最小サイズを設定する
+  const [canvasSize, setCanvasSize] = useState({ width: windowSize.width, height: windowSize.height });
 
   const handleMouseDown = (e, id) => {
     const node = nodes.find(n => n.id === id);
@@ -312,41 +316,13 @@ function App() {
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
   }, [nodes]);
-
+  
   useEffect(() => {
-    const handleResize = () => {
-      setWindowSize({ width: window.innerWidth, height: window.innerHeight });
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // ノードがキャンバスサイズを超えた場合に備えて、キャンバスの最小サイズを設定する
-  const [canvasSize, setCanvasSize] = useState({ width: windowSize.width, height: windowSize.height });
-
-  useEffect(() => {
-    // ノードの位置に基づいてキャンバスのサイズを調整するロジック
-    const maxNodeX = Math.max(...nodes.map(node => node.x + calculateNodeWidth(node.text))) + parentXOffset; // ノードの最大X座標
-    const maxNodeY = Math.max(...nodes.map(node => node.y + nodeHeight)) + nodeHeight; // ノードの最大Y座標
-
-    setCanvasSize({
-      width: Math.max(windowSize.width, maxNodeX),
-      height: Math.max(windowSize.height, maxNodeY)
-    });
+    setCanvasSize(calculateCanvasSize(nodes, calculateNodeWidth, 50, 200, windowSize));
   }, [nodes, windowSize]);
 
   // 2点間の距離を計算するロジックをここに記述...
   // この距離の変化に基づいてズームレベルを更新...
-  useEffect(() => {
-    const handleResize = () => {
-      setWindowSize({ width: window.innerWidth, height: window.innerHeight });
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
   useEffect(() => {
     const handleTouchMove = (event) => {
       if (event.touches.length === 2) {
