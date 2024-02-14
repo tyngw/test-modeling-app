@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { calculateNodeWidth, calculateTextWidth, wrapText } from './util/TextUtilities';
 import './App.css';
 
 function App() {
@@ -18,45 +19,6 @@ function App() {
   const curveControlOffset = 80; // 曲線の制御点のオフセット
 
   const parentXOffset = 200; // 親ノードから子ノードへのX軸オフセット
-
-  const calculateNodeWidth = (text) => {
-    const minWidth = 80;
-    const maxWidth = 200;
-    const textLength = calculateTextWidth(text);
-    const widthBasedOnText = Math.max(minWidth, Math.min(maxWidth, textLength));
-    return widthBasedOnText;
-  };
-
-  const calculateTextWidth = (text) => {
-    const textLength = text.length * 10;
-    return textLength;
-  };
-
-  function wrapText(text, maxWidth) {
-    const lines = [];
-    let currentLine = '';
-
-    text.split('').forEach(char => {
-      // 次の文字を追加した場合の仮の行を検討
-      const testLine = currentLine + char;
-      const testWidth = calculateTextWidth(testLine);
-
-      if (testWidth <= maxWidth || currentLine === '') {
-        // 仮の行が最大幅以下、または現在の行が空の場合は追加
-        currentLine = testLine;
-      } else {
-        // 最大幅を超えた場合、現在の行をlinesに追加し、新しい行を開始
-        lines.push(currentLine);
-        currentLine = char;
-      }
-    });
-
-    // 残りの部分を追加
-    if (currentLine) {
-      lines.push(currentLine);
-    }
-    return lines;
-  }
 
   const [dragging, setDragging] = useState(null);
   const [startPosition, setStartPosition] = useState({ x: 0, y: 0 });
