@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { calculateNodeWidth, calculateTextWidth, wrapText } from './util/TextUtilities';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { calculateNodeWidth, wrapText } from './util/TextUtilities';
 import { useWindowSize, calculateCanvasSize } from './util/LayoutUtilities';
 import './App.css';
 
@@ -35,6 +35,94 @@ function App() {
     setOriginalPosition({ x: node.x, y: node.y }); // 元の座標を保存
     e.stopPropagation();
   };
+
+  const shouldSkipOverlapAdjustment = useCallback((currentNode, overlappingNode, allNodes) => {
+    const currentParent = allNodes.find(n => n.id === currentNode.parentId);
+    const overlappingParent = allNodes.find(n => n.id === overlappingNode.parentId);
+    return currentParent && overlappingParent && currentParent.order < overlappingParent.order;
+  }, []);
+
+  // ノードの位置を調整する
+  const adjustNodePositions = useCallback((allNodes) => {
+    let adjustedNodes = [...allNodes];
+    let queue = []; // 待ち行列を初期化
+    let startY = 10; // 初期Y座標
+    let loop = 0; //デバッグログ用
+
+    // 最初に全てのルートノード（parentIdがnullのノード）を待ち行列に追加
+    adjustedNodes.filter(node => node.parentId === null).forEach(rootNode => {
+      queue.push({ node: rootNode, startX: 50, startY: startY });
+      startY += nodeHeight + 10; // ルートノード間の間隔
+    });
+
+    while (queue.length > 0) {
+      let { node, startX, startY } = queue.shift(); // 待ち行列からノードを取り出す
+      let currentY = startY; // ここで各ノードごとにcurrentYをリセット
+      let childStartYs = [];
+
+      node.x = startX;
+      node.y = currentY;
+      loop += 1;
+
+      // 現在のノードに属する子ノードを処理
+      let children = adjustedNodes.filter(child => child.parentId === node.id).sort((a, b) => a.order - b.order);
+      children.forEach((child, index) => {
+        while (isPositionForOverlap(child.id, child.x, currentY, adjustedNodes)) {
+          const overlappingNode = adjustedNodes.find(n =>
+            n.x < child.x + calculateNodeWidth(child.text) &&
+            n.x + calculateNodeWidth(n.text) > child.x &&
+            n.y < currentY + nodeHeight &&
+            n.y + nodeHeight > currentY &&
+            n.id !== child.id);
+
+          if (overlappingNode && shouldSkipOverlapAdjustment(child, overlappingNode, adjustedNodes)) {
+            break;
+          }
+          currentY += nodeHeight + 10;
+        }
+
+        console.log(`[debug] shouldSkipOverlapAdjustment - ${child.text} index= ${index} Height: ${currentY} loop=${loop}`);
+        child.x = node.x + 200; // X座標のオフセットを設定
+        child.y = currentY;
+        childStartYs.push(currentY);
+
+        // 子ノードがさらに子ノードを持つ場合、待ち行列に追加
+        //queue.push({ node: child, startX: child.x, startY: currentY + nodeHeight + 10 }); // 子ノードごとにstartYを更新
+        queue.push({ node: child, startX: child.x, startY: currentY }); // 子ノードごとにstartYを更新
+      });
+
+      // 子ノードが存在する場合、親ノードのY座標を更新
+      if (children.length > 0) {
+        const minY = Math.min(...childStartYs);
+        const maxY = Math.max(...childStartYs.map(y => y + nodeHeight));
+        node.y = minY + ((maxY - minY) / 2) - (nodeHeight / 2); // 子ノード群の中央に親ノードを配置
+        console.log(`[debug] 親ノードのY座標更新 - ${node.y}`)
+        if (isPositionForOverlap(node.id, node.x, node.y, adjustedNodes)) {
+          console.log(`親衝突検知 ${node.text} ${node.x} ${node.y}`)
+          // 重複が検出された場合、このノードより下にある全てのノードのY座標を調整
+          // 親ノードより下にある全ノードのY座標を調整
+          const shiftY = nodeHeight + 100; // 調整するY座標の量
+          adjustedNodes = adjustedNodes.map(n => {
+            console.log(`[debug] node.id: ${node.id},  n.parentId: ${n.parentId}`)
+            if (n.y > node.y && node.id !== n.parentId) { // 現在の親ノードより下にあるノードのみ対象
+              return { ...n, y: n.y + shiftY };
+            }
+            return n;
+          });
+        }
+      }
+    }
+    return adjustedNodes; // 更新されたノードの配列を返却
+    // }
+  }, [shouldSkipOverlapAdjustment]);
+
+  const handleClickOutside = useCallback((event) => {
+    // const handleClickOutside = (event) => {
+    if (!event.target.closest('.editable') && !event.target.classList.contains('node')) {
+      setEditingId(null);
+      setNodes(nodes.map(node => ({ ...node, selected: false })));
+    }
+  }, [nodes]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -120,7 +208,7 @@ function App() {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [nodes, editingId]);
+  }, [nodes, editingId, adjustNodePositions]);
 
   useEffect(() => {
     if (editingId !== null) {
@@ -149,7 +237,7 @@ function App() {
     };
   }, [dragging, startPosition, nodes]);
 
-  const handleMouseUp = (e) => {
+  const handleMouseUp = useCallback((e) => {
     if (dragging !== null) {
       const dropX = e.clientX;
       const dropY = e.clientY;
@@ -197,7 +285,7 @@ function App() {
 
       setDragging(null);
     }
-  };
+  }, [nodes, setNodes, dragging, originalPosition.x, originalPosition.y]);
 
   function getNodeOfId(nodes, id) {
     return nodes.find(node => node.id === id);
@@ -223,89 +311,6 @@ function App() {
     });
   }
 
-
-  // ノードの位置を調整する
-  function adjustNodePositions(nodes) {
-    let queue = []; // 待ち行列を初期化
-    let startY = 10; // 初期Y座標
-    let loop = 0;
-
-    // 最初に全てのルートノード（parentIdがnullのノード）を待ち行列に追加
-    nodes.filter(node => node.parentId === null).forEach(rootNode => {
-      queue.push({ node: rootNode, startX: 50, startY: startY });
-      startY += nodeHeight + 10; // ルートノード間の間隔
-    });
-
-    while (queue.length > 0) {
-      let { node, startX, startY } = queue.shift(); // 待ち行列からノードを取り出す
-      let currentY = startY; // ここで各ノードごとにcurrentYをリセット
-      let childStartYs = [];
-
-      node.x = startX;
-      node.y = currentY;
-      loop += 1;
-
-      // 現在のノードに属する子ノードを処理
-      let children = nodes.filter(child => child.parentId === node.id).sort((a, b) => a.order - b.order);
-      children.forEach((child, index) => {
-        while (isPositionForOverlap(child.id, child.x, currentY, nodes)) {
-          const overlappingNode = nodes.find(n =>
-            n.x < child.x + calculateNodeWidth(child.text) &&
-            n.x + calculateNodeWidth(n.text) > child.x &&
-            n.y < currentY + nodeHeight &&
-            n.y + nodeHeight > currentY &&
-            n.id !== child.id);
-
-          if (overlappingNode && shouldSkipOverlapAdjustment(child, overlappingNode, nodes)) {
-            break;
-          }
-          currentY += nodeHeight + 10;
-        }
-
-        function shouldSkipOverlapAdjustment(currentNode, overlappingNode, nodes) {
-          // currentNodeとoverlappingNodeの親ノードのorderを比較
-          const currentParent = nodes.find(n => n.id === currentNode.parentId);
-          const overlappingParent = nodes.find(n => n.id === overlappingNode.parentId);
-
-          if (currentParent && overlappingParent && currentParent.order < overlappingParent.order) {
-            return true; // スキップ
-          }
-          return false; // 加算
-        }
-        console.log(`[debug] shouldSkipOverlapAdjustment - ${child.text} index= ${index} Height: ${currentY} loop=${loop}`);
-        child.x = node.x + 200; // X座標のオフセットを設定
-        child.y = currentY;
-        childStartYs.push(currentY);
-
-        // 子ノードがさらに子ノードを持つ場合、待ち行列に追加
-        //queue.push({ node: child, startX: child.x, startY: currentY + nodeHeight + 10 }); // 子ノードごとにstartYを更新
-        queue.push({ node: child, startX: child.x, startY: currentY }); // 子ノードごとにstartYを更新
-      });
-
-      // 子ノードが存在する場合、親ノードのY座標を更新
-      if (children.length > 0) {
-        const minY = Math.min(...childStartYs);
-        const maxY = Math.max(...childStartYs.map(y => y + nodeHeight));
-        node.y = minY + ((maxY - minY) / 2) - (nodeHeight / 2); // 子ノード群の中央に親ノードを配置
-        console.log(`[debug] 親ノードのY座標更新 - ${node.y}`)
-        if (isPositionForOverlap(node.id, node.x, node.y, nodes)) {
-          console.log(`親衝突検知 ${node.text} ${node.x} ${node.y}`)
-          // 重複が検出された場合、このノードより下にある全てのノードのY座標を調整
-          // 親ノードより下にある全ノードのY座標を調整
-          const shiftY = nodeHeight + 100; // 調整するY座標の量
-          nodes = nodes.map(n => {
-            console.log(`[debug] node.id: ${node.id},  n.parentId: ${n.parentId}`)
-            if (n.y > node.y && node.id !== n.parentId) { // 現在の親ノードより下にあるノードのみ対象
-              return { ...n, y: n.y + shiftY };
-            }
-            return n;
-          });
-        }
-      }
-    }
-    return nodes; // 更新されたノードの配列を返却
-  }
-
   useEffect(() => {
     document.addEventListener('mouseup', handleMouseUp);
     return () => document.removeEventListener('mouseup', handleMouseUp);
@@ -315,8 +320,8 @@ function App() {
   useEffect(() => {
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
-  }, [nodes]);
-  
+  }, [handleClickOutside]);
+
   useEffect(() => {
     setCanvasSize(calculateCanvasSize(nodes, calculateNodeWidth, 50, 200, windowSize));
   }, [nodes, windowSize]);
@@ -358,14 +363,6 @@ function App() {
     document.addEventListener('touchmove', handleTouchMove, { passive: false });
     return () => document.removeEventListener('touchmove', handleTouchMove);
   }, [viewBox]);
-
-
-  const handleClickOutside = (event) => {
-    if (!event.target.closest('.editable') && !event.target.classList.contains('node')) {
-      setEditingId(null);
-      setNodes(nodes.map(node => ({ ...node, selected: false })));
-    }
-  };
 
   const handleDoubleClick = (id) => {
     // ダブルクリックされたノードで編集モードに入る
