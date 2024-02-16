@@ -44,100 +44,49 @@ function App() {
 
   // ノードの位置を調整する
   const adjustNodePositions = useCallback((allNodes) => {
-    let adjustedNodes = [...allNodes].sort((a, b) => b.depth - a.depth);
-    let queue = []; // 待ち行列を初期化
-    let startY = 10; // 初期Y座標
-    let loop = 0; //デバッグログ用
-    let parentUpdateStack = [];
+    // depthが小さい順にノードをソートし、同じdepth内ではparentId, その後orderでソート
+    let sortedNodes = [...allNodes].sort((a, b) => a.depth - b.depth || a.parentId - b.parentId || a.order - b.order);
+    let currentY = 10; // Y座標の初期値
+    let prevDepth = -1;
+    let children;
+    let parentNode;
 
-    // 最初に全てのルートノード（parentIdがnullのノード）を待ち行列に追加
-    adjustedNodes.filter(node => node.parentId === null).forEach(rootNode => {
-      queue.push({ node: rootNode, startX: 50, startY: startY });
-      startY += nodeHeight + 10; // ルートノード間の間隔
+    sortedNodes.forEach((node, index) => {
+      node.x = ((node.depth - 1) * 260);
+      if (prevDepth !== node.depth) {
+        currentY = 10;
+        parentNode = getNodeId(sortedNodes, node.parentId)
+        currentY = parentNode.y;
+      } else {
+        currentY += nodeHeight + 10;
+      }
+      // prevDepth = node.depth;
+      node.y = currentY;
+      console.log(`node.text: ${node.text} node.x: ${node.x} node.y: ${node.y}`);
     });
 
-    while (queue.length > 0) {
-      let { node: currentNode, startX, startY } = queue.shift(); // 待ち行列からノードを取り出す
-      let currentY = startY; // ここで各ノードごとにcurrentYをリセット
+    // // depthが小さい順にノードをソートし、同じdepth内ではparentId, その後orderでソート
+    // sortedNodes = [...allNodes].sort((a, b) => b.depth - a.depth || a.parentId - b.parentId || a.order - b.order);
+    // // 親ノードのY座標を子ノードに基づいて更新
+    // sortedNodes.forEach(parentNode => {
+    //   const children = sortedNodes.filter(n => n.parentId === parentNode.id);
+    //   if (children.length > 0) {
+    //     const minY = Math.min(...children.map(n => n.y));
+    //     const maxY = Math.max(...children.map(n => n.y + nodeHeight));
+    //     parentNode.y = minY + (maxY - minY) / 2 - nodeHeight / 2;
 
-      currentNode.x = startX;
-      currentNode.y = currentY;
-      loop += 1;
+    //     // 重複回避のロジック
+    //     // 親ノードが他のノードと重複しないように調整
+    //     sortedNodes.forEach(node => {
+    //       if (node.depth === parentNode.depth && node.id !== parentNode.id && node.y >= parentNode.y) {
+    //         node.y += nodeHeight + 10; // 重複を避けるために下に移動
+    //       }
+    //     });
+    //   }
+    // });
 
-      // 現在のノードに属する子ノードを処理
-      let children = adjustedNodes.filter(child => child.parentId === currentNode.id).sort((a, b) => a.order - b.order);
-      let childStartYs = [];
-      children.forEach((child, index) => {
-        while (isPositionForOverlap(child.id, child.x, currentY, adjustedNodes)) {
-          const overlappingNode = adjustedNodes.find(node =>
-            node.x < child.x + calculateNodeWidth(child.text) &&
-            node.x + calculateNodeWidth(node.text) > child.x &&
-            node.y < currentY + nodeHeight &&
-            node.y + nodeHeight > currentY &&
-            node.id !== child.id);
-
-          if (overlappingNode && shouldSkipOverlapAdjustment(child, overlappingNode, adjustedNodes)) {
-            break;
-          }
-          currentY += nodeHeight + 10;
-
-          queue.push({ node: child, startX: child.x + parentXOffset, startY: currentY + nodeHeight + 10 });
-          childStartYs.push(child.y);
-        }
-
-        child.x = currentNode.x + 200; // X座標のオフセットを設定
-        child.y = currentY;
-        console.log(`[debug][位置調整] ${child.text} index= ${index} child.x: ${child.x} child.y: ${child.y} loop=${loop}`);
-        childStartYs.push(currentY);
-
-        // 子ノードがさらに子ノードを持つ場合、待ち行列に追加
-        queue.push({ node: child, startX: child.x, startY: currentY }); // 子ノードごとにstartYを更新
-      });
-
-      if (children.length > 0) {
-        // 子ノードのY座標を基に親ノードのY座標を後で更新するために記録
-        parentUpdateStack.push(currentNode);
-      }
-    }
-
-    // 子ノードが存在する場合、親ノードのY座標を更新
-    while (parentUpdateStack.length > 0) {
-      let parentNode = parentUpdateStack.pop();
-      let childStartYs = adjustedNodes.filter(node => node.parentId === parentNode.id).map(node => node.y);
-      let minY;
-      let maxY;
-      if (childStartYs.length > 0) {
-        minY = Math.min(...childStartYs);
-        maxY = Math.max(...childStartYs);
-        parentNode.y = minY + ((maxY - minY) / 2) - (nodeHeight / 2); // Recalculate parent Y to center it among its children
-      }
-      console.log(`[debug] 親ノードY座標更新処理開始 対象ノード: [${parentNode.text}] minY: ${minY} maxY: ${maxY}`)
-      // parentNode.y = minY + ((maxY - minY) / 2) - (nodeHeight / 2); // 子ノード群の中央に親ノードを配置
-      parentNode.y = minY + ((maxY - minY) / 2); // 子ノード群の中央に親ノードを配置
-      console.log(`[debug] ${parentNode.text} ノードのY座標更新 - ${parentNode.y}`)
-      if (isPositionForOverlap(parentNode.id, parentNode.x, parentNode.y, adjustedNodes)) {
-        // console.log(`親衝突検知 ${parentNode.text} ${parentNode.x} ${parentNode.y}`)
-        // 重複が検出された場合、このノードより下にある全てのノードのY座標を調整
-        // 親ノードより下にある全ノードのY座標を調整
-        const shiftY = nodeHeight + 10; // 調整するY座標の量
-        adjustedNodes = adjustedNodes.map(node => {
-          // console.log(`[debug] ${parentNode.text} ${node.text}: ${parentNode.depth}, === ${node.depth}, ${parentNode.parentId} != ${node.id} targetNode.y: ${parentNode.y} >= node.y: ${node.y}`)
-          // オフセット追加対象のノードが自分自身でない
-          // かつ、自分よりも階層が下(depthが大きくない)
-          // かつ、オフセット追加対象のノードが衝突検知したノードよりも
-          if (parentNode.id !== node.id && parentNode.depth === node.depth && parentNode.y + nodeHeight + 10 >= node.y) {
-            console.log(`オフセット追加`)
-            return { ...node, y: parentNode.y + shiftY };
-          }
-          return node;
-        });
-
-      }
-    }
-
-    return adjustedNodes; // 更新されたノードの配列を返却
-    // }
-  }, [shouldSkipOverlapAdjustment]);
+    return sortedNodes; // 更新されたノードの配列を返却
+  }, [nodeHeight]);
 
   const handleClickOutside = useCallback((event) => {
     // const handleClickOutside = (event) => {
