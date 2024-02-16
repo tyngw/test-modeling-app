@@ -55,12 +55,14 @@ function App() {
       node.x = ((node.depth - 1) * 260);
       if (prevDepth !== node.depth) {
         currentY = 10;
-        parentNode = getNodeId(sortedNodes, node.parentId)
-        currentY = parentNode.y;
+        parentNode = getNodeOfId(sortedNodes, node.parentId)
+        if (parentNode) {
+          currentY = parentNode.y;
+        }
       } else {
         currentY += nodeHeight + 10;
       }
-      // prevDepth = node.depth;
+      prevDepth = node.depth;
       node.y = currentY;
       console.log(`node.text: ${node.text} node.x: ${node.x} node.y: ${node.y}`);
     });
@@ -79,7 +81,7 @@ function App() {
     //     // 親ノードが他のノードと重複しないように調整
     //     sortedNodes.forEach(node => {
     //       if (node.depth === parentNode.depth && node.id !== parentNode.id && node.y >= parentNode.y) {
-    //         node.y += nodeHeight + 10; // 重複を避けるために下に移動
+    //         node.y += nodeHeight + 100; // 重複を避けるために下に移動
     //       }
     //     });
     //   }
