@@ -1,6 +1,8 @@
+// components/App.js
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { calculateNodeWidth, wrapText } from './util/TextUtilities';
+import { calculateNodeWidth } from './util/TextUtilities';
 import { useWindowSize, calculateCanvasSize } from './util/LayoutUtilities';
+import Node from './components/Node';
 import './App.css';
 
 function App() {
@@ -35,13 +37,9 @@ function App() {
   // ノードがキャンバスサイズを超えた場合に備えて、キャンバスの最小サイズを設定する
   const [canvasSize, setCanvasSize] = useState({ width: windowSize.width, height: windowSize.height });
 
-  const handleMouseDown = (e, id) => {
-    const node = nodes.find(node => node.id === id);
-    setDragging(id);
-    setStartPosition({ x: e.clientX - node.x, y: e.clientY - node.y });
-    setOriginalPosition({ x: node.x, y: node.y }); // 元の座標を保存
-    e.stopPropagation();
-  };
+  function getNodeById(nodes, id) {
+    return nodes.find(node => node.id === id);
+  }
 
   function adjustNodeAndChildrenPosition(node, currentY, allNodes, depthOffset = 260, ySpacing = 10) {
     node.x = 50 + (node.depth - 1) * depthOffset;
@@ -62,9 +60,10 @@ function App() {
 
   // ノードの位置を調整する
   const adjustNodePositions = useCallback((allNodes) => {
-    // depthが小さい順にノードをソートし、同じdepth内ではparentId, その後orderでソート
-    let sortedNodes = [...allNodes].sort((a, b) => a.depth - b.depth || a.parentId - b.parentId || a.order - b.order);
     const rootNodes = allNodes.filter(n => n.parentId === null);
+
+    // depthが小さい順にノードをソートし、同じdepth内ではparentId, その後orderでソート
+    let sortedNodes = [...allNodes].sort((a, b) => b.depth - a.depth || a.parentId - b.parentId || a.order - b.order);
     let currentY = 10; // Y座標の初期値
     let lastChildY;
     const adjust = true;
@@ -72,9 +71,6 @@ function App() {
     rootNodes.forEach(rootNode => {
       currentY = adjustNodeAndChildrenPosition(rootNode, currentY, allNodes);
     });
-
-    // depthが小さい順にノードをソートし、同じdepth内ではparentId, その後orderでソート
-    sortedNodes = [...allNodes].sort((a, b) => b.depth - a.depth || a.parentId - b.parentId || a.order - b.order);
 
     // 親ノードのY座標を子ノードに基づいて更新
     if (adjust) {
@@ -92,6 +88,15 @@ function App() {
     }
     return sortedNodes; // 更新されたノードの配列を返却
   }, [nodeHeight]);
+
+  // ドラッグ処理
+  const handleMouseDown = (e, id) => {
+    const node = getNodeById(nodes, id);
+    setDragging(id);
+    setStartPosition({ x: e.clientX - node.x, y: e.clientY - node.y });
+    setOriginalPosition({ x: node.x, y: node.y }); // 元の座標を保存
+    e.stopPropagation();
+  };
 
   const handleClickOutside = useCallback((event) => {
     if (!event.target.closest('.editable') && !event.target.classList.contains('node')) {
@@ -165,7 +170,8 @@ function App() {
           if (selectedNodeIds.length > 0) {
             // 削除対象のノードIDを取得
             const deletableNodeIds = selectedNodeIds.filter(id => {
-              const node = nodes.find(node => node.id === id);
+              // const node = nodes.find(node => node.id === id);
+              const node = getNodeById(nodes, id);
               return node.parentId !== null; // parentIdがnullでないノードだけを対象とする
             });
 
@@ -193,7 +199,6 @@ function App() {
 
       // ノード選択処理
       if (nodes.some(node => node.selected)) {
-        const selectedNode = nodes.find(node => node.selected);
         const switchSelectedNode = (newSelectedNodeId) => {
           if (newSelectedNodeId !== null && newSelectedNodeId !== undefined) {
             setNodes(nodes.map(node => ({
@@ -222,7 +227,7 @@ function App() {
             switchSelectedNode(siblingNodes[currentIndex - 1].id);
           } else if (selectedNode.parentId !== null) {
             // 親のノードの末尾のノードを選択
-            const parentNode = nodes.find(node => node.id === selectedNode.parentId);
+            const parentNode = getNodeById(nodes, selectedNode.parentId);
             const parentSiblingNodes = nodes.filter(node => node.parentId === parentNode.parentId);
             const parentIndex = parentSiblingNodes.findIndex(node => node.id === parentNode.id);
             if (parentIndex > 0) {
@@ -242,7 +247,7 @@ function App() {
             switchSelectedNode(siblingNodes[currentIndex + 1].id);
           } else if (selectedNode.parentId !== null) {
             // 次の親ノードの先頭のノードを選択
-            const parentNode = nodes.find(node => node.id === selectedNode.parentId);
+            const parentNode = getNodeById(nodes, selectedNode.parentId);
             const parentSiblingNodes = nodes.filter(node => node.parentId === parentNode.parentId);
             const parentIndex = parentSiblingNodes.findIndex(node => node.id === parentNode.id);
             if (parentIndex < parentSiblingNodes.length - 1) {
@@ -264,6 +269,8 @@ function App() {
           case 'ArrowDown':
             // 一つ下のノードを選択
             handleArrowDown();
+            break;
+          default:
             break;
         }
       }
@@ -306,7 +313,7 @@ function App() {
       const dropY = e.clientY;
 
       const droppedOverNode = nodes.find(node => {
-        const width = calculateNodeWidth([node.text]); // Calculate width
+        const width = calculateNodeWidth([node.text]);
         return dropX >= node.x && dropX <= node.x + width &&
           dropY >= node.y && dropY <= node.y + nodeHeight &&
           node.id !== dragging;
@@ -314,7 +321,7 @@ function App() {
 
       if (droppedOverNode) {
         console.log(`droppedOverNode.id: ${droppedOverNode.id}`)
-        const draggingNode = nodes.find(node => node.id === dragging);
+        const draggingNode = getNodeById(nodes, dragging);
         const originalParentId = draggingNode.parentId;
         const newParentId = droppedOverNode.id;
 
@@ -367,10 +374,6 @@ function App() {
       setDragging(null);
     }
   }, [nodes, setNodes, dragging, originalPosition.x, originalPosition.y]);
-
-  function getNodeById(nodes, id) {
-    return nodes.find(node => node.id === id);
-  }
 
   useEffect(() => {
     document.addEventListener('mouseup', handleMouseUp);
@@ -441,7 +444,8 @@ function App() {
   };
 
   const selectNode = (id) => {
-    const selectedNode = nodes.find(node => node.id === id);
+    // const selectedNode = nodes.find(node => node.id === id);
+    const selectedNode = getNodeById(nodes, id);
     console.log(`Selected Node: id=${selectedNode.id}, x=${selectedNode.x}, y=${selectedNode.y}, parentId=${selectedNode.parentId}, order=${selectedNode.order}, children=${selectedNode.children}`);
 
     setNodes(nodes.map(node => ({
@@ -486,77 +490,20 @@ function App() {
         style={{ touchAction: 'none' }} // ブラウザのデフォルトのピンチズームを無効化
       >
         {nodes.map((node, index) => {
-          const parentNode = getNodeById(nodes, node.parentId)
-          const nodeWidth = calculateNodeWidth([node.text, node.text2, node.text3]);
-          const sectionHeight = nodeHeight / 3;
           return (
-            <React.Fragment key={node.id}>
-              {parentNode && (
-                <path
-                  d={`M ${node.x},${node.y + nodeHeight / 2}
-                  C ${node.x - curveControlOffset},${node.y + nodeHeight / 2} 
-                  ${parentNode.x + calculateNodeWidth([parentNode.text, parentNode.text2, parentNode.text3]) + curveControlOffset},${parentNode.y + nodeHeight / 2} 
-                  ${parentNode.x + calculateNodeWidth([parentNode.text, parentNode.text2, parentNode.text3]) + arrowOffset},${parentNode.y + nodeHeight / 2}`}
-                  stroke="black"
-                  strokeWidth="2"
-                  fill="none"
-                  markerEnd="url(#arrowhead)"
-                />
-              )}
-
-              <rect
-                x={node.x}
-                y={node.y}
-                width={nodeWidth}
-                height={nodeHeight}
-                className={`node ${node.selected ? 'node-selected' : 'node-unselected'}`}
-                rx="2"
-                onClick={() => selectNode(node.id)}
-                onDoubleClick={() => handleDoubleClick(node.id)}
-                onMouseDown={(e) => handleMouseDown(e, node.id)}
-              />
-              <text
-                x={node.x + 5}
-                y={node.y + sectionHeight / 2 + 5} // 上段の中央に配置
-                className="node-text"
-              >
-                {node.text}
-              </text>
-              {/* 中段のテキスト */}
-              <text
-                x={node.x + 5}
-                y={node.y + sectionHeight + sectionHeight / 2 + 5} // 中段の中央に配置
-                className="node-text"
-              >
-                {node.text2}
-              </text>
-              {/* 下段のテキスト */}
-              <text
-                x={node.x + 5}
-                y={node.y + 2 * sectionHeight + sectionHeight / 2 + 5} // 下段の中央に配置
-                className="node-text"
-              >
-                {node.text3}
-              </text>
-              {/* 上段と中段の間の線 */}
-              <line
-                x1={node.x}
-                y1={node.y + sectionHeight}
-                x2={node.x + nodeWidth}
-                y2={node.y + sectionHeight}
-                stroke="black"
-                strokeWidth="1"
-              />
-              {/* 中段と下段の間の線 */}
-              <line
-                x1={node.x}
-                y1={node.y + 2 * sectionHeight}
-                x2={node.x + nodeWidth}
-                y2={node.y + 2 * sectionHeight}
-                stroke="black"
-                strokeWidth="1"
-              />
-            </React.Fragment>
+            <Node
+              key={node.id}
+              node={node}
+              getNodeById={getNodeById}
+              calculateNodeWidth={calculateNodeWidth}
+              nodeHeight={nodeHeight}
+              curveControlOffset={curveControlOffset}
+              arrowOffset={arrowOffset}
+              selectNode={selectNode}
+              handleDoubleClick={handleDoubleClick}
+              handleMouseDown={handleMouseDown}
+              nodes={nodes}
+            />
           );
         })}
         <defs>
