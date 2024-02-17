@@ -54,14 +54,11 @@ function App() {
 
     sortedNodes.forEach((node, index) => {
       node.x = ((node.depth - 1) * 260);
+      parentNode = getNodeOfId(sortedNodes, node.parentId)
       if (prevDepth !== node.depth) {
-        currentY = 10;
-        parentNode = getNodeOfId(sortedNodes, node.parentId)
-        if (parentNode) {
-          currentY = parentNode.y;
-        }
+        currentY = parentNode ? parentNode.y : 10;
       } else {
-        currentY += nodeHeight + 10;
+        currentY = currentY < parentNode.y ? parentNode.y : currentY + nodeHeight + 10;
       }
       prevDepth = node.depth;
       node.y = currentY;
