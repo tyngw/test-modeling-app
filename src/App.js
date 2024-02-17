@@ -100,10 +100,6 @@ function App() {
     }
   }, [nodes]);
 
-  // useEffect(() => {
-  //   console.log('Nodes array has been updated:', nodes);
-  // }, [nodes]);
-
   useEffect(() => {
     const handleKeyDown = (event) => {
       // キー操作による新しいノードの追加処理
@@ -191,6 +187,57 @@ function App() {
             const adjustedNodes = adjustNodePositions(updatedNodes);
 
             setNodes(adjustedNodes);
+          }
+        }
+      }
+
+      // ノード選択処理
+      if (nodes.some(node => node.selected)) {
+        const selectedNode = nodes.find(node => node.selected);
+        
+        if (event.key === 'ArrowLeft') {
+          // 親ノードを選択
+          if (selectedNode.parentId !== null) {
+            const parentNode = nodes.find(node => node.id === selectedNode.parentId);
+            selectNode(parentNode.id);
+          }
+        } else if (event.key === 'ArrowRight') {
+          // 先頭の子ノードを選択
+          const children = nodes.filter(node => node.parentId === selectedNode.id);
+          if (children.length > 0) {
+            selectNode(children[0].id);
+          }
+        } else if (event.key === 'ArrowUp') {
+          // 一つ上のノードを選択
+          const siblingNodes = nodes.filter(node => node.parentId === selectedNode.parentId);
+          const currentIndex = siblingNodes.findIndex(node => node.id === selectedNode.id);
+          if (currentIndex > 0) {
+            selectNode(siblingNodes[currentIndex - 1].id);
+          } else if (selectedNode.parentId !== null) {
+            // 親のノードの末尾のノードを選択
+            const parentNode = nodes.find(node => node.id === selectedNode.parentId);
+            const parentSiblingNodes = nodes.filter(node => node.parentId === parentNode.parentId);
+            const parentIndex = parentSiblingNodes.findIndex(node => node.id === parentNode.id);
+            if (parentIndex > 0) {
+              const lastChildOfPreviousParent = nodes.filter(node => node.parentId === parentSiblingNodes[parentIndex - 1].id).slice(-1)[0];
+              if (lastChildOfPreviousParent) selectNode(lastChildOfPreviousParent.id);
+            }
+          }
+        } else if (event.key === 'ArrowDown') {
+          // 一つ下のノードを選択
+          const siblingNodes = nodes.filter(node => node.parentId === selectedNode.parentId);
+          const currentIndex = siblingNodes.findIndex(node => node.id === selectedNode.id);
+          if (currentIndex < siblingNodes.length - 1) {
+            selectNode(siblingNodes[currentIndex + 1].id);
+          } else if (selectedNode.parentId !== null) {
+            // 次の親ノードの先頭のノードを選択
+            const parentNode = nodes.find(node => node.id === selectedNode.parentId);
+            const parentSiblingNodes = nodes.filter(node => node.parentId === parentNode.parentId);
+            const parentIndex = parentSiblingNodes.findIndex(node => node.id === parentNode.id);
+            if (parentIndex < parentSiblingNodes.length - 1) {
+              const firstChildOfNextParent = nodes.filter(node => node.parentId === parentSiblingNodes[parentIndex + 1].id)[0];
+              if (firstChildOfNextParent) selectNode(firstChildOfNextParent.id);
+            }
           }
         }
       }
@@ -380,14 +427,15 @@ function App() {
   // 入力フィールドを描画する部分
   const renderInputFields = () => {
     if (editingId === null) return null;
-
+  
     const node = nodes.find(n => n.id === editingId);
     if (!node) return null;
-
+  
+    const maxWidth = calculateNodeWidth([node.text, node.text2, node.text3, ]);
+  
     return ['text', 'text2', 'text3'].map((field, index) => (
       <input
         key={field}
-        // ref={editingField === field ? inputRef : null}
         ref={inputRefs[field]}
         value={node[field]}
         onChange={(e) => updateText(e, field)}
@@ -396,12 +444,12 @@ function App() {
           position: 'absolute',
           left: `${node.x}px`,
           top: `${node.y + index * 20}px`,
-          width: `${calculateNodeWidth([node[field]])}px`,
+          width: `${maxWidth}px`, // 全フィールドで共通の最大幅を使用
         }}
         autoFocus={editingField === field}
       />
     ));
-  };
+  };  
 
   return (
     <div className="App" style={{ width: '200%', height: '200%', overflow: 'auto' }}>
@@ -482,16 +530,6 @@ function App() {
                 stroke="black"
                 strokeWidth="1"
               />
-              {/* {lines.map((line, lineIndex) => (
-                <text
-                  key={`${node.id}-${lineIndex}`}
-                  x={node.x + 5}
-                  y={node.y + 20 + (lineIndex * 20)} // 行ごとにY座標をオフセット
-                  className="node-text"
-                >
-                  {line}
-                </text>
-              ))} */}
             </React.Fragment>
           );
         })}
