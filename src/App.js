@@ -36,31 +36,34 @@ function App() {
     e.stopPropagation();
   };
 
+  function adjustNodeAndChildrenPosition(node, currentY, allNodes, depthOffset = 260, ySpacing = 10) {
+    node.x = (node.depth - 1) * depthOffset;
+    node.y = currentY;
+  
+    console.log(`「${node.text}」の位置を設定: x=${node.x}, y=${node.y}`);
+    const childNodes = allNodes.filter(n => n.parentId === node.id);
+  
+    if (childNodes.length > 0) {
+      childNodes.forEach(childNode => {
+        currentY = adjustNodeAndChildrenPosition(childNode, currentY, allNodes, depthOffset, ySpacing);
+      });
+    } else {
+      currentY += nodeHeight + ySpacing; // 子ノードがない場合、Y座標を更新
+    }
+    return currentY;
+  }
+
   // ノードの位置を調整する
   const adjustNodePositions = useCallback((allNodes) => {
     // depthが小さい順にノードをソートし、同じdepth内ではparentId, その後orderでソート
     let sortedNodes = [...allNodes].sort((a, b) => a.depth - b.depth || a.parentId - b.parentId || a.order - b.order);
+    const rootNodes = allNodes.filter(n => n.parentId === null);
     let currentY = 10; // Y座標の初期値
-    let prevDepth = -1;
-    let parentNode;
     let lastChildY;
-    let offsetY;
-    let prevNodeChildren = 0;
-    const adjust = false;
+    const adjust = true;
 
-    sortedNodes.forEach((node, index) => {
-      node.x = ((node.depth - 1) * 260);
-      parentNode = getNodeById(sortedNodes, node.parentId)
-      if (prevDepth !== node.depth) {
-        currentY = parentNode ? parentNode.y : 10;
-      } else {
-        offsetY = prevNodeChildren === 0 ? nodeHeight + 10 : (prevNodeChildren) * (nodeHeight + 10);
-        currentY = currentY < parentNode.y ? parentNode.y : currentY + offsetY;
-      }
-      prevDepth = node.depth;
-      prevNodeChildren = node.children;
-      node.y = currentY;
-      console.log(`node.text: ${node.text} node.x: ${node.x} node.y: ${node.y}`);
+    rootNodes.forEach(rootNode => {
+      currentY = adjustNodeAndChildrenPosition(rootNode, currentY, allNodes);
     });
 
     // depthが小さい順にノードをソートし、同じdepth内ではparentId, その後orderでソート
