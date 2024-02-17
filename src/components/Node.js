@@ -1,12 +1,10 @@
 // components/Node.js
 import React from 'react';
+import { calculateNodeWidth } from '../util/TextUtilities';
 
 const Node = ({
     node,
-    onNodeSelect,
-    onNodeMove,
     getNodeById,
-    calculateNodeWidth,
     nodeHeight = 60, // デフォルト値を設定するか、App.js から受け取る
     curveControlOffset = 80, // デフォルト値を設定するか、App.js から受け取る
     arrowOffset = 20, // デフォルト値を設定するか、App.js から受け取る

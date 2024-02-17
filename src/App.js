@@ -489,23 +489,21 @@ function App() {
         onClick={handleClickOutside}
         style={{ touchAction: 'none' }} // ブラウザのデフォルトのピンチズームを無効化
       >
-        {nodes.map((node, index) => {
-          return (
-            <Node
-              key={node.id}
-              node={node}
-              getNodeById={getNodeById}
-              calculateNodeWidth={calculateNodeWidth}
-              nodeHeight={nodeHeight}
-              curveControlOffset={curveControlOffset}
-              arrowOffset={arrowOffset}
-              selectNode={selectNode}
-              handleDoubleClick={handleDoubleClick}
-              handleMouseDown={handleMouseDown}
-              nodes={nodes}
-            />
-          );
-        })}
+        {nodes.map((node) => (
+          <Node
+            key={node.id}
+            node={node}
+            getNodeById={getNodeById}
+            calculateNodeWidth={calculateNodeWidth}
+            nodeHeight={nodeHeight}
+            curveControlOffset={curveControlOffset}
+            arrowOffset={arrowOffset}
+            selectNode={selectNode}
+            handleDoubleClick={handleDoubleClick}
+            handleMouseDown={handleMouseDown}
+            nodes={nodes}
+          />
+        ))}
         <defs>
           <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto" fill="none" stroke="black">
             <polygon points="0 0, 10 3.5, 0 7" fill="none" stroke="black" />
