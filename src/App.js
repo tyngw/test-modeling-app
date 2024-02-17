@@ -194,25 +194,32 @@ function App() {
       // ノード選択処理
       if (nodes.some(node => node.selected)) {
         const selectedNode = nodes.find(node => node.selected);
-        
-        if (event.key === 'ArrowLeft') {
-          // 親ノードを選択
-          if (selectedNode.parentId !== null) {
-            const parentNode = nodes.find(node => node.id === selectedNode.parentId);
-            selectNode(parentNode.id);
+        const switchSelectedNode = (newSelectedNodeId) => {
+          if (newSelectedNodeId !== null && newSelectedNodeId !== undefined) {
+            setNodes(nodes.map(node => ({
+              ...node,
+              selected: node.id === newSelectedNodeId,
+            })));
           }
-        } else if (event.key === 'ArrowRight') {
-          // 先頭の子ノードを選択
-          const children = nodes.filter(node => node.parentId === selectedNode.id);
-          if (children.length > 0) {
-            selectNode(children[0].id);
+        };
+
+        const findNodeAndSwitch = (conditionCallback) => {
+          const selectedNode = nodes.find(node => node.selected);
+          if (!selectedNode) return;
+
+          const newSelectedNode = nodes.find(conditionCallback);
+          if (newSelectedNode) {
+            switchSelectedNode(newSelectedNode.id);
           }
-        } else if (event.key === 'ArrowUp') {
-          // 一つ上のノードを選択
+        };
+        const handleArrowUp = () => {
+          const selectedNode = nodes.find(node => node.selected);
+          if (!selectedNode) return;
+
           const siblingNodes = nodes.filter(node => node.parentId === selectedNode.parentId);
           const currentIndex = siblingNodes.findIndex(node => node.id === selectedNode.id);
           if (currentIndex > 0) {
-            selectNode(siblingNodes[currentIndex - 1].id);
+            switchSelectedNode(siblingNodes[currentIndex - 1].id);
           } else if (selectedNode.parentId !== null) {
             // 親のノードの末尾のノードを選択
             const parentNode = nodes.find(node => node.id === selectedNode.parentId);
@@ -223,12 +230,16 @@ function App() {
               if (lastChildOfPreviousParent) selectNode(lastChildOfPreviousParent.id);
             }
           }
-        } else if (event.key === 'ArrowDown') {
-          // 一つ下のノードを選択
+        };
+
+        const handleArrowDown = () => {
+          const selectedNode = nodes.find(node => node.selected);
+          if (!selectedNode) return;
+
           const siblingNodes = nodes.filter(node => node.parentId === selectedNode.parentId);
           const currentIndex = siblingNodes.findIndex(node => node.id === selectedNode.id);
           if (currentIndex < siblingNodes.length - 1) {
-            selectNode(siblingNodes[currentIndex + 1].id);
+            switchSelectedNode(siblingNodes[currentIndex + 1].id);
           } else if (selectedNode.parentId !== null) {
             // 次の親ノードの先頭のノードを選択
             const parentNode = nodes.find(node => node.id === selectedNode.parentId);
@@ -239,6 +250,21 @@ function App() {
               if (firstChildOfNextParent) selectNode(firstChildOfNextParent.id);
             }
           }
+        };
+        switch (event.key) {
+          case 'ArrowLeft':
+            findNodeAndSwitch(node => node.id === nodes.find(n => n.selected).parentId);
+            break;
+          case 'ArrowRight':
+            findNodeAndSwitch(node => node.parentId === nodes.find(n => n.selected).id);
+            break;
+          case 'ArrowUp':
+            handleArrowUp();
+            break;
+          case 'ArrowDown':
+            // 一つ下のノードを選択
+            handleArrowDown();
+            break;
         }
       }
     };
@@ -427,12 +453,12 @@ function App() {
   // 入力フィールドを描画する部分
   const renderInputFields = () => {
     if (editingId === null) return null;
-  
+
     const node = nodes.find(n => n.id === editingId);
     if (!node) return null;
-  
-    const maxWidth = calculateNodeWidth([node.text, node.text2, node.text3, ]);
-  
+
+    const maxWidth = calculateNodeWidth([node.text, node.text2, node.text3,]);
+
     return ['text', 'text2', 'text3'].map((field, index) => (
       <input
         key={field}
@@ -449,7 +475,7 @@ function App() {
         autoFocus={editingField === field}
       />
     ));
-  };  
+  };
 
   return (
     <div className="App" style={{ width: '200%', height: '200%', overflow: 'auto' }}>
