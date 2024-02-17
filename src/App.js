@@ -5,9 +5,10 @@ import './App.css';
 
 function App() {
   const [nodes, setNodes] = useState([
-    { id: 1, text: 'Node 1', selected: false, x: 50, y: 50, parentId: null, order: 0, depth: 1, children: 0, },
+    { id: 1, text: 'Node 1', text2: '', text3: '', selected: false, x: 50, y: 50, parentId: null, order: 0, depth: 1, children: 0, },
   ]);
   const [editingId, setEditingId] = useState(null);
+  const [editingField, setEditingField] = useState('text');
   const inputRef = useRef(null);
 
   // ウィンドウサイズとviewBoxのステート
@@ -15,7 +16,7 @@ function App() {
   const [viewBox, setViewBox] = useState(`0 0 ${windowSize.width} ${windowSize.height}`);
   const lastDistanceRef = useRef(null); // 最後の距離を格納するためのref
 
-  const nodeHeight = 50;
+  const nodeHeight = 60;
   const arrowOffset = 20; // 矢印のオフセット
   const curveControlOffset = 80; // 曲線の制御点のオフセット
 
@@ -24,6 +25,12 @@ function App() {
   const [dragging, setDragging] = useState(null);
   const [startPosition, setStartPosition] = useState({ x: 0, y: 0 });
   const [originalPosition, setOriginalPosition] = useState({ x: 0, y: 0 });
+
+  const inputRefs = {
+    text: useRef(null),
+    text2: useRef(null),
+    text3: useRef(null),
+  };
 
   // ノードがキャンバスサイズを超えた場合に備えて、キャンバスの最小サイズを設定する
   const [canvasSize, setCanvasSize] = useState({ width: windowSize.width, height: windowSize.height });
@@ -37,12 +44,12 @@ function App() {
   };
 
   function adjustNodeAndChildrenPosition(node, currentY, allNodes, depthOffset = 260, ySpacing = 10) {
-    node.x = (node.depth - 1) * depthOffset;
+    node.x = 50 + (node.depth - 1) * depthOffset;
     node.y = currentY;
-  
+
     console.log(`「${node.text}」の位置を設定: x=${node.x}, y=${node.y}`);
     const childNodes = allNodes.filter(n => n.parentId === node.id);
-  
+
     if (childNodes.length > 0) {
       childNodes.forEach(childNode => {
         currentY = adjustNodeAndChildrenPosition(childNode, currentY, allNodes, depthOffset, ySpacing);
@@ -100,7 +107,7 @@ function App() {
   useEffect(() => {
     const handleKeyDown = (event) => {
       // キー操作による新しいノードの追加処理
-      if (event.key === 'Tab' && nodes.some(node => node.selected)) {
+      if (event.key === 'Tab' && nodes.some(node => node.selected) && editingId === null) {
         event.preventDefault();
         const selectedNode = nodes.find(node => node.selected);
         const newId = Math.max(...nodes.map(node => node.id), 0) + 1;
@@ -112,6 +119,8 @@ function App() {
           id: newId,
           // text: '',
           text: `Node ${newId}`,
+          text2: ``,
+          text3: ``,
           selected: false,
           x: selectedNode.depth * 260,
           // y: newChildY,
@@ -131,6 +140,25 @@ function App() {
         setNodes(adjustedNodes);
       }
 
+      if (editingId !== null && event.key === 'Tab') {
+        event.preventDefault(); // デフォルトの挙動を防止
+        const fields = ['text', 'text2', 'text3'];
+        const currentIndex = fields.indexOf(editingField);
+        const nextIndex = (currentIndex + 1) % fields.length;
+        setEditingField(fields[nextIndex]);
+
+        // `text3`からTab/Enterを押した場合、編集モードを終了
+        if (editingField === 'text3') {
+          setEditingId(null);
+        } else {
+          // 次のフィールドにフォーカスを移動
+          const nextFieldRef = inputRefs[fields[nextIndex]];
+          if (nextFieldRef.current) {
+            nextFieldRef.current.focus();
+          }
+        }
+      }
+
       if (event.key === 'Enter' && editingId === null && nodes.some(node => node.selected)) {
         // Enterキーが押され、選択中のノードがある場合、編集モードに入る
         const selectedNode = nodes.find(node => node.selected);
@@ -144,7 +172,7 @@ function App() {
               const node = nodes.find(node => node.id === id);
               return node.parentId !== null; // parentIdがnullでないノードだけを対象とする
             });
-    
+
             // 削除されるノードの親ノードのchildrenをデクリメント
             let updatedNodes = nodes.map(node => {
               if (deletableNodeIds.includes(node.id) && node.parentId) {
@@ -155,13 +183,13 @@ function App() {
               }
               return node;
             });
-    
+
             // 選択されたノードを除外して新しいノードのリストを作成
             updatedNodes = updatedNodes.filter(node => !deletableNodeIds.includes(node.id));
-    
+
             // 削除されたノードの影響を受けるノードのY座標を調整
             const adjustedNodes = adjustNodePositions(updatedNodes);
-    
+
             setNodes(adjustedNodes);
           }
         }
@@ -170,7 +198,7 @@ function App() {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [nodes, editingId, adjustNodePositions]);
+  }, [nodes, editingId, editingField]);
 
   useEffect(() => {
     if (editingId !== null) {
@@ -205,7 +233,7 @@ function App() {
       const dropY = e.clientY;
 
       const droppedOverNode = nodes.find(node => {
-        const width = calculateNodeWidth(node.text); // Calculate width
+        const width = calculateNodeWidth([node.text]); // Calculate width
         return dropX >= node.x && dropX <= node.x + width &&
           dropY >= node.y && dropY <= node.y + nodeHeight &&
           node.id !== dragging;
@@ -222,6 +250,22 @@ function App() {
           ...node,
           order: node.parentId === originalParentId && node.order > draggingNode.order ? node.order - 1 : node.order,
         }));
+
+        // 移動元の親ノードの情報を更新
+        updatedNodes = updatedNodes.map(node => {
+          if (node.id === originalParentId) {
+            return { ...node, children: node.children - 1 };
+          }
+          return node;
+        });
+
+        // 移動先の親ノードの情報を更新
+        updatedNodes = updatedNodes.map(node => {
+          if (node.id === newParentId) {
+            return { ...node, children: node.children + 1 };
+          }
+          return node;
+        });
 
         // 移動先の子ノードの数に基づいて新しいorderを計算
         const siblings = updatedNodes.filter(node => node.parentId === newParentId);
@@ -313,9 +357,14 @@ function App() {
     setEditingId(id);
   };
 
-  const updateText = (e) => {
+  const updateText = (e, field) => {
     const newText = e.target.value;
-    setNodes(nodes.map(node => node.id === editingId ? { ...node, text: newText } : node));
+    setNodes(nodes.map(node => {
+      if (node.id === editingId) {
+        return { ...node, [field]: newText };
+      }
+      return node;
+    }));
   };
 
   const selectNode = (id) => {
@@ -328,6 +377,31 @@ function App() {
     })));
   };
 
+  // 入力フィールドを描画する部分
+  const renderInputFields = () => {
+    if (editingId === null) return null;
+
+    const node = nodes.find(n => n.id === editingId);
+    if (!node) return null;
+
+    return ['text', 'text2', 'text3'].map((field, index) => (
+      <input
+        key={field}
+        // ref={editingField === field ? inputRef : null}
+        ref={inputRefs[field]}
+        value={node[field]}
+        onChange={(e) => updateText(e, field)}
+        className={`editable editable-${field}`}
+        style={{
+          position: 'absolute',
+          left: `${node.x}px`,
+          top: `${node.y + index * 20}px`,
+          width: `${calculateNodeWidth([node[field]])}px`,
+        }}
+        autoFocus={editingField === field}
+      />
+    ));
+  };
 
   return (
     <div className="App" style={{ width: '200%', height: '200%', overflow: 'auto' }}>
@@ -339,16 +413,16 @@ function App() {
       >
         {nodes.map((node, index) => {
           const parentNode = getNodeById(nodes, node.parentId)
-          const nodeWidth = calculateNodeWidth(node.text);
-          const lines = wrapText(node.text, nodeWidth);
+          const nodeWidth = calculateNodeWidth([node.text, node.text2, node.text3]);
+          const sectionHeight = nodeHeight / 3;
           return (
             <React.Fragment key={node.id}>
               {parentNode && (
                 <path
                   d={`M ${node.x},${node.y + nodeHeight / 2}
                   C ${node.x - curveControlOffset},${node.y + nodeHeight / 2} 
-                  ${parentNode.x + calculateNodeWidth(parentNode.text) + curveControlOffset},${parentNode.y + nodeHeight / 2} 
-                  ${parentNode.x + calculateNodeWidth(parentNode.text) + arrowOffset},${parentNode.y + nodeHeight / 2}`}
+                  ${parentNode.x + calculateNodeWidth([parentNode.text, parentNode.text2, parentNode.text3]) + curveControlOffset},${parentNode.y + nodeHeight / 2} 
+                  ${parentNode.x + calculateNodeWidth([parentNode.text, parentNode.text2, parentNode.text3]) + arrowOffset},${parentNode.y + nodeHeight / 2}`}
                   stroke="black"
                   strokeWidth="2"
                   fill="none"
@@ -362,12 +436,53 @@ function App() {
                 width={nodeWidth}
                 height={nodeHeight}
                 className={`node ${node.selected ? 'node-selected' : 'node-unselected'}`}
-                rx="10"
+                rx="2"
                 onClick={() => selectNode(node.id)}
                 onDoubleClick={() => handleDoubleClick(node.id)}
                 onMouseDown={(e) => handleMouseDown(e, node.id)}
               />
-              {lines.map((line, lineIndex) => (
+              <text
+                x={node.x + 5}
+                y={node.y + sectionHeight / 2 + 5} // 上段の中央に配置
+                className="node-text"
+              >
+                {node.text}
+              </text>
+              {/* 中段のテキスト */}
+              <text
+                x={node.x + 5}
+                y={node.y + sectionHeight + sectionHeight / 2 + 5} // 中段の中央に配置
+                className="node-text"
+              >
+                {node.text2}
+              </text>
+              {/* 下段のテキスト */}
+              <text
+                x={node.x + 5}
+                y={node.y + 2 * sectionHeight + sectionHeight / 2 + 5} // 下段の中央に配置
+                className="node-text"
+              >
+                {node.text3}
+              </text>
+              {/* 上段と中段の間の線 */}
+              <line
+                x1={node.x}
+                y1={node.y + sectionHeight}
+                x2={node.x + nodeWidth}
+                y2={node.y + sectionHeight}
+                stroke="black"
+                strokeWidth="1"
+              />
+              {/* 中段と下段の間の線 */}
+              <line
+                x1={node.x}
+                y1={node.y + 2 * sectionHeight}
+                x2={node.x + nodeWidth}
+                y2={node.y + 2 * sectionHeight}
+                stroke="black"
+                strokeWidth="1"
+              />
+              {/* {lines.map((line, lineIndex) => (
                 <text
                   key={`${node.id}-${lineIndex}`}
                   x={node.x + 5}
@@ -376,7 +491,7 @@ function App() {
                 >
                   {line}
                 </text>
-              ))}
+              ))} */}
             </React.Fragment>
           );
         })}
@@ -386,24 +501,8 @@ function App() {
           </marker>
         </defs>
       </svg>
-      {editingId !== null && (
-        <input
-          ref={inputRef}
-          type="text"
-          className="editable"
-          value={nodes.find(node => node.id === editingId)?.text}
-          onChange={updateText}
-          style={{
-            // position: 'absolute',
-            left: `${nodes.find(node => node.id === editingId)?.x}px`,
-            //top: `${nodes.find(n => n.id === editingId)?.y - 30}px`,
-            top: `${nodes.find(node => node.id === editingId)?.y}px`,
-            width: `${calculateNodeWidth(nodes.find(node => node.id === editingId)?.text)}px`,
-            // zIndex: 100,
-          }}
-        />
-      )}
-    </div>
+      {renderInputFields()}
+    </div >
   );
 }
 

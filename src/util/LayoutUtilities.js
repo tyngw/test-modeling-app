@@ -21,7 +21,7 @@ export const useWindowSize = () => {
 
 // キャンバスサイズを計算する関数
 export const calculateCanvasSize = (nodes, nodeWidthCalculator, nodeHeight, parentXOffset) => {
-  const maxNodeX = Math.max(...nodes.map(node => node.x + nodeWidthCalculator(node.text))) + parentXOffset;
+  const maxNodeX = Math.max(...nodes.map(node => node.x + nodeWidthCalculator([node.text]))) + parentXOffset;
   const maxNodeY = Math.max(...nodes.map(node => node.y + nodeHeight)) + nodeHeight;
 
   return {
