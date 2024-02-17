@@ -3,6 +3,7 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { calculateNodeWidth } from './util/TextUtilities';
 import { useWindowSize, calculateCanvasSize } from './util/LayoutUtilities';
 import Node from './components/Node';
+import InputFields from './components/InputFields';
 import './App.css';
 
 function App() {
@@ -454,32 +455,7 @@ function App() {
     })));
   };
 
-  // 入力フィールドを描画する部分
-  const renderInputFields = () => {
-    if (editingId === null) return null;
-
-    const node = nodes.find(n => n.id === editingId);
-    if (!node) return null;
-
-    const maxWidth = calculateNodeWidth([node.text, node.text2, node.text3,]);
-
-    return ['text', 'text2', 'text3'].map((field, index) => (
-      <input
-        key={field}
-        ref={inputRefs[field]}
-        value={node[field]}
-        onChange={(e) => updateText(e, field)}
-        className={`editable editable-${field}`}
-        style={{
-          position: 'absolute',
-          left: `${node.x}px`,
-          top: `${node.y + index * 20}px`,
-          width: `${maxWidth}px`, // 全フィールドで共通の最大幅を使用
-        }}
-        autoFocus={editingField === field}
-      />
-    ));
-  };
+  const editingNode = nodes.find(n => n.id === editingId);
 
   return (
     <div className="App" style={{ width: '200%', height: '200%', overflow: 'auto' }}>
@@ -510,7 +486,7 @@ function App() {
           </marker>
         </defs>
       </svg>
-      {renderInputFields()}
+      <InputFields node={editingNode} updateText={updateText} editingField={editingField} />
     </div >
   );
 }
