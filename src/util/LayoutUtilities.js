@@ -1,3 +1,4 @@
+// util/LayoutUtilities.js
 import { useState, useEffect } from 'react';
 
 // ウィンドウサイズを管理するカスタムフック
