@@ -67,6 +67,7 @@ function App() {
 
     // depthが小さい順にノードをソートし、同じdepth内ではparentId, その後orderでソート
     sortedNodes = [...allNodes].sort((a, b) => b.depth - a.depth || a.parentId - b.parentId || a.order - b.order);
+    
     // 親ノードのY座標を子ノードに基づいて更新
     sortedNodes.forEach(parentNode => {
       const children = sortedNodes.filter(n => n.parentId === parentNode.id);
