@@ -50,6 +50,7 @@ function App() {
     let prevDepth = -1;
     let children;
     let parentNode;
+    let lastChildY;
 
     sortedNodes.forEach((node, index) => {
       node.x = ((node.depth - 1) * 260);
@@ -67,25 +68,29 @@ function App() {
       console.log(`node.text: ${node.text} node.x: ${node.x} node.y: ${node.y}`);
     });
 
-    // // depthが小さい順にノードをソートし、同じdepth内ではparentId, その後orderでソート
-    // sortedNodes = [...allNodes].sort((a, b) => b.depth - a.depth || a.parentId - b.parentId || a.order - b.order);
-    // // 親ノードのY座標を子ノードに基づいて更新
-    // sortedNodes.forEach(parentNode => {
-    //   const children = sortedNodes.filter(n => n.parentId === parentNode.id);
-    //   if (children.length > 0) {
-    //     const minY = Math.min(...children.map(n => n.y));
-    //     const maxY = Math.max(...children.map(n => n.y + nodeHeight));
-    //     parentNode.y = minY + (maxY - minY) / 2 - nodeHeight / 2;
+    // depthが小さい順にノードをソートし、同じdepth内ではparentId, その後orderでソート
+    sortedNodes = [...allNodes].sort((a, b) => b.depth - a.depth || a.parentId - b.parentId || a.order - b.order);
+    // 親ノードのY座標を子ノードに基づいて更新
+    sortedNodes.forEach(parentNode => {
+      const children = sortedNodes.filter(n => n.parentId === parentNode.id);
+      if (children.length > 0) {
+        const minY = Math.min(...children.map(n => n.y));
+        const maxY = Math.max(...children.map(n => n.y + nodeHeight));
+        parentNode.y = minY + (maxY - minY) / 2 - nodeHeight / 2;
 
-    //     // 重複回避のロジック
-    //     // 親ノードが他のノードと重複しないように調整
-    //     sortedNodes.forEach(node => {
-    //       if (node.depth === parentNode.depth && node.id !== parentNode.id && node.y >= parentNode.y) {
-    //         node.y += nodeHeight + 100; // 重複を避けるために下に移動
-    //       }
-    //     });
-    //   }
-    // });
+        // 重複回避のロジック
+        // 親ノードが他のノードと重複しないように調整
+        sortedNodes.forEach(node => {
+          if (node.depth === parentNode.depth && node.id !== parentNode.id && node.y >= parentNode.y) {
+            node.y += nodeHeight + 100; // 重複を避けるために下に移動
+          }
+        });
+        lastChildY = maxY;
+      } else {
+        lastChildY += lastChildY ? nodeHeight + 10 : lastChildY;
+        parentNode.y = lastChildY ? lastChildY : parentNode.y;
+      }
+    });
 
     return sortedNodes; // 更新されたノードの配列を返却
   }, [nodeHeight]);
