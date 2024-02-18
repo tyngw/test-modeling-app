@@ -1,4 +1,4 @@
-// components/App.js
+// App.js
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { calculateNodeWidth } from './util/TextUtilities';
 import { useWindowSize, calculateCanvasSize } from './util/LayoutUtilities';
@@ -200,11 +200,11 @@ function App() {
 
       // ノード選択処理
       if (nodes.some(node => node.selected)) {
-        const switchSelectedNode = (newSelectedNodeId) => {
-          if (newSelectedNodeId !== null && newSelectedNodeId !== undefined) {
+        const switchSelectedNode = (selectedNodeId) => {
+          if (selectedNodeId !== null && selectedNodeId !== undefined) {
             setNodes(nodes.map(node => ({
               ...node,
-              selected: node.id === newSelectedNodeId,
+              selected: node.id === selectedNodeId,
             })));
           }
         };
