@@ -7,6 +7,7 @@ import InputFields from './components/InputFields';
 import './App.css';
 
 function App() {
+  // 初期ノードの追加処理(addNode関数を使って追加処理を行う)
   const [nodes, setNodes] = useState([
     { id: 1, text: 'Node 1', text2: '', text3: '', selected: false, x: 50, y: 50, parentId: null, order: 0, depth: 1, children: 0, },
   ]);
@@ -40,6 +41,11 @@ function App() {
 
   function getNodeById(nodes, id) {
     return nodes.find(node => node.id === id);
+  }
+
+  // 選択中のノードを取得する関数
+  function getSelectedNode(nodes) {
+    return nodes.find(node => node.selected);
   }
 
   function adjustNodeAndChildrenPosition(node, currentY, allNodes, depthOffset = 260, ySpacing = 10) {
@@ -90,6 +96,18 @@ function App() {
     return sortedNodes; // 更新されたノードの配列を返却
   }, [nodeHeight]);
 
+  // Undo/Redoのためのノードのスナップショットを保存
+  const [snapshots, setSnapshots] = useState([]);
+  const [snapshotIndex, setSnapshotIndex] = useState(-1);
+
+  // ノードの追加・削除・移動などの変更があった場合にスナップショットを保存
+  useEffect(() => {
+    if (snapshotIndex === snapshots.length - 1) {
+      setSnapshots([...snapshots, nodes]);
+      setSnapshotIndex(snapshotIndex + 1);
+    }
+  }, [nodes]);
+
   // ドラッグ処理
   const handleMouseDown = (e, id) => {
     const node = getNodeById(nodes, id);
@@ -106,40 +124,81 @@ function App() {
     }
   }, [nodes]);
 
+  // 新しいノードの追加処理を行う関数
+  // 引数として追加元ノードの要素を受け取り、その追加元ノードの子ノードとして新しいノードを追加する
+  const addNode = (parentNode) => {
+    let newNodes;
+    const newId = Math.max(...nodes.map(node => node.id), 0) + 1;
+    const newOrder = parentNode.children;
+    const newRect = {
+      id: newId,
+      text: `Node ${newId}`,
+      text2: `order: ${newOrder}`,
+      text3: `depth: ${parentNode.depth + 1}`,
+      selected: false,
+      x: 0,
+      y: 0,
+      parentId: parentNode.id,
+      order: newOrder,
+      depth: parentNode.depth + 1,
+      children: 0,
+    };
+    newNodes = [...nodes, newRect];
+
+    // 追加元ノードのchildrenプロパティをインクリメント
+    newNodes = newNodes.map(node => {
+      if (node.id === parentNode.id) {
+        return { ...node, children: node.children + 1 };
+      }
+      return node;
+    });
+
+    // 新しいノードと既存のノードとの間で重なりをチェックし、調整
+    let adjustedNodes = adjustNodePositions(newNodes)
+
+    // 状態を更新
+    setNodes(adjustedNodes);
+  };
+
+  // 与えられたノードの削除処理を行う関数(useEffectの中に書かれた処理を関数化)
+  const deleteNode = (deletableNode) => {
+    const deletableNodeIds = deletableNode.id;
+
+    let updatedNodes = nodes.map(node => {
+      if (deletableNodeIds.includes(node.id) && node.parentId) {
+        const parentNodeIndex = nodes.findIndex(n => n.id === node.parentId);
+        if (parentNodeIndex !== -1) {
+          nodes[parentNodeIndex].children = Math.max(0, nodes[parentNodeIndex].children - 1);
+        }
+      }
+      return node;
+    });
+
+    // 削除対象のノードIdと一致するparentIdを持つノードも削除する
+    // 再起的に自身のdeleteNode関数を呼び出して処理する
+    const childNodes = updatedNodes.filter(node => node.parentId === deletableNode.id);
+    if (childNodes.length > 0) {
+      childNodes.forEach(childNode => {
+        deleteNode(childNode);
+      });
+    }
+
+    updatedNodes = updatedNodes.filter(node => !deletableNodeIds.includes(node.id));
+    const adjustedNodes = adjustNodePositions(updatedNodes);
+    setNodes(adjustedNodes);
+  };
+
   useEffect(() => {
     const handleKeyDown = (event) => {
       // キー操作による新しいノードの追加処理
+      // 関数化して、useEffectの外に出す
       if (event.key === 'Tab' && nodes.some(node => node.selected) && editingId === null) {
+        // preventDefault()を呼び出して、ブラウザのデフォルトの挙動をキャンセル
         event.preventDefault();
-        const selectedNode = nodes.find(node => node.selected);
-        const newId = Math.max(...nodes.map(node => node.id), 0) + 1;
+        const selectedNode = getSelectedNode(nodes);
 
-        // 選択したノードのchildrenプロパティを更新
-        selectedNode.children = (selectedNode.children || 0) + 1;
-
-        const newRect = {
-          id: newId,
-          // text: '',
-          text: `Node ${newId}`,
-          text2: ``,
-          text3: ``,
-          selected: false,
-          x: selectedNode.depth * 260,
-          // y: newChildY,
-          y: 0,
-          parentId: selectedNode.id,
-          order: selectedNode.children - 1,
-          depth: selectedNode.depth + 1,
-          children: 0,
-        };
-
-        const newNodes = [...nodes, newRect];
-
-        // 新しいノードと既存のノードとの間で重なりをチェックし、調整
-        let adjustedNodes = adjustNodePositions(newNodes)
-
-        // 状態を更新
-        setNodes(adjustedNodes);
+        // 新しいノードを追加(addNode関数を使って追加処理を行う)
+        addNode(selectedNode);
       }
 
       if (editingId !== null && event.key === 'Tab') {
@@ -169,6 +228,8 @@ function App() {
         if (event.key === 'Delete' || event.key === 'Backspace') {
           const selectedNodeIds = nodes.filter(node => node.selected).map(node => node.id);
           if (selectedNodeIds.length > 0) {
+            // 選択されたノードを削除する処理をuseEffectの外に関数化
+
             // 削除対象のノードIDを取得
             const deletableNodeIds = selectedNodeIds.filter(id => {
               // const node = nodes.find(node => node.id === id);
