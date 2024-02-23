@@ -160,32 +160,33 @@ function App() {
     setNodes(adjustedNodes);
   };
 
-  // 与えられたノードの削除処理を行う関数(useEffectの中に書かれた処理を関数化)
-  const deleteNode = (deletableNode) => {
-    const deletableNodeIds = deletableNode.id;
+  // 与えられたノードの削除処理を行う関数
+  // 引数としてノードのリストと削除対象のノードを受け取る(ノードのリストの名称はグローバルで定義しているnodes以外の名称にする)
+  const deleteNode = (nodeList, nodeToDelete) => {
+    
+    // 指定されたノードを除外して新しいノードのリストを作成
+    let updatedNodes = nodeList.filter(node => node.id !== nodeToDelete.id);
 
-    let updatedNodes = nodes.map(node => {
-      if (deletableNodeIds.includes(node.id) && node.parentId) {
-        const parentNodeIndex = nodes.findIndex(n => n.id === node.parentId);
-        if (parentNodeIndex !== -1) {
-          nodes[parentNodeIndex].children = Math.max(0, nodes[parentNodeIndex].children - 1);
-        }
+    // 削除対象のノードIdと一致するparentIdを持つノードも削除する
+    // 再起的に自身のdeleteNode関数を呼び出して処理する
+    const childNodes = updatedNodes.filter(node => node.parentId === nodeToDelete.id);
+    if (childNodes.length > 0) {
+      childNodes.forEach(childNode => {
+        console.log(`削除対象の子ノードのtext: ${childNode.text}`);
+        updatedNodes = deleteNode(updatedNodes, childNode);
+      });
+    }
+
+    // 指定されたノードのIdと一致するparentIdを持つノードのchildrenをデクリメント
+    updatedNodes = updatedNodes.map(node => {
+      if (nodeToDelete.parentId === node.id) {
+        return { ...node, children: node.children - 1 };
       }
       return node;
     });
 
-    // 削除対象のノードIdと一致するparentIdを持つノードも削除する
-    // 再起的に自身のdeleteNode関数を呼び出して処理する
-    const childNodes = updatedNodes.filter(node => node.parentId === deletableNode.id);
-    if (childNodes.length > 0) {
-      childNodes.forEach(childNode => {
-        deleteNode(childNode);
-      });
-    }
-
-    updatedNodes = updatedNodes.filter(node => !deletableNodeIds.includes(node.id));
-    const adjustedNodes = adjustNodePositions(updatedNodes);
-    setNodes(adjustedNodes);
+    updatedNodes = adjustNodePositions(updatedNodes);
+    return updatedNodes;
   };
 
   useEffect(() => {
@@ -227,35 +228,12 @@ function App() {
       } else if (editingId === null && nodes.some(node => node.selected)) {
         if (event.key === 'Delete' || event.key === 'Backspace') {
           const selectedNodeIds = nodes.filter(node => node.selected).map(node => node.id);
-          if (selectedNodeIds.length > 0) {
-            // 選択されたノードを削除する処理をuseEffectの外に関数化
-
-            // 削除対象のノードIDを取得
-            const deletableNodeIds = selectedNodeIds.filter(id => {
-              // const node = nodes.find(node => node.id === id);
-              const node = getNodeById(nodes, id);
-              return node.parentId !== null; // parentIdがnullでないノードだけを対象とする
-            });
-
-            // 削除されるノードの親ノードのchildrenをデクリメント
-            let updatedNodes = nodes.map(node => {
-              if (deletableNodeIds.includes(node.id) && node.parentId) {
-                const parentNodeIndex = nodes.findIndex(n => n.id === node.parentId);
-                if (parentNodeIndex !== -1) {
-                  nodes[parentNodeIndex].children = Math.max(0, nodes[parentNodeIndex].children - 1);
-                }
-              }
-              return node;
-            });
-
-            // 選択されたノードを除外して新しいノードのリストを作成
-            updatedNodes = updatedNodes.filter(node => !deletableNodeIds.includes(node.id));
-
-            // 削除されたノードの影響を受けるノードのY座標を調整
-            const adjustedNodes = adjustNodePositions(updatedNodes);
-
-            setNodes(adjustedNodes);
-          }
+          // 選択されたノードを削除する処理
+          let updatedNodes = nodes;
+          selectedNodeIds.forEach(id => {
+            updatedNodes = deleteNode(nodes, getNodeById(updatedNodes, id));
+          });
+          setNodes(updatedNodes);
         }
       }
 
