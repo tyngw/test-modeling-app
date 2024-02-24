@@ -12,7 +12,7 @@ import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import './App.css';
 
 function App() {
-  // 初期ノードの追加処理(addNode関数を使って追加処理を行う)
+  // 初期ノードの追加処理
   const [nodes, setNodes] = useState([
     { id: 1, text: 'Node 1', text2: '', text3: '', selected: false, x: 50, y: 50, parentId: null, order: 0, depth: 1, children: 0, },
   ]);
@@ -23,8 +23,7 @@ function App() {
   // ウィンドウサイズとviewBoxのステート
   const windowSize = useWindowSize();
   const [viewBox, setViewBox] = useState(`0 0 ${windowSize.width} ${windowSize.height}`);
-  const lastDistanceRef = useRef(null); // 最後の距離を格納するためのref
-  // viewBoxのズーム比率
+  // ズーム倍率のステート
   const [zoomRatio, setZoomRatio] = useState(1);
 
   const nodeHeight = 60;
@@ -59,11 +58,6 @@ function App() {
   // 選択中のノードの一つ目を取得する関数
   function getSelectedNode(nodes) {
     return nodes.find(node => node.selected);
-  }
-
-  // 選択中のノードの全てを取得する関数
-  function getSelectedNodes(nodes) {
-    return nodes.filter(node => node.selected);
   }
 
   function adjustNodeAndChildrenPosition(node, currentY, allNodes, depthOffset = 260, ySpacing = 10) {
@@ -149,22 +143,16 @@ function App() {
   }, [nodes]);
 
   const ZoomInViewBox = () => {
-    console.log(`zoomRatio: ${zoomRatio}`);
     setZoomRatio(prevZoomRatio => Math.min(prevZoomRatio + 0.1, 2));
-    console.log(`zoomRatio: ${zoomRatio}`);
-    setViewBox(`0 0 ${canvasSize.width * zoomRatio} ${canvasSize.height * zoomRatio}`);
   }
 
   const ZoomOutViewBox = () => {
     setZoomRatio(prevZoomRatio => Math.max(prevZoomRatio - 0.1, 0.1));
-    console.log(`zoomRatio: ${zoomRatio}`);
-    setViewBox(`0 0 ${canvasSize.width * zoomRatio} ${canvasSize.height * zoomRatio}`);
   }
 
   // キャンバスサイズの変更に伴い、viewBoxを更新する
   useEffect(() => {
     setViewBox(`0 0 ${canvasSize.width * (1 /zoomRatio)} ${canvasSize.height * (1 / zoomRatio)}`);
-    console.log(`setViewBox: ${viewBox}`);
   }, [canvasSize]);
 
   // 新しいノードの追加処理を行う関数
@@ -577,8 +565,8 @@ function App() {
           </defs>
         </svg>
       </div>
-      {/* // アイコンバーを表示。背景灰色 */}
-      <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '40px', backgroundColor: 'lightgray' }}>
+      {/* // アイコンバーを表示。背景灰色 幅はcanvasSize.widthか100%の大きい方に合わせて動的に変更する */}
+      <div style={{ position: 'absolute', top: 0, left: 0, width: canvasSize.width > windowSize.width ? canvasSize.width : '100%', height: '40px', backgroundColor: 'lightgray' }}>
         <div style={{ display: 'flex', justifyContent: 'left', alignItems: 'center', height: '100%' }}>
           <Button variant="contained" onClick={undo}>
             <UndoIcon />
