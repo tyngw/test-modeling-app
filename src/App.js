@@ -4,6 +4,7 @@ import { calculateNodeWidth } from './utils/TextUtilities';
 import { useWindowSize, calculateCanvasSize } from './utils/LayoutUtilities';
 import Node from './components/Node';
 import MenuBar from './components/Menubar';
+import InputFields from './components/InputFields';
 import './App.css';
 
 function App() {
@@ -147,7 +148,7 @@ function App() {
 
   // キャンバスサイズの変更に伴い、viewBoxを更新する
   useEffect(() => {
-    setViewBox(`0 0 ${canvasSize.width * (1 /zoomRatio)} ${canvasSize.height * (1 / zoomRatio)}`);
+    setViewBox(`0 0 ${canvasSize.width * (1 / zoomRatio)} ${canvasSize.height * (1 / zoomRatio)}`);
   }, [canvasSize]);
 
   // 新しいノードの追加処理を行う関数
@@ -560,13 +561,8 @@ function App() {
           </defs>
         </svg>
       </div>
-      <MenuBar
-        canvasSize={canvasSize}
-        undo={undo}
-        redo={redo}
-        ZoomInViewBox={ZoomInViewBox}
-        ZoomOutViewBox={ZoomOutViewBox}
-      />
+      <MenuBar canvasSize={canvasSize} undo={undo} redo={redo} ZoomInViewBox={ZoomInViewBox} ZoomOutViewBox={ZoomOutViewBox}/>
+      <InputFields node={editingNode} updateText={updateText} editingField={editingField} />
     </div>
   );
 }
