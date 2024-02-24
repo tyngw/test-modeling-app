@@ -3,12 +3,7 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { calculateNodeWidth } from './utils/TextUtilities';
 import { useWindowSize, calculateCanvasSize } from './utils/LayoutUtilities';
 import Node from './components/Node';
-import InputFields from './components/InputFields';
-import Button from '@mui/material/Button';
-import UndoIcon from '@mui/icons-material/Undo';
-import RedoIcon from '@mui/icons-material/Redo';
-import ZoomInIcon from '@mui/icons-material/ZoomIn';
-import ZoomOutIcon from '@mui/icons-material/ZoomOut';
+import MenuBar from './components/Menubar';
 import './App.css';
 
 function App() {
@@ -565,30 +560,14 @@ function App() {
           </defs>
         </svg>
       </div>
-      {/* // アイコンバーを表示。背景灰色 幅はcanvasSize.widthか100%の大きい方に合わせて動的に変更する */}
-      <div style={{ position: 'absolute', top: 0, left: 0, width: canvasSize.width > windowSize.width ? canvasSize.width : '100%', height: '40px', backgroundColor: 'lightgray' }}>
-        <div style={{ display: 'flex', justifyContent: 'left', alignItems: 'center', height: '100%' }}>
-          <Button variant="contained" onClick={undo}>
-            <UndoIcon />
-            Undo
-          </Button>
-          <div style={{ width: '10px' }}></div>
-          <Button variant="contained" onClick={redo}>
-            <RedoIcon />
-            Redo
-          </Button>
-          <div style={{ width: '20px' }}></div>
-          <Button variant="contained" onClick={ZoomInViewBox}>
-            <ZoomInIcon />
-          </Button>
-          <div style={{ width: '10px' }}></div>
-          <Button variant="contained" onClick={ZoomOutViewBox}>
-            <ZoomOutIcon />
-          </Button>
-        </div>
-      </div>
-      <InputFields node={editingNode} updateText={updateText} editingField={editingField} />
-    </div >
+      <MenuBar
+        canvasSize={canvasSize}
+        undo={undo}
+        redo={redo}
+        ZoomInViewBox={ZoomInViewBox}
+        ZoomOutViewBox={ZoomOutViewBox}
+      />
+    </div>
   );
 }
 
