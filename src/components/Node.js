@@ -1,6 +1,6 @@
 // components/Node.js
 import React from 'react';
-import { calculateNodeWidth } from '../util/TextUtilities';
+import { calculateNodeWidth } from '../utils/TextUtilities';
 
 const Node = ({
     node,

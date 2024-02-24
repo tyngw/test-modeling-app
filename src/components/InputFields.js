@@ -1,6 +1,6 @@
 // components/InputFields.js
 import React, { useEffect, useRef } from 'react';
-import { calculateNodeWidth } from '../util/TextUtilities';
+import { calculateNodeWidth } from '../utils/TextUtilities';
 
 // 入力フィールドを描画する部分
 const InputFields = ({ node, updateText, editingField }) => {

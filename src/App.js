@@ -1,7 +1,7 @@
 // App.js
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { calculateNodeWidth } from './util/TextUtilities';
-import { useWindowSize, calculateCanvasSize } from './util/LayoutUtilities';
+import { calculateNodeWidth } from './utils/TextUtilities';
+import { useWindowSize, calculateCanvasSize } from './utils/LayoutUtilities';
 import Node from './components/Node';
 import InputFields from './components/InputFields';
 import Button from '@mui/material/Button';
