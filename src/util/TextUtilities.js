@@ -1,3 +1,5 @@
+// util/TextUtilities.js
+
 export const calculateNodeWidth = (texts) => {
     const minWidth = 80;
     const maxWidth = 200;
@@ -12,7 +14,8 @@ export const calculateNodeWidth = (texts) => {
 
 export const calculateTextWidth = (text) => {
     // マルチバイト文字を見つけるための正規表現
-    const regexMultibyte = /[^\x00-\xff]/g;
+    const regexMultibyte = /[^\u0000-\u00ff]/g;
+
     const multibyteChars = text.match(regexMultibyte) || [];
     const multibyteLength = multibyteChars.length * 20; // マルチバイト文字は1文字20で計算
 
