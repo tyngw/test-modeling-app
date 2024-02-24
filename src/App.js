@@ -150,50 +150,20 @@ function App() {
 
   const ZoomInViewBox = () => {
     console.log(`zoomRatio: ${zoomRatio}`);
-    setZoomRatio(prevZoomRatio => Math.min(prevZoomRatio - 0.1, 2));
+    setZoomRatio(prevZoomRatio => Math.min(prevZoomRatio + 0.1, 2));
     console.log(`zoomRatio: ${zoomRatio}`);
     setViewBox(`0 0 ${canvasSize.width * zoomRatio} ${canvasSize.height * zoomRatio}`);
-}
+  }
 
-const ZoomOutViewBox = () => {
-    setZoomRatio(prevZoomRatio => Math.max(prevZoomRatio + 0.1, 0.1));
+  const ZoomOutViewBox = () => {
+    setZoomRatio(prevZoomRatio => Math.max(prevZoomRatio - 0.1, 0.1));
     console.log(`zoomRatio: ${zoomRatio}`);
     setViewBox(`0 0 ${canvasSize.width * zoomRatio} ${canvasSize.height * zoomRatio}`);
-}
-
-  // wheelイベントを処理する関数
-  const handleWheel = (event) => {
-    event.preventDefault();
-
-    // const minSize = Math.min(windowSize.width, windowSize.height) * 0.5;
-    const minSize = Math.min(windowSize.width, windowSize.height);
-    const zoomSensitivity = 0.5;
-    const deltaX = event.deltaX;
-    const deltaY = event.deltaY;
-    const newDistance = lastDistanceRef.current + deltaY * zoomSensitivity;
-    lastDistanceRef.current = newDistance;
-
-    const currentViewBox = viewBox.split(' ').map(parseFloat);
-    const currentWidth = currentViewBox[2];
-    const currentHeight = currentViewBox[3];
-
-    let zoomRatio = 1 + deltaY * zoomSensitivity / minSize;
-    // zoomRatio = Math.max(zoomRatio, 0.1); // 最小ズームサイズを10%に制限
-
-    const newWidth = Math.max(currentWidth * zoomRatio, minSize);
-    const newHeight = Math.max(currentHeight * zoomRatio, minSize);
-
-    const x = Math.max(currentViewBox[0] + (currentWidth - newWidth) / 2, 0);
-    const y = Math.max(currentViewBox[1] + (currentHeight - newHeight) / 2, 0);
-
-    console.log(`x: ${x}, y: ${y}, newWidth: ${newWidth}, newHeight: ${newHeight}`);
-    const newViewBox = `${x} ${y} ${newWidth} ${newHeight}`;
-    setViewBox(newViewBox);
-  };
+  }
 
   // キャンバスサイズの変更に伴い、viewBoxを更新する
   useEffect(() => {
-    setViewBox(`0 0 ${canvasSize.width * zoomRatio} ${canvasSize.height * zoomRatio}`);
+    setViewBox(`0 0 ${canvasSize.width * (1 /zoomRatio)} ${canvasSize.height * (1 / zoomRatio)}`);
     console.log(`setViewBox: ${viewBox}`);
   }, [canvasSize]);
 
@@ -542,7 +512,7 @@ const ZoomOutViewBox = () => {
   }, [handleClickOutside]);
 
   useEffect(() => {
-    setCanvasSize(calculateCanvasSize(nodes, calculateNodeWidth, 50, 200, windowSize));
+    setCanvasSize(calculateCanvasSize(nodes, 50, 200, zoomRatio));
   }, [nodes, windowSize]);
 
   const handleDoubleClick = (id) => {
@@ -574,14 +544,16 @@ const ZoomOutViewBox = () => {
   const editingNode = nodes.find(n => n.id === editingId);
 
   return (
-    <div className="App" style={{ width: '200%', height: '200%', overflow: 'auto' }}>
+    //<div className="App" style={{ width: '200%', height: '200%', overflow: 'auto' }}>
+    // zoomRatioを用いてsvgのサイズを動的に変更
+    <div className="App" style={{ width: '100%', height: '100%', overflow: 'auto' }}>
       <div style={{ position: 'absolute', top: 0, left: 0 }}>
         <svg
           viewBox={viewBox}
-          width={canvasSize.width * 2}
-          height={canvasSize.height * 2}
+          width={canvasSize.width}
+          height={canvasSize.height}
           onClick={handleClickOutside}
-          // onWheel={handleWheel}
+        // onWheel={handleWheel}
         >
           {nodes.map((node) => (
             <Node
