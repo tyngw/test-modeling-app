@@ -7,6 +7,8 @@ import InputFields from './components/InputFields';
 import Button from '@mui/material/Button';
 import UndoIcon from '@mui/icons-material/Undo';
 import RedoIcon from '@mui/icons-material/Redo';
+import ZoomInIcon from '@mui/icons-material/ZoomIn';
+import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import './App.css';
 
 function App() {
@@ -20,8 +22,10 @@ function App() {
 
   // ウィンドウサイズとviewBoxのステート
   const windowSize = useWindowSize();
-  const [viewBox, setViewBox] = useState(`0 0 ${windowSize.width * 0.5} ${windowSize.height * 0.5}`);
+  const [viewBox, setViewBox] = useState(`0 0 ${windowSize.width} ${windowSize.height}`);
   const lastDistanceRef = useRef(null); // 最後の距離を格納するためのref
+  // viewBoxのズーム比率
+  const [zoomRatio, setZoomRatio] = useState(1);
 
   const nodeHeight = 60;
   const arrowOffset = 20; // 矢印のオフセット
@@ -36,9 +40,6 @@ function App() {
   // Undo/Redoのためのノードのスナップショットを保存
   const [snapshots, setSnapshots] = useState([]);
   const [snapshotIndex, setSnapshotIndex] = useState(0);
-
-  // svgのズームレベルを管理するステート
-  const [zoomLevel, setZoomLevel] = useState(1);
 
   // テキストフィールドの参照を作成
   const inputRefs = {
@@ -88,7 +89,7 @@ function App() {
 
     // depthが小さい順にノードをソートし、同じdepth内ではparentId, その後orderでソート
     let sortedNodes = [...allNodes].sort((a, b) => b.depth - a.depth || a.parentId - b.parentId || a.order - b.order);
-    let currentY = 10; // Y座標の初期値
+    let currentY = 50; // Y座標の初期値
     let lastChildY;
     const adjust = true;
 
@@ -146,6 +147,55 @@ function App() {
       setNodes(nodes.map(node => ({ ...node, selected: false })));
     }
   }, [nodes]);
+
+  const ZoomInViewBox = () => {
+    console.log(`zoomRatio: ${zoomRatio}`);
+    setZoomRatio(prevZoomRatio => Math.min(prevZoomRatio - 0.1, 2));
+    console.log(`zoomRatio: ${zoomRatio}`);
+    setViewBox(`0 0 ${canvasSize.width * zoomRatio} ${canvasSize.height * zoomRatio}`);
+}
+
+const ZoomOutViewBox = () => {
+    setZoomRatio(prevZoomRatio => Math.max(prevZoomRatio + 0.1, 0.1));
+    console.log(`zoomRatio: ${zoomRatio}`);
+    setViewBox(`0 0 ${canvasSize.width * zoomRatio} ${canvasSize.height * zoomRatio}`);
+}
+
+  // wheelイベントを処理する関数
+  const handleWheel = (event) => {
+    event.preventDefault();
+
+    // const minSize = Math.min(windowSize.width, windowSize.height) * 0.5;
+    const minSize = Math.min(windowSize.width, windowSize.height);
+    const zoomSensitivity = 0.5;
+    const deltaX = event.deltaX;
+    const deltaY = event.deltaY;
+    const newDistance = lastDistanceRef.current + deltaY * zoomSensitivity;
+    lastDistanceRef.current = newDistance;
+
+    const currentViewBox = viewBox.split(' ').map(parseFloat);
+    const currentWidth = currentViewBox[2];
+    const currentHeight = currentViewBox[3];
+
+    let zoomRatio = 1 + deltaY * zoomSensitivity / minSize;
+    // zoomRatio = Math.max(zoomRatio, 0.1); // 最小ズームサイズを10%に制限
+
+    const newWidth = Math.max(currentWidth * zoomRatio, minSize);
+    const newHeight = Math.max(currentHeight * zoomRatio, minSize);
+
+    const x = Math.max(currentViewBox[0] + (currentWidth - newWidth) / 2, 0);
+    const y = Math.max(currentViewBox[1] + (currentHeight - newHeight) / 2, 0);
+
+    console.log(`x: ${x}, y: ${y}, newWidth: ${newWidth}, newHeight: ${newHeight}`);
+    const newViewBox = `${x} ${y} ${newWidth} ${newHeight}`;
+    setViewBox(newViewBox);
+  };
+
+  // キャンバスサイズの変更に伴い、viewBoxを更新する
+  useEffect(() => {
+    setViewBox(`0 0 ${canvasSize.width * zoomRatio} ${canvasSize.height * zoomRatio}`);
+    console.log(`setViewBox: ${viewBox}`);
+  }, [canvasSize]);
 
   // 新しいノードの追加処理を行う関数
   // 引数として追加元ノードの要素を受け取り、その追加元ノードの子ノードとして新しいノードを追加する
@@ -222,6 +272,7 @@ function App() {
     return updatedNodes;
   };
 
+  // 選択中のノードを切り替える関数
   const switchSelectedNode = (selectedNodeId) => {
     if (selectedNodeId !== null && selectedNodeId !== undefined) {
       setNodes(nodes.map(node => ({
@@ -232,24 +283,24 @@ function App() {
   };
 
   const handleArrowUp = () => {
-      const selectedNode = nodes.find(node => node.selected);
-      if (!selectedNode) return;
+    const selectedNode = nodes.find(node => node.selected);
+    if (!selectedNode) return;
 
-      const siblingNodes = nodes.filter(node => node.parentId === selectedNode.parentId);
-      const currentIndex = siblingNodes.findIndex(node => node.id === selectedNode.id);
-      if (currentIndex > 0) {
-        switchSelectedNode(siblingNodes[currentIndex - 1].id);
-      } else if (selectedNode.parentId !== null) {
-        // 親のノードの末尾のノードを選択
-        const parentNode = getNodeById(nodes, selectedNode.parentId);
-        const parentSiblingNodes = nodes.filter(node => node.parentId === parentNode.parentId);
-        const parentIndex = parentSiblingNodes.findIndex(node => node.id === parentNode.id);
-        if (parentIndex > 0) {
-          const lastChildOfPreviousParent = nodes.filter(node => node.parentId === parentSiblingNodes[parentIndex - 1].id).slice(-1)[0];
-          if (lastChildOfPreviousParent) selectNode(lastChildOfPreviousParent.id);
-        }
+    const siblingNodes = nodes.filter(node => node.parentId === selectedNode.parentId);
+    const currentIndex = siblingNodes.findIndex(node => node.id === selectedNode.id);
+    if (currentIndex > 0) {
+      switchSelectedNode(siblingNodes[currentIndex - 1].id);
+    } else if (selectedNode.parentId !== null) {
+      // 親のノードの末尾のノードを選択
+      const parentNode = getNodeById(nodes, selectedNode.parentId);
+      const parentSiblingNodes = nodes.filter(node => node.parentId === parentNode.parentId);
+      const parentIndex = parentSiblingNodes.findIndex(node => node.id === parentNode.id);
+      if (parentIndex > 0) {
+        const lastChildOfPreviousParent = nodes.filter(node => node.parentId === parentSiblingNodes[parentIndex - 1].id).slice(-1)[0];
+        if (lastChildOfPreviousParent) selectNode(lastChildOfPreviousParent.id);
       }
-    };
+    }
+  };
 
   const handleArrowDown = () => {
     const selectedNode = nodes.find(node => node.selected);
@@ -378,7 +429,7 @@ function App() {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [nodes, editingId, editingField, snapshots, snapshotIndex, undo, redo]);
+  }, [nodes, editingId, editingField, snapshots, snapshotIndex, undo, redo, addNode, deleteNode, adjustNodePositions, handleArrowUp, handleArrowDown, findNodeAndSwitch, inputRefs]);
 
   useEffect(() => {
     if (editingId !== null) {
@@ -413,7 +464,7 @@ function App() {
       const dropY = e.clientY;
 
       const droppedOverNode = nodes.find(node => {
-        const width = calculateNodeWidth([node.text]);
+        const width = calculateNodeWidth([node.text, node.text2, node.text3]);
         return dropX >= node.x && dropX <= node.x + width &&
           dropY >= node.y && dropY <= node.y + nodeHeight &&
           node.id !== dragging;
@@ -424,6 +475,9 @@ function App() {
         const draggingNode = getNodeById(nodes, dragging);
         const originalParentId = draggingNode.parentId;
         const newParentId = droppedOverNode.id;
+
+        setSnapshots([...snapshots.slice(0, snapshotIndex + 1), nodes]);
+        setSnapshotIndex(snapshotIndex + 1);
 
         // ノードのorderを更新する前に、移動元の兄弟ノードのorderをデクリメント
         let updatedNodes = nodes.map(node => ({
@@ -463,6 +517,7 @@ function App() {
 
         setNodes(updatedNodes);
       } else {
+        // ドロップされた位置がノードの上にない場合、元の位置に戻す
         setNodes(nodes.map(node => {
           if (node.id === dragging) {
             return { ...node, x: originalPosition.x, y: originalPosition.y };
@@ -489,44 +544,6 @@ function App() {
   useEffect(() => {
     setCanvasSize(calculateCanvasSize(nodes, calculateNodeWidth, 50, 200, windowSize));
   }, [nodes, windowSize]);
-
-
-  // ズームレベルに基づいてviewBoxを更新...
-  useEffect(() => {
-    const handleTouchMove = (event) => {
-      if (event.touches.length === 2) {
-        event.preventDefault();
-
-        const touch1 = { x: event.touches[0].pageX, y: event.touches[0].pageY };
-        const touch2 = { x: event.touches[1].pageX, y: event.touches[1].pageY };
-
-        const distance = Math.sqrt(Math.pow(touch2.x - touch1.x, 2) + Math.pow(touch2.y - touch1.y, 2));
-
-        if (lastDistanceRef.current !== null) {
-          const zoomFactor = 0.01; // ズーム感度を調整
-          const zoomChange = distance - lastDistanceRef.current;
-
-          let [x, y, width, height] = viewBox.split(' ').map(Number);
-
-          // ズームの変更を適用
-          let newWidth = width - (zoomChange * zoomFactor * width);
-          let newHeight = height - (zoomChange * zoomFactor * height);
-
-          // 新しいviewBoxの計算（ズームアウトの範囲拡大）
-          let newX = x + (width - newWidth) / 2;
-          let newY = y + (height - newHeight) / 2;
-
-          // viewBoxを更新してズームイン・アウト
-          setViewBox(`${newX} ${newY} ${newWidth} ${newHeight}`);
-        }
-
-        lastDistanceRef.current = distance;
-      }
-    };
-
-    document.addEventListener('touchmove', handleTouchMove, { passive: false });
-    return () => document.removeEventListener('touchmove', handleTouchMove);
-  }, [viewBox]);
 
   const handleDoubleClick = (id) => {
     // ダブルクリックされたノードで編集モードに入る
@@ -558,27 +575,13 @@ function App() {
 
   return (
     <div className="App" style={{ width: '200%', height: '200%', overflow: 'auto' }}>
-      {/* // アイコンバーを表示。背景灰色 */}
-      <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '40px', backgroundColor: 'lightgray' }}>
-        <div style={{ display: 'flex', justifyContent: 'left', alignItems: 'center', height: '100%' }}>
-          <Button variant="contained" onClick={undo}>
-            <UndoIcon />
-            Undo
-          </Button>
-          <div style={{ width: '20px' }}></div>
-          <Button variant="contained" onClick={redo}>
-            <RedoIcon />
-            Redo
-          </Button>
-        </div>
-      </div>
-      {/* // Undo/Redoボタンを左上に配置 */}
-      <div style={{ position: 'absolute', top: '40px', left: 0 }}>
+      <div style={{ position: 'absolute', top: 0, left: 0 }}>
         <svg
+          viewBox={viewBox}
           width={canvasSize.width * 2}
           height={canvasSize.height * 2}
           onClick={handleClickOutside}
-          style={{ touchAction: 'none' }} // ブラウザのデフォルトのピンチズームを無効化
+          // onWheel={handleWheel}
         >
           {nodes.map((node) => (
             <Node
@@ -601,6 +604,28 @@ function App() {
             </marker>
           </defs>
         </svg>
+      </div>
+      {/* // アイコンバーを表示。背景灰色 */}
+      <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '40px', backgroundColor: 'lightgray' }}>
+        <div style={{ display: 'flex', justifyContent: 'left', alignItems: 'center', height: '100%' }}>
+          <Button variant="contained" onClick={undo}>
+            <UndoIcon />
+            Undo
+          </Button>
+          <div style={{ width: '10px' }}></div>
+          <Button variant="contained" onClick={redo}>
+            <RedoIcon />
+            Redo
+          </Button>
+          <div style={{ width: '20px' }}></div>
+          <Button variant="contained" onClick={ZoomInViewBox}>
+            <ZoomInIcon />
+          </Button>
+          <div style={{ width: '10px' }}></div>
+          <Button variant="contained" onClick={ZoomOutViewBox}>
+            <ZoomOutIcon />
+          </Button>
+        </div>
       </div>
       <InputFields node={editingNode} updateText={updateText} editingField={editingField} />
     </div >
