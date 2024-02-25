@@ -12,8 +12,9 @@ const Node = ({
     node,
     getNodeById,
     selectNode,
-    handleDoubleClick,
     handleMouseDown,
+    // handleDoubleClick,
+    // handleKeyDown,
     nodes,
 }) => {
     const parentNode = getNodeById(nodes, node.parentId);
@@ -42,8 +43,8 @@ const Node = ({
                 className={`node ${node.selected ? 'node-selected' : 'node-unselected'}`}
                 rx="2"
                 onClick={() => selectNode(node.id)}
-                onDoubleClick={() => handleDoubleClick(node.id)}
-                onMouseDown={(e) => handleMouseDown(e, node.id)}
+                // onDoubleClick={() => handleDoubleClick(node.id)}
+                // onMouseDown={(e) => handleMouseDown(e, node.id)}
             />
             <text
                 x={node.x + 5}

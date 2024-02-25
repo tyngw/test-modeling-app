@@ -87,82 +87,6 @@ function App() {
     setViewBox(`0 0 ${canvasSize.width * (1 / zoomRatio)} ${canvasSize.height * (1 / zoomRatio)}`);
   }, [canvasSize]);
 
-  // 新しいノードの追加処理を行う関数
-  // 引数として追加元ノードの要素を受け取り、その追加元ノードの子ノードとして新しいノードを追加する
-  const addNode = (parentNode) => {
-    let newNodes;
-    const newId = Math.max(...nodes.map(node => node.id), 0) + 1;
-    const newOrder = parentNode.children;
-    const newRect = {
-      id: newId,
-      text: `Node ${newId}`,
-      text2: `order: ${newOrder}`,
-      text3: `depth: ${parentNode.depth + 1}`,
-      selected: false,
-      x: 0,
-      y: 0,
-      parentId: parentNode.id,
-      order: newOrder,
-      depth: parentNode.depth + 1,
-      children: 0,
-    };
-    newNodes = [...nodes, newRect];
-
-    // 追加元ノードのchildrenプロパティをインクリメント
-    newNodes = newNodes.map(node => {
-      if (node.id === parentNode.id) {
-        return { ...node, children: node.children + 1 };
-      }
-      return node;
-    });
-
-    // 新しいノードと既存のノードとの間で重なりをチェックし、調整
-    let adjustedNodes = adjustNodePositions(newNodes)
-
-    return adjustedNodes;
-  };
-
-  // deleteNodeRecursive関数を呼び出す関数
-  // 引数としてノードのリストと削除対象のノードを受け取る
-  const deleteNode = (nodeList, nodeToDelete) => {
-    let updatedNodes = deleteNodeRecursive(nodeList, nodeToDelete);
-
-    updatedNodes = adjustNodePositions(updatedNodes);
-    return updatedNodes;
-  }
-
-  // 与えられたノードを再帰的に削除する関数
-  // 引数としてノードのリストと削除対象のノードを受け取る
-  const deleteNodeRecursive = (nodeList, nodeToDelete) => {
-
-    // 与えられたnodeToDeleteのparentIdがnullの場合は処理を終了
-    if (nodeToDelete.parentId === null) {
-      return nodeList;
-    }
-    // 指定されたノードを除外して新しいノードのリストを作成
-    let updatedNodes = nodeList.filter(node => node.id !== nodeToDelete.id);
-
-    // 削除対象のノードIdと一致するparentIdを持つノードも削除する
-    // 再起的に自身のdeleteNode関数を呼び出して処理する
-    const childNodes = updatedNodes.filter(node => node.parentId === nodeToDelete.id);
-    if (childNodes.length > 0) {
-      childNodes.forEach(childNode => {
-        console.log(`削除対象の子ノードのtext: ${childNode.text}`);
-        updatedNodes = deleteNodeRecursive(updatedNodes, childNode);
-      });
-    }
-
-    // 指定されたノードのIdと一致するparentIdを持つノードのchildrenをデクリメント
-    updatedNodes = updatedNodes.map(node => {
-      if (nodeToDelete.parentId === node.id) {
-        return { ...node, children: node.children - 1 };
-      }
-      return node;
-    });
-
-    return updatedNodes;
-  };
-
   const findNodeAndSwitch = (conditionCallback) => {
     const selectedNode = nodes.find(node => node.selected);
     if (!selectedNode) return;
@@ -427,8 +351,7 @@ function App() {
 
   return (
     <div className="App" style={{ width: '100%', height: '100%', overflow: 'auto' }}>
-      <div style={{ position: 'absolute', top: 0, left: 0 }}>
-        // ViewBoxコンポーネントを追加
+      <div style={{ position: 'absolute', top: '40px', left: 0 }}>
         <ViewBox
           nodes={nodes}
           setNodes={setNodes}
