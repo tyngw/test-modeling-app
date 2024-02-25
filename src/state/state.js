@@ -19,7 +19,7 @@ const initialState = {
     height: 600,
 };
 
-const addNode = (parentNode) => {
+const addNode = (allNodes, parentNode) => {
     console.log(`parentNode: ${parentNode}`)
     let newNodes;
     const newId = Math.max(...initialState.nodes.map(node => node.id), 0) + 1;
@@ -37,7 +37,9 @@ const addNode = (parentNode) => {
         depth: parentNode.depth + 1,
         children: 0,
     };
-    newNodes = [...initialState.nodes, newRect];
+    console.log(`newRect: ${newRect.text}`)
+    newNodes = [...allNodes, newRect];
+    
 
     // 追加元ノードのchildrenプロパティをインクリメント
     newNodes = newNodes.map(node => {
@@ -61,7 +63,7 @@ function reducer(state, action) {
         case 'DESELECT_ALL':
             return { ...state, nodes: state.nodes.map(node => ({ ...node, selected: false })) };
         case 'ADD_NODE':
-            let updatedNodes = addNode(action.payload);
+            let updatedNodes = addNode(state.nodes, action.payload);
             return { ...state, nodes: updatedNodes };
         case 'EDIT_NODE':
             // ここにノード編集のロジックを書く
