@@ -32,11 +32,6 @@ function App() {
   // ズーム倍率のステート
   const [zoomRatio, setZoomRatio] = useState(1);
 
-  //const NODE_HEIGHT = 60;
-  //const ARROW_OFFSET = 20; // 矢印のオフセット
-  // const CURVE_CONTROL_OFFSET = 80; // 曲線の制御点のオフセット
-  // const X_OFFSET = 200; // 親ノードから子ノードへのX軸オフセット
-
   const [dragging, setDragging] = useState(null);
   const [startPosition, setStartPosition] = useState({ x: 0, y: 0 });
   const [originalPosition, setOriginalPosition] = useState({ x: 0, y: 0 });
@@ -211,18 +206,16 @@ function App() {
       }
 
       // Ctrl + ZでUndo処理
-      // Macの場合は、Command + ZでUndo処理
       if ((event.ctrlKey || event.metaKey) && event.key === 'z') {
         event.preventDefault();
-        //undo関数を呼び出してUndo処理を行う
-        setNodes(Undo(nodes));
+        handleUndo();
       }
 
       // Shift + Ctrl + ZでRedo処理
-      // Macの場合は、Shift + Command + ZでRedo処理
       if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'z') {
         event.preventDefault();
-        setNodes(Redo(nodes));
+        console.log('Ctrl + Shift + Z');
+        handleRedo();
       }
 
       if (event.key === 'Enter' && editingId === null && nodes.some(node => node.selected)) {
@@ -445,10 +438,6 @@ function App() {
               key={node.id}
               node={node}
               getNodeById={getNodeById}
-              calculateNodeWidth={calculateNodeWidth}
-              nodeHeight={NODE_HEIGHT}
-              curveControlOffset={CURVE_CONTROL_OFFSET}
-              arrowOffset={ARROW_OFFSET}
               selectNode={switchSelectNode}
               handleDoubleClick={handleDoubleClick}
               handleMouseDown={handleMouseDown}

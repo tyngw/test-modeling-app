@@ -1,13 +1,16 @@
 // components/Node.js
 import React from 'react';
 import { calculateNodeWidth } from '../utils/TextUtilities';
+// constantsのインポート
+import { 
+    NODE_HEIGHT,
+    CURVE_CONTROL_OFFSET,
+    ARROW_OFFSET,
+ } from '../constants/Node';
 
 const Node = ({
     node,
     getNodeById,
-    nodeHeight = 60, // デフォルト値を設定するか、App.js から受け取る
-    curveControlOffset = 80, // デフォルト値を設定するか、App.js から受け取る
-    arrowOffset = 20, // デフォルト値を設定するか、App.js から受け取る
     selectNode,
     handleDoubleClick,
     handleMouseDown,
@@ -15,15 +18,15 @@ const Node = ({
 }) => {
     const parentNode = getNodeById(nodes, node.parentId);
     const nodeWidth = calculateNodeWidth([node.text, node.text2, node.text3]);
-    const sectionHeight = nodeHeight / 3;
+    const sectionHeight = NODE_HEIGHT / 3;
     return (
         <React.Fragment key={node.id}>
             {parentNode && (
                 <path
-                    d={`M ${node.x},${node.y + nodeHeight / 2}
-            C ${node.x - curveControlOffset},${node.y + nodeHeight / 2} 
-            ${parentNode.x + calculateNodeWidth([parentNode.text, parentNode.text2, parentNode.text3]) + curveControlOffset},${parentNode.y + nodeHeight / 2} 
-            ${parentNode.x + calculateNodeWidth([parentNode.text, parentNode.text2, parentNode.text3]) + arrowOffset},${parentNode.y + nodeHeight / 2}`}
+                    d={`M ${node.x},${node.y + NODE_HEIGHT / 2}
+            C ${node.x - CURVE_CONTROL_OFFSET},${node.y + NODE_HEIGHT / 2} 
+            ${parentNode.x + calculateNodeWidth([parentNode.text, parentNode.text2, parentNode.text3]) + CURVE_CONTROL_OFFSET},${parentNode.y + NODE_HEIGHT / 2} 
+            ${parentNode.x + calculateNodeWidth([parentNode.text, parentNode.text2, parentNode.text3]) + ARROW_OFFSET},${parentNode.y + NODE_HEIGHT / 2}`}
                     stroke="black"
                     strokeWidth="2"
                     fill="none"
@@ -35,7 +38,7 @@ const Node = ({
                 x={node.x}
                 y={node.y}
                 width={nodeWidth}
-                height={nodeHeight}
+                height={NODE_HEIGHT}
                 className={`node ${node.selected ? 'node-selected' : 'node-unselected'}`}
                 rx="2"
                 onClick={() => selectNode(node.id)}

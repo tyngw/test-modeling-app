@@ -8,7 +8,7 @@ export const adjustNodeAndChildrenPosition = (allNodes, node, currentY) => {
     node.x = 50 + (node.depth - 1) * (X_OFFSET + 60);
     node.y = currentY;
 
-    console.log(`「${node.text}」の位置を設定: x=${node.x}, y=${node.y}`);
+    // console.log(`「${node.text}」の位置を設定: x=${node.x}, y=${node.y}`);
     const childNodes = allNodes.filter(n => n.parentId === node.id);
 
     if (childNodes.length > 0) {
