@@ -2,6 +2,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { calculateNodeWidth } from './utils/TextUtilities';
 import { useWindowSize, calculateCanvasSize } from './utils/LayoutUtilities';
+import ViewBox from './components/ViewBox';
 import Node from './components/Node';
 import MenuBar from './components/Menubar';
 import { Marker } from './components/Marker';
@@ -62,9 +63,10 @@ function App() {
     setDragging(id);
     setStartPosition({ x: e.clientX - node.x, y: e.clientY - node.y });
     setOriginalPosition({ x: node.x, y: node.y }); // 元の座標を保存
-    e.stopPropagation();
+    e.stopPropagation();  // イベントのバブリングを防止。パブリングとは、イベントが発生した要素から親要素に向かってイベントが伝播すること
   };
 
+  // キャンバスでノード以外がクリックされた場合
   const handleClickOutside = useCallback((event) => {
     if (!event.target.closest('.editable') && !event.target.classList.contains('node')) {
       setEditingId(null);
@@ -426,28 +428,21 @@ function App() {
   return (
     <div className="App" style={{ width: '100%', height: '100%', overflow: 'auto' }}>
       <div style={{ position: 'absolute', top: 0, left: 0 }}>
-        <svg
+        // ViewBoxコンポーネントを追加
+        <ViewBox
+          nodes={nodes}
+          setNodes={setNodes}
           viewBox={viewBox}
-          width={canvasSize.width}
-          height={canvasSize.height}
-          onClick={handleClickOutside}
-          // onWheel={handleWheel}
-        >
-          {nodes.map((node) => (
-            <Node
-              key={node.id}
-              node={node}
-              getNodeById={getNodeById}
-              selectNode={switchSelectNode}
-              handleDoubleClick={handleDoubleClick}
-              handleMouseDown={handleMouseDown}
-              nodes={nodes}
-            />
-          ))}
-          <defs>
-            <Marker />
-          </defs>
-        </svg>
+          setViewBox={setViewBox}
+          setCanvasSize={setCanvasSize}
+          setDragging={setDragging}
+          setStartPosition={setStartPosition}
+          setOriginalPosition={setOriginalPosition}
+          handleMouseDown={handleMouseDown}
+          handleDoubleClick={handleDoubleClick}
+          switchSelectNode={switchSelectNode}
+          getNodeById={getNodeById}
+        />
       </div>
       <MenuBar menubarWidth={canvasSize.width} handleUndo={handleUndo} handleRedo={handleRedo} ZoomInViewBox={ZoomInViewBox} ZoomOutViewBox={ZoomOutViewBox}/>
       <InputFields node={editingNode} updateText={updateText} editingField={editingField} />
