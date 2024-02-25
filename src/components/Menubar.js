@@ -5,9 +5,9 @@ import RedoIcon from '@mui/icons-material/Redo';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 
-const MenuBar = ({ canvasSize, undo, redo, ZoomInViewBox, ZoomOutViewBox }) => {
+const MenuBar = ({ menubarWidth, undo, redo, ZoomInViewBox, ZoomOutViewBox }) => {
     return (
-        <div style={{ position: 'absolute', top: 0, left: 0, width: canvasSize.width > window.innerWidth ? canvasSize.width : '100%', height: '40px', backgroundColor: 'lightgray' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, width: menubarWidth > window.innerWidth ? menubarWidth : '100%', height: '40px', backgroundColor: 'lightgray' }}>
             <div style={{ display: 'flex', justifyContent: 'left', alignItems: 'center', height: '100%' }}>
                 <Button variant="contained" onClick={undo}>
                     <UndoIcon />

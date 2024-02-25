@@ -5,6 +5,8 @@ import { useWindowSize, calculateCanvasSize } from './utils/LayoutUtilities';
 import Node from './components/Node';
 import MenuBar from './components/Menubar';
 import InputFields from './components/InputFields';
+import { adjustNodePositions } from './utils/NodeAdjuster';
+import { handleArrowUp, handleArrowDown } from './utils/NodeSelector';
 import './App.css';
 
 function App() {
@@ -55,55 +57,7 @@ function App() {
   function getSelectedNode(nodes) {
     return nodes.find(node => node.selected);
   }
-
-  function adjustNodeAndChildrenPosition(node, currentY, allNodes, depthOffset = 260, ySpacing = 10) {
-    node.x = 50 + (node.depth - 1) * depthOffset;
-    node.y = currentY;
-
-    console.log(`「${node.text}」の位置を設定: x=${node.x}, y=${node.y}`);
-    const childNodes = allNodes.filter(n => n.parentId === node.id);
-
-    if (childNodes.length > 0) {
-      childNodes.forEach(childNode => {
-        currentY = adjustNodeAndChildrenPosition(childNode, currentY, allNodes, depthOffset, ySpacing);
-      });
-    } else {
-      currentY += nodeHeight + ySpacing; // 子ノードがない場合、Y座標を更新
-    }
-    return currentY;
-  }
-
-  // ノードの位置を調整する
-  const adjustNodePositions = useCallback((allNodes) => {
-    const rootNodes = allNodes.filter(n => n.parentId === null);
-
-    // depthが小さい順にノードをソートし、同じdepth内ではparentId, その後orderでソート
-    let sortedNodes = [...allNodes].sort((a, b) => b.depth - a.depth || a.parentId - b.parentId || a.order - b.order);
-    let currentY = 50; // Y座標の初期値
-    let lastChildY;
-    const adjust = true;
-
-    rootNodes.forEach(rootNode => {
-      currentY = adjustNodeAndChildrenPosition(rootNode, currentY, allNodes);
-    });
-
-    // 親ノードのY座標を子ノードに基づいて更新
-    if (adjust) {
-      sortedNodes.forEach(parentNode => {
-        const children = sortedNodes.filter(n => n.parentId === parentNode.id);
-        if (children.length > 0) {
-          const minY = Math.min(...children.map(n => n.y));
-          const maxY = Math.max(...children.map(n => n.y + nodeHeight));
-          parentNode.y = minY + (maxY - minY) / 2 - nodeHeight / 2;
-        } else {
-          lastChildY += lastChildY ? nodeHeight + 10 : lastChildY;
-          parentNode.y = lastChildY ? lastChildY : parentNode.y;
-        }
-      });
-    }
-    return sortedNodes; // 更新されたノードの配列を返却
-  }, [nodeHeight]);
-
+  
   // Undo処理を行う関数
   const undo = () => {
     if (snapshotIndex > 0) {
@@ -181,7 +135,7 @@ function App() {
     });
 
     // 新しいノードと既存のノードとの間で重なりをチェックし、調整
-    let adjustedNodes = adjustNodePositions(newNodes)
+    let adjustedNodes = adjustNodePositions(newNodes, nodeHeight)
 
     return adjustedNodes;
   };
@@ -222,58 +176,8 @@ function App() {
       return node;
     });
 
-    updatedNodes = adjustNodePositions(updatedNodes);
+    updatedNodes = adjustNodePositions(updatedNodes, nodeHeight);
     return updatedNodes;
-  };
-
-  // 選択中のノードを切り替える関数
-  const switchSelectedNode = (selectedNodeId) => {
-    if (selectedNodeId !== null && selectedNodeId !== undefined) {
-      setNodes(nodes.map(node => ({
-        ...node,
-        selected: node.id === selectedNodeId,
-      })));
-    }
-  };
-
-  const handleArrowUp = () => {
-    const selectedNode = nodes.find(node => node.selected);
-    if (!selectedNode) return;
-
-    const siblingNodes = nodes.filter(node => node.parentId === selectedNode.parentId);
-    const currentIndex = siblingNodes.findIndex(node => node.id === selectedNode.id);
-    if (currentIndex > 0) {
-      switchSelectedNode(siblingNodes[currentIndex - 1].id);
-    } else if (selectedNode.parentId !== null) {
-      // 親のノードの末尾のノードを選択
-      const parentNode = getNodeById(nodes, selectedNode.parentId);
-      const parentSiblingNodes = nodes.filter(node => node.parentId === parentNode.parentId);
-      const parentIndex = parentSiblingNodes.findIndex(node => node.id === parentNode.id);
-      if (parentIndex > 0) {
-        const lastChildOfPreviousParent = nodes.filter(node => node.parentId === parentSiblingNodes[parentIndex - 1].id).slice(-1)[0];
-        if (lastChildOfPreviousParent) selectNode(lastChildOfPreviousParent.id);
-      }
-    }
-  };
-
-  const handleArrowDown = () => {
-    const selectedNode = nodes.find(node => node.selected);
-    if (!selectedNode) return;
-
-    const siblingNodes = nodes.filter(node => node.parentId === selectedNode.parentId);
-    const currentIndex = siblingNodes.findIndex(node => node.id === selectedNode.id);
-    if (currentIndex < siblingNodes.length - 1) {
-      switchSelectedNode(siblingNodes[currentIndex + 1].id);
-    } else if (selectedNode.parentId !== null) {
-      // 次の親ノードの先頭のノードを選択
-      const parentNode = getNodeById(nodes, selectedNode.parentId);
-      const parentSiblingNodes = nodes.filter(node => node.parentId === parentNode.parentId);
-      const parentIndex = parentSiblingNodes.findIndex(node => node.id === parentNode.id);
-      if (parentIndex < parentSiblingNodes.length - 1) {
-        const firstChildOfNextParent = nodes.filter(node => node.parentId === parentSiblingNodes[parentIndex + 1].id)[0];
-        if (firstChildOfNextParent) selectNode(firstChildOfNextParent.id);
-      }
-    }
   };
 
   const findNodeAndSwitch = (conditionCallback) => {
@@ -282,7 +186,9 @@ function App() {
 
     const newSelectedNode = nodes.find(conditionCallback);
     if (newSelectedNode) {
-      switchSelectedNode(newSelectedNode.id);
+      // selectNodeを利用するように処理を変更
+      switchSelectNode(newSelectedNode.id);
+      //switchSelectedNode(newSelectedNode.id);
     }
   };
 
@@ -363,17 +269,17 @@ function App() {
         // 矢印キーによるノードの選択処理
         switch (event.key) {
           case 'ArrowLeft':
-            findNodeAndSwitch(node => node.id === nodes.find(n => n.selected).parentId);
+            switchSelectNode(nodes.find(n => n.selected).parentId);
             break;
           case 'ArrowRight':
             findNodeAndSwitch(node => node.parentId === nodes.find(n => n.selected).id);
             break;
           case 'ArrowUp':
-            handleArrowUp();
+            handleArrowUp(nodes, getNodeById, switchSelectNode);
             break;
           case 'ArrowDown':
             // 一つ下のノードを選択
-            handleArrowDown();
+            handleArrowDown(nodes, getNodeById, switchSelectNode);
             break;
           default:
             break;
@@ -482,12 +388,12 @@ function App() {
 
       setDragging(null);
     }
-  }, [nodes, setNodes, dragging, originalPosition.x, originalPosition.y]);
+  }, [nodes, setNodes, dragging, originalPosition.x, originalPosition.y, snapshots, snapshotIndex]);
 
   useEffect(() => {
     document.addEventListener('mouseup', handleMouseUp);
     return () => document.removeEventListener('mouseup', handleMouseUp);
-  }, [nodes, dragging, originalPosition, handleMouseUp]);
+  }, [nodes, dragging, handleMouseUp]);
 
 
   useEffect(() => {
@@ -497,7 +403,7 @@ function App() {
 
   useEffect(() => {
     setCanvasSize(calculateCanvasSize(nodes, 50, 200, zoomRatio));
-  }, [nodes, windowSize]);
+  }, [nodes, windowSize, zoomRatio]);
 
   const handleDoubleClick = (id) => {
     // ダブルクリックされたノードで編集モードに入る
@@ -515,7 +421,7 @@ function App() {
   };
 
   // ノードの選択処理
-  const selectNode = (id) => {
+  const switchSelectNode = (id) => {
     const selectedNode = getNodeById(nodes, id);
     console.log(`Selected Node: id=${selectedNode.id}, x=${selectedNode.x}, y=${selectedNode.y}, parentId=${selectedNode.parentId}, order=${selectedNode.order}, children=${selectedNode.children}`);
 
@@ -528,8 +434,6 @@ function App() {
   const editingNode = nodes.find(n => n.id === editingId);
 
   return (
-    //<div className="App" style={{ width: '200%', height: '200%', overflow: 'auto' }}>
-    // zoomRatioを用いてsvgのサイズを動的に変更
     <div className="App" style={{ width: '100%', height: '100%', overflow: 'auto' }}>
       <div style={{ position: 'absolute', top: 0, left: 0 }}>
         <svg
@@ -548,7 +452,7 @@ function App() {
               nodeHeight={nodeHeight}
               curveControlOffset={curveControlOffset}
               arrowOffset={arrowOffset}
-              selectNode={selectNode}
+              selectNode={switchSelectNode}
               handleDoubleClick={handleDoubleClick}
               handleMouseDown={handleMouseDown}
               nodes={nodes}
@@ -561,7 +465,7 @@ function App() {
           </defs>
         </svg>
       </div>
-      <MenuBar canvasSize={canvasSize} undo={undo} redo={redo} ZoomInViewBox={ZoomInViewBox} ZoomOutViewBox={ZoomOutViewBox}/>
+      <MenuBar menubarWidth={canvasSize.width} undo={undo} redo={redo} ZoomInViewBox={ZoomInViewBox} ZoomOutViewBox={ZoomOutViewBox}/>
       <InputFields node={editingNode} updateText={updateText} editingField={editingField} />
     </div>
   );
