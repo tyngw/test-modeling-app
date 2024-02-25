@@ -7,6 +7,7 @@ import MenuBar from './components/Menubar';
 import InputFields from './components/InputFields';
 import { adjustNodePositions } from './utils/NodeAdjuster';
 import { handleArrowUp, handleArrowDown } from './utils/NodeSelector';
+import { Undo, Redo, saveSnapshot } from './state/undoredo';
 import './App.css';
 
 function App() {
@@ -34,10 +35,6 @@ function App() {
   const [startPosition, setStartPosition] = useState({ x: 0, y: 0 });
   const [originalPosition, setOriginalPosition] = useState({ x: 0, y: 0 });
 
-  // Undo/Redoのためのノードのスナップショットを保存
-  const [snapshots, setSnapshots] = useState([]);
-  const [snapshotIndex, setSnapshotIndex] = useState(0);
-
   // テキストフィールドの参照を作成
   const inputRefs = {
     text: useRef(null),
@@ -57,24 +54,6 @@ function App() {
   function getSelectedNode(nodes) {
     return nodes.find(node => node.selected);
   }
-  
-  // Undo処理を行う関数
-  const undo = () => {
-    if (snapshotIndex > 0) {
-      console.log(`Undo snapshotIndex: ${snapshotIndex}`);
-      setSnapshotIndex(snapshotIndex - 1);
-      setNodes(snapshots[snapshotIndex - 1]);
-    }
-  };
-
-  // Redo処理を行う関数
-  const redo = () => {
-    if (snapshotIndex < snapshots.length - 1) {
-      console.log(`Redo snapshotIndex: ${snapshotIndex}`);
-      setSnapshotIndex(snapshotIndex + 1);
-      setNodes(snapshots[snapshotIndex + 1]);
-    }
-  };
 
   // ドラッグ処理
   const handleMouseDown = (e, id) => {
@@ -143,7 +122,9 @@ function App() {
   // deleteNodeRecursive関数を呼び出す関数
   // 引数としてノードのリストと削除対象のノードを受け取る
   const deleteNode = (nodeList, nodeToDelete) => {
-    const updatedNodes = deleteNodeRecursive(nodeList, nodeToDelete);
+    let updatedNodes = deleteNodeRecursive(nodeList, nodeToDelete);
+
+    updatedNodes = adjustNodePositions(updatedNodes, nodeHeight);
     return updatedNodes;
   }
 
@@ -176,7 +157,6 @@ function App() {
       return node;
     });
 
-    updatedNodes = adjustNodePositions(updatedNodes, nodeHeight);
     return updatedNodes;
   };
 
@@ -200,10 +180,7 @@ function App() {
         const selectedNode = getSelectedNode(nodes);
 
         // Undoのスナップショットを追加
-        setSnapshots([...snapshots.slice(0, snapshotIndex + 1), nodes]);
-        setSnapshotIndex(snapshotIndex + 1);
-        console.log(`snapshotIndex: ${snapshotIndex}`);
-
+        saveSnapshot(nodes);
 
         // 新しいノードを追加する処理
         let updatedNodes = addNode(selectedNode);
@@ -234,14 +211,14 @@ function App() {
       if ((event.ctrlKey || event.metaKey) && event.key === 'z') {
         event.preventDefault();
         //undo関数を呼び出してUndo処理を行う
-        undo();
+        setNodes(Undo(nodes));
       }
 
       // Shift + Ctrl + ZでRedo処理
       // Macの場合は、Shift + Command + ZでRedo処理
       if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'z') {
         event.preventDefault();
-        redo();
+        setNodes(Redo(nodes));
       }
 
       if (event.key === 'Enter' && editingId === null && nodes.some(node => node.selected)) {
@@ -252,12 +229,12 @@ function App() {
         if (event.key === 'Delete' || event.key === 'Backspace') {
           const selectedNodeIds = nodes.filter(node => node.selected).map(node => node.id);
           // Undoのスナップショットを追加
-          setSnapshots([...snapshots.slice(0, snapshotIndex + 1), nodes]);
-          setSnapshotIndex(snapshotIndex + 1);
+          saveSnapshot(nodes);
 
           // 選択されたノードを削除する処理
           let updatedNodes = nodes;
           selectedNodeIds.forEach(id => {
+            saveSnapshot(updatedNodes);
             updatedNodes = deleteNode(nodes, getNodeById(updatedNodes, id));
           });
           setNodes(updatedNodes);
@@ -289,7 +266,7 @@ function App() {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [nodes, editingId, editingField, snapshots, snapshotIndex, undo, redo, addNode, deleteNode, adjustNodePositions, handleArrowUp, handleArrowDown, findNodeAndSwitch, inputRefs]);
+  }, [nodes, editingId, editingField, addNode, deleteNode, adjustNodePositions, handleArrowUp, handleArrowDown, findNodeAndSwitch, inputRefs]);
 
   useEffect(() => {
     if (editingId !== null) {
@@ -336,8 +313,8 @@ function App() {
         const originalParentId = draggingNode.parentId;
         const newParentId = droppedOverNode.id;
 
-        setSnapshots([...snapshots.slice(0, snapshotIndex + 1), nodes]);
-        setSnapshotIndex(snapshotIndex + 1);
+        // Undoのスナップショットを追加
+        saveSnapshot(nodes);
 
         // ノードのorderを更新する前に、移動元の兄弟ノードのorderをデクリメント
         let updatedNodes = nodes.map(node => ({
@@ -388,7 +365,7 @@ function App() {
 
       setDragging(null);
     }
-  }, [nodes, setNodes, dragging, originalPosition.x, originalPosition.y, snapshots, snapshotIndex]);
+  }, [nodes, setNodes, dragging, originalPosition.x, originalPosition.y]);
 
   useEffect(() => {
     document.addEventListener('mouseup', handleMouseUp);
@@ -433,6 +410,22 @@ function App() {
 
   const editingNode = nodes.find(n => n.id === editingId);
 
+  // メニューバーでUndoボタンが押された場合の処理
+  const handleUndo = () => {
+    // Undo関数を呼び出してUndo処理を行う
+    let updatedNodes = Undo(nodes);
+    updatedNodes = adjustNodePositions(updatedNodes, nodeHeight);
+    setNodes(updatedNodes);
+  };
+
+  // メニューバーでRedoボタンが押された場合の処理
+  const handleRedo = () => {
+    // Redo関数を呼び出してRedo処理を行う
+    let updatedNodes = Redo(nodes);
+    updatedNodes = adjustNodePositions(updatedNodes, nodeHeight);
+    setNodes(updatedNodes);
+  };
+
   return (
     <div className="App" style={{ width: '100%', height: '100%', overflow: 'auto' }}>
       <div style={{ position: 'absolute', top: 0, left: 0 }}>
@@ -465,7 +458,7 @@ function App() {
           </defs>
         </svg>
       </div>
-      <MenuBar menubarWidth={canvasSize.width} undo={undo} redo={redo} ZoomInViewBox={ZoomInViewBox} ZoomOutViewBox={ZoomOutViewBox}/>
+      <MenuBar menubarWidth={canvasSize.width} handleUndo={handleUndo} handleRedo={handleRedo} ZoomInViewBox={ZoomInViewBox} ZoomOutViewBox={ZoomOutViewBox}/>
       <InputFields node={editingNode} updateText={updateText} editingField={editingField} />
     </div>
   );
