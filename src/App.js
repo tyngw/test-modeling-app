@@ -4,10 +4,17 @@ import { calculateNodeWidth } from './utils/TextUtilities';
 import { useWindowSize, calculateCanvasSize } from './utils/LayoutUtilities';
 import Node from './components/Node';
 import MenuBar from './components/Menubar';
+import { Marker } from './components/Marker';
 import InputFields from './components/InputFields';
 import { adjustNodePositions } from './utils/NodeAdjuster';
 import { handleArrowUp, handleArrowDown } from './utils/NodeSelector';
 import { Undo, Redo, saveSnapshot } from './state/undoredo';
+import {
+  NODE_HEIGHT,
+  ARROW_OFFSET,
+  CURVE_CONTROL_OFFSET,
+  X_OFFSET,
+} from './constants/Node';
 import './App.css';
 
 function App() {
@@ -25,11 +32,10 @@ function App() {
   // ズーム倍率のステート
   const [zoomRatio, setZoomRatio] = useState(1);
 
-  const nodeHeight = 60;
-  const arrowOffset = 20; // 矢印のオフセット
-  const curveControlOffset = 80; // 曲線の制御点のオフセット
-
-  const parentXOffset = 200; // 親ノードから子ノードへのX軸オフセット
+  //const NODE_HEIGHT = 60;
+  //const ARROW_OFFSET = 20; // 矢印のオフセット
+  // const CURVE_CONTROL_OFFSET = 80; // 曲線の制御点のオフセット
+  // const X_OFFSET = 200; // 親ノードから子ノードへのX軸オフセット
 
   const [dragging, setDragging] = useState(null);
   const [startPosition, setStartPosition] = useState({ x: 0, y: 0 });
@@ -114,7 +120,7 @@ function App() {
     });
 
     // 新しいノードと既存のノードとの間で重なりをチェックし、調整
-    let adjustedNodes = adjustNodePositions(newNodes, nodeHeight)
+    let adjustedNodes = adjustNodePositions(newNodes)
 
     return adjustedNodes;
   };
@@ -124,7 +130,7 @@ function App() {
   const deleteNode = (nodeList, nodeToDelete) => {
     let updatedNodes = deleteNodeRecursive(nodeList, nodeToDelete);
 
-    updatedNodes = adjustNodePositions(updatedNodes, nodeHeight);
+    updatedNodes = adjustNodePositions(updatedNodes);
     return updatedNodes;
   }
 
@@ -166,9 +172,7 @@ function App() {
 
     const newSelectedNode = nodes.find(conditionCallback);
     if (newSelectedNode) {
-      // selectNodeを利用するように処理を変更
       switchSelectNode(newSelectedNode.id);
-      //switchSelectedNode(newSelectedNode.id);
     }
   };
 
@@ -303,7 +307,7 @@ function App() {
       const droppedOverNode = nodes.find(node => {
         const width = calculateNodeWidth([node.text, node.text2, node.text3]);
         return dropX >= node.x && dropX <= node.x + width &&
-          dropY >= node.y && dropY <= node.y + nodeHeight &&
+          dropY >= node.y && dropY <= node.y + NODE_HEIGHT &&
           node.id !== dragging;
       });
 
@@ -341,8 +345,8 @@ function App() {
         // 移動先の子ノードの数に基づいて新しいorderを計算
         const siblings = updatedNodes.filter(node => node.parentId === newParentId);
         const maxOrder = siblings.length > 0 ? Math.max(...siblings.map(node => node.order)) + 1 : 0;
-        const newX = siblings.length > 0 ? siblings[0].x : droppedOverNode.x + parentXOffset;
-        const newY = siblings.length > 0 ? siblings[maxOrder - 1].y + nodeHeight + 10 : droppedOverNode.y;
+        const newX = siblings.length > 0 ? siblings[0].x : droppedOverNode.x + X_OFFSET;
+        const newY = siblings.length > 0 ? siblings[maxOrder - 1].y + NODE_HEIGHT + 10 : droppedOverNode.y;
 
         // 移動したノードのparentIdとorderを更新
         updatedNodes = updatedNodes.map(node => {
@@ -414,7 +418,7 @@ function App() {
   const handleUndo = () => {
     // Undo関数を呼び出してUndo処理を行う
     let updatedNodes = Undo(nodes);
-    updatedNodes = adjustNodePositions(updatedNodes, nodeHeight);
+    updatedNodes = adjustNodePositions(updatedNodes);
     setNodes(updatedNodes);
   };
 
@@ -422,7 +426,7 @@ function App() {
   const handleRedo = () => {
     // Redo関数を呼び出してRedo処理を行う
     let updatedNodes = Redo(nodes);
-    updatedNodes = adjustNodePositions(updatedNodes, nodeHeight);
+    updatedNodes = adjustNodePositions(updatedNodes);
     setNodes(updatedNodes);
   };
 
@@ -434,7 +438,7 @@ function App() {
           width={canvasSize.width}
           height={canvasSize.height}
           onClick={handleClickOutside}
-        // onWheel={handleWheel}
+          // onWheel={handleWheel}
         >
           {nodes.map((node) => (
             <Node
@@ -442,9 +446,9 @@ function App() {
               node={node}
               getNodeById={getNodeById}
               calculateNodeWidth={calculateNodeWidth}
-              nodeHeight={nodeHeight}
-              curveControlOffset={curveControlOffset}
-              arrowOffset={arrowOffset}
+              nodeHeight={NODE_HEIGHT}
+              curveControlOffset={CURVE_CONTROL_OFFSET}
+              arrowOffset={ARROW_OFFSET}
               selectNode={switchSelectNode}
               handleDoubleClick={handleDoubleClick}
               handleMouseDown={handleMouseDown}
@@ -452,9 +456,7 @@ function App() {
             />
           ))}
           <defs>
-            <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto" fill="none" stroke="black">
-              <polygon points="0 0, 10 3.5, 0 7" fill="none" stroke="black" />
-            </marker>
+            <Marker />
           </defs>
         </svg>
       </div>

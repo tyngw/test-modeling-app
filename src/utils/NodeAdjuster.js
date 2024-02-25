@@ -1,8 +1,11 @@
+import { NODE_HEIGHT,
+    X_OFFSET,
+    Y_OFFSET,
+ } from "../constants/Node";
 
-
-export const adjustNodeAndChildrenPosition = (allNodes, node, nodeHeight, currentY, depthOffset = 260, ySpacing = 10) => {
+export const adjustNodeAndChildrenPosition = (allNodes, node, currentY) => {
     //function adjustNodeAndChildrenPosition(node, currentY, allNodes, depthOffset = 260, ySpacing = 10) {
-    node.x = 50 + (node.depth - 1) * depthOffset;
+    node.x = 50 + (node.depth - 1) * (X_OFFSET + 60);
     node.y = currentY;
 
     console.log(`「${node.text}」の位置を設定: x=${node.x}, y=${node.y}`);
@@ -10,15 +13,15 @@ export const adjustNodeAndChildrenPosition = (allNodes, node, nodeHeight, curren
 
     if (childNodes.length > 0) {
         childNodes.forEach(childNode => {
-            currentY = adjustNodeAndChildrenPosition(allNodes, childNode, nodeHeight, currentY, depthOffset, ySpacing);
+            currentY = adjustNodeAndChildrenPosition(allNodes, childNode, currentY);
         });
     } else {
-        currentY += nodeHeight + ySpacing; // 子ノードがない場合、Y座標を更新
+        currentY += NODE_HEIGHT + Y_OFFSET; // 子ノードがない場合、Y座標を更新
     }
     return currentY;
 }
 
-export const adjustNodePositions = (allNodes, nodeHeight) => {
+export const adjustNodePositions = (allNodes) => {
     const rootNodes = allNodes.filter(n => n.parentId === null);
 
     // depthが小さい順にノードをソートし、同じdepth内ではparentId, その後orderでソート
@@ -28,7 +31,7 @@ export const adjustNodePositions = (allNodes, nodeHeight) => {
     const adjust = true;
 
     rootNodes.forEach(rootNode => {
-        currentY = adjustNodeAndChildrenPosition(allNodes, rootNode, nodeHeight, currentY);
+        currentY = adjustNodeAndChildrenPosition(allNodes, rootNode, currentY);
     });
 
     // 親ノードのY座標を子ノードに基づいて更新
@@ -37,10 +40,10 @@ export const adjustNodePositions = (allNodes, nodeHeight) => {
             const children = sortedNodes.filter(n => n.parentId === parentNode.id);
             if (children.length > 0) {
                 const minY = Math.min(...children.map(n => n.y));
-                const maxY = Math.max(...children.map(n => n.y + nodeHeight));
-                parentNode.y = minY + (maxY - minY) / 2 - nodeHeight / 2;
+                const maxY = Math.max(...children.map(n => n.y + NODE_HEIGHT));
+                parentNode.y = minY + (maxY - minY) / 2 - NODE_HEIGHT / 2;
             } else {
-                lastChildY += lastChildY ? nodeHeight + 10 : lastChildY;
+                lastChildY += lastChildY ? NODE_HEIGHT + 10 : lastChildY;
                 parentNode.y = lastChildY ? lastChildY : parentNode.y;
             }
         });
