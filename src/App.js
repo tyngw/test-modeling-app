@@ -4,9 +4,7 @@ import { calculateNodeWidth } from './utils/TextUtilities';
 import { useWindowSize, calculateCanvasSize } from './utils/LayoutUtilities';
 import ViewBox from './components/ViewBox';
 import Node from './components/Node';
-import MenuBar from './components/Menubar';
-import { Marker } from './components/Marker';
-import InputFields from './components/InputFields';
+
 import { adjustNodePositions } from './utils/NodeAdjuster';
 import { handleArrowUp, handleArrowDown } from './utils/NodeSelector';
 import { Undo, Redo, saveSnapshot } from './state/undoredo';
@@ -351,7 +349,7 @@ function App() {
 
   return (
     <div className="App" style={{ width: '100%', height: '100%', overflow: 'auto' }}>
-      <div style={{ position: 'absolute', top: '40px', left: 0 }}>
+      {/* <div style={{ position: 'absolute', top: '40px', left: 0 }}> */}
         <ViewBox
           nodes={nodes}
           setNodes={setNodes}
@@ -366,9 +364,7 @@ function App() {
           switchSelectNode={switchSelectNode}
           getNodeById={getNodeById}
         />
-      </div>
-      <MenuBar menubarWidth={canvasSize.width} handleUndo={handleUndo} handleRedo={handleRedo} ZoomInViewBox={ZoomInViewBox} ZoomOutViewBox={ZoomOutViewBox}/>
-      <InputFields node={editingNode} updateText={updateText} editingField={editingField} />
+      {/* </div> */}
     </div>
   );
 }

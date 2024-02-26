@@ -16,8 +16,9 @@ const initialState = {
     ],
     // 現在のウィンドウサイズをデフォルトにする
     // width: window.innerWidth,
-    width: 800,
-    height: 600,
+    width: Window.innerWidth,
+    height: window.innerHeight,
+    zoomRatio: 1,
 };
 
 const addNode = (allNodes, parentNode) => {
@@ -118,7 +119,9 @@ function reducer(state, action) {
             updatedNodes = deleteNode(state.nodes, action.payload);
             return { ...state, nodes: updatedNodes };
         case 'EDIT_NODE':
-            // ここにノード編集のロジックを書く
+            // InputFieldsコンポーネントを表示する
+            return { ...state, nodes: state.nodes.map(node => node.id === action.payload ? { ...node, editing: true } : node) };
+
         case 'UNDO':
             updatedNodes = Undo(action.payload);
             return { ...state, nodes: updatedNodes };
@@ -127,6 +130,10 @@ function reducer(state, action) {
         case 'REDO':
             updatedNodes = Redo(action.payload);
             return { ...state, nodes: updatedNodes };
+        case 'ZOOM_IN':
+            return { ...state, zoomRatio: state.zoomRatio + 0.1 };
+        case 'ZOOM_OUT':
+            return { ...state, zoomRatio: state.zoomRatio - 0.1 };
     }
 }
 
