@@ -44,7 +44,7 @@ const Node = ({
                 rx="2"
                 onClick={() => selectNode(node.id)}
                 // onDoubleClick={() => handleDoubleClick(node.id)}
-                // onMouseDown={(e) => handleMouseDown(e, node.id)}
+                onMouseDown={(e) => handleMouseDown(e, node.id)}
             />
             <text
                 x={node.x + 5}

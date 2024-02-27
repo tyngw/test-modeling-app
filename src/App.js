@@ -65,25 +65,17 @@ function App() {
   };
 
   // キャンバスでノード以外がクリックされた場合
-  const handleClickOutside = useCallback((event) => {
-    if (!event.target.closest('.editable') && !event.target.classList.contains('node')) {
-      setEditingId(null);
-      setNodes(nodes.map(node => ({ ...node, selected: false })));
-    }
-  }, [nodes]);
+  // const handleClickOutside = useCallback((event) => {
+  //   if (!event.target.closest('.editable') && !event.target.classList.contains('node')) {
+  //     setEditingId(null);
+  //     setNodes(nodes.map(node => ({ ...node, selected: false })));
+  //   }
+  // }, [nodes]);
 
-  const ZoomInViewBox = () => {
-    setZoomRatio(prevZoomRatio => Math.min(prevZoomRatio + 0.1, 2));
-  }
-
-  const ZoomOutViewBox = () => {
-    setZoomRatio(prevZoomRatio => Math.max(prevZoomRatio - 0.1, 0.1));
-  }
-
-  // キャンバスサイズの変更に伴い、viewBoxを更新する
-  useEffect(() => {
-    setViewBox(`0 0 ${canvasSize.width * (1 / zoomRatio)} ${canvasSize.height * (1 / zoomRatio)}`);
-  }, [canvasSize]);
+  // // キャンバスサイズの変更に伴い、viewBoxを更新する
+  // useEffect(() => {
+  //   setViewBox(`0 0 ${canvasSize.width * (1 / zoomRatio)} ${canvasSize.height * (1 / zoomRatio)}`);
+  // }, [canvasSize]);
 
   const findNodeAndSwitch = (conditionCallback) => {
     const selectedNode = nodes.find(node => node.selected);
@@ -194,105 +186,6 @@ function App() {
       inputRef.current?.focus();
     }
   }, [editingId]);
-
-  // useEffect(() => {
-  //   const handleMouseMove = (e) => {
-  //     if (dragging !== null) {
-  //       const newX = e.clientX - startPosition.x;
-  //       const newY = e.clientY - startPosition.y;
-
-  //       setNodes(nodes.map(node => node.id === dragging ? { ...node, x: newX, y: newY } : node));
-  //     }
-  //   };
-
-  //   if (dragging !== null) {
-  //     document.addEventListener('mousemove', handleMouseMove);
-  //   }
-
-  //   return () => {
-  //     if (dragging !== null) {
-  //       document.removeEventListener('mousemove', handleMouseMove);
-  //     }
-  //   };
-  // }, [dragging, startPosition, nodes]);
-
-  // const handleMouseUp = useCallback((e) => {
-  //   if (dragging !== null) {
-  //     const dropX = e.clientX;
-  //     const dropY = e.clientY;
-
-  //     const droppedOverNode = nodes.find(node => {
-  //       const width = calculateNodeWidth([node.text, node.text2, node.text3]);
-  //       return dropX >= node.x && dropX <= node.x + width &&
-  //         dropY >= node.y && dropY <= node.y + NODE_HEIGHT &&
-  //         node.id !== dragging;
-  //     });
-
-  //     if (droppedOverNode) {
-  //       console.log(`droppedOverNode.id: ${droppedOverNode.id}`)
-  //       const draggingNode = getNodeById(nodes, dragging);
-  //       const originalParentId = draggingNode.parentId;
-  //       const newParentId = droppedOverNode.id;
-
-  //       // Undoのスナップショットを追加
-  //       saveSnapshot(nodes);
-
-  //       // ノードのorderを更新する前に、移動元の兄弟ノードのorderをデクリメント
-  //       let updatedNodes = nodes.map(node => ({
-  //         ...node,
-  //         order: node.parentId === originalParentId && node.order > draggingNode.order ? node.order - 1 : node.order,
-  //       }));
-
-  //       // 移動元の親ノードの情報を更新
-  //       updatedNodes = updatedNodes.map(node => {
-  //         if (node.id === originalParentId) {
-  //           return { ...node, children: node.children - 1 };
-  //         }
-  //         return node;
-  //       });
-
-  //       // 移動先の親ノードの情報を更新
-  //       updatedNodes = updatedNodes.map(node => {
-  //         if (node.id === newParentId) {
-  //           return { ...node, children: node.children + 1 };
-  //         }
-  //         return node;
-  //       });
-
-  //       // 移動先の子ノードの数に基づいて新しいorderを計算
-  //       const siblings = updatedNodes.filter(node => node.parentId === newParentId);
-  //       const maxOrder = siblings.length > 0 ? Math.max(...siblings.map(node => node.order)) + 1 : 0;
-  //       const newX = siblings.length > 0 ? siblings[0].x : droppedOverNode.x + X_OFFSET;
-  //       const newY = siblings.length > 0 ? siblings[maxOrder - 1].y + NODE_HEIGHT + 10 : droppedOverNode.y;
-
-  //       // 移動したノードのparentIdとorderを更新
-  //       updatedNodes = updatedNodes.map(node => {
-  //         if (node.id === dragging) {
-  //           return { ...node, parentId: newParentId, order: maxOrder, depth: droppedOverNode.depth + 1, x: newX, y: newY };
-  //         }
-  //         return node;
-  //       });
-
-  //       setNodes(updatedNodes);
-  //     } else {
-  //       // ドロップされた位置がノードの上にない場合、元の位置に戻す
-  //       setNodes(nodes.map(node => {
-  //         if (node.id === dragging) {
-  //           return { ...node, x: originalPosition.x, y: originalPosition.y };
-  //         }
-  //         return node;
-  //       }));
-  //     }
-
-  //     setDragging(null);
-  //   }
-  // }, [nodes, setNodes, dragging, originalPosition.x, originalPosition.y]);
-
-  // useEffect(() => {
-  //   document.addEventListener('mouseup', handleMouseUp);
-  //   return () => document.removeEventListener('mouseup', handleMouseUp);
-  // }, [nodes, dragging, handleMouseUp]);
-
 
   // useEffect(() => {
   //   document.addEventListener('click', handleClickOutside);
