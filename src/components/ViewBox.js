@@ -23,8 +23,6 @@ const ViewBox = () => {
     const [viewBox, setViewBox] = useState(`0 0 ${canvasSize.width} ${canvasSize.height}`);
 
     const editingNode = state.nodes.find((node) => node.editing);
-    // editingFieldをuseSateで管理する
-    const [editingField, setEditingField] = useState('text');
 
     const [dragging, setDragging] = useState(null);
     const [startPosition, setStartPosition] = useState({ x: 0, y: 0 });
@@ -33,6 +31,13 @@ const ViewBox = () => {
     const updateText = (e, field) => {
         console.log(`[updateText] field: ${field} text: ${e.target.value}`);
         dispatch({ type: 'UPDATE_TEXT', payload: { id: editingNode.id, field: field, value: e.target.value } });
+    };
+
+    // 編集モードを終了する
+    const endEditing = () => {
+        dispatch({ type: 'END_EDITING' });
+        // フォーカスをsvgに戻す
+        svgRef.current.focus();
     };
 
     const ZoomInViewBox = () => {
@@ -143,8 +148,7 @@ const ViewBox = () => {
 
     // ノードの編集処理
     const handleDoubleClick = (id) => {
-        dispatch({ type: 'EDIT_NODE', payload: id, editingField: 'text'});
-        // dispatch({ type: 'EDIT_NODE', payload: id});
+        dispatch({ type: 'EDIT_NODE', payload: id});
     };
 
     const getSelectedNode = (nodes) => {
@@ -170,11 +174,6 @@ const ViewBox = () => {
         if (selectedNode) {
             dispatch({ type: 'EDIT_NODE', payload: {id:selectedNode.id, editingField: 'text'}});
         }
-
-        // const editingNode = state.nodes.find((node) => node.editing);
-        // if (editingNode) {
-        //     updateText(editingNode, editingField);
-        // }
     }
 
     // ノードの追加処理
@@ -215,11 +214,6 @@ const ViewBox = () => {
             default:
                 console.log(`editingNode: ${editingNode}`)
                 break;
-        }
-
-        // 編集モードで、尚且つEnterキーが押された場合、編集モードを終了する
-        if (editingNode && e.key === 'Enter') {
-            dispatch({ type: 'EDIT_NODE', payload: null });
         }
 
         if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
@@ -283,7 +277,7 @@ const ViewBox = () => {
                     ))}
                 </svg>
 
-                <InputFields node={editingNode} updateText={updateText} editingField={editingField} />
+                <InputFields node={editingNode} updateText={updateText} endEditing={endEditing} />
             </div>
         </>
 

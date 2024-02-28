@@ -127,21 +127,27 @@ function reducer(state, action) {
             updatedNodes = deleteNode(state.nodes, action.payload);
             return { ...state, nodes: updatedNodes };
         case 'EDIT_NODE':
+            // nullなら何もしない    
+            if (action.payload === null || action.payload === undefined) {
+                return state;
+            }
             // InputFieldsコンポーネントを表示する
-            console.log(`[EDIT_NODE]action.payload.id: ${action.payload.id}`);
             return { ...state, nodes: state.nodes.map(node => node.id === action.payload.id ? { ...node, editing: true } : node) };
+        case 'END_EDITING':
+            // 編集中のフィールドを終了する
+            return { ...state, nodes: state.nodes.map(node => ({ ...node, editing: false })) };
         case 'CHANGE_FOCUS':
-            // 編集中のフィールドを変更する
+        // 編集中のフィールドを変更する
 
         case 'ARROW_UP':
             // handleArrowUp関数から返却されたidを持つノードを選択状態にする
-            return {...state, nodes: state.nodes.map(node => node.id === handleArrowUp(state.nodes) ? { ...node, selected: true } : { ...node, selected: false })};
+            return { ...state, nodes: state.nodes.map(node => node.id === handleArrowUp(state.nodes) ? { ...node, selected: true } : { ...node, selected: false }) };
         case 'ARROW_DOWN':
-            return {...state, nodes: state.nodes.map(node => node.id === handleArrowDown(state.nodes) ? { ...node, selected: true } : { ...node, selected: false })};
+            return { ...state, nodes: state.nodes.map(node => node.id === handleArrowDown(state.nodes) ? { ...node, selected: true } : { ...node, selected: false }) };
         case 'ARROW_RIGHT':
-            return {...state, nodes: state.nodes.map(node => node.id === handleArrowRight(state.nodes) ? { ...node, selected: true } : { ...node, selected: false })};
+            return { ...state, nodes: state.nodes.map(node => node.id === handleArrowRight(state.nodes) ? { ...node, selected: true } : { ...node, selected: false }) };
         case 'ARROW_LEFT':
-            return {...state, nodes: state.nodes.map(node => node.id === handleArrowLeft(state.nodes) ? { ...node, selected: true } : { ...node, selected: false })};
+            return { ...state, nodes: state.nodes.map(node => node.id === handleArrowLeft(state.nodes) ? { ...node, selected: true } : { ...node, selected: false }) };
         case 'UNDO':
             updatedNodes = Undo(action.payload);
             return { ...state, nodes: updatedNodes };
