@@ -1,7 +1,4 @@
 // src/components/ViewBox.js
-
-// App.jsのsvgの描画処理をViewBox.jsに移動する
-
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import Node from './Node';
 import { Marker } from './Marker';
@@ -26,14 +23,16 @@ const ViewBox = () => {
     const [viewBox, setViewBox] = useState(`0 0 ${canvasSize.width} ${canvasSize.height}`);
 
     const editingNode = state.nodes.find((node) => node.editing);
-    const editingField = editingNode ? editingNode.editingField : null;
+    // editingFieldをuseSateで管理する
+    const [editingField, setEditingField] = useState('text');
 
     const [dragging, setDragging] = useState(null);
     const [startPosition, setStartPosition] = useState({ x: 0, y: 0 });
     const [originalPosition, setOriginalPosition] = useState({ x: 0, y: 0 });
 
-    const updateText = (text, field) => {
-        dispatch({ type: 'UPDATE_TEXT', payload: { text, field } });
+    const updateText = (e, field) => {
+        console.log(`[updateText] field: ${field} text: ${e.target.value}`);
+        dispatch({ type: 'UPDATE_TEXT', payload: { id: editingNode.id, field: field, value: e.target.value } });
     };
 
     const ZoomInViewBox = () => {
@@ -144,24 +143,86 @@ const ViewBox = () => {
 
     // ノードの編集処理
     const handleDoubleClick = (id) => {
-        dispatch({ type: 'EDIT_NODE', payload: id });
+        dispatch({ type: 'EDIT_NODE', payload: id, editingField: 'text'});
+        // dispatch({ type: 'EDIT_NODE', payload: id});
     };
+
+    const getSelectedNode = (nodes) => {
+        return nodes.find((node) => node.selected);
+    }
+
+    const handleTabKey = (state, dispatch) => {
+        const selectedNode = getSelectedNode(state.nodes);
+        if (selectedNode) {
+            dispatch({ type: 'ADD_NODE', payload: selectedNode });
+        }
+    };
+
+    const handleDeleteKey = (state, dispatch) => {
+        const selectedNode = getSelectedNode(state.nodes);
+        if (selectedNode) {
+            dispatch({ type: 'DELETE_NODE', payload: selectedNode });
+        }
+    };
+
+    const handleEnterKey = (state, dispatch) => {
+        const selectedNode = state.nodes.find((node) => node.selected);
+        if (selectedNode) {
+            dispatch({ type: 'EDIT_NODE', payload: {id:selectedNode.id, editingField: 'text'}});
+        }
+
+        // const editingNode = state.nodes.find((node) => node.editing);
+        // if (editingNode) {
+        //     updateText(editingNode, editingField);
+        // }
+    }
 
     // ノードの追加処理
     // ノード選択中にTabキーを押すと、選択中のノードの子ノードを追加する
     const handleKeyDown = (e) => {
-        if (e.key === 'Tab') {
-            e.preventDefault();
-            const selectedNode = state.nodes.find((node) => node.selected);
-            if (selectedNode) {
-                dispatch({ type: 'ADD_NODE', payload: selectedNode });
-            }
-        } else if (e.key === 'Delete' || e.key === 'Backspace') {
-            const selectedNode = state.nodes.find((node) => node.selected);
-            if (selectedNode) {
-                dispatch({ type: 'DELETE_NODE', payload: selectedNode });
-            }
-        } else if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        switch (e.key) {
+            case 'Tab':
+                e.preventDefault();
+                handleTabKey(state, dispatch);
+                break;
+            case 'Delete':
+            case 'Backspace':
+                e.preventDefault();
+                handleDeleteKey(state, dispatch);
+                break;
+            case 'Enter':
+                e.preventDefault();
+                handleEnterKey(state, dispatch);
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                dispatch({ type: 'ARROW_UP', payload: state.nodes });
+                break;
+            case 'ArrowDown':
+                e.preventDefault();
+                dispatch({ type: 'ARROW_DOWN', payload: state.nodes });
+                break;
+            // 右キー
+            case 'ArrowRight':
+                e.preventDefault();
+                console.log('ArrowRight');
+                dispatch({ type: 'ARROW_RIGHT', payload: state.nodes });
+                break;
+            case 'ArrowLeft':
+                e.preventDefault();
+                dispatch({ type: 'ARROW_LEFT', payload: state.nodes });
+                break;
+            default:
+                console.log(`editingNode: ${editingNode}`)
+                break;
+        }
+
+        // 編集モードで、尚且つEnterキーが押された場合、編集モードを終了する
+        if (editingNode && e.key === 'Enter') {
+            dispatch({ type: 'EDIT_NODE', payload: null });
+        }
+
+        if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
             // Ctrl+Z or Command+ZでUndo処理を行う
             e.preventDefault();
             dispatch({ type: 'UNDO', payload: state.nodes });
@@ -169,17 +230,6 @@ const ViewBox = () => {
             // Shift+Ctrl+Z or Shift+Command+ZでRedo処理を行う
             e.preventDefault();
             dispatch({ type: 'REDO', payload: state.nodes });
-        } else if (e.key === 'Enter') {
-            // 編集中モードに遷移し、InputFieldsコンポーネントを表示する
-            // すでに編集中の場合は、編集中のノードを更新する
-            const selectedNode = state.nodes.find((node) => node.selected);
-            const editingNode = state.nodes.find((node) => node.editing);
-
-            if (selectedNode) {
-                dispatch({ type: 'EDIT_NODE', payload: selectedNode.id });
-            } else if (editingNode) {
-                dispatch({ type: 'UPDATE_TEXT', payload: editingNode });
-            }
         }
     };
 

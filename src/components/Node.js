@@ -18,7 +18,8 @@ const Node = ({
     nodes,
 }) => {
     const parentNode = getNodeById(nodes, node.parentId);
-    const nodeWidth = calculateNodeWidth([node.text, node.text2, node.text3]);
+    console.log(`[Node.js]node: ${node.text} ${node.text2} ${node.text3}`)
+const nodeWidth = calculateNodeWidth([node.text || '', node.text2 || '', node.text3 || '']);
     const sectionHeight = NODE_HEIGHT / 3;
     return (
         <React.Fragment key={node.id}>

@@ -3,6 +3,7 @@
 import { useReducer } from 'react';
 import { adjustNodePositions } from '../utils/NodeAdjuster';
 import { Undo, Redo, saveSnapshot } from './undoredo';
+import { handleArrowUp, handleArrowDown, handleArrowRight, handleArrowLeft } from '../utils/NodeSelector';
 
 // ノードの初期状態を以下のように定義する
 // 初期ノードの追加処理
@@ -102,7 +103,7 @@ function reducer(state, action) {
         case 'SELECT_NODE':
             // ノードを選択状態にする
             let targetNode = state.nodes.find(node => node.id === action.payload);
-            console.log(`id: ${targetNode.id}, text: ${targetNode.text}, text2: ${targetNode.text2}, text3: ${targetNode.text3}, selected: ${targetNode.selected}, x: ${targetNode.x}, y: ${targetNode.y}, parentId: ${targetNode.parentId}, order: ${targetNode.order}, depth: ${targetNode.depth}, children: ${targetNode.children}`);
+            console.log(`[SELECT_NODE] id: ${targetNode.id}, text: ${targetNode.text}, text2: ${targetNode.text2}, text3: ${targetNode.text3}, selected: ${targetNode.selected}, x: ${targetNode.x}, y: ${targetNode.y}, parentId: ${targetNode.parentId}, order: ${targetNode.order}, depth: ${targetNode.depth}, children: ${targetNode.children}`);
 
             // 新しいノードの selected プロパティを true にし、それ以外のノードの selected プロパティを false にする
             return { ...state, nodes: state.nodes.map(node => node.id === action.payload ? { ...node, selected: true } : { ...node, selected: false }) };
@@ -112,7 +113,8 @@ function reducer(state, action) {
             return { ...state, nodes: state.nodes.map(node => ({ ...node, selected: false, editing: false })) };
         case 'UPDATE_TEXT':
             // テキストを更新する
-            return { ...state, nodes: state.nodes.map(node => node.id === action.payload.id ? { ...node, [action.payload.field]: action.payload.text, editing: false } : node) };
+            console.log(`action.payload.id: ${action.payload.id}, action.payload.field: ${action.payload.field}, action.payload.value: ${action.payload.value}`);
+            return { ...state, nodes: state.nodes.map(node => node.id === action.payload.id ? { ...node, [action.payload.field]: action.payload.value } : node) };
         case 'ADD_NODE':
             // Undo/Redoのためのスナップショットを保存
             saveSnapshot(state.nodes);
@@ -126,8 +128,20 @@ function reducer(state, action) {
             return { ...state, nodes: updatedNodes };
         case 'EDIT_NODE':
             // InputFieldsコンポーネントを表示する
-            return { ...state, nodes: state.nodes.map(node => node.id === action.payload ? { ...node, editing: true } : node) };
+            console.log(`[EDIT_NODE]action.payload.id: ${action.payload.id}`);
+            return { ...state, nodes: state.nodes.map(node => node.id === action.payload.id ? { ...node, editing: true } : node) };
+        case 'CHANGE_FOCUS':
+            // 編集中のフィールドを変更する
 
+        case 'ARROW_UP':
+            // handleArrowUp関数から返却されたidを持つノードを選択状態にする
+            return {...state, nodes: state.nodes.map(node => node.id === handleArrowUp(state.nodes) ? { ...node, selected: true } : { ...node, selected: false })};
+        case 'ARROW_DOWN':
+            return {...state, nodes: state.nodes.map(node => node.id === handleArrowDown(state.nodes) ? { ...node, selected: true } : { ...node, selected: false })};
+        case 'ARROW_RIGHT':
+            return {...state, nodes: state.nodes.map(node => node.id === handleArrowRight(state.nodes) ? { ...node, selected: true } : { ...node, selected: false })};
+        case 'ARROW_LEFT':
+            return {...state, nodes: state.nodes.map(node => node.id === handleArrowLeft(state.nodes) ? { ...node, selected: true } : { ...node, selected: false })};
         case 'UNDO':
             updatedNodes = Undo(action.payload);
             return { ...state, nodes: updatedNodes };

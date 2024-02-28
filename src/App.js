@@ -6,7 +6,7 @@ import ViewBox from './components/ViewBox';
 import Node from './components/Node';
 
 import { adjustNodePositions } from './utils/NodeAdjuster';
-import { handleArrowUp, handleArrowDown } from './utils/NodeSelector';
+import { handleArrowUp, handleArrowDown, getNodeById } from './utils/NodeSelector';
 import { Undo, Redo, saveSnapshot } from './state/undoredo';
 import {
   NODE_HEIGHT,
@@ -22,18 +22,18 @@ function App() {
     { id: 1, text: 'Node 1', text2: '', text3: '', selected: false, x: 50, y: 50, parentId: null, order: 0, depth: 1, children: 0, },
   ]);
   const [editingId, setEditingId] = useState(null);
-  const [editingField, setEditingField] = useState('text');
+  // const [editingField, setEditingField] = useState('text');
   const inputRef = useRef(null);
 
   // ウィンドウサイズとviewBoxのステート
-  const windowSize = useWindowSize();
-  const [viewBox, setViewBox] = useState(`0 0 ${windowSize.width} ${windowSize.height}`);
+  // const windowSize = useWindowSize();
+  // const [viewBox, setViewBox] = useState(`0 0 ${windowSize.width} ${windowSize.height}`);
   // ズーム倍率のステート
-  const [zoomRatio, setZoomRatio] = useState(1);
+  // const [zoomRatio, setZoomRatio] = useState(1);
 
-  const [dragging, setDragging] = useState(null);
-  const [startPosition, setStartPosition] = useState({ x: 0, y: 0 });
-  const [originalPosition, setOriginalPosition] = useState({ x: 0, y: 0 });
+  // const [dragging, setDragging] = useState(null);
+  // const [startPosition, setStartPosition] = useState({ x: 0, y: 0 });
+  // const [originalPosition, setOriginalPosition] = useState({ x: 0, y: 0 });
 
   // テキストフィールドの参照を作成
   const inputRefs = {
@@ -43,26 +43,7 @@ function App() {
   };
 
   // ノードがキャンバスサイズを超えた場合に備えて、キャンバスの最小サイズを設定する
-  const [canvasSize, setCanvasSize] = useState({ width: windowSize.width, height: windowSize.height });
-
-  // 指定されたidを持つノードを取得する関数
-  function getNodeById(nodes, id) {
-    return nodes.find(node => node.id === id);
-  }
-
-  // 選択中のノードの一つ目を取得する関数
-  function getSelectedNode(nodes) {
-    return nodes.find(node => node.selected);
-  }
-
-  // ドラッグ処理
-  const handleMouseDown = (e, id) => {
-    const node = getNodeById(nodes, id);
-    setDragging(id);
-    setStartPosition({ x: e.clientX - node.x, y: e.clientY - node.y });
-    setOriginalPosition({ x: node.x, y: node.y }); // 元の座標を保存
-    e.stopPropagation();  // イベントのバブリングを防止。パブリングとは、イベントが発生した要素から親要素に向かってイベントが伝播すること
-  };
+  // const [canvasSize, setCanvasSize] = useState({ width: windowSize.width, height: windowSize.height });
 
   // キャンバスでノード以外がクリックされた場合
   // const handleClickOutside = useCallback((event) => {
@@ -77,15 +58,15 @@ function App() {
   //   setViewBox(`0 0 ${canvasSize.width * (1 / zoomRatio)} ${canvasSize.height * (1 / zoomRatio)}`);
   // }, [canvasSize]);
 
-  const findNodeAndSwitch = (conditionCallback) => {
-    const selectedNode = nodes.find(node => node.selected);
-    if (!selectedNode) return;
+  // const findNodeAndSwitch = (conditionCallback) => {
+  //   const selectedNode = nodes.find(node => node.selected);
+  //   if (!selectedNode) return;
 
-    const newSelectedNode = nodes.find(conditionCallback);
-    if (newSelectedNode) {
-      switchSelectNode(newSelectedNode.id);
-    }
-  };
+  //   const newSelectedNode = nodes.find(conditionCallback);
+  //   if (newSelectedNode) {
+  //     switchSelectNode(newSelectedNode.id);
+  //   }
+  // };
 
   // useEffect(() => {
   //   const handleKeyDown = (event) => {
@@ -154,29 +135,6 @@ function App() {
   //       }
   //     }
 
-  //     // ノードの選択処理
-  //     if (nodes.some(node => node.selected)) {
-  //       // 矢印キーによるノードの選択処理
-  //       switch (event.key) {
-  //         case 'ArrowLeft':
-  //           switchSelectNode(nodes.find(n => n.selected).parentId);
-  //           break;
-  //         case 'ArrowRight':
-  //           findNodeAndSwitch(node => node.parentId === nodes.find(n => n.selected).id);
-  //           break;
-  //         case 'ArrowUp':
-  //           handleArrowUp(nodes, getNodeById, switchSelectNode);
-  //           break;
-  //         case 'ArrowDown':
-  //           // 一つ下のノードを選択
-  //           handleArrowDown(nodes, getNodeById, switchSelectNode);
-  //           break;
-  //         default:
-  //           break;
-  //       }
-  //     }
-  //   };
-
   //   document.addEventListener('keydown', handleKeyDown);
   //   return () => document.removeEventListener('keydown', handleKeyDown);
   // }, [nodes, editingId, editingField, addNode, deleteNode, adjustNodePositions, handleArrowUp, handleArrowDown, findNodeAndSwitch, inputRefs]);
@@ -192,9 +150,9 @@ function App() {
   //   return () => document.removeEventListener('click', handleClickOutside);
   // }, [handleClickOutside]);
 
-  useEffect(() => {
-    setCanvasSize(calculateCanvasSize(nodes, 50, 200, zoomRatio));
-  }, [nodes, windowSize, zoomRatio]);
+  // useEffect(() => {
+  //   setCanvasSize(calculateCanvasSize(nodes, 50, 200, zoomRatio));
+  // }, [nodes, windowSize, zoomRatio]);
 
   // const handleDoubleClick = (id) => {
   //   // ダブルクリックされたノードで編集モードに入る
@@ -211,53 +169,12 @@ function App() {
     }));
   };
 
-  // ノードの選択処理
-  const switchSelectNode = (id) => {
-    const selectedNode = getNodeById(nodes, id);
-    console.log(`Selected Node: id=${selectedNode.id}, x=${selectedNode.x}, y=${selectedNode.y}, parentId=${selectedNode.parentId}, order=${selectedNode.order}, children=${selectedNode.children}`);
-
-    setNodes(nodes.map(node => ({
-      ...node,
-      selected: node.id === id
-    })));
-  };
-
   const editingNode = nodes.find(n => n.id === editingId);
-
-  // メニューバーでUndoボタンが押された場合の処理
-  const handleUndo = () => {
-    // Undo関数を呼び出してUndo処理を行う
-    let updatedNodes = Undo(nodes);
-    updatedNodes = adjustNodePositions(updatedNodes);
-    setNodes(updatedNodes);
-  };
-
-  // メニューバーでRedoボタンが押された場合の処理
-  const handleRedo = () => {
-    // Redo関数を呼び出してRedo処理を行う
-    let updatedNodes = Redo(nodes);
-    updatedNodes = adjustNodePositions(updatedNodes);
-    setNodes(updatedNodes);
-  };
 
   return (
     <div className="App" style={{ width: '100%', height: '100%', overflow: 'auto' }}>
       {/* <div style={{ position: 'absolute', top: '40px', left: 0 }}> */}
-        <ViewBox
-          nodes={nodes}
-          setNodes={setNodes}
-          viewBox={viewBox}
-          setViewBox={setViewBox}
-          setCanvasSize={setCanvasSize}
-          setDragging={setDragging}
-          setStartPosition={setStartPosition}
-          setOriginalPosition={setOriginalPosition}
-          // handleMouseDown={handleMouseDown}
-          // handleDoubleClick={handleDoubleClick}
-          switchSelectNode={switchSelectNode}
-          getNodeById={getNodeById}
-        />
-      {/* </div> */}
+        <ViewBox/>
     </div>
   );
 }

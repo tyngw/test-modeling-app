@@ -26,7 +26,6 @@ export const calculateCanvasSize = (nodes, nodeHeight, parentXOffset, zoomRatio)
   const maxNodeX = Math.max(...nodes.map(node => node.x + calculateNodeWidth([node.text]))) + parentXOffset;
   const maxNodeY = Math.max(...nodes.map(node => node.y + nodeHeight)) + nodeHeight;
 
-  console.log('zoomRatio', zoomRatio);
    return {
     width: maxNodeX * zoomRatio,
     height: maxNodeY * zoomRatio,

@@ -12,6 +12,7 @@ const InputFields = ({ node, updateText, editingField }) => {
     };
 
     useEffect(() => {
+        console.log(`[InputFields.js] node: ${node} editingField: ${editingField}`)
         const currentFieldRef = fieldRefs[editingField];
         if (currentFieldRef && currentFieldRef.current) {
             currentFieldRef.current.focus(); // 対応するフィールドにフォーカスを設定
