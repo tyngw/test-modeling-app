@@ -28,9 +28,10 @@ const ViewBox = () => {
     const [startPosition, setStartPosition] = useState({ x: 0, y: 0 });
     const [originalPosition, setOriginalPosition] = useState({ x: 0, y: 0 });
 
-    const updateText = (e, field) => {
-        console.log(`[updateText] field: ${field} text: ${e.target.value}`);
-        dispatch({ type: 'UPDATE_TEXT', payload: { id: editingNode.id, field: field, value: e.target.value } });
+    const updateText = (text, field) => {
+        console.log(`[updateText] field: ${field} text: ${text}`);
+        dispatch({ type: 'UPDATE_TEXT', payload: { id: editingNode.id, field: field, value: text } });
+
     };
 
     // 編集モードを終了する
