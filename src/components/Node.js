@@ -2,11 +2,11 @@
 import React from 'react';
 import { calculateNodeWidth } from '../utils/TextUtilities';
 // constantsのインポート
-import { 
+import {
     NODE_HEIGHT,
     CURVE_CONTROL_OFFSET,
     ARROW_OFFSET,
- } from '../constants/Node';
+} from '../constants/Node';
 
 const Node = ({
     node,
@@ -17,8 +17,27 @@ const Node = ({
     nodes,
 }) => {
     const parentNode = getNodeById(nodes, node.parentId);
-    const nodeWidth = calculateNodeWidth([node.text, node.text2, node.text3]);
+    console.log(`[Node.js]node: ${node.text} ${node.text2} ${node.text3}`)
+    const nodeWidth = calculateNodeWidth([node.text || '', node.text2 || '', node.text3 || '']);
     const sectionHeight = NODE_HEIGHT / 3;
+
+    // 各テキストの行数を計算
+    const lines1 = node.text.split('\n').length;
+    const lines2 = node.text2.split('\n').length;
+    const lines3 = node.text3.split('\n').length;
+
+    // 各テキストの高さを計算
+    const height1 = sectionHeight + (lines1 - 1) * 20;
+    const height2 = sectionHeight + (lines2 - 1) * 20;
+    const height3 = sectionHeight + (lines3 - 1) * 20;
+
+    // ノードの高さを計算
+    const height = height1 + height2 + height3;
+
+    // 中段と下段のテキストのY座標を計算
+    const y2 = node.y + height1;
+    const y3 = node.y + height1 + height2;
+
     return (
         <React.Fragment key={node.id}>
             {parentNode && (
@@ -38,51 +57,62 @@ const Node = ({
                 x={node.x}
                 y={node.y}
                 width={nodeWidth}
-                height={NODE_HEIGHT}
+                // height={NODE_HEIGHT}
+                height={height} // 計算した高さを使用
                 className={`node ${node.selected ? 'node-selected' : 'node-unselected'}`}
                 rx="2"
                 onClick={() => selectNode(node.id)}
                 onDoubleClick={() => handleDoubleClick(node.id)}
                 onMouseDown={(e) => handleMouseDown(e, node.id)}
             />
-            <text
-                x={node.x + 5}
-                y={node.y + sectionHeight / 2 + 5} // 上段の中央に配置
-                className="node-text"
-            >
-                {node.text}
-            </text>
+            {/* 上段のテキスト */}
+            {node.text.split('\n').map((line, index) => (
+                <text
+                    key={index}
+                    x={node.x + 5}
+                    y={node.y + sectionHeight / 2 + 5 + index * 20} // 上段の中央に配置し、行ごとに下にずらす
+                    className="node-text"
+                >
+                    {line}
+                </text>
+            ))}
             {/* 中段のテキスト */}
-            <text
-                x={node.x + 5}
-                y={node.y + sectionHeight + sectionHeight / 2 + 5} // 中段の中央に配置
-                className="node-text"
-            >
-                {node.text2}
-            </text>
+            {node.text2.split('\n').map((line, index) => (
+                <text
+                    key={index}
+                    x={node.x + 5}
+                    y={y2 + sectionHeight / 2 + 5 + index * 20} // 中段の中央に配置し、行ごとに下にずらす
+                    className="node-text"
+                >
+                    {line}
+                </text>
+            ))}
             {/* 下段のテキスト */}
-            <text
-                x={node.x + 5}
-                y={node.y + 2 * sectionHeight + sectionHeight / 2 + 5} // 下段の中央に配置
-                className="node-text"
-            >
-                {node.text3}
-            </text>
+            {node.text3.split('\n').map((line, index) => (
+                <text
+                    key={index}
+                    x={node.x + 5}
+                    y={y3 + sectionHeight / 2 + 5 + index * 20} // 下段の中央に配置し、行ごとに下にずらす
+                    className="node-text"
+                >
+                    {line}
+                </text>
+            ))}
             {/* 上段と中段の間の線 */}
             <line
                 x1={node.x}
-                y1={node.y + sectionHeight}
+                y1={node.y + height1} // 上段のテキストの高さを考慮
                 x2={node.x + nodeWidth}
-                y2={node.y + sectionHeight}
+                y2={node.y + height1} // 上段のテキストの高さを考慮
                 stroke="black"
                 strokeWidth="1"
             />
             {/* 中段と下段の間の線 */}
             <line
                 x1={node.x}
-                y1={node.y + 2 * sectionHeight}
+                y1={node.y + height1 + height2} // 上段と中段のテキストの高さを考慮
                 x2={node.x + nodeWidth}
-                y2={node.y + 2 * sectionHeight}
+                y2={node.y + height1 + height2} // 上段と中段のテキストの高さを考慮
                 stroke="black"
                 strokeWidth="1"
             />
