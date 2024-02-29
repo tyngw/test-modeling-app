@@ -3,20 +3,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { calculateNodeWidth } from '../utils/TextUtilities';
 
 // 入力フィールドを描画する部分
-const InputFields = ({ node, updateText, editingField }) => {
+const InputFields = ({ node, updateText, endEditing }) => {
     const fields = ['text', 'text2', 'text3'];
     const fieldRefs = {
         text: useRef(null),
         text2: useRef(null),
         text3: useRef(null),
     };
-
-    useEffect(() => {
-        const currentFieldRef = fieldRefs[editingField];
-        if (currentFieldRef && currentFieldRef.current) {
-            currentFieldRef.current.focus(); // 対応するフィールドにフォーカスを設定
-        }
-    }, [editingField, fieldRefs]);
 
     if (!node) return null;
 
@@ -29,6 +22,7 @@ const InputFields = ({ node, updateText, editingField }) => {
             const nextField = fields[nextIndex];
             fieldRefs[nextField].current.focus();
         }
+
         if (e.key === 'Enter' && e.shiftKey) {
             e.preventDefault();
             const cursorPosition = e.target.selectionStart;
@@ -44,6 +38,7 @@ const InputFields = ({ node, updateText, editingField }) => {
         if (e.key === 'Escape') {
             e.preventDefault();
             endEditing();
+
         }
     };
 
@@ -82,6 +77,7 @@ const InputFields = ({ node, updateText, editingField }) => {
                     />
                 );
             })}
+
         </>
     );
 };

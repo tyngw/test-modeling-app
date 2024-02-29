@@ -12,13 +12,15 @@ const Node = ({
     node,
     getNodeById,
     selectNode,
-    handleDoubleClick,
     handleMouseDown,
+    // handleDoubleClick,
+    // handleKeyDown,
     nodes,
 }) => {
     const parentNode = getNodeById(nodes, node.parentId);
     console.log(`[Node.js]node: ${node.text} ${node.text2} ${node.text3}`)
     const nodeWidth = calculateNodeWidth([node.text || '', node.text2 || '', node.text3 || '']);
+
     const sectionHeight = NODE_HEIGHT / 3;
 
     // 各テキストの行数を計算
@@ -62,7 +64,7 @@ const Node = ({
                 className={`node ${node.selected ? 'node-selected' : 'node-unselected'}`}
                 rx="2"
                 onClick={() => selectNode(node.id)}
-                onDoubleClick={() => handleDoubleClick(node.id)}
+                // onDoubleClick={() => handleDoubleClick(node.id)}
                 onMouseDown={(e) => handleMouseDown(e, node.id)}
             />
             {/* 上段のテキスト */}

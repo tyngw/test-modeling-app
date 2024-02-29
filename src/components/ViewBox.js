@@ -31,6 +31,7 @@ const ViewBox = () => {
     const updateText = (text, field) => {
         console.log(`[updateText] field: ${field} text: ${text}`);
         dispatch({ type: 'UPDATE_TEXT', payload: { id: editingNode.id, field: field, value: text } });
+
     };
 
     // 編集モードを終了する
