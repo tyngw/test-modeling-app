@@ -47,15 +47,15 @@ const ViewBox = () => {
 
     useClickOutside(svgRef, dispatch, editingNode, endEditing);
 
-    const getNodeById = (nodes, id) => {
-        return nodes.find((node) => node.id === id);
-    };
+    // const getNodeById = (nodes, id) => {
+    //     return nodes.find((node) => node.id === id);
+    // };
 
     const getSelectedNode = (nodes) => {
         return nodes.find((node) => node.selected);
     }
 
-    const { handleMouseDown, handleMouseUp } = useDragEffect(state, dispatch, getNodeById);
+    const { handleMouseDown, handleMouseUp } = useDragEffect(state, dispatch);
 
     const handleDoubleClick = (id) => {
         dispatch({ type: 'EDIT_NODE', payload: id });
@@ -164,7 +164,7 @@ const ViewBox = () => {
                         <Node
                             key={node.id}
                             node={node}
-                            getNodeById={getNodeById}
+                            // getNodeById={getNodeById}
                             selectNode={selectNode}
                             nodes={nodes}
                             handleMouseDown={handleMouseDown}

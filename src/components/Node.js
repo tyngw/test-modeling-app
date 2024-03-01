@@ -1,6 +1,7 @@
 // components/Node.js
 import React from 'react';
 import { calculateNodeWidth } from '../utils/TextNodeHelpers';
+import { getNodeById} from '../utils/NodeSelector';
 // constantsのインポート
 import {
     NODE_HEIGHT,
@@ -10,11 +11,8 @@ import {
 
 const Node = ({
     node,
-    getNodeById,
     selectNode,
     handleMouseDown,
-    // handleDoubleClick,
-    // handleKeyDown,
     nodes,
 }) => {
     const parentNode = getNodeById(nodes, node.parentId);

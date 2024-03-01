@@ -2,8 +2,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { calculateNodeWidth } from '../utils/TextNodeHelpers';
 import { NODE_HEIGHT, X_OFFSET } from '../constants/Node';
+import { getNodeById} from '../utils/NodeSelector';
 
-export const useDragEffect = (state, dispatch, getNodeById) => {
+export const useDragEffect = (state, dispatch) => {
     const [dragging, setDragging] = useState(null);
     const [startPosition, setStartPosition] = useState({ x: 0, y: 0 });
     const [originalPosition, setOriginalPosition] = useState({ x: 0, y: 0 });
