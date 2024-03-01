@@ -1,6 +1,6 @@
 // components/Node.js
 import React from 'react';
-import { calculateNodeWidth } from '../utils/TextUtilities';
+import { calculateNodeWidth } from '../utils/TextNodeHelpers';
 // constantsのインポート
 import {
     NODE_HEIGHT,

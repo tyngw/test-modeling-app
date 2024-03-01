@@ -1,6 +1,6 @@
 // util/LayoutUtilities.js
 import { useState, useEffect } from 'react';
-import { calculateNodeWidth } from './TextUtilities';
+import { calculateNodeWidth } from './TextNodeHelpers';
 
 // ウィンドウサイズを管理するカスタムフック
 export const useWindowSize = () => {

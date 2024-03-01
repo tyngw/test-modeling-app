@@ -1,6 +1,6 @@
 // components/InputFields.js
 import React, { useState, useEffect, useRef } from 'react';
-import { calculateNodeWidth } from '../utils/TextUtilities';
+import { calculateNodeWidth } from '../utils/TextNodeHelpers';
 
 // 入力フィールドを描画する部分
 const InputFields = ({ node, updateText, endEditing }) => {
@@ -26,11 +26,11 @@ const InputFields = ({ node, updateText, endEditing }) => {
         if (e.key === 'Enter' && e.shiftKey) {
             e.preventDefault();
             const cursorPosition = e.target.selectionStart;
-    // カーソルの位置に改行を挿入
-    const newValue = e.target.value.substring(0, cursorPosition) + '\n' + e.target.value.substring(cursorPosition);
+            // カーソルの位置に改行を挿入
+            const newValue = e.target.value.substring(0, cursorPosition) + '\n' + e.target.value.substring(cursorPosition);
             updateText(newValue, field);
         } else if (e.key === 'Enter') {
-        // Enterキーが押された場合、編集モードを終了
+            // Enterキーが押された場合、編集モードを終了
             e.preventDefault();
             endEditing();
         }

@@ -1,4 +1,4 @@
-// util/TextUtilities.js
+// util/TextNodeHelpers.js
 
 export const calculateNodeWidth = (texts) => {
     const minWidth = 80;
@@ -14,16 +14,18 @@ export const calculateNodeWidth = (texts) => {
 };
 
 export const calculateTextWidth = (text) => {
-    // マルチバイト文字を見つけるための正規表現
+    // 改行ごとに分割し、最も長い行の幅を計算
+    // 半角文字は10px, 全角文字は20pxとして計算
+    const lines = text.split('\n');
     const regexMultibyte = /[^\u0000-\u00ff]/g;
-
-    const multibyteChars = text.match(regexMultibyte) || [];
-    const multibyteLength = multibyteChars.length * 20; // マルチバイト文字は1文字20で計算
-
-    // 単バイト文字の数 = 全体の文字数 - マルチバイト文字の数
-    const singleByteLength = (text.length - multibyteChars.length) * 10; // それ以外は1文字10で計算
-
-    return multibyteLength + singleByteLength;
+    // 改行ごとに分割し、最も長い行の幅を計算
+    const width = Math.max(...lines.map(line => {
+        const multibyteChars = line.match(regexMultibyte) || [];
+        const multibyteLength = multibyteChars.length * 18; // マルチバイト文字は1文字20で計算
+        const singleByteLength = (line.length - multibyteChars.length) * 9; // それ以外は1文字10で計算
+        return multibyteLength + singleByteLength;
+    }));
+    return width;
 };
 
 
