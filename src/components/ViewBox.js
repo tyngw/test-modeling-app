@@ -6,7 +6,8 @@ import MenuBar from './Menubar';
 import InputFields from './InputFields';
 import { useStore } from '../state/state';
 import useResizeEffect from '../hooks/useResizeEffect';
-import {useDragEffect} from '../hooks/useDragEffect';
+import { useDragEffect } from '../hooks/useDragEffect';
+import { useClickOutside } from '../hooks/useClickOutside';
 
 const ViewBox = () => {
     const svgRef = useRef();
@@ -40,22 +41,11 @@ const ViewBox = () => {
     // zoomRatioに応じてviewBoxのサイズを変更する
     useEffect(() => {
         setViewBox(`0 0 ${window.innerWidth * (1 / state.zoomRatio)} ${window.innerHeight * (1 / state.zoomRatio)}`);
-
     }, [canvasSize, state.nodes, state.zoomRatio]);
 
     useResizeEffect({ setCanvasSize, state });
 
-    useEffect(() => {
-        const svg = svgRef.current;
-        svg.addEventListener('mousedown', (e) => {
-            if (e.target.tagName === 'svg') {
-                dispatch({ type: 'DESELECT_ALL' });
-                if (editingNode) {
-                    endEditing();
-                }
-            }
-        });
-    }, [dispatch, editingNode]);
+    useClickOutside(svgRef, dispatch, editingNode, endEditing);
 
     const getNodeById = (nodes, id) => {
         return nodes.find((node) => node.id === id);
@@ -69,7 +59,7 @@ const ViewBox = () => {
 
     const handleDoubleClick = (id) => {
         dispatch({ type: 'EDIT_NODE', payload: id });
-    };  
+    };
 
     const handleTabKey = (state, dispatch) => {
         const selectedNode = getSelectedNode(state.nodes);
@@ -91,6 +81,14 @@ const ViewBox = () => {
             dispatch({ type: 'EDIT_NODE', payload: { id: selectedNode.id, editingField: 'text' } });
         }
     }
+
+    const handleUndo = () => {
+        dispatch({ type: 'UNDO', payload: state.nodes });
+    };
+
+    const handleRedo = () => {
+        dispatch({ type: 'REDO', payload: state.nodes });
+    };
 
     const handleKeyDown = (e) => {
         switch (e.key) {
@@ -139,19 +137,9 @@ const ViewBox = () => {
         }
     };
 
-    const handleUndo = () => {
-        dispatch({ type: 'UNDO', payload: state.nodes });
-    };
-
-    const handleRedo = () => {
-        dispatch({ type: 'REDO', payload: state.nodes });
-    };
-
     const selectNode = (id) => {
         dispatch({ type: 'SELECT_NODE', payload: id });
     };
-
-    
 
     const nodes = state.nodes;
 
