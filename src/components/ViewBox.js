@@ -1,13 +1,14 @@
 // src/components/ViewBox.js
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import Node from './Node';
 import { Marker } from './Marker';
 import MenuBar from './Menubar';
 import InputFields from './InputFields';
 import { useStore } from '../state/state';
 import useResizeEffect from '../hooks/useResizeEffect';
-import { useDragEffect } from '../hooks/useDragEffect';
+import { useNodeDragEffect } from '../hooks/useNodeDragEffect';
 import { useClickOutside } from '../hooks/useClickOutside';
+import { MENUBAR_HEIGHT } from '../constants/Node';
 
 const ViewBox = () => {
     const svgRef = useRef();
@@ -40,26 +41,23 @@ const ViewBox = () => {
 
     // zoomRatioに応じてviewBoxのサイズを変更する
     useEffect(() => {
-        setViewBox(`0 0 ${window.innerWidth * (1 / state.zoomRatio)} ${window.innerHeight * (1 / state.zoomRatio)}`);
+        setViewBox(`0 0 ${window.innerWidth * (1 / state.zoomRatio)} ${(window.innerHeight - MENUBAR_HEIGHT) * (1 / state.zoomRatio)}`);
     }, [canvasSize, state.nodes, state.zoomRatio]);
 
     useResizeEffect({ setCanvasSize, state });
 
     useClickOutside(svgRef, dispatch, editingNode, endEditing);
 
-    // const getNodeById = (nodes, id) => {
-    //     return nodes.find((node) => node.id === id);
-    // };
-
     const getSelectedNode = (nodes) => {
         return nodes.find((node) => node.selected);
     }
 
-    const { handleMouseDown, handleMouseUp } = useDragEffect(state, dispatch);
+    const { handleMouseDown, handleMouseUp } = useNodeDragEffect(state, dispatch);
 
-    const handleDoubleClick = (id) => {
+    // useCallBackを使ってラップすることで、関数の再生成を防ぐ
+    const handleDoubleClick = useCallback((id) => {
         dispatch({ type: 'EDIT_NODE', payload: id });
-    };
+    }, [dispatch]);
 
     const handleTabKey = (state, dispatch) => {
         const selectedNode = getSelectedNode(state.nodes);
@@ -137,16 +135,18 @@ const ViewBox = () => {
         }
     };
 
-    const selectNode = (id) => {
+    const selectNode = useCallback((id) => {
+        console.log(`[ViewBox]selectNode id: ${id}`)
         dispatch({ type: 'SELECT_NODE', payload: id });
-    };
+    }, [dispatch]);
 
-    const nodes = state.nodes;
+    // const nodes = state.nodes;
+    const nodes = useMemo(() => state.nodes, [state.nodes]);
 
     return (
         <>
-            <MenuBar menubarWidth={canvasSize.width} handleUndo={handleUndo} handleRedo={handleRedo} ZoomInViewBox={ZoomInViewBox} ZoomOutViewBox={ZoomOutViewBox} />
-            <div style={{ position: 'absolute', top: '40px', left: 0 }}>
+            <MenuBar menubarWidth={canvasSize.width} handleUndo={handleUndo} handleRedo={handleRedo} ZoomInViewBox={ZoomInViewBox} ZoomOutViewBox={ZoomOutViewBox} canvasSize={canvasSize} viewBox={viewBox} />
+            <div style={{ position: 'absolute', top: `${MENUBAR_HEIGHT}px`, left: 0 }}>
                 <svg
                     ref={svgRef}
                     width={canvasSize.width}
@@ -154,9 +154,8 @@ const ViewBox = () => {
                     viewBox={viewBox}
                     tabIndex="0"
                     onKeyDown={(e) => handleKeyDown(e)}
-                    onDoubleClick={(e) => handleDoubleClick()}
-                    onMouseDown={(e) => handleMouseDown(e)}
-                    onMouseUp={(e) => handleMouseUp(e)}
+                    // onMouseDown={(e) => handleMouseDown(e)}
+                    // onMouseUp={(e) => handleMouseUp(e)}
                     style={{ outline: 'none' }}
                 >
                     <Marker />
@@ -164,14 +163,15 @@ const ViewBox = () => {
                         <Node
                             key={node.id}
                             node={node}
-                            // getNodeById={getNodeById}
                             selectNode={selectNode}
                             nodes={nodes}
+                            handleMouseUp={handleMouseUp}
                             handleMouseDown={handleMouseDown}
+                            handleDoubleClick={handleDoubleClick}
                         />
                     ))}
                 </svg>
-                <InputFields node={editingNode} updateText={updateText} endEditing={endEditing} />
+                <InputFields node={editingNode} updateText={updateText} endEditing={endEditing} zoomRatio={state.zoomRatio} />
             </div>
         </>
 

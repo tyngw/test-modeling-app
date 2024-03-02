@@ -16,7 +16,8 @@ export const adjustNodeAndChildrenPosition = (allNodes, node, currentY) => {
             currentY = adjustNodeAndChildrenPosition(allNodes, childNode, currentY);
         });
     } else {
-        currentY += NODE_HEIGHT + Y_OFFSET; // 子ノードがない場合、Y座標を更新
+        //currentY += NODE_HEIGHT + Y_OFFSET; // 子ノードがない場合、Y座標を更新
+        currentY += node.height + Y_OFFSET; // 子ノードがない場合、Y座標を更新
     }
     return currentY;
 }

@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { calculateNodeWidth } from '../utils/TextNodeHelpers';
 
 // 入力フィールドを描画する部分
-const InputFields = ({ node, updateText, endEditing }) => {
+const InputFields = ({ node, updateText, endEditing, zoomRatio }) => {
     const fields = ['text', 'text2', 'text3'];
     const fieldRefs = {
         text: useRef(null),
@@ -67,10 +67,11 @@ const InputFields = ({ node, updateText, endEditing }) => {
                         className={`editable editable-${field}`}
                         style={{
                             position: 'absolute',
-                            left: `${node.x}px`,
-                            top: `${y}px`, // 計算したY座標を設定
-                            width: `${maxWidth}px`, // 全フィールドで共通の最大幅を使用
-                            height: `${height}px`, // 計算した高さを設定
+                            left: `${node.x * zoomRatio}px`,
+                            top: `${y * zoomRatio}px`, // 計算したY座標を設定
+                            width: `${maxWidth * zoomRatio}px`, // 全フィールドで共通の最大幅を使用
+                            height: `${height * zoomRatio}px`, // 計算した高さを設定
+                            fontSize: `${12 * zoomRatio}px`,
                             resize: 'none',
                         }}
                         autoFocus={field === 'text'}

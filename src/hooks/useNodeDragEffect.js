@@ -1,25 +1,27 @@
-// src/hooks/useDragEffect.js
+// src/hooks/useNodeDragEffect.js
 import { useState, useEffect, useCallback } from 'react';
 import { calculateNodeWidth } from '../utils/TextNodeHelpers';
 import { NODE_HEIGHT, X_OFFSET } from '../constants/Node';
 import { getNodeById} from '../utils/NodeSelector';
 
-export const useDragEffect = (state, dispatch) => {
+export const useNodeDragEffect = (state, dispatch) => {
     const [dragging, setDragging] = useState(null);
     const [startPosition, setStartPosition] = useState({ x: 0, y: 0 });
     const [originalPosition, setOriginalPosition] = useState({ x: 0, y: 0 });
 
-    const handleMouseDown = (e, id) => {
+    //const handleMouseDown = (e, id) => {  // useCallBackを使ってラップすることで、関数の再生成を防ぐ
+    const handleMouseDown = useCallback((e, id) => {
         if (id === undefined || id === null) {
             return;
         }
-
+        e.stopPropagation();
+        console.log(`[useNodeDragEffect]handleMouseDown id: ${id}`)
         const node = getNodeById(state.nodes, id);
         setDragging(id);
         setStartPosition({ x: e.clientX - node.x, y: e.clientY - node.y });
         setOriginalPosition({ x: node.x, y: node.y });
-        e.stopPropagation();
-    };
+    // };
+    }, [state.nodes]);
 
     useEffect(() => {
         if (dragging !== null) {
