@@ -82,6 +82,46 @@ const ViewBox = () => {
         dispatch({ type: 'REDO', payload: state.nodes });
     };
 
+    const saveSvg = (svgEl, name) => {
+        svgEl.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+        const svgData = svgEl.outerHTML;
+        const preface = '<?xml version="1.0" standalone="no"?>\r\n';
+        const svgBlob = new Blob([preface, svgData], {type:"image/svg+xml;charset=utf-8"});
+        const svgUrl = URL.createObjectURL(svgBlob);
+        const downloadLink = document.createElement("a");
+        downloadLink.href = svgUrl;
+        downloadLink.download = name;
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+    }
+
+    const saveNodes = () => {
+        const json = JSON.stringify(state.nodes);
+        const blob = new Blob([json], {type: "application/json"});
+        const url = URL.createObjectURL(blob);
+    
+        const downloadLink = document.createElement('a');
+        downloadLink.href = url;
+        downloadLink.download = 'nodes.json';
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+    }
+
+    const loadNodes = (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const contents = e.target.result;
+                const nodes = JSON.parse(contents);
+                dispatch({ type: 'LOAD_NODES', payload: nodes });
+            };
+            reader.readAsText(file);
+        }
+    }
+
     const handleKeyDown = (e) => {
         switch (e.key) {
             case 'Tab':
@@ -139,7 +179,7 @@ const ViewBox = () => {
 
     return (
         <>
-            <MenuBar menubarWidth={canvasSize.width} handleUndo={handleUndo} handleRedo={handleRedo} ZoomInViewBox={ZoomInViewBox} ZoomOutViewBox={ZoomOutViewBox} />
+            <MenuBar menubarWidth={canvasSize.width} handleUndo={handleUndo} handleRedo={handleRedo} ZoomInViewBox={ZoomInViewBox} ZoomOutViewBox={ZoomOutViewBox} saveSvg={saveSvg} svgElement={svgRef.current} loadNodes={loadNodes} saveNodes={saveNodes} />
             <div style={{ position: 'absolute', top: `${MENUBAR_HEIGHT}px`, left: 0 }}>
                 <svg
                     ref={svgRef}
@@ -162,6 +202,7 @@ const ViewBox = () => {
                             handleMouseDown={handleMouseDown}
                             handleDoubleClick={handleDoubleClick}
                             overDropTarget={overDropTarget}
+                            zoomRatio={state.zoomRatio}
                         />
                     ))}
                 </svg>

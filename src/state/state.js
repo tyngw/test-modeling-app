@@ -104,6 +104,9 @@ const deleteNodeRecursive = (nodeList, nodeToDelete) => {
 function reducer(state, action) {
     let updatedNodes
     switch (action.type) {
+        case 'LOAD_NODES':
+            // jsonファイルからノードを読み込んだ時の処理を実装する
+            return { ...state, nodes: action.payload };
         case 'SELECT_NODE':
             // ノードを選択状態にする
             let targetNode = state.nodes.find(node => node.id === action.payload);

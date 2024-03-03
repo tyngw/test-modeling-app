@@ -42,7 +42,6 @@
 /* ノード内のテキストのスタイル */
 .node-text {
   fill: black;
-  font-size: 14px;
   pointer-events: none; /* テキストをクリック可能なエリアとして扱わない */
 }
 

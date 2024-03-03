@@ -16,6 +16,7 @@ const Node = ({
     handleDoubleClick,
     nodes,
     overDropTarget,
+    zoomRatio,
 }) => {
     const parentNode = getNodeById(nodes, node.parentId);
     // console.log(`[Node.js][Render] ${node.text} ${node.text2} ${node.text3}`)
@@ -64,7 +65,11 @@ const Node = ({
                 onDoubleClick={() => handleDoubleClick(node.id)}
                 onMouseDown={(e) => handleMouseDown(e, node.id)}
                 onMouseUp={(e) => handleMouseUp(e)}
-                style={{ fill: node.id === overDropTargetId ? 'lightblue' : 'white' }}
+                style={{
+                    fill: node.id === overDropTargetId ? 'lightblue' : 'white',
+                    stroke: 'black',  // 枠線の色を設定
+                    strokeWidth: '2' // 枠線の幅を設定
+                }}
             />
             {/* 上段のテキスト */}
             {node.text.split('\n').map((line, index) => (
@@ -73,6 +78,7 @@ const Node = ({
                     x={node.x + 5}
                     y={node.y + sectionHeight / 2 + 5 + index * 20} // 上段の中央に配置し、行ごとに下にずらす
                     className="node-text"
+                    style={{ fontSize: `${zoomRatio * 14}px` }}
                 >
                     {line}
                 </text>
@@ -84,6 +90,7 @@ const Node = ({
                     x={node.x + 5}
                     y={y2 + sectionHeight / 2 + 5 + index * 20} // 中段の中央に配置し、行ごとに下にずらす
                     className="node-text"
+                    style={{ fontSize: `${zoomRatio * 14}px` }}
                 >
                     {line}
                 </text>
@@ -95,6 +102,7 @@ const Node = ({
                     x={node.x + 5}
                     y={y3 + sectionHeight / 2 + 5 + index * 20} // 下段の中央に配置し、行ごとに下にずらす
                     className="node-text"
+                    style={{ fontSize: `${zoomRatio * 14}px` }}
                 >
                     {line}
                 </text>
