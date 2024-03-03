@@ -137,10 +137,8 @@ function reducer(state, action) {
             return { ...state, nodes: state.nodes.map(node => node.id === action.payload.id ? { ...node, editing: true } : node) };
         case 'END_EDITING':
             // 編集中のフィールドを終了する
-            return { ...state, nodes: state.nodes.map(node => ({ ...node, editing: false })) };
-        case 'CHANGE_FOCUS':
-        // 編集中のフィールドを変更する
-
+            updatedNodes = adjustNodePositions(state.nodes);
+            return { ...state, nodes: updatedNodes.map(node => ({ ...node, editing: false })) };
         case 'ARROW_UP':
             // handleArrowUp関数から返却されたidを持つノードを選択状態にする
             return { ...state, nodes: state.nodes.map(node => node.id === handleArrowUp(state.nodes) ? { ...node, selected: true } : { ...node, selected: false }) };

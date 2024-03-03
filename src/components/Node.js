@@ -44,8 +44,8 @@ const Node = ({
                 <path
                     d={`M ${node.x},${node.y + NODE_HEIGHT / 2}
             C ${node.x - CURVE_CONTROL_OFFSET},${node.y + NODE_HEIGHT / 2} 
-            ${parentNode.x + calculateNodeWidth([parentNode.text, parentNode.text2, parentNode.text3]) + CURVE_CONTROL_OFFSET},${parentNode.y + NODE_HEIGHT / 2} 
-            ${parentNode.x + calculateNodeWidth([parentNode.text, parentNode.text2, parentNode.text3]) + ARROW_OFFSET},${parentNode.y + NODE_HEIGHT / 2}`}
+            ${parentNode.x + calculateNodeWidth([parentNode.text, parentNode.text2, parentNode.text3]) + CURVE_CONTROL_OFFSET},${parentNode.y + parentNode.height / 2} 
+            ${parentNode.x + calculateNodeWidth([parentNode.text, parentNode.text2, parentNode.text3]) + ARROW_OFFSET},${parentNode.y + parentNode.height / 2}`}
                     stroke="black"
                     strokeWidth="2"
                     fill="none"

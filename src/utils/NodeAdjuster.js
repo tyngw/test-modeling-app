@@ -47,8 +47,8 @@ export const adjustNodePositions = (allNodes) => {
             const children = sortedNodes.filter(n => n.parentId === parentNode.id);
             if (children.length > 0) {
                 const minY = Math.min(...children.map(n => n.y));
-                const maxY = Math.max(...children.map(n => n.y + NODE_HEIGHT));
-                parentNode.y = minY + (maxY - minY) / 2 - NODE_HEIGHT / 2;
+                const maxY = Math.max(...children.map(n => n.y + n.height));
+                parentNode.y = minY + (maxY - minY) / 2 - parentNode.height / 2;
             } else {
                 lastChildY += lastChildY ? NODE_HEIGHT + 10 : lastChildY;
                 parentNode.y = lastChildY ? lastChildY : parentNode.y;
