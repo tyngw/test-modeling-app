@@ -67,8 +67,6 @@ const Node = ({
                 onMouseUp={(e) => handleMouseUp(e)}
                 style={{
                     fill: node.id === overDropTargetId ? 'lightblue' : 'white',
-                    stroke: 'black',  // 枠線の色を設定
-                    strokeWidth: '2' // 枠線の幅を設定
                 }}
             />
             {/* 上段のテキスト */}

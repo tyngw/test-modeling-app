@@ -26,6 +26,7 @@
 /* ノードの基本スタイル */
 .node {
   stroke-width: 2;
+  stroke: black;
   fill: transparent;
 }
 
@@ -42,7 +43,8 @@
 /* ノード内のテキストのスタイル */
 .node-text {
   fill: black;
-  pointer-events: none; /* テキストをクリック可能なエリアとして扱わない */
+  pointer-events: none;
+  /* テキストをクリック可能なエリアとして扱わない */
 }
 
 /* 編集中のテキスト入力フィールドのスタイル */
