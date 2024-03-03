@@ -16,9 +16,10 @@ const Node = ({
     handleMouseUp,
     handleDoubleClick,
     nodes,
+    overDropTarget,
 }) => {
     const parentNode = getNodeById(nodes, node.parentId);
-    console.log(`[Node.js][Render] ${node.text} ${node.text2} ${node.text3}`)
+    // console.log(`[Node.js][Render] ${node.text} ${node.text2} ${node.text3}`)
     const nodeWidth = calculateNodeWidth([node.text || '', node.text2 || '', node.text3 || '']);
 
     const sectionHeight = NODE_HEIGHT / 3;
@@ -40,6 +41,9 @@ const Node = ({
     // 中段と下段のテキストのY座標を計算
     const y2 = node.y + height1;
     const y3 = node.y + height1 + height2;
+
+    // overDropTargetがnull or undefinedの場合、overDropTargetIdに-1を代入
+    const overDropTargetId = overDropTarget ? overDropTarget.id : -1;
 
     return (
         <React.Fragment key={node.id}>
@@ -68,6 +72,7 @@ const Node = ({
                 onDoubleClick={() => handleDoubleClick(node.id)}
                 onMouseDown={(e) => handleMouseDown(e, node.id)}
                 onMouseUp={(e) => handleMouseUp(e)}
+                style={{ fill: node.id === overDropTargetId ? 'lightblue' : 'white' }}
             />
             {/* 上段のテキスト */}
             {node.text.split('\n').map((line, index) => (

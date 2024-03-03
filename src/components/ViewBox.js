@@ -52,7 +52,7 @@ const ViewBox = () => {
         return nodes.find((node) => node.selected);
     }
 
-    const { handleMouseDown, handleMouseUp } = useNodeDragEffect(state, dispatch);
+    const { handleMouseDown, handleMouseUp, overDropTarget } = useNodeDragEffect(state, dispatch);
 
     // useCallBackを使ってラップすることで、関数の再生成を防ぐ
     const handleDoubleClick = useCallback((id) => {
@@ -154,8 +154,6 @@ const ViewBox = () => {
                     viewBox={viewBox}
                     tabIndex="0"
                     onKeyDown={(e) => handleKeyDown(e)}
-                    // onMouseDown={(e) => handleMouseDown(e)}
-                    // onMouseUp={(e) => handleMouseUp(e)}
                     style={{ outline: 'none' }}
                 >
                     <Marker />
@@ -168,6 +166,7 @@ const ViewBox = () => {
                             handleMouseUp={handleMouseUp}
                             handleMouseDown={handleMouseDown}
                             handleDoubleClick={handleDoubleClick}
+                            overDropTarget={overDropTarget}
                         />
                     ))}
                 </svg>

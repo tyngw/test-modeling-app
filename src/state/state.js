@@ -157,11 +157,6 @@ function reducer(state, action) {
             saveSnapshot(state.nodes);
             return state;
         case 'DECREMENT_ORDER':
-            // let updatedNodes = nodes.map(node => ({
-            //     ...node,
-            //     order: node.parentId === originalParentId && node.order > draggingNode.order ? node.order - 1 : node.order,
-            // }));
-            // 上記の処理を実現するためのロジックを上記と同じように複数行で書く
             updatedNodes = state.nodes.map(node => ({
                 ...node,
                 order: node.parentId === action.payload.parentId && node.order > action.payload.draggingNodeOrder ? node.order - 1 : node.order,
