@@ -15,7 +15,6 @@ export const useNodeDragEffect = (state, dispatch) => {
             return;
         }
         e.stopPropagation();
-        console.log(`[useNodeDragEffect]handleMouseDown id: ${id}`)
         const node = getNodeById(state.nodes, id);
         setDragging(id);
         setStartPosition({ x: e.clientX - node.x, y: e.clientY - node.y });
@@ -31,8 +30,7 @@ export const useNodeDragEffect = (state, dispatch) => {
                 const newY = e.clientY - startPosition.y;
 
                 const overNode = state.nodes.find(node => {
-                    const width = calculateNodeWidth([node.text, node.text2, node.text3]);
-                    return newX >= node.x && newX <= node.x + width &&
+                    return newX >= node.x && newX <= node.x + node.width &&
                         newY >= node.y && newY <= node.y + node.height &&
                         node.id !== dragging;
                 });
@@ -55,10 +53,8 @@ export const useNodeDragEffect = (state, dispatch) => {
     }, [dragging, startPosition, dispatch]);
 
     const handleMouseUp = useCallback((e) => {
-        console.log(`[useNodeDragEffect]overDropTarget: ${overDropTarget}`)
         if (dragging !== null) {
             if (overDropTarget) {
-                console.log(`[useNodeDragEffect][判定後]overDropTarget: ${overDropTarget}`)
                 const draggingNode = getNodeById(state.nodes, dragging);
                 const originalParentId = draggingNode.parentId;
                 const newParentId = overDropTarget.id;
@@ -79,7 +75,6 @@ export const useNodeDragEffect = (state, dispatch) => {
 
                 dispatch({ type: 'DROP_NODE', payload: { id: dragging, x: newX, y: newY, parentId: newParentId, order: maxOrder, depth: overDropTarget.depth + 1 } });
             } else {
-                console.log(`[useNodeDragEffect]DRAG_NODE`)
                 dispatch({ type: 'DRAG_NODE', payload: { id: dragging, x: originalPosition.x, y: originalPosition.y } });
             }
             setDragging(null);

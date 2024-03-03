@@ -4,7 +4,6 @@ import { NODE_HEIGHT,
  } from "../constants/Node";
 
 export const adjustNodeAndChildrenPosition = (allNodes, node, currentY) => {
-    //function adjustNodeAndChildrenPosition(node, currentY, allNodes, depthOffset = 260, ySpacing = 10) {
     node.x = 50 + (node.depth - 1) * (X_OFFSET + 60);
     node.y = currentY;
 
@@ -16,7 +15,6 @@ export const adjustNodeAndChildrenPosition = (allNodes, node, currentY) => {
             currentY = adjustNodeAndChildrenPosition(allNodes, childNode, currentY);
         });
     } else {
-        //currentY += NODE_HEIGHT + Y_OFFSET; // 子ノードがない場合、Y座標を更新
         currentY += node.height + Y_OFFSET; // 子ノードがない場合、Y座標を更新
     }
     return currentY;

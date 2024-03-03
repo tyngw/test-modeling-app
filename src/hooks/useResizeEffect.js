@@ -9,7 +9,7 @@ import {
 
 const useResizeEffect = ({ setCanvasSize, setViewBox, state }) => {
     useEffect(() => {
-        const newCanvasSize = calculateCanvasSize(state.nodes, NODE_HEIGHT, X_OFFSET, state.zoomRatio);
+        const newCanvasSize = calculateCanvasSize(state.nodes);
         newCanvasSize.width = Math.max(newCanvasSize.width, window.innerWidth);
         newCanvasSize.height = Math.max(newCanvasSize.height, window.innerHeight - MENUBAR_HEIGHT);
         const newViewSize = {

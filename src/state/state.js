@@ -4,11 +4,14 @@ import { useReducer } from 'react';
 import { adjustNodePositions } from '../utils/NodeAdjuster';
 import { Undo, Redo, saveSnapshot } from './undoredo';
 import { handleArrowUp, handleArrowDown, handleArrowRight, handleArrowLeft } from '../utils/NodeSelector';
-import { NODE_HEIGHT } from '../constants/Node';
+import {
+    NODE_HEIGHT,
+    MIN_WIDTH
+} from '../constants/Node';
 
 const initialState = {
     nodes: [
-        { id: 1, text: 'Node 1', text2: '', text3: '', selected: false, x: 50, y: 50, height: NODE_HEIGHT, parentId: null, order: 0, depth: 1, children: 0, },
+        { id: 1, text: 'Node 1', text2: '', text3: '', selected: false, x: 50, y: 50, width:MIN_WIDTH, height: NODE_HEIGHT, parentId: null, order: 0, depth: 1, children: 0, },
     ],
     // 現在のウィンドウサイズをデフォルトにする
     // width: window.innerWidth,
@@ -30,6 +33,7 @@ const addNode = (allNodes, parentNode) => {
         selected: false,
         x: 0,
         y: 0,
+        width: MIN_WIDTH,
         height: NODE_HEIGHT,
         parentId: parentNode.id,
         order: newOrder,
@@ -99,7 +103,7 @@ function reducer(state, action) {
         case 'SELECT_NODE':
             // ノードを選択状態にする
             let targetNode = state.nodes.find(node => node.id === action.payload);
-            console.log(`[SELECT_NODE] id: ${targetNode.id}, text: ${targetNode.text}, text2: ${targetNode.text2}, text3: ${targetNode.text3}, selected: ${targetNode.selected}, x: ${targetNode.x}, y: ${targetNode.y}, parentId: ${targetNode.parentId}, order: ${targetNode.order}, depth: ${targetNode.depth}, children: ${targetNode.children}`);
+            console.log(`[SELECT_NODE] id: ${targetNode.id}, text: ${targetNode.text}, text2: ${targetNode.text2}, text3: ${targetNode.text3}, selected: ${targetNode.selected}, x: ${targetNode.x}, y: ${targetNode.y}, width: ${targetNode.width}, height: ${targetNode.height}, parentId: ${targetNode.parentId}, order: ${targetNode.order}, depth: ${targetNode.depth}, children: ${targetNode.children}`);
             // 新しいノードの selected プロパティを true にし、それ以外のノードの selected プロパティを false にする
             return { ...state, nodes: state.nodes.map(node => node.id === action.payload ? { ...node, selected: true } : { ...node, selected: false }) };
         // return { ...state, nodes: state.nodes.map(node => node.id === action.payload ? { ...node, selected: true } : node) };

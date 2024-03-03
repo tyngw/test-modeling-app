@@ -14,6 +14,7 @@ const InputFields = ({ node, updateText, endEditing, zoomRatio }) => {
     if (!node) return null;
 
     const maxWidth = calculateNodeWidth([node.text, node.text2, node.text3]);
+    node.width = maxWidth;
 
     const handleKeyDown = (e, field, index) => {
         if (e.key === 'Tab') {

@@ -1,6 +1,10 @@
 // util/LayoutUtilities.js
 import { useState, useEffect } from 'react';
-import { calculateNodeWidth } from './TextNodeHelpers';
+import {
+  NODE_HEIGHT,
+  X_OFFSET,
+} from '../constants/Node';
+
 
 // ウィンドウサイズを管理するカスタムフック
 export const useWindowSize = () => {
@@ -22,12 +26,12 @@ export const useWindowSize = () => {
 };
 
 // キャンバスサイズを計算する関数
-export const calculateCanvasSize = (nodes, nodeHeight, parentXOffset, zoomRatio) => {
-  const maxNodeX = Math.max(...nodes.map(node => node.x + calculateNodeWidth([node.text]))) + parentXOffset;
-  const maxNodeY = Math.max(...nodes.map(node => node.y + nodeHeight)) + nodeHeight;
+export const calculateCanvasSize = (nodes) => {
+  const maxNodeX = Math.max(...nodes.map(node => node.x + node.width));
+  const maxNodeY = Math.max(...nodes.map(node => node.y + node.height));
 
    return {
-    width: maxNodeX * zoomRatio,
-    height: maxNodeY * zoomRatio,
+    width: maxNodeX  + X_OFFSET,
+    height: maxNodeY  + NODE_HEIGHT,
   };
 };

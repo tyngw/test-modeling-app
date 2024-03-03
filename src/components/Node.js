@@ -19,8 +19,9 @@ const Node = ({
     overDropTarget,
 }) => {
     const parentNode = getNodeById(nodes, node.parentId);
-    // console.log(`[Node.js][Render] ${node.text} ${node.text2} ${node.text3}`)
-    const nodeWidth = calculateNodeWidth([node.text || '', node.text2 || '', node.text3 || '']);
+    console.log(`[Node.js][Render] ${node.text} ${node.text2} ${node.text3}`)
+    // const nodeWidth = calculateNodeWidth([node.text || '', node.text2 || '', node.text3 || '']);
+    // node.width = nodeWidth;
 
     const sectionHeight = NODE_HEIGHT / 3;
 
@@ -63,7 +64,7 @@ const Node = ({
             <rect
                 x={node.x}
                 y={node.y}
-                width={nodeWidth}
+                width={node.width}
                 // height={NODE_HEIGHT}
                 height={height} // 計算した高さを使用
                 className={`node ${node.selected ? 'node-selected' : 'node-unselected'}`}
@@ -111,7 +112,7 @@ const Node = ({
             <line
                 x1={node.x}
                 y1={node.y + height1} // 上段のテキストの高さを考慮
-                x2={node.x + nodeWidth}
+                x2={node.x + node.width}
                 y2={node.y + height1} // 上段のテキストの高さを考慮
                 stroke="black"
                 strokeWidth="1"
@@ -120,7 +121,7 @@ const Node = ({
             <line
                 x1={node.x}
                 y1={node.y + height1 + height2} // 上段と中段のテキストの高さを考慮
-                x2={node.x + nodeWidth}
+                x2={node.x + node.width}
                 y2={node.y + height1 + height2} // 上段と中段のテキストの高さを考慮
                 stroke="black"
                 strokeWidth="1"

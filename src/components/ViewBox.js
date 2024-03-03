@@ -150,6 +150,7 @@ const ViewBox = () => {
                     tabIndex="0"
                     onKeyDown={(e) => handleKeyDown(e)}
                     style={{ outline: 'none' }}
+                    className="svg-element"
                 >
                     <Marker />
                     {nodes.map((node) => (
