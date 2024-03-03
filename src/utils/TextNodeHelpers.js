@@ -1,15 +1,17 @@
 // util/TextNodeHelpers.js
+import { 
+    MIN_WIDTH,
+    MAX_WIDTH,
+ } from "../constants/Node";
 
 export const calculateNodeWidth = (texts) => {
-    const minWidth = 80;
-    const maxWidth = 200;
     // 配列内のテキストから最も長いテキストの幅を計算
     const maxTextLength = texts.reduce((max, text) => {
-        if (text == undefined) return minWidth;
+        if (text == undefined) return MIN_WIDTH;
         const textLength = calculateTextWidth(text); // この関数はテキストの幅を計算します
         return Math.max(max, textLength);
     }, 0);
-    const widthBasedOnText = Math.max(minWidth, Math.min(maxWidth, maxTextLength));
+    const widthBasedOnText = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, maxTextLength));
     return widthBasedOnText;
 };
 

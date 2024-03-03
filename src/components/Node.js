@@ -18,7 +18,7 @@ const Node = ({
     overDropTarget,
 }) => {
     const parentNode = getNodeById(nodes, node.parentId);
-    console.log(`[Node.js][Render] ${node.text} ${node.text2} ${node.text3}`)
+    // console.log(`[Node.js][Render] ${node.text} ${node.text2} ${node.text3}`)
 
     const sectionHeight = NODE_HEIGHT / 3;
 

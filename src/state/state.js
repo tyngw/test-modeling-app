@@ -13,8 +13,6 @@ const initialState = {
     nodes: [
         { id: 1, text: 'Node 1', text2: '', text3: '', selected: false, x: 50, y: 50, width:MIN_WIDTH, height: NODE_HEIGHT, parentId: null, order: 0, depth: 1, children: 0, },
     ],
-    // 現在のウィンドウサイズをデフォルトにする
-    // width: window.innerWidth,
     width: Window.innerWidth,
     height: window.innerHeight,
     zoomRatio: 1,
@@ -43,8 +41,6 @@ const addNode = (allNodes, parentNode) => {
     console.log(`newRect: ${newRect.text}`)
     newNodes = [...allNodes, newRect];
 
-
-    // 追加元ノードのchildrenプロパティをインクリメント
     newNodes = newNodes.map(node => {
         if (node.id === parentNode.id) {
             return { ...node, children: node.children + 1 };
@@ -52,18 +48,26 @@ const addNode = (allNodes, parentNode) => {
         return node;
     });
 
-    // 新しいノードと既存のノードとの間で重なりをチェックし、調整
-    let adjustedNodes = adjustNodePositions(newNodes)
-
-    return adjustedNodes;
+    return newNodes;
 };
 
-const deleteNode = (nodeList, nodeToDelete) => {
-    let updatedNodes = deleteNodeRecursive(nodeList, nodeToDelete);
+// 指定されたノードの子ノードのdepthを再帰的に親ノードのdepth+1に設定する関数
+const incrementDepthRecursive = (nodeList, parentNode) => {
+    let updatedNodes = nodeList.map(node => {
+        if (node.parentId === parentNode.id) {
+            return { ...node, depth: parentNode.depth + 1 };
+        }
+        return node;
+    });
 
-    updatedNodes = adjustNodePositions(updatedNodes);
+    const childNodes = updatedNodes.filter(node => node.parentId === parentNode.id);
+    if (childNodes.length > 0) {
+        childNodes.forEach(childNode => {
+            updatedNodes = incrementDepthRecursive(updatedNodes, childNode);
+        });
+    }
     return updatedNodes;
-}
+};
 
 // 与えられたノードを再帰的に削除する関数
 // 引数としてノードのリストと削除対象のノードを受け取る
@@ -118,15 +122,14 @@ function reducer(state, action) {
             // Undo/Redoのためのスナップショットを保存
             saveSnapshot(state.nodes);
             updatedNodes = addNode(state.nodes, action.payload);
+            updatedNodes = adjustNodePositions(updatedNodes);
             return { ...state, nodes: updatedNodes };
         case 'DELETE_NODE':
-            // ここにノード削除のロジックを書く
-            // Undo/Redoのためのスナップショットを保存
             saveSnapshot(state.nodes);
-            updatedNodes = deleteNode(state.nodes, action.payload);
+            updatedNodes = deleteNodeRecursive(state.nodes, action.payload);
+            updatedNodes = adjustNodePositions(updatedNodes);
             return { ...state, nodes: updatedNodes };
         case 'EDIT_NODE':
-            // nullなら何もしない    
             if (action.payload === null || action.payload === undefined) {
                 return state;
             }
@@ -185,8 +188,12 @@ function reducer(state, action) {
 
             return { ...state, nodes: updatedNodes };
         case 'DROP_NODE':
-            return { ...state, nodes: state.nodes.map(node => node.id === action.payload.id ? { ...node, x: action.payload.x, y: action.payload.y, parentId: action.payload.parentId, order: action.payload.order, depth: action.payload.depth } : node) };
-        case 'DRAG_NODE':
+            // 子ノードのdepthを再帰的に1インクリメント
+            updatedNodes = incrementDepthRecursive(state.nodes, action.payload);
+            updatedNodes = updatedNodes.map(node => node.id === action.payload.id ? { ...node, x: action.payload.x, y: action.payload.y, parentId: action.payload.parentId, order: action.payload.order, depth: action.payload.depth } : node);
+            updatedNodes = adjustNodePositions(updatedNodes);
+            return { ...state, nodes: updatedNodes };
+        case 'MOVE_NODE':
             return { ...state, nodes: state.nodes.map(node => node.id === action.payload.id ? { ...node, x: action.payload.x, y: action.payload.y } : node) };
         default:
             throw new Error();

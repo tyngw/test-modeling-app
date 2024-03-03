@@ -1,5 +1,5 @@
 // components/InputFields.js
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import { calculateNodeWidth } from '../utils/TextNodeHelpers';
 
 // 入力フィールドを描画する部分
@@ -17,23 +17,25 @@ const InputFields = ({ node, updateText, endEditing, zoomRatio }) => {
     node.width = maxWidth;
 
     const handleKeyDown = (e, field, index) => {
+        // タブキーが押された場合、次のフィールドにフォーカスを移動
+        // ただし、最後のフィールドの場合は編集モードを終了
         if (e.key === 'Tab') {
             e.preventDefault();
             const nextIndex = (index + 1) % fields.length;
             const nextField = fields[nextIndex];
-            fieldRefs[nextField].current.focus();
-        }
 
+            if (nextField !== 'text') {
+                fieldRefs[nextField].current.focus();
+            } else {
+                endEditing();
+            }
+        }
         if (e.key === 'Enter' && e.shiftKey) {
             e.preventDefault();
             const cursorPosition = e.target.selectionStart;
             // カーソルの位置に改行を挿入
             const newValue = e.target.value.substring(0, cursorPosition) + '\n' + e.target.value.substring(cursorPosition);
             updateText(newValue, field);
-        } else if (e.key === 'Enter') {
-            // Enterキーが押された場合、編集モードを終了
-            e.preventDefault();
-            endEditing();
         }
         // Escキーが押された場合、編集モードを終了
         if (e.key === 'Escape') {

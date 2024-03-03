@@ -1,5 +1,5 @@
 // src/components/ViewBox.js
-import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useRef, useState, useCallback, useMemo } from 'react';
 import Node from './Node';
 import { Marker } from './Marker';
 import MenuBar from './Menubar';
@@ -151,7 +151,7 @@ const ViewBox = () => {
 
     return (
         <>
-            <MenuBar menubarWidth={canvasSize.width} handleUndo={handleUndo} handleRedo={handleRedo} ZoomInViewBox={ZoomInViewBox} ZoomOutViewBox={ZoomOutViewBox} canvasSize={canvasSize} viewBox={viewBox} />
+            <MenuBar menubarWidth={canvasSize.width} handleUndo={handleUndo} handleRedo={handleRedo} ZoomInViewBox={ZoomInViewBox} ZoomOutViewBox={ZoomOutViewBox} />
             <div style={{ position: 'absolute', top: `${MENUBAR_HEIGHT}px`, left: 0 }}>
                 <svg
                     ref={svgRef}

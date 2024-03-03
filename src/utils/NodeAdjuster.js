@@ -4,7 +4,15 @@ import { NODE_HEIGHT,
  } from "../constants/Node";
 
 export const adjustNodeAndChildrenPosition = (allNodes, node, currentY) => {
-    node.x = 50 + (node.depth - 1) * (X_OFFSET + 60);
+    // node.xに親ノードのx座標を設定 + X_OFFSET + 親ノードのwidthをセットする
+    const parentNode = allNodes.find(n => n.id === node.parentId);
+    if (!parentNode) {
+        node.x = 50;
+    } else {
+        node.x = parentNode.x + parentNode.width + X_OFFSET;
+    }
+    
+    //node.x = 50 + (node.depth - 1) * (X_OFFSET + 60);
     node.y = currentY;
 
     // console.log(`「${node.text}」の位置を設定: x=${node.x}, y=${node.y}`);

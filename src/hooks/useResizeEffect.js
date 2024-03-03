@@ -2,8 +2,6 @@
 import { useEffect } from 'react';
 import { calculateCanvasSize } from '../utils/LayoutUtilities';
 import {
-    NODE_HEIGHT,
-    X_OFFSET,
     MENUBAR_HEIGHT,
 } from '../constants/Node';
 

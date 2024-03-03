@@ -1,7 +1,8 @@
 // ./hooks/useNodeDragEffect.js
 import { useState, useEffect, useCallback } from 'react';
-import { calculateNodeWidth } from '../utils/TextNodeHelpers';
-import { NODE_HEIGHT, X_OFFSET } from '../constants/Node';
+import { 
+    NODE_HEIGHT, 
+    X_OFFSET } from '../constants/Node';
 import { getNodeById } from '../utils/NodeSelector';
 
 export const useNodeDragEffect = (state, dispatch) => {
@@ -41,7 +42,7 @@ export const useNodeDragEffect = (state, dispatch) => {
                     setOverDropTarget(null);
                 }
 
-                dispatch({ type: 'DRAG_NODE', payload: { id: dragging, x: newX, y: newY } });
+                dispatch({ type: 'MOVE_NODE', payload: { id: dragging, x: newX, y: newY } });
             };
 
             document.addEventListener('mousemove', handleMouseMove);
@@ -75,7 +76,7 @@ export const useNodeDragEffect = (state, dispatch) => {
 
                 dispatch({ type: 'DROP_NODE', payload: { id: dragging, x: newX, y: newY, parentId: newParentId, order: maxOrder, depth: overDropTarget.depth + 1 } });
             } else {
-                dispatch({ type: 'DRAG_NODE', payload: { id: dragging, x: originalPosition.x, y: originalPosition.y } });
+                dispatch({ type: 'MOVE_NODE', payload: { id: dragging, x: originalPosition.x, y: originalPosition.y } });
             }
             setDragging(null);
             setOverDropTarget(null);
