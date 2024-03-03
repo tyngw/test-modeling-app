@@ -39,12 +39,7 @@ const ViewBox = () => {
         dispatch({ type: 'ZOOM_OUT' });
     };
 
-    // zoomRatioに応じてviewBoxのサイズを変更する
-    useEffect(() => {
-        setViewBox(`0 0 ${window.innerWidth * (1 / state.zoomRatio)} ${(window.innerHeight - MENUBAR_HEIGHT) * (1 / state.zoomRatio)}`);
-    }, [canvasSize, state.nodes, state.zoomRatio]);
-
-    useResizeEffect({ setCanvasSize, state });
+    useResizeEffect({ setCanvasSize, setViewBox, state });
 
     useClickOutside(svgRef, dispatch, editingNode, endEditing);
 
