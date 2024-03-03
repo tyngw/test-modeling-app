@@ -1,8 +1,7 @@
 // components/Node.js
 import React from 'react';
 import { calculateNodeWidth } from '../utils/TextNodeHelpers';
-import { getNodeById} from '../utils/NodeSelector';
-// constantsのインポート
+import { getNodeById } from '../utils/NodeSelector';
 import {
     NODE_HEIGHT,
     CURVE_CONTROL_OFFSET,
@@ -20,28 +19,21 @@ const Node = ({
 }) => {
     const parentNode = getNodeById(nodes, node.parentId);
     console.log(`[Node.js][Render] ${node.text} ${node.text2} ${node.text3}`)
-    // const nodeWidth = calculateNodeWidth([node.text || '', node.text2 || '', node.text3 || '']);
-    // node.width = nodeWidth;
 
     const sectionHeight = NODE_HEIGHT / 3;
 
     // 各テキストの行数を計算
-    const lines1 = node.text.split('\n').length;
-    const lines2 = node.text2.split('\n').length;
-    const lines3 = node.text3.split('\n').length;
+    const lines = [node.text, node.text2, node.text3].map(text => text.split('\n').length);
 
     // 各テキストの高さを計算
-    const height1 = sectionHeight + (lines1 - 1) * 20;
-    const height2 = sectionHeight + (lines2 - 1) * 20;
-    const height3 = sectionHeight + (lines3 - 1) * 20;
+    const heights = lines.map(line => sectionHeight + (line - 1) * 20);
 
     // ノードの高さを計算
-    const height = height1 + height2 + height3;
-    node.height = height;
+    node.height = heights.reduce((total, height) => total + height, 0);
 
     // 中段と下段のテキストのY座標を計算
-    const y2 = node.y + height1;
-    const y3 = node.y + height1 + height2;
+    const y2 = node.y + heights[0];
+    const y3 = node.y + heights[0] + heights[1];
 
     // overDropTargetがnull or undefinedの場合、overDropTargetIdに-1を代入
     const overDropTargetId = overDropTarget ? overDropTarget.id : -1;
@@ -65,8 +57,7 @@ const Node = ({
                 x={node.x}
                 y={node.y}
                 width={node.width}
-                // height={NODE_HEIGHT}
-                height={height} // 計算した高さを使用
+                height={node.height}
                 className={`node ${node.selected ? 'node-selected' : 'node-unselected'}`}
                 rx="2"
                 onClick={() => selectNode(node.id)}
@@ -111,18 +102,18 @@ const Node = ({
             {/* 上段と中段の間の線 */}
             <line
                 x1={node.x}
-                y1={node.y + height1} // 上段のテキストの高さを考慮
+                y1={node.y + heights[0]} // 上段のテキストの高さを考慮
                 x2={node.x + node.width}
-                y2={node.y + height1} // 上段のテキストの高さを考慮
+                y2={node.y + heights[0]} // 上段のテキストの高さを考慮
                 stroke="black"
                 strokeWidth="1"
             />
             {/* 中段と下段の間の線 */}
             <line
                 x1={node.x}
-                y1={node.y + height1 + height2} // 上段と中段のテキストの高さを考慮
+                y1={node.y + heights[0] + heights[1]} // 上段と中段のテキストの高さを考慮
                 x2={node.x + node.width}
-                y2={node.y + height1 + height2} // 上段と中段のテキストの高さを考慮
+                y2={node.y + heights[0] + heights[1]} // 上段と中段のテキストの高さを考慮
                 stroke="black"
                 strokeWidth="1"
             />

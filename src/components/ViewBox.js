@@ -10,6 +10,18 @@ import { useNodeDragEffect } from '../hooks/useNodeDragEffect';
 import { useClickOutside } from '../hooks/useClickOutside';
 import { MENUBAR_HEIGHT } from '../constants/Node';
 
+/**
+ * ViewBox component represents the main container for displaying nodes and handling user interactions.
+ *
+ * @component
+ * @returns {JSX.Element} ViewBox component
+ */
+/**
+ * Represents a view box component.
+ *
+ * @component
+ * @returns {JSX.Element} The JSX element representing the view box component.
+ */
 const ViewBox = () => {
     const svgRef = useRef();
     const { state, dispatch } = useStore();
@@ -49,7 +61,6 @@ const ViewBox = () => {
 
     const { handleMouseDown, handleMouseUp, overDropTarget } = useNodeDragEffect(state, dispatch);
 
-    // useCallBackを使ってラップすることで、関数の再生成を防ぐ
     const handleDoubleClick = useCallback((id) => {
         dispatch({ type: 'EDIT_NODE', payload: id });
     }, [dispatch]);
