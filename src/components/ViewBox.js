@@ -82,28 +82,32 @@ const ViewBox = () => {
         dispatch({ type: 'REDO', payload: state.nodes });
     };
 
-    const saveSvg = (svgEl, name) => {
-        svgEl.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-
-        // SVG内の全ての要素を取得します
-        const elements = svgEl.querySelectorAll('*');
-
+    const saveSvg = (svgElement, name) => {
+        const svgElementClone = svgElement.cloneNode(true);
+    
+        svgElementClone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    
+        const elements = svgElement.querySelectorAll('*');
+        const clonedElements = svgElementClone.querySelectorAll('*');
+    
         // 各要素に対してループを行います
         for (let i = 0; i < elements.length; i++) {
             const element = elements[i];
-
-            // 要素の計算されたスタイルを取得します
+            const clonedElement = clonedElements[i];
+    
+            // 元の要素の計算されたスタイルを取得します
             const computedStyle = window.getComputedStyle(element);
-
-            // 計算されたスタイルを要素のstyle属性に設定します
+    
+            // 計算されたスタイルを複製した要素のstyle属性に設定します
             for (let j = 0; j < computedStyle.length; j++) {
                 const styleName = computedStyle[j];
                 const styleValue = computedStyle.getPropertyValue(styleName);
-                element.style[styleName] = styleValue;
+                clonedElement.style[styleName] = styleValue;
             }
         }
-
-        const svgData = svgEl.outerHTML;
+    
+        // SVG要素を文字列に変換します
+        const svgData = svgElementClone.outerHTML;
         const preface = '<?xml version="1.0" standalone="no"?>\r\n';
         const svgBlob = new Blob([preface, svgData], { type: "image/svg+xml;charset=utf-8" });
         const svgUrl = URL.createObjectURL(svgBlob);
