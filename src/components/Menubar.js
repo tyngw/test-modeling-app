@@ -16,7 +16,6 @@ const MenuBar = ({
     ZoomInViewBox,
     ZoomOutViewBox,
     saveSvg,
-    svgElement,
     loadNodes,
     saveNodes,
 }) => {
@@ -39,7 +38,7 @@ const MenuBar = ({
                     Save
                 </Button>
                 <div style={{ width: '10px' }}></div>
-                <Button variant="contained" onClick={() => saveSvg(svgElement, 'download.svg')}>
+                <Button variant="contained" onClick={() => saveSvg()}>
                     <SaveAltIcon />
                     Export SVG
                 </Button>

@@ -36,6 +36,23 @@ export const saveSnapshot = (nodes) => {
     const newSnapshots = snapshots.slice(0, snapshotIndex + 1);
 
     newSnapshots.push(nodes);
+    // localStorageにスナップショットを保存
+    saveToLocalStorage(nodes);
     snapshots = newSnapshots;
     snapshotIndex++;
+};
+
+// localStorageにスナップショットを保存する関数
+export const saveToLocalStorage = (nodes) => {
+    localStorage.setItem('nodes', JSON.stringify(nodes));
+};
+
+// localStorageからスナップショットを取得する関数
+export const loadFromLocalStorage = () => {
+    // localStorageに値がない場合は空の配列を返す
+    if (!localStorage.getItem('nodes')) {
+        return [];
+    }
+    const nodes = JSON.parse(localStorage.getItem('nodes'));
+    return nodes;
 };
