@@ -25,9 +25,12 @@ const addNode = (allNodes, parentNode) => {
     const newOrder = parentNode.children;
     const newRect = {
         id: newId,
-        text: `Node ${newId}`,
-        text2: `order: ${newOrder}`,
-        text3: `depth: ${parentNode.depth + 1}`,
+        text: '',
+        text2: '',
+        text3: '',
+        // text: `Node ${newId}`,
+        // text2: `order: ${newOrder}`,
+        // text3: `depth: ${parentNode.depth + 1}`,
         selected: false,
         x: 0,
         y: 0,
@@ -37,13 +40,16 @@ const addNode = (allNodes, parentNode) => {
         order: newOrder,
         depth: parentNode.depth + 1,
         children: 0,
+        editing: true,
+        selected: true,
     };
-    console.log(`newRect: ${newRect.text}`)
     newNodes = [...allNodes, newRect];
 
+    // 親ノードのchildrenをインクリメントするとともに、選択状態を解除する
     newNodes = newNodes.map(node => {
         if (node.id === parentNode.id) {
-            return { ...node, children: node.children + 1 };
+            // return { ...node, children: node.children + 1 };
+            return { ...node, children: node.children + 1, selected: false };
         }
         return node;
     });
