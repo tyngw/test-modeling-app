@@ -1,5 +1,5 @@
 // components/Node.js
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { calculateNodeWidth } from '../utils/TextNodeHelpers';
 import { getNodeById } from '../utils/NodeSelector';
 import {
@@ -21,23 +21,29 @@ const Node = ({
     const parentNode = getNodeById(nodes, node.parentId);
     // console.log(`[Node.js][Render] ${node.text} ${node.text2} ${node.text3}`)
 
-    const sectionHeight = NODE_HEIGHT / 3;
-
-    // 各テキストの行数を計算
-    const lines = [node.text, node.text2, node.text3].map(text => text.split('\n').length);
-
-    // 各テキストの高さを計算
-    const heights = lines.map(line => sectionHeight + (line - 1) * 20);
-
-    // ノードの高さを計算
-    node.height = heights.reduce((total, height) => total + height, 0);
-
-    // 中段と下段のテキストのY座標を計算
-    const y2 = node.y + heights[0];
-    const y3 = node.y + heights[0] + heights[1];
-
     // overDropTargetがnull or undefinedの場合、overDropTargetIdに-1を代入
     const overDropTargetId = overDropTarget ? overDropTarget.id : -1;
+
+    // div要素へのrefを作成
+    const div1Ref = useRef(null);
+    const div2Ref = useRef(null);
+    const div3Ref = useRef(null);
+
+    // div要素の高さをstateとして保持
+    const [div1Height, setDiv1Height] = useState(20);
+    const [div2Height, setDiv2Height] = useState(20);
+    const [div3Height, setDiv3Height] = useState(20);
+
+    useEffect(() => {
+        // div要素の高さを取得し、stateを更新
+        setDiv1Height(Math.max(div1Ref.current.offsetHeight, 20));
+        setDiv2Height(Math.max(div2Ref.current.offsetHeight, 20));
+        setDiv3Height(Math.max(div3Ref.current.offsetHeight, 20));
+    }, [div1Ref.current, div2Ref.current, div3Ref.current]);
+
+    useEffect(() => {
+        node.height = div1Height + div2Height + div3Height;
+    }, [div1Height, div2Height, div3Height]);
 
     return (
         <React.Fragment key={node.id}>
@@ -70,56 +76,110 @@ const Node = ({
                 }}
             />
             {/* 上段のテキスト */}
-            {node.text.split('\n').map((line, index) => (
-                <text
-                    key={index}
-                    x={node.x + 5}
-                    y={node.y + sectionHeight / 2 + 5 + index * 20} // 上段の中央に配置し、行ごとに下にずらす
-                    className="node-text"
-                    style={{ fontSize: `${zoomRatio * 14}px` }}
+            <foreignObject
+                x={node.x}
+                y={node.y}
+                width={node.width}
+                height={div1Height}
+            // style={{ border: '1px solid red' }}
+            >
+                <div
+                    ref={div1Ref}
+                    xmlns="http://www.w3.org/1999/xhtml"
+                    style={{
+                        fontSize: `${zoomRatio * 14}px`,
+                        minWidth: `${node.width}px`,
+                        maxWidth: `${node.width}px`,
+                        minHeight: `${div1Height}px`,
+                        overflow: 'hidden',
+                        whiteSpace: 'pre-wrap',
+                        wordWrap: 'break-word',
+                        pointerEvents: 'none',
+                        verticalAlign: 'middle',
+                        display: 'flex',
+                        pointerEvents: 'all',
+                    }}
+                    // クリックイベントを処理(selectNodeの呼び出し)
+                    onClick={() => selectNode(node.id)}
+                    onDoubleClick={() => handleDoubleClick(node.id)}
                 >
-                    {line}
-                </text>
-            ))}
+                    {node.text}
+                </div>
+            </foreignObject>
+
             {/* 中段のテキスト */}
-            {node.text2.split('\n').map((line, index) => (
-                <text
-                    key={index}
-                    x={node.x + 5}
-                    y={y2 + sectionHeight / 2 + 5 + index * 20} // 中段の中央に配置し、行ごとに下にずらす
-                    className="node-text"
-                    style={{ fontSize: `${zoomRatio * 14}px` }}
+            <foreignObject
+                x={node.x}
+                y={node.y + div1Height}
+                width={node.width}
+                height={div2Height}
+            >
+                <div
+                    ref={div2Ref}
+                    xmlns="http://www.w3.org/1999/xhtml"
+                    style={{
+                        fontSize: `${zoomRatio * 14}px`,
+                        minWidth: `${node.width}px`,
+                        maxWidth: `${node.width}px`,
+                        minHeight: `${div2Height}px`,
+                        overflow: 'hidden',
+                        whiteSpace: 'pre-wrap',
+                        wordWrap: 'break-word',
+                        pointerEvents: 'none',
+                        verticalAlign: 'middle',
+                        display: 'flex',
+                        pointerEvents: 'all',
+                    }}
+                    onClick={() => selectNode(node.id)}
+                    onDoubleClick={() => handleDoubleClick(node.id)}
                 >
-                    {line}
-                </text>
-            ))}
+                    {node.text2}
+                </div>
+            </foreignObject>
             {/* 下段のテキスト */}
-            {node.text3.split('\n').map((line, index) => (
-                <text
-                    key={index}
-                    x={node.x + 5}
-                    y={y3 + sectionHeight / 2 + 5 + index * 20} // 下段の中央に配置し、行ごとに下にずらす
-                    className="node-text"
-                    style={{ fontSize: `${zoomRatio * 14}px` }}
+            <foreignObject
+                x={node.x}
+                y={node.y + div1Height + div2Height}
+                width={node.width}
+                height={div3Height}
+            >
+                <div
+                    ref={div3Ref}
+                    xmlns="http://www.w3.org/1999/xhtml"
+                    style={{
+                        fontSize: `${zoomRatio * 14}px`,
+                        minWidth: `${node.width}px`,
+                        maxWidth: `${node.width}px`,
+                        minHeight: `${div3Height}px`,
+                        overflow: 'hidden',
+                        whiteSpace: 'pre-wrap',
+                        wordWrap: 'break-word',
+                        pointerEvents: 'none',
+                        verticalAlign: 'middle',
+                        display: 'flex',
+                        pointerEvents: 'all',
+                    }}
+                    onClick={() => selectNode(node.id)}
+                    onDoubleClick={() => handleDoubleClick(node.id)}
                 >
-                    {line}
-                </text>
-            ))}
+                    {node.text3}
+                </div>
+            </foreignObject>
             {/* 上段と中段の間の線 */}
             <line
                 x1={node.x}
-                y1={node.y + heights[0]} // 上段のテキストの高さを考慮
+                y1={node.y + div1Height}
                 x2={node.x + node.width}
-                y2={node.y + heights[0]} // 上段のテキストの高さを考慮
+                y2={node.y + div1Height}
                 stroke="black"
                 strokeWidth="1"
             />
             {/* 中段と下段の間の線 */}
             <line
                 x1={node.x}
-                y1={node.y + heights[0] + heights[1]} // 上段と中段のテキストの高さを考慮
+                y1={node.y + div1Height + div2Height}
                 x2={node.x + node.width}
-                y2={node.y + heights[0] + heights[1]} // 上段と中段のテキストの高さを考慮
+                y2={node.y + div1Height + div2Height}
                 stroke="black"
                 strokeWidth="1"
             />
