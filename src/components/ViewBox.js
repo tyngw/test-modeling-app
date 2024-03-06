@@ -53,10 +53,6 @@ const ViewBox = () => {
 
     useClickOutside(svgRef, dispatch, editingNode, endEditing);
 
-    const getSelectedNode = (nodes) => {
-        return nodes.find((node) => node.selected);
-    }
-
     const { handleMouseDown, handleMouseUp, overDropTarget } = useNodeDragEffect(state, dispatch);
 
     const handleDoubleClick = useCallback((id) => {
@@ -100,27 +96,20 @@ const ViewBox = () => {
                 handleKeyAction(e, 'DELETE_NODE');
                 break;
             case 'Enter':
-                // e.preventDefault();
-                // handleEnterKey(state, dispatch);
                 handleKeyAction(e, 'EDIT_NODE', { editingField: 'text' });
                 break;
             case 'ArrowUp':
-                e.preventDefault();
-                dispatch({ type: 'ARROW_UP', payload: state.nodes });
+                handleKeyAction(e, 'ARROW_UP');
                 break;
             case 'ArrowDown':
-                e.preventDefault();
-                dispatch({ type: 'ARROW_DOWN', payload: state.nodes });
+                handleKeyAction(e, 'ARROW_DOWN');
                 break;
             // 右キー
             case 'ArrowRight':
-                e.preventDefault();
-                console.log('ArrowRight');
-                dispatch({ type: 'ARROW_RIGHT', payload: state.nodes });
+                handleKeyAction(e, 'ARROW_RIGHT');
                 break;
             case 'ArrowLeft':
-                e.preventDefault();
-                dispatch({ type: 'ARROW_LEFT', payload: state.nodes });
+                handleKeyAction(e, 'ARROW_LEFT');
                 break;
             default:
                 console.log(`editingNode: ${editingNode}`)
