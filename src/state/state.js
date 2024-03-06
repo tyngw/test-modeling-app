@@ -11,7 +11,7 @@ import {
 
 const initialState = {
     nodes: [
-        { id: 1, text: 'Node 1', text2: '', text3: '', selected: false, x: 50, y: 50, width:MIN_WIDTH, height: NODE_HEIGHT, parentId: null, order: 0, depth: 1, children: 0, },
+        { id: 1, text: 'Node 1', text2: '', text3: '', selected: false, x: 50, y: 50, width: MIN_WIDTH, height: NODE_HEIGHT, parentId: null, order: 0, depth: 1, children: 0, },
     ],
     width: Window.innerWidth,
     height: window.innerHeight,
@@ -112,7 +112,11 @@ function reducer(state, action) {
     const selectedNode = state.nodes.find(node => node.selected);
     switch (action.type) {
         case 'LOAD_NODES':
-            return { ...state, nodes: action.payload };
+            if (action.payload.length === 0) {
+                return initialState;
+            } else {
+                return { ...state, nodes: action.payload };
+            }
         case 'SELECT_NODE':
             // ノードを選択状態にする
             let targetNode = state.nodes.find(node => node.id === action.payload);
@@ -128,7 +132,7 @@ function reducer(state, action) {
             console.log(`action.payload.id: ${action.payload.id}, action.payload.field: ${action.payload.field}, action.payload.value: ${action.payload.value}`);
             return { ...state, nodes: state.nodes.map(node => node.id === action.payload.id ? { ...node, [action.payload.field]: action.payload.value } : node) };
         case 'ADD_NODE':
-            if (selectedNode){
+            if (selectedNode) {
                 saveSnapshot(state.nodes);
                 updatedNodes = addNode(state.nodes, selectedNode);
                 updatedNodes = adjustNodePositions(updatedNodes);
@@ -137,7 +141,7 @@ function reducer(state, action) {
                 return state;
             }
         case 'DELETE_NODE':
-            if (selectedNode){
+            if (selectedNode) {
                 saveSnapshot(state.nodes);
                 updatedNodes = deleteNodeRecursive(state.nodes, selectedNode);
                 updatedNodes = adjustNodePositions(updatedNodes);
@@ -146,12 +150,12 @@ function reducer(state, action) {
                 return state;
             }
         case 'EDIT_NODE':
-            if (selectedNode){
+            if (selectedNode) {
                 return { ...state, nodes: state.nodes.map(node => node.id === selectedNode.id ? { ...node, editing: true } : node) };
             } else {
                 return state;
             }
-            
+
         case 'END_EDITING':
             // 編集中のフィールドを終了する
             updatedNodes = adjustNodePositions(state.nodes);
