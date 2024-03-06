@@ -108,7 +108,8 @@ const deleteNodeRecursive = (nodeList, nodeToDelete) => {
 };
 
 function reducer(state, action) {
-    let updatedNodes
+    let updatedNodes;
+    const selectedNode = state.nodes.find(node => node.selected);
     switch (action.type) {
         case 'LOAD_NODES':
             return { ...state, nodes: action.payload };
@@ -127,22 +128,30 @@ function reducer(state, action) {
             console.log(`action.payload.id: ${action.payload.id}, action.payload.field: ${action.payload.field}, action.payload.value: ${action.payload.value}`);
             return { ...state, nodes: state.nodes.map(node => node.id === action.payload.id ? { ...node, [action.payload.field]: action.payload.value } : node) };
         case 'ADD_NODE':
-            // Undo/Redoのためのスナップショットを保存
-            saveSnapshot(state.nodes);
-            updatedNodes = addNode(state.nodes, action.payload);
-            updatedNodes = adjustNodePositions(updatedNodes);
-            return { ...state, nodes: updatedNodes };
-        case 'DELETE_NODE':
-            saveSnapshot(state.nodes);
-            updatedNodes = deleteNodeRecursive(state.nodes, action.payload);
-            updatedNodes = adjustNodePositions(updatedNodes);
-            return { ...state, nodes: updatedNodes };
-        case 'EDIT_NODE':
-            if (action.payload === null || action.payload === undefined) {
+            if (selectedNode){
+                saveSnapshot(state.nodes);
+                updatedNodes = addNode(state.nodes, selectedNode);
+                updatedNodes = adjustNodePositions(updatedNodes);
+                return { ...state, nodes: updatedNodes };
+            } else {
                 return state;
             }
-            // InputFieldsコンポーネントを表示する
-            return { ...state, nodes: state.nodes.map(node => node.id === action.payload.id ? { ...node, editing: true } : node) };
+        case 'DELETE_NODE':
+            if (selectedNode){
+                saveSnapshot(state.nodes);
+                updatedNodes = deleteNodeRecursive(state.nodes, selectedNode);
+                updatedNodes = adjustNodePositions(updatedNodes);
+                return { ...state, nodes: updatedNodes };
+            } else {
+                return state;
+            }
+        case 'EDIT_NODE':
+            if (selectedNode){
+                return { ...state, nodes: state.nodes.map(node => node.id === selectedNode.id ? { ...node, editing: true } : node) };
+            } else {
+                return state;
+            }
+            
         case 'END_EDITING':
             // 編集中のフィールドを終了する
             updatedNodes = adjustNodePositions(state.nodes);
@@ -157,11 +166,9 @@ function reducer(state, action) {
         case 'ARROW_LEFT':
             return { ...state, nodes: state.nodes.map(node => node.id === handleArrowLeft(state.nodes) ? { ...node, selected: true } : { ...node, selected: false }) };
         case 'UNDO':
-            updatedNodes = Undo(action.payload);
-            return { ...state, nodes: updatedNodes };
+            return { ...state, nodes: Undo(state.nodes) };
         case 'REDO':
-            updatedNodes = Redo(action.payload);
-            return { ...state, nodes: updatedNodes };
+            return { ...state, nodes: Redo(state.nodes) };
         case 'ZOOM_IN':
             return { ...state, zoomRatio: state.zoomRatio + 0.1 };
         case 'ZOOM_OUT':

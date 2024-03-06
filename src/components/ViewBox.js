@@ -1,5 +1,5 @@
 // src/components/ViewBox.js
-import React, { useRef, useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
 import Node from './Node';
 import { Marker } from './Marker';
 import MenuBar from './Menubar';
@@ -63,26 +63,11 @@ const ViewBox = () => {
         dispatch({ type: 'EDIT_NODE', payload: id });
     }, [dispatch]);
 
-    const handleTabKey = (state, dispatch) => {
-        const selectedNode = getSelectedNode(state.nodes);
-        if (selectedNode) {
-            dispatch({ type: 'ADD_NODE', payload: selectedNode });
-        }
+    // handleTabKey, handleDeleteKeyをまとめて新しい関数handleKeyDownにする。引数としてactionTypeを追加
+    const handleKeyAction = (e, actionType, payload) => {
+        e.preventDefault();
+        dispatch({ type: actionType, payload: payload });
     };
-
-    const handleDeleteKey = (state, dispatch) => {
-        const selectedNode = getSelectedNode(state.nodes);
-        if (selectedNode) {
-            dispatch({ type: 'DELETE_NODE', payload: selectedNode });
-        }
-    };
-
-    const handleEnterKey = (state, dispatch) => {
-        const selectedNode = state.nodes.find((node) => node.selected);
-        if (selectedNode) {
-            dispatch({ type: 'EDIT_NODE', payload: { id: selectedNode.id, editingField: 'text' } });
-        }
-    }
 
     const handleUndo = () => {
         dispatch({ type: 'UNDO', payload: state.nodes });
@@ -108,17 +93,16 @@ const ViewBox = () => {
     const handleKeyDown = (e) => {
         switch (e.key) {
             case 'Tab':
-                e.preventDefault();
-                handleTabKey(state, dispatch);
+                handleKeyAction(e, 'ADD_NODE');
                 break;
             case 'Delete':
             case 'Backspace':
-                e.preventDefault();
-                handleDeleteKey(state, dispatch);
+                handleKeyAction(e, 'DELETE_NODE');
                 break;
             case 'Enter':
-                e.preventDefault();
-                handleEnterKey(state, dispatch);
+                // e.preventDefault();
+                // handleEnterKey(state, dispatch);
+                handleKeyAction(e, 'EDIT_NODE', { editingField: 'text' });
                 break;
             case 'ArrowUp':
                 e.preventDefault();
@@ -144,11 +128,13 @@ const ViewBox = () => {
         }
 
         if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
-            e.preventDefault();
-            dispatch({ type: 'UNDO', payload: state.nodes });
+            // e.preventDefault();
+            // dispatch({ type: 'UNDO', payload: state.nodes });
+            handleKeyAction(e, 'UNDO');
         } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'z') {
-            e.preventDefault();
-            dispatch({ type: 'REDO', payload: state.nodes });
+            // e.preventDefault();
+            // dispatch({ type: 'REDO', payload: state.nodes });
+            handleKeyAction(e, 'REDO');
         }
     };
 
@@ -156,9 +142,6 @@ const ViewBox = () => {
         console.log(`[ViewBox]selectNode id: ${id}`)
         dispatch({ type: 'SELECT_NODE', payload: id });
     }, [dispatch]);
-
-    // const nodes = state.nodes;
-    const nodes = useMemo(() => state.nodes, [state.nodes]);
 
     return (
         <>
@@ -184,12 +167,12 @@ const ViewBox = () => {
                     className="svg-element"
                 >
                     <Marker />
-                    {nodes.map((node) => (
+                    {state.nodes.map((node) => (
                         <Node
                             key={node.id}
                             node={node}
                             selectNode={selectNode}
-                            nodes={nodes}
+                            nodes={state.nodes}
                             handleMouseUp={handleMouseUp}
                             handleMouseDown={handleMouseDown}
                             handleDoubleClick={handleDoubleClick}
