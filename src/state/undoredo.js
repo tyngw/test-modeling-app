@@ -1,15 +1,10 @@
 // state/undoredo.js
-// 別ファイルから呼び出せるようにする
 
-// Undo/Redoのためのノードのスナップショットを保存
 let snapshots = [];
 let snapshotIndex = 0;
 
-// Undo処理を行う関数
 export const Undo = (nodes) => {
-    // console.log(`Undo snapshotIndex: ${snapshotIndex} snapshots.length-1: ${snapshots.length - 1}`);
     if (snapshotIndex > 0) {
-        // 引数として渡されたnodesをsnapshotsに追加する処理
         snapshots[snapshotIndex] = nodes;
         snapshotIndex--;
         return snapshots[snapshotIndex];
@@ -18,9 +13,7 @@ export const Undo = (nodes) => {
     }
 };
 
-// Redo処理を行う関数
 export const Redo = (nodes) => {
-    // console.log(`Redo snapshotIndex: ${snapshotIndex}, snapshots.length-1: ${snapshots.length - 1}`)
     if (snapshotIndex < snapshots.length - 1) {
         snapshotIndex++;
         return snapshots[snapshotIndex];
@@ -29,25 +22,20 @@ export const Redo = (nodes) => {
     }
 };
 
-// ノードのスナップショットを保存する関数
 export const saveSnapshot = (nodes) => {
     console.log(`saveSnapshot snapshotIndex: ${snapshotIndex}`);
-    // snapshotIndex+1以降のスナップショットを削除する処理
     const newSnapshots = snapshots.slice(0, snapshotIndex + 1);
 
     newSnapshots.push(nodes);
-    // localStorageにスナップショットを保存
     saveToLocalStorage(nodes);
     snapshots = newSnapshots;
     snapshotIndex++;
 };
 
-// localStorageにスナップショットを保存する関数
 export const saveToLocalStorage = (nodes) => {
     localStorage.setItem('nodes', JSON.stringify(nodes));
 };
 
-// localStorageからスナップショットを取得する関数
 export const loadFromLocalStorage = () => {
     // localStorageに値がない場合は空の配列を返す
     if (!localStorage.getItem('nodes')) {

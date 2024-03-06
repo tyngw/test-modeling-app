@@ -19,7 +19,6 @@ const initialState = {
 };
 
 const addNode = (allNodes, parentNode) => {
-    console.log(`parentNode: ${parentNode}`)
     let newNodes;
     const newId = Math.max(...allNodes.map(node => node.id), 0) + 1;
     const newOrder = parentNode.children;
@@ -91,7 +90,6 @@ const deleteNodeRecursive = (nodeList, nodeToDelete) => {
     const childNodes = updatedNodes.filter(node => node.parentId === nodeToDelete.id);
     if (childNodes.length > 0) {
         childNodes.forEach(childNode => {
-            console.log(`削除対象の子ノードのtext: ${childNode.text}`);
             updatedNodes = deleteNodeRecursive(updatedNodes, childNode);
         });
     }
@@ -110,7 +108,23 @@ const deleteNodeRecursive = (nodeList, nodeToDelete) => {
 function reducer(state, action) {
     let updatedNodes;
     const selectedNode = state.nodes.find(node => node.selected);
+
     switch (action.type) {
+        case 'ZOOM_IN':
+            return { ...state, zoomRatio: state.zoomRatio + 0.1 };
+        case 'ZOOM_OUT':
+            return { ...state, zoomRatio: state.zoomRatio - 0.1 };
+        case 'ARROW_UP':
+        case 'ARROW_DOWN':
+        case 'ARROW_RIGHT':
+        case 'ARROW_LEFT':
+            const handler = {
+                'ARROW_UP': handleArrowUp,
+                'ARROW_DOWN': handleArrowDown,
+                'ARROW_RIGHT': handleArrowRight,
+                'ARROW_LEFT': handleArrowLeft,
+            }[action.type];
+            return { ...state, nodes: state.nodes.map(node => node.id === handler(state.nodes) ? { ...node, selected: true } : { ...node, selected: false }) };
         case 'LOAD_NODES':
             if (action.payload.length === 0) {
                 return initialState;
@@ -118,18 +132,11 @@ function reducer(state, action) {
                 return { ...state, nodes: action.payload };
             }
         case 'SELECT_NODE':
-            // ノードを選択状態にする
             let targetNode = state.nodes.find(node => node.id === action.payload);
-            console.log(`[SELECT_NODE] id: ${targetNode.id}, text: ${targetNode.text}, text2: ${targetNode.text2}, text3: ${targetNode.text3}, selected: ${targetNode.selected}, x: ${targetNode.x}, y: ${targetNode.y}, width: ${targetNode.width}, height: ${targetNode.height}, parentId: ${targetNode.parentId}, order: ${targetNode.order}, depth: ${targetNode.depth}, children: ${targetNode.children}`);
-            // 新しいノードの selected プロパティを true にし、それ以外のノードの selected プロパティを false にする
             return { ...state, nodes: state.nodes.map(node => node.id === action.payload ? { ...node, selected: true } : { ...node, selected: false }) };
-        // return { ...state, nodes: state.nodes.map(node => node.id === action.payload ? { ...node, selected: true } : node) };
         case 'DESELECT_ALL':
-            // 選択状態、編集状態を解除する
             return { ...state, nodes: state.nodes.map(node => ({ ...node, selected: false, editing: false })) };
         case 'UPDATE_TEXT':
-            // テキストを更新する
-            console.log(`action.payload.id: ${action.payload.id}, action.payload.field: ${action.payload.field}, action.payload.value: ${action.payload.value}`);
             return { ...state, nodes: state.nodes.map(node => node.id === action.payload.id ? { ...node, [action.payload.field]: action.payload.value } : node) };
         case 'ADD_NODE':
             if (selectedNode) {
@@ -160,15 +167,6 @@ function reducer(state, action) {
             // 編集中のフィールドを終了する
             updatedNodes = adjustNodePositions(state.nodes);
             return { ...state, nodes: updatedNodes.map(node => ({ ...node, editing: false })) };
-        case 'ARROW_UP':
-            // handleArrowUp関数から返却されたidを持つノードを選択状態にする
-            return { ...state, nodes: state.nodes.map(node => node.id === handleArrowUp(state.nodes) ? { ...node, selected: true } : { ...node, selected: false }) };
-        case 'ARROW_DOWN':
-            return { ...state, nodes: state.nodes.map(node => node.id === handleArrowDown(state.nodes) ? { ...node, selected: true } : { ...node, selected: false }) };
-        case 'ARROW_RIGHT':
-            return { ...state, nodes: state.nodes.map(node => node.id === handleArrowRight(state.nodes) ? { ...node, selected: true } : { ...node, selected: false }) };
-        case 'ARROW_LEFT':
-            return { ...state, nodes: state.nodes.map(node => node.id === handleArrowLeft(state.nodes) ? { ...node, selected: true } : { ...node, selected: false }) };
         case 'UNDO':
             return { ...state, nodes: Undo(state.nodes) };
         case 'REDO':
@@ -205,7 +203,6 @@ function reducer(state, action) {
 
             return { ...state, nodes: updatedNodes };
         case 'DROP_NODE':
-            // 子ノードのdepthを再帰的に1インクリメント
             updatedNodes = incrementDepthRecursive(state.nodes, action.payload);
             updatedNodes = updatedNodes.map(node => node.id === action.payload.id ? { ...node, x: action.payload.x, y: action.payload.y, parentId: action.payload.parentId, order: action.payload.order, depth: action.payload.depth } : node);
             updatedNodes = adjustNodePositions(updatedNodes);
@@ -213,7 +210,7 @@ function reducer(state, action) {
         case 'MOVE_NODE':
             return { ...state, nodes: state.nodes.map(node => node.id === action.payload.id ? { ...node, x: action.payload.x, y: action.payload.y } : node) };
         default:
-            throw new Error();
+            return state;
     }
 }
 
