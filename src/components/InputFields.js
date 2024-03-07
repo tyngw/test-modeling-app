@@ -48,16 +48,26 @@ const InputFields = ({ node, updateText, endEditing, zoomRatio }) => {
     return (
         <>
             {fields.map((field, index) => {
-                // 各テキストの行数を計算
-                const lines = node[field].split('\n').length;
-                // テキストエリアの高さを計算
-                const height = 20 * lines;
+                let height;
+                switch (field) {
+                    case 'text':
+                        console.log(`[InputFields.js] text: ${node.text} height: ${node.section1Height}`);
+                        height = node.section1Height;
+                        break;
+                    case 'text2':
+                        height = node.section2Height;
+                        break;
+                    case 'text3':
+                        height = node.section3Height;
+                        break;
+                    default:
+                        height = 20; // デフォルトの高さ
+                }
 
-                // テキストエリアのY座標を計算
                 let y = node.y;
                 for (let i = 0; i < index; i++) {
-                    const prevLines = node[fields[i]].split('\n').length;
-                    y += 20 * prevLines;
+                    // それぞれのsectionHeightの値を使用
+                    y += node[`section${i + 1}Height`];
                 }
 
                 return (
