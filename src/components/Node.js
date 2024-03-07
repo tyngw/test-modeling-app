@@ -92,7 +92,7 @@ const Node = ({
                 y={node.y}
                 width={node.width}
                 height={section1Height}
-            // style={{ border: '3px solid red' }}
+                // style={{ border: '3px solid red' }}
             >
                 <div
                     ref={div1Ref}
@@ -108,7 +108,7 @@ const Node = ({
                         verticalAlign: 'middle',
                         display: 'flex',
                         pointerEvents: 'all',
-                        border: '2px dashed orange', 
+                        // border: '2px dashed orange', 
                     }}
                     onClick={() => selectNode(node.id)}
                     onDoubleClick={() => handleDoubleClick(node.id)}
