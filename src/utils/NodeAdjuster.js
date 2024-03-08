@@ -1,29 +1,31 @@
-import { NODE_HEIGHT,
+import {
     X_OFFSET,
     Y_OFFSET,
- } from "../constants/Node";
+    PRESET_Y
+} from "../constants/Node";
 
-export const adjustNodeAndChildrenPosition = (allNodes, node, currentY) => {
-    // node.xに親ノードのx座標を設定 + X_OFFSET + 親ノードのwidthをセットする
+export const adjustNodeAndChildrenPosition = (allNodes, node, currentY, maxHeight) => {
+    const childNodes = allNodes.filter(n => n.parentId === node.id);
     const parentNode = allNodes.find(n => n.id === node.parentId);
+
     if (!parentNode) {
         node.x = 50;
     } else {
+        // node.xに親ノードのx座標を設定 + X_OFFSET + 親ノードのwidthをセットする
         node.x = parentNode.x + parentNode.width + X_OFFSET;
     }
-    
-    //node.x = 50 + (node.depth - 1) * (X_OFFSET + 60);
-    node.y = currentY;
 
-    // console.log(`「${node.text}」の位置を設定: x=${node.x}, y=${node.y}`);
-    const childNodes = allNodes.filter(n => n.parentId === node.id);
+    node.y = currentY;
+    maxHeight = Math.max(maxHeight, node.height);
+
+    console.log(`[adjustNodeAndChildrenPosition] ${node.id} 「${node.text}」 ${node.x}x${node.y}`);
 
     if (childNodes.length > 0) {
         childNodes.forEach(childNode => {
-            currentY = adjustNodeAndChildrenPosition(allNodes, childNode, currentY);
+            currentY = adjustNodeAndChildrenPosition(allNodes, childNode, currentY, maxHeight);
         });
     } else {
-        currentY += node.height + Y_OFFSET; // 子ノードがない場合、Y座標を更新
+        currentY += maxHeight + Y_OFFSET;
     }
     return currentY;
 }
@@ -35,10 +37,10 @@ export const adjustNodePositions = (allNodes) => {
     let sortedNodes = [...allNodes].sort((a, b) => b.depth - a.depth || a.parentId - b.parentId || a.order - b.order);
     let currentY = 50; // Y座標の初期値
     let lastChildY;
-    const adjust = true;
+    const adjust = false;
 
     rootNodes.forEach(rootNode => {
-        currentY = adjustNodeAndChildrenPosition(allNodes, rootNode, currentY);
+        currentY = adjustNodeAndChildrenPosition(allNodes, rootNode, PRESET_Y, rootNode.height);
     });
 
     // 親ノードのY座標を子ノードに基づいて更新
@@ -48,10 +50,11 @@ export const adjustNodePositions = (allNodes) => {
             if (children.length > 0) {
                 const minY = Math.min(...children.map(n => n.y));
                 const maxY = Math.max(...children.map(n => n.y + n.height));
-                parentNode.y = minY + (maxY - minY) / 2 - parentNode.height / 2;
+                parentNode.y = parentNode.y + (maxY - minY) / 2 - parentNode.height / 2;
             } else {
-                lastChildY += lastChildY ? NODE_HEIGHT + 10 : lastChildY;
+                lastChildY += lastChildY ? parentNode.height + 10 : lastChildY;
                 parentNode.y = lastChildY ? lastChildY : parentNode.y;
+                
             }
         });
     }

@@ -11,7 +11,22 @@ import {
 
 const initialState = {
     nodes: [
-        { id: 1, text: 'Node 1', text2: '', text3: '', selected: false, x: 50, y: 50, width: MIN_WIDTH, height: NODE_HEIGHT, parentId: null, order: 0, depth: 1, children: 0, },
+        {
+            id: 1,
+            text: 'Node 1',
+            text2: '',
+            text3: '',
+            selected: false,
+            x: 50,
+            y: 50,
+            width: MIN_WIDTH,
+            height: NODE_HEIGHT,
+            parentId: null,
+            order: 0,
+            depth: 1,
+            children: 0,
+            visible: true,
+        },
     ],
     width: Window.innerWidth,
     height: window.innerHeight,
@@ -41,6 +56,7 @@ const addNode = (allNodes, parentNode) => {
         children: 0,
         editing: true,
         selected: true,
+        visible: true,
     };
     newNodes = [...allNodes, newRect];
 
@@ -69,6 +85,24 @@ const incrementDepthRecursive = (nodeList, parentNode) => {
     if (childNodes.length > 0) {
         childNodes.forEach(childNode => {
             updatedNodes = incrementDepthRecursive(updatedNodes, childNode);
+        });
+    }
+    return updatedNodes;
+};
+
+// 指定されたノードの子ノードのvisibleを再帰的にtrueまたはfalseに設定する関数
+const setVisibilityRecursive = (nodeList, parentNode, visible) => {
+    let updatedNodes = nodeList.map(node => {
+        if (node.parentId === parentNode.id) {
+            return { ...node, visible: visible };
+        }
+        return node;
+    });
+
+    const childNodes = updatedNodes.filter(node => node.parentId === parentNode.id);
+    if (childNodes.length > 0) {
+        childNodes.forEach(childNode => {
+            updatedNodes = setVisibilityRecursive(updatedNodes, childNode, visible);
         });
     }
     return updatedNodes;
@@ -208,6 +242,14 @@ function reducer(state, action) {
             return { ...state, nodes: updatedNodes };
         case 'MOVE_NODE':
             return { ...state, nodes: state.nodes.map(node => node.id === action.payload.id ? { ...node, x: action.payload.x, y: action.payload.y } : node) };
+        case 'EXPAND_NODE':
+            updatedNodes = setVisibilityRecursive(state.nodes, selectedNode, true);
+            updatedNodes = adjustNodePositions(updatedNodes);
+            return { ...state, nodes: updatedNodes };
+        case 'COLLAPSE_NODE':
+            updatedNodes = setVisibilityRecursive(state.nodes, selectedNode, false);
+            updatedNodes = adjustNodePositions(updatedNodes);
+            return { ...state, nodes: updatedNodes };
         default:
             return state;
     }

@@ -89,6 +89,18 @@ const ViewBox = () => {
     }
 
     const handleKeyDown = (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+            handleKeyAction(e, 'UNDO');
+        } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'z') {
+            handleKeyAction(e, 'REDO');
+        } else if ((e.ctrlKey || e.metaKey) && e.key === 'ArrowRight') {
+            handleKeyAction(e, 'EXPAND_NODE');
+            return;
+        } else if ((e.ctrlKey || e.metaKey) && e.key === 'ArrowLeft') {
+            handleKeyAction(e, 'COLLAPSE_NODE');
+            return;
+        }
+
         switch (e.key) {
             case 'Tab':
                 handleKeyAction(e, 'ADD_NODE');
@@ -116,12 +128,6 @@ const ViewBox = () => {
             default:
                 console.log(`editingNode: ${editingNode}`)
                 break;
-        }
-
-        if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
-            handleKeyAction(e, 'UNDO');
-        } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'z') {
-            handleKeyAction(e, 'REDO');
         }
     };
 
@@ -155,7 +161,7 @@ const ViewBox = () => {
                     className="svg-element"
                 >
                     <Marker />
-                    {state.nodes.map((node) => (
+                    {state.nodes.filter(node => node.visible).map(node => (
                         <Node
                             key={node.id}
                             node={node}
