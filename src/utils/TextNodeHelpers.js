@@ -17,14 +17,13 @@ export const calculateNodeWidth = (texts) => {
 
 export const calculateTextWidth = (text) => {
     // 改行ごとに分割し、最も長い行の幅を計算
-    // 半角文字は10px, 全角文字は20pxとして計算
     const lines = text.split('\n');
     const regexMultibyte = /[^\u0000-\u00ff]/g;
     // 改行ごとに分割し、最も長い行の幅を計算
     const width = Math.max(...lines.map(line => {
         const multibyteChars = line.match(regexMultibyte) || [];
-        const multibyteLength = multibyteChars.length * 12; // マルチバイト文字は1文字20で計算
-        const singleByteLength = (line.length - multibyteChars.length) * 6; // それ以外は1文字10で計算
+        const multibyteLength = multibyteChars.length * 14; // マルチバイト文字は1文字20で計算
+        const singleByteLength = (line.length - multibyteChars.length) * 7; // それ以外は1文字10で計算
         return multibyteLength + singleByteLength;
     }));
     return width;
