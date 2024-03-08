@@ -132,8 +132,9 @@ function reducer(state, action) {
                 return { ...state, nodes: action.payload };
             }
         case 'SELECT_NODE':
-            let targetNode = state.nodes.find(node => node.id === action.payload);
-            return { ...state, nodes: state.nodes.map(node => node.id === action.payload ? { ...node, selected: true } : { ...node, selected: false }) };
+            // 編集中(editing: true)のノードがある場合は、編集中状態(editing: false)にする
+            updatedNodes = state.nodes.map(node => ({ ...node, editing: false, selected: false}));
+            return { ...state, nodes: updatedNodes.map(node => node.id === action.payload ? { ...node, selected: true } : node) };
         case 'DESELECT_ALL':
             return { ...state, nodes: state.nodes.map(node => ({ ...node, selected: false, editing: false })) };
         case 'UPDATE_TEXT':
