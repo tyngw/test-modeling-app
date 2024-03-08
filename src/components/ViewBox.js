@@ -27,7 +27,6 @@ const ViewBox = () => {
 
     };
 
-    // リロードされた時に、localStorageに保存されたデータを読み込む
     useEffect(() => {
         const nodeList = loadFromLocalStorage();
         if (nodeList) {
@@ -59,7 +58,6 @@ const ViewBox = () => {
         dispatch({ type: 'EDIT_NODE', payload: id });
     }, [dispatch]);
 
-    // handleTabKey, handleDeleteKeyをまとめて新しい関数handleKeyDownにする。引数としてactionTypeを追加
     const handleKeyAction = (e, actionType, payload) => {
         e.preventDefault();
         dispatch({ type: actionType, payload: payload });
@@ -117,12 +115,8 @@ const ViewBox = () => {
         }
 
         if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
-            // e.preventDefault();
-            // dispatch({ type: 'UNDO', payload: state.nodes });
             handleKeyAction(e, 'UNDO');
         } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'z') {
-            // e.preventDefault();
-            // dispatch({ type: 'REDO', payload: state.nodes });
             handleKeyAction(e, 'REDO');
         }
     };
