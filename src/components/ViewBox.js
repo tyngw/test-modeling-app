@@ -2,13 +2,13 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import Node from './Node';
 import { Marker } from './Marker';
-import MenuBar from './Menubar';
+import IconBar from './IconBar';
 import InputFields from './InputFields';
 import { useStore } from '../state/state';
 import useResizeEffect from '../hooks/useResizeEffect';
 import { useNodeDragEffect } from '../hooks/useNodeDragEffect';
 import { useClickOutside } from '../hooks/useClickOutside';
-import { MENUBAR_HEIGHT } from '../constants/Node';
+import { ICONBAR_HEIGHT } from '../constants/Node';
 import { loadFromLocalStorage } from '../state/undoredo';
 import { saveSvg, saveNodes } from '../utils/FileHelpers';
 
@@ -133,8 +133,8 @@ const ViewBox = () => {
 
     return (
         <>
-            <MenuBar
-                menubarWidth={canvasSize.width}
+            <IconBar
+                canvasWidth={canvasSize.width}
                 handleUndo={handleUndo}
                 handleRedo={handleRedo}
                 ZoomInViewBox={ZoomInViewBox}
@@ -143,7 +143,7 @@ const ViewBox = () => {
                 loadNodes={loadNodes}
                 saveNodes={() => saveNodes(state.nodes)}
             />
-            <div style={{ position: 'absolute', top: `${MENUBAR_HEIGHT}px`, left: 0 }}>
+            <div style={{ position: 'absolute', top: `${ICONBAR_HEIGHT}px`, left: 0 }}>
                 <svg
                     ref={svgRef}
                     width={canvasSize.width}

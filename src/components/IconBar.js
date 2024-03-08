@@ -9,8 +9,8 @@ import SaveIcon from '@mui/icons-material/Save';
 import SaveAltIcon from '@mui/icons-material/SaveAlt';
 
 
-const MenuBar = ({
-    menubarWidth,
+const IconBar = ({
+    canvasWidth,
     handleUndo,
     handleRedo,
     ZoomInViewBox,
@@ -25,7 +25,7 @@ const MenuBar = ({
     };
 
     return (
-        <div style={{ position: 'absolute', top: 0, left: 0, width: menubarWidth > window.innerWidth ? menubarWidth : '100%', height: '40px', backgroundColor: 'lightgray' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, width: canvasWidth > window.innerWidth ? canvasWidth : '100%', height: '40px', backgroundColor: 'lightgray' }}>
             <div style={{ display: 'flex', justifyContent: 'left', alignItems: 'center', height: '100%' }}>
                 <input type="file" ref={fileInput} onChange={loadNodes} style={{ display: 'none' }} />
                 <Button variant="contained" onClick={handleFileOpen}>
@@ -65,4 +65,4 @@ const MenuBar = ({
     );
 }
 
-export default MenuBar;
+export default IconBar;
