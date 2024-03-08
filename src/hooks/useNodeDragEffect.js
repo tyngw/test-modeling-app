@@ -27,14 +27,14 @@ export const useNodeDragEffect = (state, dispatch) => {
         if (dragging !== null) {
             console.log(`[useNodeDragEffect]dragging: ${dragging}`)
             const handleMouseMove = (e) => {
-                const newX = e.clientX - startPosition.x;
-                const newY = e.clientY - startPosition.y;
-
                 const overNode = state.nodes.find(node => {
-                    return newX >= node.x && newX <= node.x + node.width &&
-                        newY >= node.y && newY <= node.y + node.height &&
+                    return e.clientX >= node.x && e.clientX <= node.x + node.width &&
+                    e.clientY >= node.y && e.clientY <= node.y + node.height &&
                         node.id !== dragging;
                 });
+
+                const newX = e.clientX - startPosition.x;
+                const newY = e.clientY - startPosition.y;
 
                 if (overNode) {
                     setOverDropTarget(overNode);
