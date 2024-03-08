@@ -77,8 +77,12 @@ const ViewBox = () => {
             const reader = new FileReader();
             reader.onload = function (e) {
                 const contents = e.target.result;
-                const nodes = JSON.parse(contents);
-                dispatch({ type: 'LOAD_NODES', payload: nodes });
+                try {
+                    const nodes = JSON.parse(contents);
+                    dispatch({ type: 'LOAD_NODES', payload: nodes });
+                } catch (error) {
+                    alert('Error: JSON形式のファイルを選択してください');
+                }
             };
             reader.readAsText(file);
         }
