@@ -18,7 +18,7 @@ export const adjustNodeAndChildrenPosition = (allNodes, node, currentY, maxHeigh
     node.y = currentY;
     maxHeight = Math.max(maxHeight, node.height);
 
-    console.log(`[adjustNodeAndChildrenPosition] ${node.id} 「${node.text}」 ${node.x}x${node.y}`);
+    // console.log(`[adjustNodeAndChildrenPosition] ${node.id} 「${node.text}」 ${node.x}x${node.y}`);
 
     if (childNodes.length > 0) {
         childNodes.forEach(childNode => {
@@ -37,7 +37,7 @@ export const adjustNodePositions = (allNodes) => {
     let sortedNodes = [...allNodes].sort((a, b) => b.depth - a.depth || a.parentId - b.parentId || a.order - b.order);
     let currentY = 50; // Y座標の初期値
     let lastChildY;
-    const adjust = false;
+    const adjust = true;
 
     rootNodes.forEach(rootNode => {
         currentY = adjustNodeAndChildrenPosition(allNodes, rootNode, PRESET_Y, rootNode.height);
@@ -50,11 +50,13 @@ export const adjustNodePositions = (allNodes) => {
             if (children.length > 0) {
                 const minY = Math.min(...children.map(n => n.y));
                 const maxY = Math.max(...children.map(n => n.y + n.height));
-                parentNode.y = parentNode.y + (maxY - minY) / 2 - parentNode.height / 2;
+                const newHeight = minY + (maxY - minY) / 2 - parentNode.height / 2;
+                if (parentNode.y < newHeight) {
+                    parentNode.y = newHeight;
+                }
             } else {
-                lastChildY += lastChildY ? parentNode.height + 10 : lastChildY;
+                lastChildY += lastChildY ? parentNode + 10 : lastChildY;
                 parentNode.y = lastChildY ? lastChildY : parentNode.y;
-                
             }
         });
     }
