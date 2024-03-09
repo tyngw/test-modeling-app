@@ -18,14 +18,16 @@ export const adjustNodeAndChildrenPosition = (allNodes, node, currentY, maxHeigh
     node.y = currentY;
     maxHeight = Math.max(maxHeight, node.height);
 
-    // console.log(`[adjustNodeAndChildrenPosition] ${node.id} 「${node.text}」 ${node.x}x${node.y}`);
+    console.log(`[adjustNodeAndChildrenPosition] ${node.id} 「${node.text}」 ${node.x}x${node.y}`);
 
     if (childNodes.length > 0) {
         childNodes.forEach(childNode => {
             currentY = adjustNodeAndChildrenPosition(allNodes, childNode, currentY, maxHeight);
         });
     } else {
-        currentY += maxHeight + Y_OFFSET;
+        if (node.visible || node.order === 0) {
+            currentY += maxHeight + Y_OFFSET;
+        }
     }
     return currentY;
 }
@@ -47,16 +49,14 @@ export const adjustNodePositions = (allNodes) => {
     if (adjust) {
         sortedNodes.forEach(parentNode => {
             const children = sortedNodes.filter(n => n.parentId === parentNode.id);
-            if (children.length > 0) {
+            const visibleChildren = children.filter(n => n.visible);
+            if (visibleChildren.length > 0) {
                 const minY = Math.min(...children.map(n => n.y));
                 const maxY = Math.max(...children.map(n => n.y + n.height));
                 const newHeight = minY + (maxY - minY) / 2 - parentNode.height / 2;
                 if (parentNode.y < newHeight) {
                     parentNode.y = newHeight;
                 }
-            } else {
-                lastChildY += lastChildY ? parentNode + 10 : lastChildY;
-                parentNode.y = lastChildY ? lastChildY : parentNode.y;
             }
         });
     }
