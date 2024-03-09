@@ -11,6 +11,7 @@ import { useClickOutside } from '../hooks/useClickOutside';
 import { ICONBAR_HEIGHT } from '../constants/Node';
 import { loadFromLocalStorage } from '../state/undoredo';
 import { saveSvg, saveNodes } from '../utils/FileHelpers';
+import FoldingIcon from './FoldingIcon';
 
 const ViewBox = () => {
     const svgRef = useRef();
@@ -161,19 +162,26 @@ const ViewBox = () => {
                     className="svg-element"
                 >
                     <Marker />
-                    {state.nodes.filter(node => node.visible).map(node => (
-                        <Node
-                            key={node.id}
-                            node={node}
-                            selectNode={selectNode}
-                            nodes={state.nodes}
-                            handleMouseUp={handleMouseUp}
-                            handleMouseDown={handleMouseDown}
-                            handleDoubleClick={handleDoubleClick}
-                            overDropTarget={overDropTarget}
-                            zoomRatio={state.zoomRatio}
-                        />
-                    ))}
+                    {state.nodes.filter(node => node.visible).map(node => {
+                        // node.idをparentIdとして持つノードのうち、visibleがfalseのものがあるかどうか
+                        const hasHiddenChildren = state.nodes.some(n => n.parentId === node.id && !n.visible);
+                        return (
+                            <>
+                                <Node
+                                    key={node.id}
+                                    node={node}
+                                    selectNode={selectNode}
+                                    nodes={state.nodes}
+                                    handleMouseUp={handleMouseUp}
+                                    handleMouseDown={handleMouseDown}
+                                    handleDoubleClick={handleDoubleClick}
+                                    overDropTarget={overDropTarget}
+                                    zoomRatio={state.zoomRatio}
+                                />
+                                {hasHiddenChildren && <FoldingIcon node={node} />}
+                            </>
+                        );
+                    })}
                 </svg>
                 <InputFields node={editingNode} updateText={updateText} endEditing={endEditing} zoomRatio={state.zoomRatio} />
             </div>
