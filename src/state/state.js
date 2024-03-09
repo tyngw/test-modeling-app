@@ -73,7 +73,7 @@ const addNode = (allNodes, parentNode) => {
 };
 
 // 指定されたノードの子ノードのdepthを再帰的に親ノードのdepth+1に設定する関数
-const incrementDepthRecursive = (nodeList, parentNode) => {
+const setDepthRecursive = (nodeList, parentNode) => {
     let updatedNodes = nodeList.map(node => {
         if (node.parentId === parentNode.id) {
             return { ...node, depth: parentNode.depth + 1 };
@@ -84,7 +84,7 @@ const incrementDepthRecursive = (nodeList, parentNode) => {
     const childNodes = updatedNodes.filter(node => node.parentId === parentNode.id);
     if (childNodes.length > 0) {
         childNodes.forEach(childNode => {
-            updatedNodes = incrementDepthRecursive(updatedNodes, childNode);
+            updatedNodes = setDepthRecursive(updatedNodes, childNode);
         });
     }
     return updatedNodes;
@@ -166,7 +166,7 @@ function reducer(state, action) {
                 return { ...state, nodes: action.payload };
             }
         case 'SELECT_NODE':
-            console.log(`[reducer]SELECT_NODE id: ${action.payload} x: ${state.nodes.find(node => node.id === action.payload).x} y: ${state.nodes.find(node => node.id === action.payload).y}`)
+            console.log(`[reducer]SELECT_NODE id: ${action.payload} x: ${state.nodes.find(node => node.id === action.payload).x} y: ${state.nodes.find(node => node.id === action.payload).y} order: ${state.nodes.find(node => node.id === action.payload).order} depth: ${state.nodes.find(node => node.id === action.payload).depth}`);
             return { ...state, nodes: state.nodes.map(node => node.id === action.payload ? { ...node, selected: true } : { ...node, selected: false }) };
         case 'DESELECT_ALL':
             return { ...state, nodes: state.nodes.map(node => ({ ...node, selected: false, editing: false })) };
@@ -237,7 +237,7 @@ function reducer(state, action) {
 
             return { ...state, nodes: updatedNodes };
         case 'DROP_NODE':
-            updatedNodes = incrementDepthRecursive(state.nodes, action.payload);
+            updatedNodes = setDepthRecursive(state.nodes, action.payload);
             updatedNodes = updatedNodes.map(node => node.id === action.payload.id ? { ...node, parentId: action.payload.parentId, order: action.payload.order, depth: action.payload.depth } : node);
             updatedNodes = adjustNodePositions(updatedNodes);
             return { ...state, nodes: updatedNodes };
