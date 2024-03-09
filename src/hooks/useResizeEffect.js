@@ -1,15 +1,12 @@
 // hooks/useResizeEffect.js
 import { useEffect } from 'react';
 import { calculateCanvasSize } from '../utils/LayoutUtilities';
-import {
-    ICONBAR_HEIGHT,
-} from '../constants/Node';
 
 const useResizeEffect = ({ setCanvasSize, setViewBox, state }) => {
     useEffect(() => {
         const newCanvasSize = calculateCanvasSize(state.nodes);
         newCanvasSize.width = Math.max(newCanvasSize.width, window.innerWidth);
-        newCanvasSize.height = Math.max(newCanvasSize.height, window.innerHeight - ICONBAR_HEIGHT);
+        newCanvasSize.height = Math.max(newCanvasSize.height, window.innerHeight);
         const newViewSize = {
             width: newCanvasSize.width,
             height: newCanvasSize.height,

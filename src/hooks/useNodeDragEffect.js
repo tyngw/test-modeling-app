@@ -1,7 +1,6 @@
 // ./hooks/useNodeDragEffect.js
 import { useState, useEffect, useCallback } from 'react';
 import { 
-    ICONBAR_HEIGHT,
     NODE_HEIGHT, 
     X_OFFSET } from '../constants/Node';
 import { getNodeById } from '../utils/NodeSelector';
@@ -30,7 +29,7 @@ export const useNodeDragEffect = (state, dispatch) => {
             const handleMouseMove = (e) => {
                 const isMouseOverNode = (e, node) => {
                     const isWithinXBounds = e.pageX >= node.x && e.pageX <= node.x + node.width;
-                    const isWithinYBounds = e.pageY >= node.y + ICONBAR_HEIGHT && e.pageY <= node.y + node.height + ICONBAR_HEIGHT;
+                    const isWithinYBounds = e.pageY >= node.y  && e.pageY <= node.y + node.height;
                     const isNotDraggingNode = node.id !== dragging.id;
                     const isNotParentNode = dragging.parentId !== node.id;
 
@@ -64,22 +63,17 @@ export const useNodeDragEffect = (state, dispatch) => {
             
             if (overDropTarget) {
                 // const draggingNode = getNodeById(state.nodes, dragging);    
-                const originalParentId = dragging.parentId;
+                const oldParentId = dragging.parentId;
                 const newParentId = overDropTarget.id;
 
                 dispatch({ type: 'SNAPSHOT', payload: state.nodes });
                 // ノードのorderを更新する前に、移動元の兄弟ノードのorderをデクリメント
-                dispatch({ type: 'DECREMENT_ORDER', payload: { parentId: originalParentId, draggingNodeOrder: dragging.order } });
-                // 移動元の親ノードの情報を更新
-                dispatch({ type: 'UPDATE_SOURCE_PARENT_NODE', payload: originalParentId });
-                // 移動先の親ノードの情報を更新
-                dispatch({ type: 'UPDATE_DEST_PARENT_NODE', payload: newParentId });
-
+                dispatch({ type: 'DECREMENT', payload: { oldParentId: oldParentId, draggingNodeOrder: dragging.order } });
                 // 移動先の子ノードの数に基づいて新しいorderを計算
                 const siblings = state.nodes.filter(node => node.parentId === newParentId);
                 const maxOrder = siblings.length > 0 ? Math.max(...siblings.map(node => node.order)) + 1 : 0;
                 
-                dispatch({ type: 'DROP_NODE', payload: { id: dragging.id, parentId: newParentId, order: maxOrder, depth: overDropTarget.depth + 1 } });
+                dispatch({ type: 'DROP_NODE', payload: { id: dragging.id, newParentId: newParentId, order: maxOrder, depth: overDropTarget.depth + 1 } });
             } else {
                 dispatch({ type: 'MOVE_NODE', payload: { id: dragging.id, x: originalPosition.x, y: originalPosition.y } });
             }

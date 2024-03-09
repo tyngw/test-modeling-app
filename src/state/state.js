@@ -141,6 +141,15 @@ const deleteNodeRecursive = (nodeList, nodeToDelete) => {
     return updatedNodes;
 };
 
+function updateChildren(nodes, id, increment) {
+    return nodes.map(node => {
+        if (node.id === id) {
+            return { ...node, children: node.children + increment };
+        }
+        return node;
+    });
+}
+
 function reducer(state, action) {
     let updatedNodes;
     const selectedNode = state.nodes.find(node => node.selected);
@@ -172,7 +181,7 @@ function reducer(state, action) {
                 return { ...state, nodes: action.payload };
             }
         case 'SELECT_NODE':
-            console.log(`[reducer]SELECT_NODE id: ${action.payload} x: ${state.nodes.find(node => node.id === action.payload).x} y: ${state.nodes.find(node => node.id === action.payload).y} order: ${state.nodes.find(node => node.id === action.payload).order} depth: ${state.nodes.find(node => node.id === action.payload).depth}`);
+            console.log(`[reducer]SELECT_NODE id: ${action.payload} x: ${state.nodes.find(node => node.id === action.payload).x} y: ${state.nodes.find(node => node.id === action.payload).y} order: ${state.nodes.find(node => node.id === action.payload).order} depth: ${state.nodes.find(node => node.id === action.payload).depth} parentId: ${state.nodes.find(node => node.id === action.payload).parentId}`);
             return { ...state, nodes: state.nodes.map(node => node.id === action.payload ? { ...node, selected: true } : { ...node, selected: false }) };
         case 'DESELECT_ALL':
             return { ...state, nodes: state.nodes.map(node => ({ ...node, selected: false, editing: false })) };
@@ -218,33 +227,19 @@ function reducer(state, action) {
         case 'SNAPSHOT':
             saveSnapshot(state.nodes);
             return state;
-        case 'DECREMENT_ORDER':
+        case 'DECREMENT':
             updatedNodes = state.nodes.map(node => ({
                 ...node,
                 order: node.parentId === action.payload.parentId && node.order > action.payload.draggingNodeOrder ? node.order - 1 : node.order,
             }));
-            return { ...state, nodes: updatedNodes };
-
-        case 'UPDATE_SOURCE_PARENT_NODE':
-            updatedNodes = state.nodes.map(node => {
-                if (node.id === action.payload) {
-                    return { ...node, children: node.children - 1 };
-                }
-                return node;
-            });
-            return { ...state, nodes: updatedNodes };
-        case 'UPDATE_DEST_PARENT_NODE':
-            updatedNodes = state.nodes.map(node => {
-                if (node.id === action.payload) {
-                    return { ...node, children: node.children + 1 };
-                }
-                return node;
-            });
-
+            // 移動元の親ノードの情報を更新
+            updatedNodes = updateChildren(state.nodes, action.payload.oldParentId, -1);
             return { ...state, nodes: updatedNodes };
         case 'DROP_NODE':
+            // 移動先の親ノードの情報を更新
+            updatedNodes = updateChildren(state.nodes, action.payload.newParentId, 1);
             updatedNodes = setDepthRecursive(state.nodes, action.payload);
-            updatedNodes = updatedNodes.map(node => node.id === action.payload.id ? { ...node, parentId: action.payload.parentId, order: action.payload.order, depth: action.payload.depth } : node);
+            updatedNodes = updatedNodes.map(node => node.id === action.payload.id ? { ...node, parentId: action.payload.newParentId, order: action.payload.order, depth: action.payload.depth } : node);
             updatedNodes = adjustNodePositions(updatedNodes);
             return { ...state, nodes: updatedNodes };
         case 'MOVE_NODE':

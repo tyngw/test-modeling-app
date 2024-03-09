@@ -8,7 +8,6 @@ import { useStore } from '../state/state';
 import useResizeEffect from '../hooks/useResizeEffect';
 import { useNodeDragEffect } from '../hooks/useNodeDragEffect';
 import { useClickOutside } from '../hooks/useClickOutside';
-import { ICONBAR_HEIGHT } from '../constants/Node';
 import { loadFromLocalStorage } from '../state/undoredo';
 import { saveSvg, saveNodes } from '../utils/FileHelpers';
 import FoldingIcon from './FoldingIcon';
@@ -154,7 +153,7 @@ const ViewBox = () => {
                 loadNodes={loadNodes}
                 saveNodes={() => saveNodes(state.nodes)}
             />
-            <div style={{ position: 'absolute', top: `${ICONBAR_HEIGHT}px`, left: 0 }}>
+            <div style={{ position: 'absolute', top: 0, left: 0 }}>
                 <svg
                     ref={svgRef}
                     width={canvasSize.width}
