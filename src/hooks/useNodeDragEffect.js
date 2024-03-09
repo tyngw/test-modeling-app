@@ -1,6 +1,7 @@
 // ./hooks/useNodeDragEffect.js
 import { useState, useEffect, useCallback } from 'react';
 import { 
+    ICONBAR_HEIGHT,
     NODE_HEIGHT, 
     X_OFFSET } from '../constants/Node';
 import { getNodeById } from '../utils/NodeSelector';
@@ -18,7 +19,7 @@ export const useNodeDragEffect = (state, dispatch) => {
         e.stopPropagation();
         const node = getNodeById(state.nodes, id);
         setDragging(id);
-        setStartPosition({ x: e.clientX - node.x, y: e.clientY - node.y });
+        setStartPosition({ x: e.pageX - node.x, y: e.pageY - node.y });
         setOriginalPosition({ x: node.x, y: node.y });
         // };
     }, [state.nodes]);
@@ -27,14 +28,18 @@ export const useNodeDragEffect = (state, dispatch) => {
         if (dragging !== null) {
             console.log(`[useNodeDragEffect]dragging: ${dragging}`)
             const handleMouseMove = (e) => {
-                const overNode = state.nodes.find(node => {
-                    return e.clientX >= node.x && e.clientX <= node.x + node.width &&
-                    e.clientY >= node.y && e.clientY <= node.y + node.height &&
-                        node.id !== dragging;
-                });
+                const isMouseOverNode = (e, node) => {
+                    const isWithinXBounds = e.pageX >= node.x && e.pageX <= node.x + node.width;
+                    const isWithinYBounds = e.pageY >= node.y + ICONBAR_HEIGHT && e.pageY <= node.y + node.height + ICONBAR_HEIGHT;
+                    const isNotDraggingNode = node.id !== dragging;
 
-                const newX = e.clientX - startPosition.x;
-                const newY = e.clientY - startPosition.y;
+                    return isWithinXBounds && isWithinYBounds && isNotDraggingNode;
+                };
+
+                const overNode = state.nodes.find(node => isMouseOverNode(e, node));
+
+                const newX = e.pageX - startPosition.x;
+                const newY = e.pageY - startPosition.y;
 
                 if (overNode) {
                     setOverDropTarget(overNode);
