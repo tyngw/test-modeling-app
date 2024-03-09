@@ -18,7 +18,7 @@ export const adjustNodeAndChildrenPosition = (allNodes, node, currentY, maxHeigh
     node.y = currentY;
     maxHeight = Math.max(maxHeight, node.height);
 
-    console.log(`[adjustNodeAndChildrenPosition] ${node.id} 「${node.text}」 ${node.x}x${node.y}`);
+    // console.log(`[adjustNodeAndChildrenPosition] ${node.id} 「${node.text}」 ${node.x}x${node.y}`);
 
     if (childNodes.length > 0) {
         childNodes.forEach(childNode => {

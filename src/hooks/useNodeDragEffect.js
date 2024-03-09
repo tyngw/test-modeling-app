@@ -55,7 +55,7 @@ export const useNodeDragEffect = (state, dispatch) => {
 
     const handleMouseUp = useCallback((e) => {
         if (dragging !== null) {
-            if (overDropTarget) {
+            if (overDropTarget && originalPosition) {
                 const draggingNode = getNodeById(state.nodes, dragging);
                 const originalParentId = draggingNode.parentId;
                 const newParentId = overDropTarget.id;
@@ -71,10 +71,8 @@ export const useNodeDragEffect = (state, dispatch) => {
                 // 移動先の子ノードの数に基づいて新しいorderを計算
                 const siblings = state.nodes.filter(node => node.parentId === newParentId);
                 const maxOrder = siblings.length > 0 ? Math.max(...siblings.map(node => node.order)) + 1 : 0;
-                const newX = siblings.length > 0 ? siblings[0].x : overDropTarget.x + X_OFFSET;
-                const newY = siblings.length > 0 ? siblings[maxOrder - 1].y + NODE_HEIGHT + 10 : overDropTarget.y;
-
-                dispatch({ type: 'DROP_NODE', payload: { id: dragging, x: newX, y: newY, parentId: newParentId, order: maxOrder, depth: overDropTarget.depth + 1 } });
+                
+                dispatch({ type: 'DROP_NODE', payload: { id: dragging, parentId: newParentId, order: maxOrder, depth: overDropTarget.depth + 1 } });
             } else {
                 dispatch({ type: 'MOVE_NODE', payload: { id: dragging, x: originalPosition.x, y: originalPosition.y } });
             }
