@@ -32,6 +32,17 @@ export const saveSnapshot = (nodes) => {
     snapshotIndex++;
 };
 
+// スナップショットをクリアする
+export const clearSnapshots = () => {
+    snapshots = [];
+    snapshotIndex = 0;
+    clearLocalStorage();
+};
+
+export const clearLocalStorage = () => {
+    localStorage.clear();
+};
+
 export const saveToLocalStorage = (nodes) => {
     localStorage.setItem('nodes', JSON.stringify(nodes));
 };

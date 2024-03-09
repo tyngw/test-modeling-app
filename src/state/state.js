@@ -2,7 +2,7 @@
 
 import { useReducer } from 'react';
 import { adjustNodePositions } from '../utils/NodeAdjuster';
-import { Undo, Redo, saveSnapshot } from './undoredo';
+import { Undo, Redo, saveSnapshot, clearSnapshots } from './undoredo';
 import { handleArrowUp, handleArrowDown, handleArrowRight, handleArrowLeft } from '../utils/NodeSelector';
 import {
     NODE_HEIGHT,
@@ -71,6 +71,8 @@ const addNode = (allNodes, parentNode) => {
 
     return newNodes;
 };
+
+// 
 
 // 指定されたノードの子ノードのdepthを再帰的に親ノードのdepth+1に設定する関数
 const setDepthRecursive = (nodeList, parentNode) => {
@@ -144,6 +146,10 @@ function reducer(state, action) {
     const selectedNode = state.nodes.find(node => node.selected);
 
     switch (action.type) {
+        // initialStateを返す
+        case 'NEW':
+            clearSnapshots();
+            return initialState;
         case 'ZOOM_IN':
             return { ...state, zoomRatio: state.zoomRatio + 0.1 };
         case 'ZOOM_OUT':

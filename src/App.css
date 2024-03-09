@@ -54,3 +54,8 @@
   z-index: 100;
   /* ベースのスタイリングをここに追加 */
 }
+
+.iconbar-button {
+  background-color: transparent;
+  border: none;
+}

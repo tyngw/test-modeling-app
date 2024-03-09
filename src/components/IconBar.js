@@ -4,13 +4,15 @@ import UndoIcon from '@mui/icons-material/Undo';
 import RedoIcon from '@mui/icons-material/Redo';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
-import FileOpenIcon from '@mui/icons-material/FileOpen';
-import SaveIcon from '@mui/icons-material/Save';
+import FolderOpenOutlinedIcon from '@mui/icons-material/FolderOpenOutlined';
+import SaveAsOutlinedIcon from '@mui/icons-material/SaveAsOutlined';
 import SaveAltIcon from '@mui/icons-material/SaveAlt';
+import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined';
+import { ICONBAR_HEIGHT } from '../constants/Node';
 
 
 const IconBar = ({
-    canvasWidth,
+    handleNewFile,
     handleUndo,
     handleRedo,
     ZoomInViewBox,
@@ -25,40 +27,35 @@ const IconBar = ({
     };
 
     return (
-        <div style={{ position: 'absolute', top: 0, left: 0, width: canvasWidth > window.innerWidth ? canvasWidth : '100%', height: '40px', backgroundColor: 'lightgray' }}>
-            <div style={{ display: 'flex', justifyContent: 'left', alignItems: 'center', height: '100%' }}>
+        // フォーカスを無効にするためにdiv:focus outline: noneを設定
+        <div style={{ position: 'fixed', width: '100%', height: ICONBAR_HEIGHT, zIndex: 100, }}>
+            <div style={{ display: 'flex', justifyContent: 'left', alignItems: 'center', height: '100%', backgroundColor: '#f1f1f1', borderRadius: '30px', padding: '0 20px', }}>
                 <input type="file" ref={fileInput} onChange={loadNodes} style={{ display: 'none' }} />
-                <Button variant="contained" onClick={handleFileOpen}>
-                    <FileOpenIcon />
-                    Load
+                <Button variant="text" class="iconbar-button" onClick={handleNewFile}>
+                    <InsertDriveFileOutlinedIcon sx={{ color: '#666666' }} />
+                </Button>
+                <Button variant="text" class="iconbar-button" onClick={handleFileOpen} >
+                    <FolderOpenOutlinedIcon sx={{ color: '#666666' }} />
+                </Button>
+                <Button variant="text" class="iconbar-button" onClick={() => saveNodes()} >
+                    <SaveAsOutlinedIcon sx={{ color: '#666666' }} />
+                </Button>
+                <Button variant="text" class="iconbar-button" onClick={() => saveSvg()} >
+                    <SaveAltIcon sx={{ color: '#666666' }} />
                 </Button>
                 <div style={{ width: '10px' }}></div>
-                <Button variant="contained" onClick={() => saveNodes()}>
-                    <SaveIcon />
-                    Save
+                <Button variant="text" class="iconbar-button" onClick={handleUndo} >
+                    <UndoIcon sx={{ color: '#666666' }} />
+                </Button>
+                <Button variant="text" class="iconbar-button" onClick={handleRedo} >
+                    <RedoIcon sx={{ color: '#666666' }} />
                 </Button>
                 <div style={{ width: '10px' }}></div>
-                <Button variant="contained" onClick={() => saveSvg()}>
-                    <SaveAltIcon />
-                    Export SVG
+                <Button variant="text" class="iconbar-button" onClick={ZoomInViewBox} >
+                    <ZoomInIcon sx={{ color: '#666666' }} />
                 </Button>
-                <div style={{ width: '20px' }}></div>
-                <Button variant="contained" onClick={handleUndo}>
-                    <UndoIcon />
-                    Undo
-                </Button>
-                <div style={{ width: '10px' }}></div>
-                <Button variant="contained" onClick={handleRedo}>
-                    <RedoIcon />
-                    Redo
-                </Button>
-                <div style={{ width: '20px' }}></div>
-                <Button variant="contained" onClick={ZoomInViewBox}>
-                    <ZoomInIcon />
-                </Button>
-                <div style={{ width: '10px' }}></div>
-                <Button variant="contained" onClick={ZoomOutViewBox}>
-                    <ZoomOutIcon />
+                <Button variant="text" class="iconbar-button" onClick={ZoomOutViewBox} >
+                    <ZoomOutIcon sx={{ color: '#666666' }} />
                 </Button>
             </div>
         </div>

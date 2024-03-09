@@ -72,6 +72,10 @@ const ViewBox = () => {
         dispatch({ type: 'REDO', payload: state.nodes });
     };
 
+    const handleNewFile = () => {
+        dispatch({ type: 'NEW' });
+    };
+
     const loadNodes = (event) => {
         const file = event.target.files[0];
         if (file) {
@@ -141,7 +145,7 @@ const ViewBox = () => {
     return (
         <>
             <IconBar
-                canvasWidth={canvasSize.width}
+                handleNewFile={handleNewFile}
                 handleUndo={handleUndo}
                 handleRedo={handleRedo}
                 ZoomInViewBox={ZoomInViewBox}
