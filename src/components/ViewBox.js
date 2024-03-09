@@ -136,7 +136,6 @@ const ViewBox = () => {
     };
 
     const selectNode = useCallback((id) => {
-        console.log(`[ViewBox]selectNode id: ${id}`)
         dispatch({ type: 'SELECT_NODE', payload: id });
         dispatch({ type: 'END_EDITING' });
     }, [dispatch]);
