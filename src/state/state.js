@@ -60,9 +60,14 @@ const addNode = (allNodes, parentNode) => {
 };
 
 const getSelectedNodeAndChildren = (nodeList, targetNode, selectedNode) => {
-    const cutNodes = targetNode.id === selectedNode.id
-        ? [{ ...targetNode, parentId: null }]
-        : [targetNode];
+    let cutNodes = [];
+
+
+    if (targetNode.id === selectedNode.id) {
+        cutNodes.push({ ...targetNode, parentId: null });
+    } else {
+        cutNodes.push(targetNode);
+    }
 
     // 選択対象のノードIdと一致するparentIdを持つノードを再帰的に取得
     const childNodes = nodeList.filter(node => node.parentId === targetNode.id);
@@ -75,8 +80,8 @@ const getSelectedNodeAndChildren = (nodeList, targetNode, selectedNode) => {
     return cutNodes;
 };
 
+// cutNodesに含まれるノードをnodesに追加できるように新しいノードを作成する関数
 const pasteNodes = (nodeList, cutNodes, parentNode) => {
-    let newNodes = [];
     const rootNode = cutNodes.find(node => node.parentId === null);
     if (!rootNode) {
         return [...nodeList, ...cutNodes]
@@ -87,7 +92,7 @@ const pasteNodes = (nodeList, cutNodes, parentNode) => {
     let newId = Math.max(...nodeList.map(node => node.id), 0) + 1;
     const idMap = new Map();
 
-    cutNodes.forEach(cutNode => {
+    const newNodes = cutNodes.map(cutNode => {
         if (nodeList.find(node => node.id === cutNode.id)) {
             idMap.set(cutNode.id, newId);
             cutNode.id = newId;
@@ -99,18 +104,15 @@ const pasteNodes = (nodeList, cutNodes, parentNode) => {
             cutNode.parentId = parentNode.id;
         }
 
-        newNodes.push(cutNode);
+        return cutNode;
     });
 
-    let updatedNodes = [...nodeList];
-    newNodes = newNodes.map(node => {
+    const updatedNodes = nodeList.concat(newNodes.map(node => {
         if (idMap.has(node.parentId)) {
             node.parentId = idMap.get(node.parentId);
         }
         return node;
-    });
-
-    updatedNodes = [...updatedNodes, ...newNodes];
+    }));
 
     return updatedNodes;
 }
