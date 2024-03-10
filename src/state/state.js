@@ -1,5 +1,4 @@
 // src/state/state.js
-
 import { useReducer } from 'react';
 import { adjustNodePositions } from '../utils/NodeAdjuster';
 import { Undo, Redo, saveSnapshot, clearSnapshots } from './undoredo';
@@ -9,23 +8,32 @@ import {
     MIN_WIDTH
 } from '../constants/Node';
 
+const createNewNode = (parentId, order, depth) => ({
+    id: 0, // この値は後で上書きされます
+    text: '',
+    text2: '',
+    text3: '',
+    selected: false,
+    x: 0,
+    y: 0,
+    width: MIN_WIDTH,
+    height: NODE_HEIGHT,
+    parentId: parentId,
+    order: order,
+    depth: depth,
+    children: 0,
+    editing: true,
+    selected: true,
+    visible: true,
+});
+
 const initialState = {
     nodes: [
         {
+            ...createNewNode(null, 0, 1),
             id: 1,
-            text: 'Node 1',
-            text2: '',
-            text3: '',
-            selected: false,
-            x: 50,
-            y: 50,
-            width: MIN_WIDTH,
-            height: NODE_HEIGHT,
-            parentId: null,
-            order: 0,
-            depth: 1,
-            children: 0,
-            visible: true,
+            x: 50, y: 50,
+            editing: false,
         },
     ],
     width: Window.innerWidth,
@@ -38,22 +46,8 @@ const addNode = (allNodes, parentNode) => {
     const newId = Math.max(...allNodes.map(node => node.id), 0) + 1;
     const newOrder = parentNode.children;
     const newRect = {
+        ...createNewNode(parentNode.id, newOrder, parentNode.depth + 1),
         id: newId,
-        text: '',
-        text2: '',
-        text3: '',
-        selected: false,
-        x: 0,
-        y: 0,
-        width: MIN_WIDTH,
-        height: NODE_HEIGHT,
-        parentId: parentNode.id,
-        order: newOrder,
-        depth: parentNode.depth + 1,
-        children: 0,
-        editing: true,
-        selected: true,
-        visible: true,
     };
     const updatedNodes = allNodes.map(node => {
         if (node.id === parentNode.id) {
@@ -66,14 +60,9 @@ const addNode = (allNodes, parentNode) => {
 };
 
 const getSelectedNodeAndChildren = (nodeList, targetNode, selectedNode) => {
-    let cutNodes = [];
-
-
-    if (targetNode.id === selectedNode.id) {
-        cutNodes.push({ ...targetNode, parentId: null });
-    } else {
-        cutNodes.push(targetNode);
-    }
+    const cutNodes = targetNode.id === selectedNode.id
+        ? [{ ...targetNode, parentId: null }]
+        : [targetNode];
 
     // 選択対象のノードIdと一致するparentIdを持つノードを再帰的に取得
     const childNodes = nodeList.filter(node => node.parentId === targetNode.id);
@@ -86,11 +75,6 @@ const getSelectedNodeAndChildren = (nodeList, targetNode, selectedNode) => {
     return cutNodes;
 };
 
-// cutNodesに含まれるノードをnodesに追加できるように新しいノードを作成する関数
-    // 既存のidと重複する場合は、コピーであることを示すので、新しいidを割り当てる
-    // idを更新すると、子ノードのparentIdを更新する必要があるので、再帰的に処理する
-    // parentIdがnullの場合は、parentNode.idを割り当てる
-    // 戻り値として、編集後のcutNodesを返す
 const pasteNodes = (nodeList, cutNodes, parentNode) => {
     let newNodes = [];
     const rootNode = cutNodes.find(node => node.parentId === null);
