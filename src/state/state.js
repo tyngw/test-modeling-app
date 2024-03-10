@@ -138,20 +138,14 @@ const pasteNodes = (nodeList, cutNodes, parentNode) => {
 
 // 指定されたノードの子ノードのdepthを再帰的に親ノードのdepth+1に設定する関数
 const setDepthRecursive = (nodeList, parentNode) => {
-    let updatedNodes = nodeList.map(node => {
+    return nodeList.reduce((updatedNodes, node) => {
+        let newNode = node;
         if (node.parentId === parentNode.id) {
-            return { ...node, depth: parentNode.depth + 1 };
+            newNode = { ...node, depth: parentNode.depth + 1 };
+            updatedNodes = setDepthRecursive(updatedNodes, newNode);
         }
-        return node;
-    });
-
-    const childNodes = updatedNodes.filter(node => node.parentId === parentNode.id);
-    if (childNodes.length > 0) {
-        childNodes.forEach(childNode => {
-            updatedNodes = setDepthRecursive(updatedNodes, childNode);
-        });
-    }
-    return updatedNodes;
+        return [...updatedNodes, newNode];
+    }, []);
 };
 
 // 指定されたノードの子ノードのvisibleを再帰的にtrueまたはfalseに設定する関数
