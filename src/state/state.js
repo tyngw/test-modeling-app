@@ -104,7 +104,7 @@ function reducer(state, action) {
             }
         case 'SELECT_NODE':
             if (selectedNode) {
-                console.log(`[reducer]SELECT_NODE id: ${selectedNode.id} x: ${selectedNode.x} y: ${selectedNode.y} order: ${selectedNode.order} depth: ${selectedNode.depth} parentId: ${selectedNode.parentId}`);
+                console.log(`[SELECT_NODE] id: ${selectedNode.id} x: ${selectedNode.x} y: ${selectedNode.y} order: ${selectedNode.order} depth: ${selectedNode.depth} parentId: ${selectedNode.parentId}`);
             }
             return { ...state, nodes: state.nodes.map(node => node.id === action.payload ? { ...node, selected: true } : { ...node, selected: false }) };
         case 'DESELECT_ALL':
