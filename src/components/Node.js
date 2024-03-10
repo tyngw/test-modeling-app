@@ -6,7 +6,6 @@ import {
     NODE_HEIGHT,
     CURVE_CONTROL_OFFSET,
     ARROW_OFFSET,
-    MIN_SECTION_HEIGHT,
 } from '../constants/Node';
 import TextSection from './TextSection';
 
@@ -21,7 +20,6 @@ const Node = ({
     zoomRatio,
 }) => {
     const parentNode = getNodeById(nodes, node.parentId);
-    // console.log(`[Node.js][Render] ${node.text} ${node.text2} ${node.text3}`)
 
     // overDropTargetがnull or undefinedの場合、overDropTargetIdに-1を代入
     const overDropTargetId = overDropTarget ? overDropTarget.id : -1;
@@ -44,18 +42,19 @@ const Node = ({
     }, [node.text, node.text2, node.text3]);
 
     useEffect(() => {
-        node.height = section1Height + section2Height + section3Height;
         node.section1Height = section1Height;
         node.section2Height = section2Height;
         node.section3Height = section3Height;
+        node.height = section1Height + section2Height + section3Height;
 
         const div1Width = div1Ref.current.offsetWidth;
         const div2Width = div2Ref.current.offsetWidth;
         const div3Width = div3Ref.current.offsetWidth;
+        const maxWidth = Math.max(div1Width, div2Width, div3Width)
 
         // 幅の最大値を計算
-        node.width = Math.max(div1Width, div2Width, div3Width);
-    }, [section1Height, section2Height, section3Height]);
+        node.width = maxWidth;
+    }, [node, section1Height, section2Height, section3Height]);
 
     return (
         <React.Fragment key={node.id}>
@@ -76,7 +75,7 @@ const Node = ({
                 x={node.x}
                 y={node.y}
                 width={node.width}
-                height={node.height}
+                height={section1Height + section2Height + section3Height}
                 className={`node ${node.selected ? 'node-selected' : 'node-unselected'}`}
                 rx="2"
                 onClick={() => selectNode(node.id)}
