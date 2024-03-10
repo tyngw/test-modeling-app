@@ -55,18 +55,14 @@ const addNode = (allNodes, parentNode) => {
         selected: true,
         visible: true,
     };
-    newNodes = [...allNodes, newRect];
-
-    // 親ノードのchildrenをインクリメントするとともに、選択状態を解除する
-    newNodes = newNodes.map(node => {
+    const updatedNodes = allNodes.map(node => {
         if (node.id === parentNode.id) {
-            // return { ...node, children: node.children + 1 };
             return { ...node, children: node.children + 1, selected: false };
         }
         return node;
     });
 
-    return newNodes;
+    return [...updatedNodes, newRect];
 };
 
 const getSelectedNodeAndChildren = (nodeList, targetNode, selectedNode) => {
