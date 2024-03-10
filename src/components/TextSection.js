@@ -31,7 +31,6 @@ const TextSection = ({
                     overflow: 'hidden',
                     whiteSpace: 'pre-wrap',
                     wordWrap: 'break-word',
-                    pointerEvents: 'none',
                     verticalAlign: 'middle',
                     display: 'flex',
                     pointerEvents: 'all',
