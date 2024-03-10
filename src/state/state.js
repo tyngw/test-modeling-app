@@ -155,21 +155,16 @@ const setDepthRecursive = (nodeList, parentNode) => {
 };
 
 // 指定されたノードの子ノードのvisibleを再帰的にtrueまたはfalseに設定する関数
+// 戻り値として、visibleを更新した新しいノードのリストを返す
 const setVisibilityRecursive = (nodeList, parentNode, visible) => {
-    let updatedNodes = nodeList.map(node => {
+    return nodeList.reduce((updatedNodes, node) => {
+        let newNode = node;
         if (node.parentId === parentNode.id) {
-            return { ...node, visible: visible };
+            newNode = { ...node, visible: visible };
+            updatedNodes = setVisibilityRecursive(updatedNodes, newNode, visible);
         }
-        return node;
-    });
-
-    const childNodes = updatedNodes.filter(node => node.parentId === parentNode.id);
-    if (childNodes.length > 0) {
-        childNodes.forEach(childNode => {
-            updatedNodes = setVisibilityRecursive(updatedNodes, childNode, visible);
-        });
-    }
-    return updatedNodes;
+        return [...updatedNodes, newNode];
+    }, []);
 };
 
 // 与えられたノードを再帰的に削除する関数
@@ -336,6 +331,8 @@ function reducer(state, action) {
             }
         case 'EXPAND_NODE':
             updatedNodes = setVisibilityRecursive(state.nodes, selectedNode, true);
+            // updatedNodesをコンソールログにjson形式で整形して出力
+            console.log(`[reducer]EXPAND_NODE updatedNodes: ${JSON.stringify(updatedNodes, null, 2)}`);
             updatedNodes = adjustNodePositions(updatedNodes);
             return { ...state, nodes: updatedNodes };
         case 'COLLAPSE_NODE':
