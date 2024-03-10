@@ -97,57 +97,42 @@ const getSelectedNodeAndChildren = (nodeList, targetNode, selectedNode) => {
     // 戻り値として、編集後のcutNodesを返す
 const pasteNodes = (nodeList, cutNodes, parentNode) => {
     let newNodes = [];
-    
-    // cutNodesでparentIdがnullのノードを取得
     const rootNode = cutNodes.find(node => node.parentId === null);
-    // rootNodesのdepthをrootNodeDepthに設定
     if (!rootNode) {
-        return [];
+        return [...nodeList, ...cutNodes]
     }
     const rootNodeDepth = rootNode.depth;
-    // rootNodesのdepthをbaseDepthに設定
     const baseDepth = parentNode.depth + 1;
-    // baseDepth - rootNodesDepth;
     const depthDelta = baseDepth - rootNodeDepth;
-    // 元のdepth: 2, コピー先のdepth: 3 → 1
-    // 元のdepth: 3, コピー先のdepth: 1 → -2
-    // nodesのIdの最大値を取得
     let newId = Math.max(...nodeList.map(node => node.id), 0) + 1;
-    // parentIdを変更する場合、そのIdを参照している子ノードのparentIdも変更する必要があるので、
-    // そのIdを新しいIdに変更するためのマップを作成する
     const idMap = new Map();
 
-    cutNodes.forEach(node => {
-        // cutNodesに含まれるノードのIdが既存のIdと重複する場合は、新しいIdを割り当てる
-        if (nodeList.find(node => node.id === node.id)) {
-            idMap.set(node.id, newId);
-            node.id = newId;
+    cutNodes.forEach(cutNode => {
+        if (nodeList.find(node => node.id === cutNode.id)) {
+            idMap.set(cutNode.id, newId);
+            cutNode.id = newId;
             newId++;
         }
-        // cutNodeのdepthにdepthDeltaを加算する
-        node.depth = node.depth + depthDelta;
+        cutNode.depth = cutNode.depth + depthDelta;
         
-        if (node.id === rootNode.id) {
-            // cutNodeのparentIdがnullの場合は、parentNode.idを割り当てる
-            node.parentId = parentNode.id;
-            console.log(`[pasteNodes] rootNode: ${JSON.stringify(node, null, 2)}`);
+        if (cutNode.id === rootNode.id) {
+            cutNode.parentId = parentNode.id;
         }
 
-        newNodes.push(node);
+        newNodes.push(cutNode);
     });
 
-    // newNodesのparentIdを新しいIdに変更する
+    let updatedNodes = [...nodeList];
     newNodes = newNodes.map(node => {
         if (idMap.has(node.parentId)) {
-            return { ...node, parentId: idMap.get(node.parentId) };
+            node.parentId = idMap.get(node.parentId);
         }
         return node;
     });
 
-    // newNodesの値をコンソールログにjson形式で整形して
-    // console.log(`[pasteNodes] newNodes: ${JSON.stringify(newNodes, null, 2)}`);
+    updatedNodes = [...updatedNodes, ...newNodes];
 
-    return newNodes;
+    return updatedNodes;
 }
 
 
@@ -341,14 +326,13 @@ function reducer(state, action) {
                 return state;
             }
         case 'PASTE_NODE':
-            console.log(`[reducer]PASTE_NODE かいし~~~~~~~~~~~~~`);
             if (state.cutNodes && selectedNode) {
                 saveSnapshot(state.nodes);
-                const pasteNode = pasteNodes(state.nodes, state.cutNodes, selectedNode);
-                updatedNodes = state.nodes.concat(pasteNode);
-                console.log(`[reducer]PASTE_NODE updatedNodes: ${JSON.stringify(updatedNodes, null, 2)}`);
+                updatedNodes = pasteNodes(state.nodes, state.cutNodes, selectedNode);
                 updatedNodes = adjustNodePositions(updatedNodes);
-                return { ...state, nodes: updatedNodes, cutNodes: null };
+                return { ...state, nodes: updatedNodes};
+            } else {
+                return state;
             }
         case 'EXPAND_NODE':
             updatedNodes = setVisibilityRecursive(state.nodes, selectedNode, true);
