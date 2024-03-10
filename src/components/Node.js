@@ -8,6 +8,7 @@ import {
     ARROW_OFFSET,
     MIN_SECTION_HEIGHT,
 } from '../constants/Node';
+import TextSection from './TextSection';
 
 const Node = ({
     node,
@@ -87,98 +88,49 @@ const Node = ({
                 }}
             />
             {/* 上段のテキスト */}
-            <foreignObject
+            <TextSection
                 x={node.x}
                 y={node.y}
                 width={node.width}
                 height={section1Height}
-                // style={{ border: '3px solid red' }}
-            >
-                <div
-                    ref={div1Ref}
-                    xmlns="http://www.w3.org/1999/xhtml"
-                    style={{
-                        fontSize: `${zoomRatio * 12}px`,
-                        // maxWidth: `${node.width}px`,
-                        minHeight: `${MIN_SECTION_HEIGHT}px`,
-                        overflow: 'hidden',
-                        whiteSpace: 'pre-wrap',
-                        wordWrap: 'break-word',
-                        pointerEvents: 'none',
-                        verticalAlign: 'middle',
-                        display: 'flex',
-                        pointerEvents: 'all',
-                        // border: '2px dashed orange', 
-                    }}
-                    onClick={() => selectNode(node.id)}
-                    onDoubleClick={() => handleDoubleClick(node.id)}
-                    onMouseDown={(e) => handleMouseDown(e, node.id)}
-                    onMouseUp={(e) => handleMouseUp(e)}
-                >
-                    {node.text}
-                </div>
-            </foreignObject>
+                text={node.text}
+                zoomRatio={zoomRatio}
+                selectNode={() => selectNode(node.id)}
+                handleDoubleClick={() => handleDoubleClick(node.id)}
+                handleMouseDown={(e) => handleMouseDown(e, node.id)}
+                handleMouseUp={(e) => handleMouseUp(e)}
+                divRef={div1Ref}
+            />
 
             {/* 中段のテキスト */}
-            <foreignObject
+            <TextSection
                 x={node.x}
                 y={node.y + section1Height}
                 width={node.width}
                 height={section2Height}
-            >
-                <div
-                    ref={div2Ref}
-                    xmlns="http://www.w3.org/1999/xhtml"
-                    style={{
-                        fontSize: `${zoomRatio * 12}px`,
-                        maxWidth: `${node.width}px`,
-                        minHeight: `${MIN_SECTION_HEIGHT}px`,
-                        overflow: 'hidden',
-                        whiteSpace: 'pre-wrap',
-                        wordWrap: 'break-word',
-                        pointerEvents: 'none',
-                        verticalAlign: 'middle',
-                        display: 'flex',
-                        pointerEvents: 'all',
-                    }}
-                    onClick={() => selectNode(node.id)}
-                    onDoubleClick={() => handleDoubleClick(node.id)}
-                    onMouseDown={(e) => handleMouseDown(e, node.id)}
-                    onMouseUp={(e) => handleMouseUp(e)}
-                >
-                    {node.text2}
-                </div>
-            </foreignObject>
+                text={node.text2}
+                zoomRatio={zoomRatio}
+                selectNode={() => selectNode(node.id)}
+                handleDoubleClick={() => handleDoubleClick(node.id)}
+                handleMouseDown={(e) => handleMouseDown(e, node.id)}
+                handleMouseUp={(e) => handleMouseUp(e)}
+                divRef={div2Ref}
+            />
+
             {/* 下段のテキスト */}
-            <foreignObject
+            <TextSection
                 x={node.x}
                 y={node.y + section1Height + section2Height}
                 width={node.width}
                 height={section3Height}
-            >
-                <div
-                    ref={div3Ref}
-                    xmlns="http://www.w3.org/1999/xhtml"
-                    style={{
-                        fontSize: `${zoomRatio * 12}px`,
-                        maxWidth: `${node.width}px`,
-                        minHeight: `${MIN_SECTION_HEIGHT}px`,
-                        overflow: 'hidden',
-                        whiteSpace: 'pre-wrap',
-                        wordWrap: 'break-word',
-                        pointerEvents: 'none',
-                        verticalAlign: 'middle',
-                        display: 'flex',
-                        pointerEvents: 'all',
-                    }}
-                    onClick={() => selectNode(node.id)}
-                    onDoubleClick={() => handleDoubleClick(node.id)}
-                    onMouseDown={(e) => handleMouseDown(e, node.id)}
-                    onMouseUp={(e) => handleMouseUp(e)}
-                >
-                    {node.text3}
-                </div>
-            </foreignObject>
+                text={node.text3}
+                zoomRatio={zoomRatio}
+                selectNode={() => selectNode(node.id)}
+                handleDoubleClick={() => handleDoubleClick(node.id)}
+                handleMouseDown={(e) => handleMouseDown(e, node.id)}
+                handleMouseUp={(e) => handleMouseUp(e)}
+                divRef={div3Ref}
+            />
             {/* 上段と中段の間の線 */}
             <line
                 x1={node.x}
