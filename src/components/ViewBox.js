@@ -103,6 +103,15 @@ const ViewBox = () => {
         } else if ((e.ctrlKey || e.metaKey) && e.key === 'ArrowLeft') {
             handleKeyAction(e, 'COLLAPSE_NODE');
             return;
+        } else if ((e.ctrlKey || e.metaKey) && e.key === 'x') {
+            handleKeyAction(e, 'CUT_NODE');
+            return;
+        } else if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+            handleKeyAction(e, 'COPY_NODE');
+            return;
+        } else if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+            handleKeyAction(e, 'PASTE_NODE');
+            return;
         }
 
         switch (e.key) {
@@ -136,7 +145,6 @@ const ViewBox = () => {
     };
 
     const selectNode = useCallback((id) => {
-        console.log(`[ViewBox]selectNode id: ${id}`)
         dispatch({ type: 'SELECT_NODE', payload: id });
         dispatch({ type: 'END_EDITING' });
     }, [dispatch]);

@@ -42,9 +42,6 @@ const addNode = (allNodes, parentNode) => {
         text: '',
         text2: '',
         text3: '',
-        // text: `Node ${newId}`,
-        // text2: `order: ${newOrder}`,
-        // text3: `depth: ${parentNode.depth + 1}`,
         selected: false,
         x: 0,
         y: 0,
@@ -72,7 +69,72 @@ const addNode = (allNodes, parentNode) => {
     return newNodes;
 };
 
-// 
+const getSelectedNodeAndChildren = (nodeList, targetNode, selectedNode) => {
+    let cutNodes = [];
+
+
+    if (targetNode.id === selectedNode.id) {
+        cutNodes.push({ ...targetNode, parentId: null });
+    } else {
+        cutNodes.push(targetNode);
+    }
+
+    // 選択対象のノードIdと一致するparentIdを持つノードを再帰的に取得
+    const childNodes = nodeList.filter(node => node.parentId === targetNode.id);
+    if (childNodes.length > 0) {
+        childNodes.forEach(childNode => {
+            cutNodes = [...cutNodes, ...getSelectedNodeAndChildren(nodeList, childNode, selectedNode)];
+        });
+    }
+
+    return cutNodes;
+};
+
+// cutNodesに含まれるノードをnodesに追加できるように新しいノードを作成する関数
+    // 既存のidと重複する場合は、コピーであることを示すので、新しいidを割り当てる
+    // idを更新すると、子ノードのparentIdを更新する必要があるので、再帰的に処理する
+    // parentIdがnullの場合は、parentNode.idを割り当てる
+    // 戻り値として、編集後のcutNodesを返す
+const pasteNodes = (nodeList, cutNodes, parentNode) => {
+    let newNodes = [];
+    const rootNode = cutNodes.find(node => node.parentId === null);
+    if (!rootNode) {
+        return [...nodeList, ...cutNodes]
+    }
+    const rootNodeDepth = rootNode.depth;
+    const baseDepth = parentNode.depth + 1;
+    const depthDelta = baseDepth - rootNodeDepth;
+    let newId = Math.max(...nodeList.map(node => node.id), 0) + 1;
+    const idMap = new Map();
+
+    cutNodes.forEach(cutNode => {
+        if (nodeList.find(node => node.id === cutNode.id)) {
+            idMap.set(cutNode.id, newId);
+            cutNode.id = newId;
+            newId++;
+        }
+        cutNode.depth = cutNode.depth + depthDelta;
+        
+        if (cutNode.id === rootNode.id) {
+            cutNode.parentId = parentNode.id;
+        }
+
+        newNodes.push(cutNode);
+    });
+
+    let updatedNodes = [...nodeList];
+    newNodes = newNodes.map(node => {
+        if (idMap.has(node.parentId)) {
+            node.parentId = idMap.get(node.parentId);
+        }
+        return node;
+    });
+
+    updatedNodes = [...updatedNodes, ...newNodes];
+
+    return updatedNodes;
+}
+
 
 // 指定されたノードの子ノードのdepthを再帰的に親ノードのdepth+1に設定する関数
 const setDepthRecursive = (nodeList, parentNode) => {
@@ -181,7 +243,9 @@ function reducer(state, action) {
                 return { ...state, nodes: action.payload };
             }
         case 'SELECT_NODE':
-            console.log(`[reducer]SELECT_NODE id: ${action.payload} x: ${state.nodes.find(node => node.id === action.payload).x} y: ${state.nodes.find(node => node.id === action.payload).y} order: ${state.nodes.find(node => node.id === action.payload).order} depth: ${state.nodes.find(node => node.id === action.payload).depth} parentId: ${state.nodes.find(node => node.id === action.payload).parentId}`);
+            if (selectedNode) {
+                console.log(`[reducer]SELECT_NODE id: ${selectedNode.id} x: ${selectedNode.x} y: ${selectedNode.y} order: ${selectedNode.order} depth: ${selectedNode.depth} parentId: ${selectedNode.parentId}`);
+            }
             return { ...state, nodes: state.nodes.map(node => node.id === action.payload ? { ...node, selected: true } : { ...node, selected: false }) };
         case 'DESELECT_ALL':
             return { ...state, nodes: state.nodes.map(node => ({ ...node, selected: false, editing: false })) };
@@ -244,6 +308,32 @@ function reducer(state, action) {
             return { ...state, nodes: updatedNodes };
         case 'MOVE_NODE':
             return { ...state, nodes: state.nodes.map(node => node.id === action.payload.id ? { ...node, x: action.payload.x, y: action.payload.y } : node) };
+        case 'CUT_NODE':
+            if (selectedNode) {
+                saveSnapshot(state.nodes);
+                const cutNodes = getSelectedNodeAndChildren(state.nodes, selectedNode, selectedNode);
+                updatedNodes = deleteNodeRecursive(state.nodes, selectedNode);
+                updatedNodes = adjustNodePositions(updatedNodes);
+                return { ...state, nodes: updatedNodes, cutNodes: cutNodes };
+            } else {
+                return state;
+            }
+        case 'COPY_NODE':
+            if (selectedNode) {
+                const copyNodes = getSelectedNodeAndChildren(state.nodes, selectedNode, selectedNode);
+                return { ...state, cutNodes: copyNodes };
+            } else {
+                return state;
+            }
+        case 'PASTE_NODE':
+            if (state.cutNodes && selectedNode) {
+                saveSnapshot(state.nodes);
+                updatedNodes = pasteNodes(state.nodes, state.cutNodes, selectedNode);
+                updatedNodes = adjustNodePositions(updatedNodes);
+                return { ...state, nodes: updatedNodes};
+            } else {
+                return state;
+            }
         case 'EXPAND_NODE':
             updatedNodes = setVisibilityRecursive(state.nodes, selectedNode, true);
             updatedNodes = adjustNodePositions(updatedNodes);
