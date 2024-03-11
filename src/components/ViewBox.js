@@ -161,7 +161,7 @@ const ViewBox = () => {
                 loadNodes={loadNodes}
                 saveNodes={() => saveNodes(state.nodes)}
             />
-            <div style={{ position: 'absolute', top: 0, left: 0 }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, overflow: 'auto', }}>
                 <svg
                     ref={svgRef}
                     width={canvasSize.width}
