@@ -146,7 +146,6 @@ const ViewBox = () => {
 
     const selectNode = useCallback((id) => {
         dispatch({ type: 'SELECT_NODE', payload: id });
-        dispatch({ type: 'END_EDITING' });
     }, [dispatch]);
 
     return (
