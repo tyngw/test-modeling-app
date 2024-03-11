@@ -100,7 +100,8 @@ function reducer(state, action) {
             if (action.payload.length === 0) {
                 return initialState;
             } else {
-                return { ...state, nodes: action.payload };
+                // parentIdがnullのノードはvisibleをtrueに設定
+                return { ...state, nodes: action.payload.map(node => node.parentId === null ? { ...node, visible: true } : node) };
             }
         case 'SELECT_NODE':
             if (selectedNode) {
