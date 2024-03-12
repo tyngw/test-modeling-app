@@ -18,9 +18,14 @@ export const useNodeDragEffect = (state, dispatch) => {
         e.stopPropagation();
         const node = getNodeById(state.nodes, id);
         setDragging(node);
-        setStartPosition({ x: e.pageX - node.x, y: e.pageY - node.y });
-        setOriginalPosition({ x: node.x, y: node.y });
-        // };
+        setStartPosition({ 
+            x: (e.pageX / state.zoomRatio ) - node.x, 
+            y: (e.pageY / state.zoomRatio ) - node.y
+        });
+        setOriginalPosition({ 
+            x: node.x, 
+            y: node.y, 
+        });
     }, [state.nodes]);
 
     useEffect(() => {
@@ -28,8 +33,8 @@ export const useNodeDragEffect = (state, dispatch) => {
             console.log(`[useNodeDragEffect]dragging: ${dragging.id}`)
             const handleMouseMove = (e) => {
                 const isMouseOverNode = (e, node) => {
-                    const isWithinXBounds = e.pageX >= node.x && e.pageX <= node.x + node.width;
-                    const isWithinYBounds = e.pageY >= node.y  && e.pageY <= node.y + node.height;
+                    const isWithinXBounds = (e.pageX / state.zoomRatio ) >= node.x && (e.pageX / state.zoomRatio ) <= node.x + node.width;
+                    const isWithinYBounds = (e.pageY / state.zoomRatio ) >= node.y  && (e.pageY / state.zoomRatio ) <= node.y + node.height;
                     const isNotDraggingNode = node.id !== dragging.id;
                     const isNotParentNode = dragging.parentId !== node.id;
 
@@ -38,8 +43,8 @@ export const useNodeDragEffect = (state, dispatch) => {
 
                 const overNode = state.nodes.find(node => isMouseOverNode(e, node));
 
-                const newX = e.pageX - startPosition.x;
-                const newY = e.pageY - startPosition.y;
+                const newX = (e.pageX / state.zoomRatio ) - startPosition.x;
+                const newY = (e.pageY / state.zoomRatio ) - startPosition.y;
 
                 if (overNode) {
                     setOverDropTarget(overNode);
