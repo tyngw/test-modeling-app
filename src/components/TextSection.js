@@ -1,5 +1,6 @@
 // TextSection.js
 import React from 'react';
+import { MIN_SECTION_HEIGHT } from '../constants/Node';
 
 const TextSection = ({
     x,
@@ -14,35 +15,33 @@ const TextSection = ({
     handleMouseUp,
     divRef
 }) => (
-    <foreignObject
-        x={x}
-        y={y}
-        width={width}
-        height={height}
-    >
-        <div
-            ref={divRef}
-            xmlns="http://www.w3.org/1999/xhtml"
-            style={{
-                fontSize: `${zoomRatio * 12}px`,
-                maxWidth: `${width}px`,
-                minHeight: `20px`,
-                overflow: 'hidden',
-                whiteSpace: 'pre-wrap',
-                wordWrap: 'break-word',
-                pointerEvents: 'none',
-                verticalAlign: 'middle',
-                display: 'flex',
-                pointerEvents: 'all',
-            }}
-            onClick={selectNode}
-            onDoubleClick={handleDoubleClick}
-            onMouseDown={handleMouseDown}
-            onMouseUp={handleMouseUp}
+        <foreignObject
+            x={x}
+            y={y}
+            width={width}
+            height={height}
         >
-            {text}
-        </div>
-    </foreignObject>
-);
-
+            <div
+                ref={divRef}
+                xmlns="http://www.w3.org/1999/xhtml"
+                style={{
+                    fontSize: `${Math.log2(zoomRatio + 50) * 2.6}px`,
+                    maxWidth: `${width}px`,
+                    minHeight: `${MIN_SECTION_HEIGHT}px`,
+                    overflow: 'hidden',
+                    whiteSpace: 'pre-wrap',
+                    wordWrap: 'break-word',
+                    verticalAlign: 'middle',
+                    display: 'flex',
+                    pointerEvents: 'all',
+                }}
+                onClick={selectNode}
+                onDoubleClick={handleDoubleClick}
+                onMouseDown={handleMouseDown}
+                onMouseUp={handleMouseUp}
+            >
+                {text}
+            </div>
+        </foreignObject>
+    );
 export default TextSection;

@@ -66,14 +66,8 @@ export const useNodeDragEffect = (state, dispatch) => {
                 const oldParentId = dragging.parentId;
                 const newParentId = overDropTarget.id;
 
-                dispatch({ type: 'SNAPSHOT', payload: state.nodes });
-                // ノードのorderを更新する前に、移動元の兄弟ノードのorderをデクリメント
-                dispatch({ type: 'DECREMENT', payload: { oldParentId: oldParentId, draggingNodeOrder: dragging.order } });
-                // 移動先の子ノードの数に基づいて新しいorderを計算
-                const siblings = state.nodes.filter(node => node.parentId === newParentId);
-                const maxOrder = siblings.length > 0 ? Math.max(...siblings.map(node => node.order)) + 1 : 0;
-                
-                dispatch({ type: 'DROP_NODE', payload: { id: dragging.id, newParentId: newParentId, order: maxOrder, depth: overDropTarget.depth + 1 } });
+                dispatch({ type: 'SNAPSHOT', payload: state.nodes });                
+                dispatch({ type: 'DROP_NODE', payload: { id: dragging.id, oldParentId: oldParentId, newParentId: newParentId, depth: overDropTarget.depth + 1 } });
             } else {
                 dispatch({ type: 'MOVE_NODE', payload: { id: dragging.id, x: originalPosition.x, y: originalPosition.y } });
             }

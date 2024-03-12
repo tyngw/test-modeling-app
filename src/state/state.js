@@ -100,13 +100,15 @@ function reducer(state, action) {
             if (action.payload.length === 0) {
                 return initialState;
             } else {
-                return { ...state, nodes: action.payload };
+                // parentIdがnullのノードはvisibleをtrueに設定
+                return { ...state, nodes: action.payload.map(node => node.parentId === null ? { ...node, visible: true } : node) };
             }
         case 'SELECT_NODE':
-            if (selectedNode) {
-                console.log(`[reducer]SELECT_NODE id: ${selectedNode.id} x: ${selectedNode.x} y: ${selectedNode.y} order: ${selectedNode.order} depth: ${selectedNode.depth} parentId: ${selectedNode.parentId}`);
+            const selectNode = state.nodes.find(node => node.id === action.payload);
+            if (selectNode) {
+                console.log(`[SELECT_NODE] selectNode: ${JSON.stringify(selectNode, null, 2)}`);
             }
-            return { ...state, nodes: state.nodes.map(node => node.id === action.payload ? { ...node, selected: true } : { ...node, selected: false }) };
+            return { ...state, nodes: state.nodes.map(node => node.id === action.payload ? { ...node, selected: true } : { ...node, selected: false, editing: false }) };
         case 'DESELECT_ALL':
             return { ...state, nodes: state.nodes.map(node => ({ ...node, selected: false, editing: false })) };
         case 'UPDATE_TEXT':
@@ -146,19 +148,26 @@ function reducer(state, action) {
         case 'SNAPSHOT':
             saveSnapshot(state.nodes);
             return state;
-        case 'DECREMENT':
+        // case 'DECREMENT':
+        //     return { ...state, nodes: updatedNodes };
+        case 'DROP_NODE':
+            const siblings = state.nodes.filter(node => node.parentId === action.payload.newParentId);
+            const maxOrder = siblings.length > 0 ? Math.max(...siblings.map(node => node.order)) + 1 : 0;
+
+            // 移動元の兄弟ノードのorderを更新
             updatedNodes = state.nodes.map(node => ({
                 ...node,
-                order: node.parentId === action.payload.parentId && node.order > action.payload.draggingNodeOrder ? node.order - 1 : node.order,
+                order: node.parentId === action.payload.oldParentId && node.order > action.payload.draggingNodeOrder ? node.order - 1 : node.order,
             }));
             // 移動元の親ノードの情報を更新
             updatedNodes = updateChildren(state.nodes, action.payload.oldParentId, -1);
-            return { ...state, nodes: updatedNodes };
-        case 'DROP_NODE':
             // 移動先の親ノードの情報を更新
             updatedNodes = updateChildren(state.nodes, action.payload.newParentId, 1);
+            // 移動先のノードの情報を更新
             updatedNodes = setDepthRecursive(state.nodes, action.payload);
-            updatedNodes = updatedNodes.map(node => node.id === action.payload.id ? { ...node, parentId: action.payload.newParentId, order: action.payload.order, depth: action.payload.depth } : node);
+            // 移動先のノードのorderを更新
+            // updatedNodes = updatedNodes.map(node => node.id === action.payload.id ? { ...node, parentId: action.payload.newParentId, order: maxOrder, depth: action.payload.depth } : node);
+            updatedNodes = updatedNodes.map(node => node.id === action.payload.id ? { ...node, parentId: action.payload.newParentId, order: maxOrder, depth: action.payload.depth, text2: `order: ${maxOrder} depth: ${action.payload.depth}` } : node);
             updatedNodes = adjustNodePositions(updatedNodes);
             return { ...state, nodes: updatedNodes };
         case 'MOVE_NODE':
@@ -184,6 +193,7 @@ function reducer(state, action) {
             if (state.cutNodes && selectedNode) {
                 saveSnapshot(state.nodes);
                 updatedNodes = pasteNodes(state.nodes, state.cutNodes, selectedNode);
+                updatedNodes = updateChildren(updatedNodes, selectedNode.id, 1);
                 updatedNodes = adjustNodePositions(updatedNodes);
                 return { ...state, nodes: updatedNodes};
             } else {

@@ -41,6 +41,10 @@ export const pasteNodes = (nodeList, cutNodes, parentNode) => {
         
         if (cutNode.id === rootNode.id) {
             cutNode.parentId = parentNode.id;
+            // parentIdのchildrenを新しいorderに設定する
+            const children = nodeList.find(node => node.id === parentNode.id).children;
+            cutNode.order = children;
+            cutNode.text2 = `order: ${children} depth: ${cutNode.depth}`;
         }
 
         return cutNode;
