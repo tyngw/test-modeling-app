@@ -90,6 +90,7 @@ const ViewBox = () => {
             };
             reader.readAsText(file);
         }
+        event.target.value = null;
     }
 
     const handleKeyDown = (e) => {
