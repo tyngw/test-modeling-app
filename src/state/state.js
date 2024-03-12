@@ -101,7 +101,9 @@ function reducer(state, action) {
                 return initialState;
             } else {
                 // parentIdがnullのノードはvisibleをtrueに設定
-                return { ...state, nodes: action.payload.map(node => node.parentId === null ? { ...node, visible: true } : node) };
+                updatedNodes = action.payload.map(node => node.parentId === null ? { ...node, visible: true } : node);
+                updatedNodes = adjustNodePositions(action.payload);
+                return { ...state, nodes: updatedNodes };
             }
         case 'SELECT_NODE':
             const selectNode = state.nodes.find(node => node.id === action.payload);

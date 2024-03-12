@@ -36,7 +36,12 @@ export const saveSvg = (svgElement, name) => {
 }
 
 export const saveNodes = (nodes) => {
-    const json = JSON.stringify(nodes);
+    const nodesToSave = nodes.map(node => {
+        const { x, y, ...nodeWithoutXY } = node;
+        return nodeWithoutXY;
+    });
+
+    const json = JSON.stringify(nodesToSave);
     const blob = new Blob([json], { type: "application/json" });
     const url = URL.createObjectURL(blob);
 
