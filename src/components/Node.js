@@ -17,6 +17,7 @@ const Node = ({
     handleDoubleClick,
     nodes,
     overDropTarget,
+    updateNodeSize,
     zoomRatio,
 }) => {
     const parentNode = getNodeById(nodes, node.parentId);
@@ -52,9 +53,9 @@ const Node = ({
         const div3Width = div3Ref.current.offsetWidth;
         const maxWidth = Math.max(div1Width, div2Width, div3Width)
 
-        // 幅の最大値を計算
-        node.width = maxWidth;
-    }, [node, section1Height, section2Height, section3Height]);
+        // ノードの幅と高さを更新する関数を呼び出し
+        updateNodeSize(node.id, maxWidth, section1Height + section2Height + section3Height);
+    }, [section1Height, section2Height, section3Height]);
 
     return (
         <React.Fragment key={node.id}>

@@ -7,11 +7,11 @@ import {
     NODE_HEIGHT,
     MIN_WIDTH
 } from '../constants/Node';
-import { 
-    deleteNodeRecursive, 
-    setDepthRecursive, 
-    getSelectedNodeAndChildren, 
-    pasteNodes, 
+import {
+    deleteNodeRecursive,
+    setDepthRecursive,
+    getSelectedNodeAndChildren,
+    pasteNodes,
     setVisibilityRecursive
 } from '../utils/NodeActionHelper';
 
@@ -195,7 +195,7 @@ function reducer(state, action) {
                 updatedNodes = pasteNodes(state.nodes, state.cutNodes, selectedNode);
                 updatedNodes = updateChildren(updatedNodes, selectedNode.id, 1);
                 updatedNodes = adjustNodePositions(updatedNodes);
-                return { ...state, nodes: updatedNodes};
+                return { ...state, nodes: updatedNodes };
             } else {
                 return state;
             }
@@ -209,6 +209,8 @@ function reducer(state, action) {
             updatedNodes = setVisibilityRecursive(state.nodes, selectedNode, false);
             updatedNodes = adjustNodePositions(updatedNodes);
             return { ...state, nodes: updatedNodes };
+        case 'UPDATE_NODE_SIZE':
+            return { ...state, nodes: state.nodes.map(node => node.id === action.payload.id ? { ...node, width: action.payload.width, height: action.payload.height } : node) };
         default:
             return state;
     }

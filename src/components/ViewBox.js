@@ -148,6 +148,10 @@ const ViewBox = () => {
         dispatch({ type: 'SELECT_NODE', payload: id });
     }, [dispatch]);
 
+    const updateNodeSize = useCallback((id, width, height) => {
+        dispatch({ type: 'UPDATE_NODE_SIZE', payload: { id, width, height } });
+    }, [dispatch]);
+
     return (
         <>
             <IconBar
@@ -186,6 +190,7 @@ const ViewBox = () => {
                                     handleMouseDown={handleMouseDown}
                                     handleDoubleClick={handleDoubleClick}
                                     overDropTarget={overDropTarget}
+                                    updateNodeSize={updateNodeSize}
                                     zoomRatio={state.zoomRatio}
                                 />
                                 {hasHiddenChildren && <FoldingIcon node={node} />}
