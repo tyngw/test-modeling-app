@@ -108,7 +108,8 @@ function reducer(state, action) {
         case 'SELECT_NODE':
             const selectNode = state.nodes.find(node => node.id === action.payload);
             if (selectNode) {
-                console.log(`[SELECT_NODE] selectNode: ${JSON.stringify(selectNode, null, 2)}`);
+                const { text, text2, text3, selected, editing, visible, section1Height, section2Height, section3Height, ...selectNodeWithoutText } = selectNode;
+                console.log(`[SELECT_NODE] selectNode: ${JSON.stringify(selectNodeWithoutText, null, 2)}`);
             }
             return { ...state, nodes: state.nodes.map(node => node.id === action.payload ? { ...node, selected: true } : { ...node, selected: false, editing: false }) };
         case 'DESELECT_ALL':
