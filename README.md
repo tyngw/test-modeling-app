@@ -13,14 +13,7 @@ This is an application for describing test architecture in a notation similar to
 The application is deployed at [https://tyngw.github.io/test-modeling-app/](https://tyngw.github.io/test-modeling-app/)
 
 ### Application usage
-#### キーボードショートカット
-- `Tab`を押下すると、選択した要素の子要素を追加できます
-- `Delete`を押下すると、選択した要素を削除できます
-- `Enter`を押下すると、選択した要素を編集できます
-- `Esc`を押下すると、選択した要素の編集を終了できます
-- 編集モードの時`Tab`を押下すると、次のテキストボックスにフォーカスが移動します
-
-#### Keyboard shortcuts(English)
+#### Keyboard shortcuts
 - `Tab`: Add a child element to the selected element
 - `Delete`: Remove the selected element
 - `Enter`: Edit the selected element
