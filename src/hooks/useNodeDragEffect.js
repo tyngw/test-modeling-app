@@ -1,9 +1,5 @@
 // ./hooks/useNodeDragEffect.js
 import { useState, useEffect, useCallback } from 'react';
-import { 
-    NODE_HEIGHT, 
-    X_OFFSET } from '../constants/Node';
-import { getNodeById } from '../utils/NodeSelector';
 
 export const useNodeDragEffect = (state, dispatch) => {
     const [dragging, setDragging] = useState(null);
@@ -11,12 +7,12 @@ export const useNodeDragEffect = (state, dispatch) => {
     const [originalPosition, setOriginalPosition] = useState({ x: 0, y: 0 });
     const [overDropTarget, setOverDropTarget] = useState(null);
 
-    const handleMouseDown = useCallback((e, id) => {
-        if (id === undefined || id === null) {
+    const handleMouseDown = useCallback((e, node) => {
+        if (node.id === undefined || node.id === null || node.parentId === null) {
+            console.log(`[useNodeDragEffect] node.id: ${node.id} node.parentId: ${node.parentId}`);
             return;
         }
         e.stopPropagation();
-        const node = getNodeById(state.nodes, id);
         setDragging(node);
         setStartPosition({ 
             x: (e.pageX / state.zoomRatio ) - node.x, 

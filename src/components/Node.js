@@ -97,7 +97,7 @@ const Node = ({
                 zoomRatio={zoomRatio}
                 selectNode={() => selectNode(node.id)}
                 handleDoubleClick={() => handleDoubleClick(node.id)}
-                handleMouseDown={(e) => handleMouseDown(e, node.id)}
+                handleMouseDown={(e) => handleMouseDown(e, node)}
                 handleMouseUp={(e) => handleMouseUp(e)}
                 divRef={div1Ref}
             />
@@ -112,7 +112,7 @@ const Node = ({
                 zoomRatio={zoomRatio}
                 selectNode={() => selectNode(node.id)}
                 handleDoubleClick={() => handleDoubleClick(node.id)}
-                handleMouseDown={(e) => handleMouseDown(e, node.id)}
+                handleMouseDown={(e) => handleMouseDown(e, node)}
                 handleMouseUp={(e) => handleMouseUp(e)}
                 divRef={div2Ref}
             />
@@ -127,7 +127,7 @@ const Node = ({
                 zoomRatio={zoomRatio}
                 selectNode={() => selectNode(node.id)}
                 handleDoubleClick={() => handleDoubleClick(node.id)}
-                handleMouseDown={(e) => handleMouseDown(e, node.id)}
+                handleMouseDown={(e) => handleMouseDown(e, node)}
                 handleMouseUp={(e) => handleMouseUp(e)}
                 divRef={div3Ref}
             />
