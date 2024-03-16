@@ -169,8 +169,7 @@ function reducer(state, action) {
             // 移動先のノードの情報を更新
             updatedNodes = setDepthRecursive(state.nodes, action.payload);
             // 移動先のノードのorderを更新
-            // updatedNodes = updatedNodes.map(node => node.id === action.payload.id ? { ...node, parentId: action.payload.newParentId, order: maxOrder, depth: action.payload.depth } : node);
-            updatedNodes = updatedNodes.map(node => node.id === action.payload.id ? { ...node, parentId: action.payload.newParentId, order: maxOrder, depth: action.payload.depth, text2: `order: ${maxOrder} depth: ${action.payload.depth}` } : node);
+            updatedNodes = updatedNodes.map(node => node.id === action.payload.id ? { ...node, parentId: action.payload.newParentId, order: maxOrder, depth: action.payload.depth } : node);
             updatedNodes = adjustNodePositions(updatedNodes);
             return { ...state, nodes: updatedNodes };
         case 'MOVE_NODE':
