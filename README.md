@@ -27,6 +27,12 @@ The application is deployed at [https://tyngw.github.io/test-modeling-app/](http
 - `Ctrl + ArrowLeft` to fold the children of the selected element
 - `Ctrl + ArrowRight` to expand the children of the selected element
 
+#### Mouse operations
+- `Click` to select an element
+- `Double click` to edit an element
+  - Clicking outside the element will end the editing mode
+- `Drag` and `Drop` to move an element
+
 #### Menu operations
 - `New` to create a new diagram. Unsaved changes will be discarded.
 - `Open` to load saved data. The current data will be discarded.
