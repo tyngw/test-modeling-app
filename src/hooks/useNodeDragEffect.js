@@ -1,5 +1,5 @@
 // ./hooks/useNodeDragEffect.js
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 export const useNodeDragEffect = (state, dispatch) => {
     const [dragging, setDragging] = useState(null);
@@ -7,9 +7,17 @@ export const useNodeDragEffect = (state, dispatch) => {
     const [originalPosition, setOriginalPosition] = useState({ x: 0, y: 0 });
     const [overDropTarget, setOverDropTarget] = useState(null);
 
+    const stateRef = useRef(state);
+    useEffect(() => {
+        stateRef.current = state;
+    }, [state]);
+
     const handleMouseDown = useCallback((e, node) => {
+        if (stateRef.current.zoomRatio !== state.zoomRatio) {
+            return;
+        }
+
         if (node.id === undefined || node.id === null || node.parentId === null) {
-            console.log(`[useNodeDragEffect] node.id: ${node.id} node.parentId: ${node.parentId}`);
             return;
         }
         e.stopPropagation();
@@ -22,11 +30,10 @@ export const useNodeDragEffect = (state, dispatch) => {
             x: node.x, 
             y: node.y, 
         });
-    }, [state.nodes]);
+    }, [state]);
 
     useEffect(() => {
         if (dragging !== null) {
-            console.log(`[useNodeDragEffect]dragging: ${dragging.id}`)
             const handleMouseMove = (e) => {
                 const isMouseOverNode = (e, node) => {
                     const isWithinXBounds = (e.pageX / state.zoomRatio ) >= node.x && (e.pageX / state.zoomRatio ) <= node.x + node.width;
