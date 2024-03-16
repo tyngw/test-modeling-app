@@ -47,4 +47,4 @@ The application is deployed at [https://tyngw.github.io/test-modeling-app/](http
 - `Export`: Export the diagram in SVG format
 
 ## License
-This project is licensed under the ApacheLicence2.0. See [LICENSE](./LICENSE) for details.
+This project is licensed under the MIT license. See [LICENSE](./LICENSE) for details.
