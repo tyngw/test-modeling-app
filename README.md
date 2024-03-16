@@ -13,31 +13,38 @@ This is an application for describing test architecture in a notation similar to
 The application is deployed at [https://tyngw.github.io/test-modeling-app/](https://tyngw.github.io/test-modeling-app/)
 
 ### Application usage
-#### Keyboard shortcuts
-- `Tab` to add a new element
-- `Delete` to remove the selected element
-- `Enter` to edit the selected element
-- `Esc` to stop editing the selected element
-- `Tab` in edit mode moves the focus to the next text box
-- `Ctrl + Z` to undo the last action
-- `Shift + Ctrl + Z` to redo the last undone action
-- `Ctrl + X` to cut the selected element
-- `Ctrl + C` to copy the selected element
-- `Ctrl + V` to paste the copied element
-- `Ctrl + ArrowLeft` to fold the children of the selected element
-- `Ctrl + ArrowRight` to expand the children of the selected element
+#### キーボードショートカット
+- `Tab`を押下すると、選択した要素の子要素を追加できます
+- `Delete`を押下すると、選択した要素を削除できます
+- `Enter`を押下すると、選択した要素を編集できます
+- `Esc`を押下すると、選択した要素の編集を終了できます
+- 編集モードの時`Tab`を押下すると、次のテキストボックスにフォーカスが移動します
+
+#### Keyboard shortcuts(English)
+- `Tab`: Add a child element to the selected element
+- `Delete`: Remove the selected element
+- `Enter`: Edit the selected element
+- `Esc`: Stop editing the selected element
+- `Tab` in editing mode: Move the focus to the next text box
+- `Ctrl + Z`: Undo the last action
+- `Shift + Ctrl + Z`: Redo the last action
+- `Ctrl + X`: Cut the selected element
+- `Ctrl + C`: Copy the selected element
+- `Ctrl + V`: Paste the copied element
+- `Ctrl + ArrowLeft`: Collapse the children of the selected element
+- `Ctrl + ArrowRight`: Expand the children of the selected element
 
 #### Mouse operations
-- `Click` to select an element
-- `Double click` to edit an element
+- `Click`: Select an element
+- `Double click`: Edit the selected element
   - Clicking outside the element will end the editing mode
-- `Drag` and `Drop` to move an element
+- `Drag`: Move the selected element
 
 #### Menu operations
-- `New` to create a new diagram. Unsaved changes will be discarded.
-- `Open` to load saved data. The current data will be discarded.
-- `Save as` to save the diagram data in JSON format
-- `Export` to export the diagram in SVG format
+- `New`: Create a new diagram. Unsaved changes will be discarded.
+- `Open`: Load saved data. The current data will be discarded.
+- `Save as`: Save the diagram data in JSON format
+- `Export`: Export the diagram in SVG format
 
 ## License
 This project is licensed under the ApacheLicence2.0. See [LICENSE](./LICENSE) for details.
