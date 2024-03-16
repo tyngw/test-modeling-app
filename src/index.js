@@ -6,17 +6,14 @@ import ReactGA from "react-ga4";
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
-function MyApp() {
+function MyApp(){
   useEffect(() => {
-    ReactGA.initialize("G-CVYKPR22E4");
-    ReactGA.send("pageview");
+    ReactGA._gaCommandSendPageview(window.location.pathname);
   }, []);
 
-  return (
-    <React.StrictMode>
-      <App />
-    </React.StrictMode>
-  );
+  return (<React.StrictMode>
+    <App />
+  </React.StrictMode>)
 }
 
 root.render(<MyApp />);
