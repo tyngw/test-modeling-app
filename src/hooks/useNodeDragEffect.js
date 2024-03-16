@@ -13,24 +13,20 @@ export const useNodeDragEffect = (state, dispatch) => {
     }, [state]);
 
     const handleMouseDown = useCallback((e, node) => {
-        if (stateRef.current.zoomRatio !== state.zoomRatio) {
-            return;
-        }
-
         if (node.id === undefined || node.id === null || node.parentId === null) {
             return;
         }
         e.stopPropagation();
         setDragging(node);
         setStartPosition({ 
-            x: (e.pageX / state.zoomRatio ) - node.x, 
-            y: (e.pageY / state.zoomRatio ) - node.y
+            x: (e.pageX / stateRef.current.zoomRatio ) - node.x, 
+            y: (e.pageY / stateRef.current.zoomRatio ) - node.y
         });
         setOriginalPosition({ 
             x: node.x, 
             y: node.y, 
         });
-    }, [state]);
+    }, []);
 
     useEffect(() => {
         if (dragging !== null) {
