@@ -27,5 +27,11 @@ The application is deployed at [https://tyngw.github.io/test-modeling-app/](http
 - `Ctrl + ArrowLeft` to fold the children of the selected element
 - `Ctrl + ArrowRight` to expand the children of the selected element
 
+#### Menu operations
+- `New` to create a new diagram. Unsaved changes will be discarded.
+- `Open` to load saved data. The current data will be discarded.
+- `Save as` to save the diagram data in JSON format
+- `Export` to export the diagram in SVG format
+
 ## License
 This project is licensed under the ApacheLicence2.0. See [LICENSE](./LICENSE) for details.
