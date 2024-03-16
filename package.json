@@ -1,8 +1,8 @@
 {
+  "homepange": "https://tyngw.github.io/test-modeling-app/",
   "name": "test-modeling-app",
   "version": "0.1.0",
   "private": true,
-  "homepange": "https://tyngw.github.io/test-modeling-app/",
   "dependencies": {
     "@emotion/react": "^11.11.4",
     "@emotion/styled": "^11.11.0",
