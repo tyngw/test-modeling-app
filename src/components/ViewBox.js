@@ -9,7 +9,7 @@ import useResizeEffect from '../hooks/useResizeEffect';
 import { useNodeDragEffect } from '../hooks/useNodeDragEffect';
 import { useClickOutside } from '../hooks/useClickOutside';
 import { loadFromLocalStorage } from '../state/undoredo';
-import { saveSvg, saveNodes } from '../utils/FileHelpers';
+import { saveSvg, loadNodes, saveNodes } from '../utils/FileHelpers';
 import FoldingIcon from './FoldingIcon';
 
 const ViewBox = () => {
@@ -34,7 +34,6 @@ const ViewBox = () => {
         }
     }, []);
 
-    // 編集モードを終了する
     const endEditing = () => {
         dispatch({ type: 'END_EDITING' });
         svgRef.current.focus();
@@ -70,46 +69,50 @@ const ViewBox = () => {
         dispatch({ type: 'NEW' });
     };
 
-    const loadNodes = (event) => {
-        const file = event.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function (e) {
-                const contents = e.target.result;
-                try {
-                    const nodes = JSON.parse(contents);
-                    dispatch({ type: 'LOAD_NODES', payload: nodes });
-                } catch (error) {
-                    alert('Error: JSON形式のファイルを選択してください');
-                }
-            };
-            reader.readAsText(file);
-        }
-        event.target.value = null;
-    }
+    const handleFileSelect = (event) => {
+        loadNodes(event)
+            .then(nodes => {
+                dispatch({ type: 'LOAD_NODES', payload: nodes });
+            })
+            .catch(error => {
+                console.error(error);
+            });
+    };
 
     const keyActionMap = {
-        'z': { ctrl: true, action: 'UNDO' },
-        'z': { ctrl: true, shift: true, action: 'REDO' },
-        'ArrowRight': { ctrl: true, action: 'EXPAND_NODE' },
-        'ArrowLeft': { ctrl: true, action: 'COLLAPSE_NODE' },
-        'x': { ctrl: true, action: 'CUT_NODE' },
-        'c': { ctrl: true, action: 'COPY_NODE' },
-        'v': { ctrl: true, action: 'PASTE_NODE' },
-        'Tab': { action: 'ADD_NODE' },
-        'Delete': { action: 'DELETE_NODE' },
-        'Backspace': { action: 'DELETE_NODE' },
-        'Enter': { action: 'EDIT_NODE', payload: { editingField: 'text' } },
-        'ArrowUp': { action: 'ARROW_UP' },
-        'ArrowDown': { action: 'ARROW_DOWN' },
-        'ArrowRight': { action: 'ARROW_RIGHT' },
-        'ArrowLeft': { action: 'ARROW_LEFT' }
+        'z': { 
+            true: { shift: false, action: 'UNDO' },
+            false: { shift: true, action: 'REDO' }
+        },
+        'ArrowUp': { 
+            false: { shift: false, action: 'ARROW_UP' }
+        },
+        'ArrowDown': {
+            false: { shift: false, action: 'ARROW_DOWN' }
+        },
+        'ArrowRight': { 
+            false: { shift: false, action: 'ARROW_RIGHT' },
+            true: { shift: false, action: 'EXPAND_NODE'}
+        },
+        'ArrowLeft': {
+            false: { shift: false, action: 'ARROW_LEFT' },
+            true: { shift: false, action: 'COLLAPSE_NODE' }
+        },
+        'x': { true: { shift: false, action: 'CUT_NODE' } },
+        'c': { true: { shift: false, action: 'COPY_NODE' } },
+        'v': { true: { shift: false, action: 'PASTE_NODE' } },
+        'Tab': { false: { shift: false, action: 'ADD_NODE' } },
+        'Delete': { false: { shift: false, action: 'DELETE_NODE' } },
+        'Backspace': { false: { shift: false, action: 'DELETE_NODE' } },
+        'Enter': { false: { shift: false, action: 'EDIT_NODE', payload: { editingField: 'text' } } },
+        
     };
 
     const handleKeyDown = (e) => {
-        const keyAction = keyActionMap[e.key];
-        if (keyAction && keyAction.ctrl === e.ctrlKey && keyAction.shift === e.shiftKey) {
-            e.preventDefault();
+        e.preventDefault();
+        console.log(`[handleKeyDown] key: ${e.key} ctrl: ${e.ctrlKey} shift: ${e.shiftKey}`)
+        const keyAction = keyActionMap[e.key] && keyActionMap[e.key][e.ctrlKey || e.metaKey];
+        if (keyAction && keyAction.shift === e.shiftKey) {
             dispatch({ type: keyAction.action, payload: keyAction.payload });
         }
     };
@@ -131,7 +134,7 @@ const ViewBox = () => {
                 ZoomInViewBox={ZoomInViewBox}
                 ZoomOutViewBox={ZoomOutViewBox}
                 saveSvg={() => saveSvg(svgRef.current, 'download.svg')}
-                loadNodes={loadNodes}
+                loadNodes={handleFileSelect}
                 saveNodes={() => saveNodes(state.nodes)}
             />
             <div style={{ position: 'absolute', top: 0, left: 0, overflow: 'auto', }}>
@@ -168,7 +171,12 @@ const ViewBox = () => {
                         );
                     })}
                 </svg>
-                <InputFields node={editingNode} updateText={updateText} endEditing={endEditing} zoomRatio={state.zoomRatio} />
+                <InputFields
+                    node={editingNode}
+                    updateText={updateText}
+                    endEditing={endEditing}
+                    zoomRatio={state.zoomRatio}
+                />
             </div>
         </>
 
