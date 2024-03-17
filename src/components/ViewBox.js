@@ -32,7 +32,7 @@ const ViewBox = () => {
         if (nodeList) {
             dispatch({ type: 'LOAD_NODES', payload: nodeList });
         }
-    }, [dispatch]);
+    }, []);
 
     // 編集モードを終了する
     const endEditing = () => {
@@ -57,11 +57,6 @@ const ViewBox = () => {
     const handleDoubleClick = useCallback((id) => {
         dispatch({ type: 'EDIT_NODE', payload: id });
     }, [dispatch]);
-
-    const handleKeyAction = (e, actionType, payload) => {
-        e.preventDefault();
-        dispatch({ type: actionType, payload: payload });
-    };
 
     const handleUndo = () => {
         dispatch({ type: 'UNDO', payload: state.nodes });
@@ -93,55 +88,29 @@ const ViewBox = () => {
         event.target.value = null;
     }
 
-    const handleKeyDown = (e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
-            handleKeyAction(e, 'UNDO');
-        } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'z') {
-            handleKeyAction(e, 'REDO');
-        } else if ((e.ctrlKey || e.metaKey) && e.key === 'ArrowRight') {
-            handleKeyAction(e, 'EXPAND_NODE');
-            return;
-        } else if ((e.ctrlKey || e.metaKey) && e.key === 'ArrowLeft') {
-            handleKeyAction(e, 'COLLAPSE_NODE');
-            return;
-        } else if ((e.ctrlKey || e.metaKey) && e.key === 'x') {
-            handleKeyAction(e, 'CUT_NODE');
-            return;
-        } else if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
-            handleKeyAction(e, 'COPY_NODE');
-            return;
-        } else if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
-            handleKeyAction(e, 'PASTE_NODE');
-            return;
-        }
+    const keyActionMap = {
+        'z': { ctrl: true, action: 'UNDO' },
+        'z': { ctrl: true, shift: true, action: 'REDO' },
+        'ArrowRight': { ctrl: true, action: 'EXPAND_NODE' },
+        'ArrowLeft': { ctrl: true, action: 'COLLAPSE_NODE' },
+        'x': { ctrl: true, action: 'CUT_NODE' },
+        'c': { ctrl: true, action: 'COPY_NODE' },
+        'v': { ctrl: true, action: 'PASTE_NODE' },
+        'Tab': { action: 'ADD_NODE' },
+        'Delete': { action: 'DELETE_NODE' },
+        'Backspace': { action: 'DELETE_NODE' },
+        'Enter': { action: 'EDIT_NODE', payload: { editingField: 'text' } },
+        'ArrowUp': { action: 'ARROW_UP' },
+        'ArrowDown': { action: 'ARROW_DOWN' },
+        'ArrowRight': { action: 'ARROW_RIGHT' },
+        'ArrowLeft': { action: 'ARROW_LEFT' }
+    };
 
-        switch (e.key) {
-            case 'Tab':
-                handleKeyAction(e, 'ADD_NODE');
-                break;
-            case 'Delete':
-            case 'Backspace':
-                handleKeyAction(e, 'DELETE_NODE');
-                break;
-            case 'Enter':
-                handleKeyAction(e, 'EDIT_NODE', { editingField: 'text' });
-                break;
-            case 'ArrowUp':
-                handleKeyAction(e, 'ARROW_UP');
-                break;
-            case 'ArrowDown':
-                handleKeyAction(e, 'ARROW_DOWN');
-                break;
-            // 右キー
-            case 'ArrowRight':
-                handleKeyAction(e, 'ARROW_RIGHT');
-                break;
-            case 'ArrowLeft':
-                handleKeyAction(e, 'ARROW_LEFT');
-                break;
-            default:
-                console.log(`editingNode: ${editingNode}`)
-                break;
+    const handleKeyDown = (e) => {
+        const keyAction = keyActionMap[e.key];
+        if (keyAction && keyAction.ctrl === e.ctrlKey && keyAction.shift === e.shiftKey) {
+            e.preventDefault();
+            dispatch({ type: keyAction.action, payload: keyAction.payload });
         }
     };
 
