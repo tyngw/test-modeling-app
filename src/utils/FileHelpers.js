@@ -1,3 +1,25 @@
+export const loadNodes = (event) => {
+    return new Promise((resolve, reject) => {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const contents = e.target.result;
+                try {
+                    const nodes = JSON.parse(contents);
+                    resolve(nodes);
+                } catch (error) {
+                    reject('Error: JSON形式のファイルを選択してください');
+                }
+            };
+            reader.readAsText(file);
+        } else {
+            reject('Error: ファイルが選択されていません');
+        }
+        event.target.value = null;
+    });
+}
+
 export const saveSvg = (svgElement, name) => {
     const svgElementClone = svgElement.cloneNode(true);
 
