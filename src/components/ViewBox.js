@@ -110,7 +110,6 @@ const ViewBox = () => {
 
     const handleKeyDown = (e) => {
         e.preventDefault();
-        console.log(`[handleKeyDown] key: ${e.key} ctrl: ${e.ctrlKey} shift: ${e.shiftKey}`)
         const keyAction = keyActionMap[e.key] && keyActionMap[e.key][e.ctrlKey || e.metaKey];
         if (keyAction && keyAction.shift === e.shiftKey) {
             dispatch({ type: keyAction.action, payload: keyAction.payload });
