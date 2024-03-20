@@ -25,8 +25,7 @@ const IconBar = ({
     };
 
     return (
-        // フォーカスを無効にするためにdiv:focus outline: noneを設定
-        <div style={{ position: 'fixed', width: '100%', height: ICONBAR_HEIGHT, zIndex: 100, }}>
+        <div style={{ position: 'static', width: '100%', height: ICONBAR_HEIGHT, zIndex: 100, }}>
             <div style={{ display: 'flex', justifyContent: 'left', alignItems: 'center', height: '100%', backgroundColor: '#f1f1f1', borderRadius: '30px', padding: '0 20px', }}>
                 <input type="file" ref={fileInput} onChange={loadNodes} style={{ display: 'none' }} />
                 <Button variant="text" className="iconbar-button" onClick={handleButtonClick.bind(null, 'NEW')} >
