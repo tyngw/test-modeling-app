@@ -1,4 +1,4 @@
-// TextSection.js
+// components/TextSection.js
 import React from 'react';
 import { MIN_SECTION_HEIGHT } from '../constants/Node';
 
@@ -25,7 +25,7 @@ const TextSection = ({
                 ref={divRef}
                 xmlns="http://www.w3.org/1999/xhtml"
                 style={{
-                    fontSize: `${Math.log2(zoomRatio + 50) * 2.6}px`,
+                    fontSize: `${Math.log2(zoomRatio + 50) * 2.4}px`,
                     maxWidth: `${width}px`,
                     minHeight: `${MIN_SECTION_HEIGHT}px`,
                     overflow: 'hidden',
