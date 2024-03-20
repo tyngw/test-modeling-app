@@ -54,15 +54,15 @@ const ViewBox = () => {
     const { handleMouseDown, handleMouseUp, overDropTarget } = useNodeDragEffect(state, dispatch);
 
     const handleDoubleClick = useCallback((id) => {
-        dispatch({ type: 'EDIT_NODE', payload: id });
+        dispatch({ type: 'EDIT_NODE' });
     }, [dispatch]);
 
     const handleUndo = () => {
-        dispatch({ type: 'UNDO', payload: state.nodes });
+        dispatch({ type: 'UNDO' });
     };
 
     const handleRedo = () => {
-        dispatch({ type: 'REDO', payload: state.nodes });
+        dispatch({ type: 'REDO' });
     };
 
     const handleNewFile = () => {
@@ -80,38 +80,29 @@ const ViewBox = () => {
     };
 
     const keyActionMap = {
-        'z': {
-            true: { shift: false, action: 'UNDO' },
-            false: { shift: true, action: 'REDO' }
-        },
-        'ArrowUp': {
-            false: { shift: false, action: 'ARROW_UP' }
-        },
-        'ArrowDown': {
-            false: { shift: false, action: 'ARROW_DOWN' }
-        },
-        'ArrowRight': {
-            false: { shift: false, action: 'ARROW_RIGHT' },
-            true: { shift: false, action: 'EXPAND_NODE' }
-        },
-        'ArrowLeft': {
-            false: { shift: false, action: 'ARROW_LEFT' },
-            true: { shift: false, action: 'COLLAPSE_NODE' }
-        },
-        'x': { true: { shift: false, action: 'CUT_NODE' } },
-        'c': { true: { shift: false, action: 'COPY_NODE' } },
-        'v': { true: { shift: false, action: 'PASTE_NODE' } },
-        'Tab': { false: { shift: false, action: 'ADD_NODE' } },
-        'Delete': { false: { shift: false, action: 'DELETE_NODE' } },
-        'Backspace': { false: { shift: false, action: 'DELETE_NODE' } },
-        'Enter': { false: { shift: false, action: 'EDIT_NODE', payload: { editingField: 'text' } } },
-
+        'Ctrl+z': { action: 'UNDO' },
+        'Ctrl+Shift+z': { action: 'REDO' },
+        'ArrowUp': { action: 'ARROW_UP' },
+        'ArrowDown': { action: 'ARROW_DOWN' },
+        'ArrowRight': { action: 'ARROW_RIGHT' },
+        'Ctrl+ArrowRight': { action: 'EXPAND_NODE' },
+        'ArrowLeft': { action: 'ARROW_LEFT' },
+        'Ctrl+ArrowLeft': { action: 'COLLAPSE_NODE' },
+        'x': { action: 'CUT_NODE' },
+        'c': { action: 'COPY_NODE' },
+        'v': { action: 'PASTE_NODE' },
+        'Tab': { action: 'ADD_NODE' },
+        'Delete': { action: 'DELETE_NODE' },
+        'Backspace': { action: 'DELETE_NODE' },
+        'Enter': { action: 'EDIT_NODE', payload: { editingField: 'text' } },
     };
 
     const handleKeyDown = (e) => {
         e.preventDefault();
-        const keyAction = keyActionMap[e.key] && keyActionMap[e.key][e.ctrlKey || e.metaKey];
-        if (keyAction && keyAction.shift === e.shiftKey) {
+        const keyName = `${e.ctrlKey ? 'Ctrl+' : ''}${e.metaKey ? 'Ctrl+' : ''}${e.shiftKey ? 'Shift+' : ''}${e.key}`;
+
+        const keyAction = keyActionMap[keyName];
+        if (keyAction) {
             dispatch({ type: keyAction.action, payload: keyAction.payload });
         }
     };
