@@ -2,6 +2,11 @@ export const loadNodes = (event) => {
     return new Promise((resolve, reject) => {
         const file = event.target.files[0];
         if (file) {
+            const fileName = file.name;
+            const fileExtension = fileName.slice((fileName.lastIndexOf(".") - 1 >>> 0) + 2);
+            if (fileExtension !== 'json') {
+                throw new Error('Error: .json拡張子のファイルを選択してください');
+            }
             const reader = new FileReader();
             reader.onload = function (e) {
                 const contents = e.target.result;
@@ -9,12 +14,10 @@ export const loadNodes = (event) => {
                     const nodes = JSON.parse(contents);
                     resolve(nodes);
                 } catch (error) {
-                    reject('Error: JSON形式のファイルを選択してください');
+                    throw new Error('Error: ファイルの読み込みに失敗しました');
                 }
             };
             reader.readAsText(file);
-        } else {
-            reject('Error: ファイルが選択されていません');
         }
         event.target.value = null;
     });
@@ -69,7 +72,7 @@ export const saveNodes = (nodes) => {
 
     const downloadLink = document.createElement('a');
     downloadLink.href = url;
-    downloadLink.download = 'nodes.json';
+    downloadLink.download = 'Untitled.json';
     document.body.appendChild(downloadLink);
     downloadLink.click();
     document.body.removeChild(downloadLink);
