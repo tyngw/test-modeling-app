@@ -11,6 +11,8 @@ import { useClickOutside } from '../hooks/useClickOutside';
 import { loadFromLocalStorage } from '../state/undoredo';
 import { saveSvg, loadNodes, saveNodes } from '../utils/FileHelpers';
 import FoldingIcon from './FoldingIcon';
+import CustomWindow from './CustomWindow';
+import { helpContent } from '../constants/HelpContent';
 
 const ViewBox = () => {
     const svgRef = useRef();
@@ -18,6 +20,12 @@ const ViewBox = () => {
 
     const [canvasSize, setCanvasSize] = useState({ width: window.innerWidth, height: window.innerHeight });
     const [viewBox, setViewBox] = useState(`0 0 ${canvasSize.width} ${canvasSize.height}`);
+
+    const [isHelpOpen, setHelpOpen] = useState(false);
+
+    const toggleHelp = () => {
+        setHelpOpen(!isHelpOpen);
+    };
 
     const editingNode = state.nodes.find((node) => node.editing);
 
@@ -106,8 +114,12 @@ const ViewBox = () => {
                 saveSvg={() => saveSvg(svgRef.current, 'download.svg')}
                 loadNodes={handleFileSelect}
                 saveNodes={() => saveNodes(state.nodes)}
+                toggleHelp={toggleHelp}
             />
             <div style={{ position: 'absolute', top: 0, left: 0, overflow: 'auto', }}>
+                <CustomWindow isOpen={isHelpOpen} onClose={toggleHelp}>
+                    <div dangerouslySetInnerHTML={{ __html: helpContent }} />
+                </CustomWindow>
                 <svg
                     ref={svgRef}
                     width={canvasSize.width}
