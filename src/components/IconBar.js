@@ -12,11 +12,7 @@ import { ICONBAR_HEIGHT } from '../constants/Node';
 
 
 const IconBar = ({
-    handleNewFile,
-    handleUndo,
-    handleRedo,
-    ZoomInViewBox,
-    ZoomOutViewBox,
+    handleButtonClick,
     saveSvg,
     loadNodes,
     saveNodes,
@@ -31,7 +27,7 @@ const IconBar = ({
         <div style={{ position: 'fixed', width: '100%', height: ICONBAR_HEIGHT, zIndex: 100, }}>
             <div style={{ display: 'flex', justifyContent: 'left', alignItems: 'center', height: '100%', backgroundColor: '#f1f1f1', borderRadius: '30px', padding: '0 20px', }}>
                 <input type="file" ref={fileInput} onChange={loadNodes} style={{ display: 'none' }} />
-                <Button variant="text" className="iconbar-button" onClick={handleNewFile}>
+                <Button variant="text" className="iconbar-button" onClick={handleButtonClick.bind(null, 'NEW')} >
                     <InsertDriveFileOutlinedIcon sx={{ color: '#666666' }} />
                 </Button>
                 <Button variant="text" className="iconbar-button" onClick={handleFileOpen} >
@@ -44,17 +40,17 @@ const IconBar = ({
                     <SaveAltIcon sx={{ color: '#666666' }} />
                 </Button>
                 <div style={{ width: '10px' }}></div>
-                <Button variant="text" className="iconbar-button" onClick={handleUndo} >
+                <Button variant="text" className="iconbar-button" onClick={handleButtonClick.bind(null, 'UNDO')} >
                     <UndoIcon sx={{ color: '#666666' }} />
                 </Button>
-                <Button variant="text" className="iconbar-button" onClick={handleRedo} >
+                <Button variant="text" className="iconbar-button" onClick={handleButtonClick.bind(null, 'REDO')} >
                     <RedoIcon sx={{ color: '#666666' }} />
                 </Button>
                 <div style={{ width: '10px' }}></div>
-                <Button variant="text" className="iconbar-button" onClick={ZoomInViewBox} >
+                <Button variant="text" className="iconbar-button" onClick={handleButtonClick.bind(null, 'ZOOM_IN')} >
                     <ZoomInIcon sx={{ color: '#666666' }} />
                 </Button>
-                <Button variant="text" className="iconbar-button" onClick={ZoomOutViewBox} >
+                <Button variant="text" className="iconbar-button" onClick={handleButtonClick.bind(null, 'ZOOM_OUT')} >
                     <ZoomOutIcon sx={{ color: '#666666' }} />
                 </Button>
             </div>
