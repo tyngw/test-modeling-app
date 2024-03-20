@@ -39,14 +39,6 @@ const ViewBox = () => {
         svgRef.current.focus();
     };
 
-    const ZoomInViewBox = () => {
-        dispatch({ type: 'ZOOM_IN' });
-    };
-
-    const ZoomOutViewBox = () => {
-        dispatch({ type: 'ZOOM_OUT' });
-    };
-
     useResizeEffect({ setCanvasSize, setViewBox, state });
 
     useClickOutside(svgRef, dispatch, editingNode, endEditing);
@@ -56,18 +48,6 @@ const ViewBox = () => {
     const handleDoubleClick = useCallback((id) => {
         dispatch({ type: 'EDIT_NODE' });
     }, [dispatch]);
-
-    const handleUndo = () => {
-        dispatch({ type: 'UNDO' });
-    };
-
-    const handleRedo = () => {
-        dispatch({ type: 'REDO' });
-    };
-
-    const handleNewFile = () => {
-        dispatch({ type: 'NEW' });
-    };
 
     const handleFileSelect = (event) => {
         loadNodes(event)
@@ -107,6 +87,10 @@ const ViewBox = () => {
         }
     };
 
+    const handleButtonClick = (action) => {
+        dispatch({ type: action });
+    };
+
     const selectNode = useCallback((id) => {
         dispatch({ type: 'SELECT_NODE', payload: id });
     }, [dispatch]);
@@ -118,11 +102,7 @@ const ViewBox = () => {
     return (
         <>
             <IconBar
-                handleNewFile={handleNewFile}
-                handleUndo={handleUndo}
-                handleRedo={handleRedo}
-                ZoomInViewBox={ZoomInViewBox}
-                ZoomOutViewBox={ZoomOutViewBox}
+                handleButtonClick={handleButtonClick}
                 saveSvg={() => saveSvg(svgRef.current, 'download.svg')}
                 loadNodes={handleFileSelect}
                 saveNodes={() => saveNodes(state.nodes)}
