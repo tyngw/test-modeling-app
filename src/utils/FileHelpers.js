@@ -61,6 +61,9 @@ export const saveSvg = (svgElement, name) => {
 }
 
 export const saveNodes = (nodes) => {
+    const rootText = nodes.find(node => node.parentId === null).text;
+    const fileName = rootText || 'Untitled';
+
     const nodesToSave = nodes.map(node => {
         const { x, y, ...nodeWithoutXY } = node;
         return nodeWithoutXY;
@@ -72,7 +75,7 @@ export const saveNodes = (nodes) => {
 
     const downloadLink = document.createElement('a');
     downloadLink.href = url;
-    downloadLink.download = 'Untitled.json';
+    downloadLink.download = `${fileName}.json`;
     document.body.appendChild(downloadLink);
     downloadLink.click();
     document.body.removeChild(downloadLink);
