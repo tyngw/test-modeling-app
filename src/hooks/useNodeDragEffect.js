@@ -1,7 +1,7 @@
 // ./hooks/useNodeDragEffect.js
 import { useState, useEffect, useCallback, useRef } from 'react';
 
-export const useNodeDragEffect = (state, dispatch) => {
+export const useNodeDragEffect = (state, dispatch, svgRef) => {
     const [dragging, setDragging] = useState(null);
     const [startPosition, setStartPosition] = useState({ x: 0, y: 0 });
     const [originalPosition, setOriginalPosition] = useState({ x: 0, y: 0 });
@@ -13,14 +13,15 @@ export const useNodeDragEffect = (state, dispatch) => {
     }, [state]);
 
     const handleMouseDown = useCallback((e, node) => {
+        const rect = svgRef.current.getBoundingClientRect();
         if (node.id === undefined || node.id === null || node.parentId === null) {
             return;
         }
         e.stopPropagation();
         setDragging(node);
         setStartPosition({ 
-            x: (e.pageX / stateRef.current.zoomRatio ) - node.x, 
-            y: (e.pageY / stateRef.current.zoomRatio ) - node.y
+            x: (e.pageX / stateRef.current.zoomRatio ) - node.x,
+            y: rect.top + (e.pageY / stateRef.current.zoomRatio ) - node.y
         });
         setOriginalPosition({ 
             x: node.x, 
@@ -31,9 +32,10 @@ export const useNodeDragEffect = (state, dispatch) => {
     useEffect(() => {
         if (dragging !== null) {
             const handleMouseMove = (e) => {
+                const rect = svgRef.current.getBoundingClientRect();
                 const isMouseOverNode = (e, node) => {
                     const isWithinXBounds = (e.pageX / state.zoomRatio ) >= node.x && (e.pageX / state.zoomRatio ) <= node.x + node.width;
-                    const isWithinYBounds = (e.pageY / state.zoomRatio ) >= node.y  && (e.pageY / state.zoomRatio ) <= node.y + node.height;
+                    const isWithinYBounds = ((e.pageY) / state.zoomRatio ) - rect.top >= node.y  && (e.pageY / state.zoomRatio ) - rect.top <= node.y + node.height;
                     const isNotDraggingNode = node.id !== dragging.id;
                     const isNotParentNode = dragging.parentId !== node.id;
 
@@ -43,7 +45,7 @@ export const useNodeDragEffect = (state, dispatch) => {
                 const overNode = state.nodes.find(node => isMouseOverNode(e, node));
 
                 const newX = (e.pageX / state.zoomRatio ) - startPosition.x;
-                const newY = (e.pageY / state.zoomRatio ) - startPosition.y;
+                const newY = rect.top + (e.pageY / state.zoomRatio ) - startPosition.y;
 
                 if (overNode) {
                     setOverDropTarget(overNode);
