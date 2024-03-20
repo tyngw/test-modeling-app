@@ -25,9 +25,10 @@ const TextSection = ({
                 ref={divRef}
                 xmlns="http://www.w3.org/1999/xhtml"
                 style={{
-                    fontSize: `${Math.log2(zoomRatio + 50) * 2.4}px`,
+                    fontSize: `${Math.log2(zoomRatio + 50) * 2.0}px`,
                     maxWidth: `${width}px`,
                     minHeight: `${MIN_SECTION_HEIGHT}px`,
+                    padding: '2px 3px',
                     overflow: 'hidden',
                     whiteSpace: 'pre-wrap',
                     wordWrap: 'break-word',
