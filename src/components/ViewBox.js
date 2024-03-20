@@ -13,7 +13,6 @@ import { saveSvg, loadNodes, saveNodes } from '../utils/FileHelpers';
 import FoldingIcon from './FoldingIcon';
 import CustomWindow from './CustomWindow';
 import { helpContent } from '../constants/HelpContent';
-import { isMobileDevice } from '../utils/DeviceChecker';
 
 const ViewBox = () => {
     const svgRef = useRef();
@@ -52,7 +51,7 @@ const ViewBox = () => {
 
     useClickOutside(svgRef, dispatch, editingNode, endEditing);
 
-    const { handleMouseDown, handleMouseUp, overDropTarget } = useNodeDragEffect(state, dispatch, svgRef);
+    const { handleMouseDown, handleMouseUp, overDropTarget } = useNodeDragEffect(state, dispatch);
 
     const handleDoubleClick = useCallback((id) => {
         dispatch({ type: 'EDIT_NODE' });
@@ -117,8 +116,7 @@ const ViewBox = () => {
                 saveNodes={() => saveNodes(state.nodes)}
                 toggleHelp={toggleHelp}
             />
-            {isMobileDevice() && <div style={{position: 'static', backgroundColor: '#006666', color: 'white', textAlign: 'center', width: '100%'}}>このアプリはモバイルデバイスに対応していません。</div>}
-            <div style={{ position: 'static', overflow: 'auto', width: '100%', }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, overflow: 'auto', }}>
                 <CustomWindow isOpen={isHelpOpen} onClose={toggleHelp}>
                     <div dangerouslySetInnerHTML={{ __html: helpContent }} />
                 </CustomWindow>
