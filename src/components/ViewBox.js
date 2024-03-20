@@ -75,24 +75,24 @@ const ViewBox = () => {
                 dispatch({ type: 'LOAD_NODES', payload: nodes });
             })
             .catch(error => {
-                console.error(error);
+                alert(error);
             });
     };
 
     const keyActionMap = {
-        'z': { 
+        'z': {
             true: { shift: false, action: 'UNDO' },
             false: { shift: true, action: 'REDO' }
         },
-        'ArrowUp': { 
+        'ArrowUp': {
             false: { shift: false, action: 'ARROW_UP' }
         },
         'ArrowDown': {
             false: { shift: false, action: 'ARROW_DOWN' }
         },
-        'ArrowRight': { 
+        'ArrowRight': {
             false: { shift: false, action: 'ARROW_RIGHT' },
-            true: { shift: false, action: 'EXPAND_NODE'}
+            true: { shift: false, action: 'EXPAND_NODE' }
         },
         'ArrowLeft': {
             false: { shift: false, action: 'ARROW_LEFT' },
@@ -105,7 +105,7 @@ const ViewBox = () => {
         'Delete': { false: { shift: false, action: 'DELETE_NODE' } },
         'Backspace': { false: { shift: false, action: 'DELETE_NODE' } },
         'Enter': { false: { shift: false, action: 'EDIT_NODE', payload: { editingField: 'text' } } },
-        
+
     };
 
     const handleKeyDown = (e) => {
