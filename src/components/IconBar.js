@@ -7,6 +7,7 @@ import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import FolderOpenOutlinedIcon from '@mui/icons-material/FolderOpenOutlined';
 import SaveAsOutlinedIcon from '@mui/icons-material/SaveAsOutlined';
 import SaveAltIcon from '@mui/icons-material/SaveAlt';
+import HelpOutlineOutlinedIcon from '@mui/icons-material/HelpOutlineOutlined';
 import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined';
 import { ICONBAR_HEIGHT } from '../constants/Node';
 
@@ -16,6 +17,7 @@ const IconBar = ({
     saveSvg,
     loadNodes,
     saveNodes,
+    toggleHelp,
 }) => {
     const fileInput = useRef(null);
     const handleFileOpen = () => {
@@ -52,6 +54,10 @@ const IconBar = ({
                 </Button>
                 <Button variant="text" className="iconbar-button" onClick={handleButtonClick.bind(null, 'ZOOM_OUT')} >
                     <ZoomOutIcon sx={{ color: '#666666' }} />
+                </Button>
+                <div style={{ width: '10px' }}></div>
+                <Button variant="text" className="iconbar-button" onClick={() => toggleHelp()} >
+                    <HelpOutlineOutlinedIcon sx={{ color: '#666666' }} />
                 </Button>
             </div>
         </div>
