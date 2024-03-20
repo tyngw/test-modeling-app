@@ -155,15 +155,15 @@ const ViewBox = () => {
                             <>
                                 <Node
                                     key={node.id}
-                                    node={node}
-                                    selectNode={selectNode}
                                     nodes={state.nodes}
+                                    node={node}
+                                    zoomRatio={state.zoomRatio}
+                                    selectNode={selectNode}
                                     handleMouseUp={handleMouseUp}
                                     handleMouseDown={handleMouseDown}
                                     handleDoubleClick={handleDoubleClick}
                                     overDropTarget={overDropTarget}
                                     updateNodeSize={updateNodeSize}
-                                    zoomRatio={state.zoomRatio}
                                 />
                                 {hasHiddenChildren && <FoldingIcon node={node} />}
                             </>

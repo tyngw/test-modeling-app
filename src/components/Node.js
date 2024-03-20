@@ -10,19 +10,17 @@ import {
 import TextSection from './TextSection';
 
 const Node = ({
+    nodes,
     node,
+    zoomRatio,
     selectNode,
     handleMouseDown,
     handleMouseUp,
     handleDoubleClick,
-    nodes,
     overDropTarget,
     updateNodeSize,
-    zoomRatio,
 }) => {
     const parentNode = getNodeById(nodes, node.parentId);
-
-    // overDropTargetがnull or undefinedの場合、overDropTargetIdに-1を代入
     const overDropTargetId = overDropTarget ? overDropTarget.id : -1;
 
     // div要素へのrefを作成
@@ -43,19 +41,26 @@ const Node = ({
     }, [node.text, node.text2, node.text3]);
 
     useEffect(() => {
-        node.section1Height = section1Height;
-        node.section2Height = section2Height;
-        node.section3Height = section3Height;
-        node.height = section1Height + section2Height + section3Height;
-
         const div1Width = div1Ref.current.offsetWidth;
         const div2Width = div2Ref.current.offsetWidth;
         const div3Width = div3Ref.current.offsetWidth;
         const maxWidth = Math.max(div1Width, div2Width, div3Width)
+        const totalHeight = section1Height + section2Height + section3Height;
 
         // ノードの幅と高さを更新する関数を呼び出し
-        updateNodeSize(node.id, maxWidth, section1Height + section2Height + section3Height);
+        updateNodeSize(node.id, maxWidth, totalHeight);
+
+        node.section1Height = section1Height;
+        node.section2Height = section2Height;
+        node.section3Height = section3Height;
+        node.height = totalHeight;
     }, [section1Height, section2Height, section3Height]);
+
+    const sections = [
+        { height: section1Height, text: node.text, divRef: div1Ref },
+        { height: section2Height, text: node.text2, divRef: div2Ref },
+        { height: section3Height, text: node.text3, divRef: div3Ref },
+    ];
 
     return (
         <React.Fragment key={node.id}>
@@ -87,68 +92,33 @@ const Node = ({
                     fill: node.id === overDropTargetId ? 'lightblue' : 'white',
                 }}
             />
-            {/* 上段のテキスト */}
-            <TextSection
-                x={node.x}
-                y={node.y}
-                width={node.width}
-                height={section1Height}
-                text={node.text}
-                zoomRatio={zoomRatio}
-                selectNode={() => selectNode(node.id)}
-                handleDoubleClick={() => handleDoubleClick(node.id)}
-                handleMouseDown={(e) => handleMouseDown(e, node)}
-                handleMouseUp={(e) => handleMouseUp(e)}
-                divRef={div1Ref}
-            />
-
-            {/* 中段のテキスト */}
-            <TextSection
-                x={node.x}
-                y={node.y + section1Height}
-                width={node.width}
-                height={section2Height}
-                text={node.text2}
-                zoomRatio={zoomRatio}
-                selectNode={() => selectNode(node.id)}
-                handleDoubleClick={() => handleDoubleClick(node.id)}
-                handleMouseDown={(e) => handleMouseDown(e, node)}
-                handleMouseUp={(e) => handleMouseUp(e)}
-                divRef={div2Ref}
-            />
-
-            {/* 下段のテキスト */}
-            <TextSection
-                x={node.x}
-                y={node.y + section1Height + section2Height}
-                width={node.width}
-                height={section3Height}
-                text={node.text3}
-                zoomRatio={zoomRatio}
-                selectNode={() => selectNode(node.id)}
-                handleDoubleClick={() => handleDoubleClick(node.id)}
-                handleMouseDown={(e) => handleMouseDown(e, node)}
-                handleMouseUp={(e) => handleMouseUp(e)}
-                divRef={div3Ref}
-            />
-            {/* 上段と中段の間の線 */}
-            <line
-                x1={node.x}
-                y1={node.y + section1Height}
-                x2={node.x + node.width}
-                y2={node.y + section1Height}
-                stroke="black"
-                strokeWidth="1"
-            />
-            {/* 中段と下段の間の線 */}
-            <line
-                x1={node.x}
-                y1={node.y + section1Height + section2Height}
-                x2={node.x + node.width}
-                y2={node.y + section1Height + section2Height}
-                stroke="black"
-                strokeWidth="1"
-            />
+            {sections.map((section, index) => (
+                <React.Fragment key={index}>
+                    <TextSection
+                        x={node.x}
+                        y={node.y + sections.slice(0, index).reduce((total, section) => total + section.height, 0)}
+                        width={node.width}
+                        height={section.height}
+                        text={section.text}
+                        zoomRatio={zoomRatio}
+                        selectNode={() => selectNode(node.id)}
+                        handleDoubleClick={() => handleDoubleClick(node.id)}
+                        handleMouseDown={(e) => handleMouseDown(e, node)}
+                        handleMouseUp={(e) => handleMouseUp(e)}
+                        divRef={section.divRef}
+                    />
+                    {index < sections.length - 1 && (
+                        <line
+                            x1={node.x}
+                            y1={node.y + sections.slice(0, index + 1).reduce((total, section) => total + section.height, 0)}
+                            x2={node.x + node.width}
+                            y2={node.y + sections.slice(0, index + 1).reduce((total, section) => total + section.height, 0)}
+                            stroke="black"
+                            strokeWidth="1"
+                        />
+                    )}
+                </React.Fragment>
+            ))}
         </React.Fragment>
     );
 };
