@@ -32,23 +32,23 @@ export const pasteNodes = (nodeList, cutNodes, parentNode) => {
     const idMap = new Map();
 
     const newNodes = cutNodes.map(cutNode => {
+        const newNode = { ...cutNode };
         if (nodeList.find(node => node.id === cutNode.id)) {
             idMap.set(cutNode.id, newId);
-            cutNode.id = newId;
+            newNode.id = newId;
             newId++;
         }
         cutNode.depth = cutNode.depth + depthDelta;
         
         if (cutNode.id === rootNode.id) {
-            cutNode.parentId = parentNode.id;
+            newNode.parentId = parentNode.id;
             // parentIdのchildrenを新しいorderに設定する
             const children = nodeList.find(node => node.id === parentNode.id).children;
-            cutNode.order = children;
-            cutNode.selected = false;
-            // cutNode.text2 = `order: ${children} depth: ${cutNode.depth}`;
+            newNode.order = children;
+            newNode.selected = false;
         }
 
-        return cutNode;
+        return newNode;
     });
 
     const updatedNodes = nodeList.concat(newNodes.map(node => {
