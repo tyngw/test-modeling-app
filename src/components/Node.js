@@ -66,8 +66,8 @@ const Node = ({
         <React.Fragment key={node.id}>
             {parentNode && (
                 <path
-                    d={`M ${node.x},${node.y + NODE_HEIGHT / 2}
-            C ${node.x - CURVE_CONTROL_OFFSET},${node.y + NODE_HEIGHT / 2} 
+                    d={`M ${node.x},${node.y + node.height / 2}
+            C ${node.x - CURVE_CONTROL_OFFSET},${node.y + node.height / 2} 
             ${parentNode.x + calculateNodeWidth([parentNode.text, parentNode.text2, parentNode.text3]) + CURVE_CONTROL_OFFSET},${parentNode.y + parentNode.height / 2} 
             ${parentNode.x + calculateNodeWidth([parentNode.text, parentNode.text2, parentNode.text3]) + ARROW_OFFSET},${parentNode.y + parentNode.height / 2}`}
                     stroke="black"
