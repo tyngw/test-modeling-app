@@ -7,7 +7,7 @@ import {
 export const calculateNodeWidth = (texts) => {
     // 配列内のテキストから最も長いテキストの幅を計算
     const maxTextLength = texts.reduce((max, text) => {
-        if (text == undefined) return MIN_WIDTH;
+        if (text === undefined) return MIN_WIDTH;
         const textLength = calculateTextWidth(text); // この関数はテキストの幅を計算します
         return Math.max(max, textLength);
     }, 0);

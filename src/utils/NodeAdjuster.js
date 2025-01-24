@@ -37,12 +37,10 @@ export const adjustNodePositions = (allNodes) => {
 
     // depthが小さい順にノードをソートし、同じdepth内ではparentId, その後orderでソート
     let sortedNodes = [...allNodes].sort((a, b) => b.depth - a.depth || a.parentId - b.parentId || a.order - b.order);
-    let currentY = 50; // Y座標の初期値
-    let lastChildY;
     const adjust = true;
 
     rootNodes.forEach(rootNode => {
-        currentY = adjustNodeAndChildrenPosition(allNodes, rootNode, PRESET_Y, rootNode.height);
+        adjustNodeAndChildrenPosition(allNodes, rootNode, PRESET_Y, rootNode.height);
     });
 
     // 親ノードのY座標を子ノードに基づいて更新
