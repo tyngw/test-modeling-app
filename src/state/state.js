@@ -75,6 +75,16 @@ const createNodeAdder = (allNodes, parentNode) => {
     ];
 };
 
+const handleZoomIn = state => ({
+    ...state,
+    zoomRatio: state.zoomRatio + 0.1
+  });
+  
+const handleZoomOut = state => ({
+    ...state,
+    zoomRatio: Math.max(state.zoomRatio - 0.1, 0.1) // 最小値制限を追加
+});
+
 // アクションハンドラー群
 const actionHandlers = {
     NEW: () => {
@@ -82,15 +92,8 @@ const actionHandlers = {
         return initialState;
     },
 
-    ZOOM_IN: state => ({
-        ...state,
-        zoomRatio: state.zoomRatio + 0.1
-    }),
-
-    ZOOM_OUT: state => ({
-        ...state,
-        zoomRatio: state.zoomRatio - 0.1
-    }),
+    ZOOM_IN: handleZoomIn,
+    ZOOM_OUT: handleZoomOut,
 
     ARROW_UP: handleArrowAction(handleArrowUp),
     ARROW_DOWN: handleArrowAction(handleArrowDown),
@@ -298,7 +301,6 @@ function updateNewParentNodes(payload, maxOrder) {
     } : node;
 }
 
-// Reducer
 function reducer(state, action) {
     const handler = actionHandlers[action.type];
     return handler ? handler(state, action) : state;
