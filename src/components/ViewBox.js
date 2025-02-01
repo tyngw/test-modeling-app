@@ -109,6 +109,7 @@ const ViewBox = () => {
 
     return (
         <>
+
             <IconBar
                 handleButtonClick={handleButtonClick}
                 saveSvg={() => saveSvg(svgRef.current, 'download.svg')}
@@ -129,6 +130,7 @@ const ViewBox = () => {
                     onKeyDown={(e) => handleKeyDown(e)}
                     style={{ outline: 'none' }}
                     className="svg-element"
+                    data-testid="view-area"
                 >
                     <Marker />
                     {state.nodes.filter(node => node.visible).map(node => {
