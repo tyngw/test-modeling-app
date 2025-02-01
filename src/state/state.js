@@ -4,6 +4,8 @@ import { adjustNodePositions } from '../utils/NodeAdjuster';
 import { Undo, Redo, saveSnapshot, clearSnapshots } from './undoredo';
 import { handleArrowUp, handleArrowDown, handleArrowRight, handleArrowLeft } from '../utils/NodeSelector';
 import {
+    DEFAULT_X,
+    DEFAULT_Y,
     NODE_HEIGHT,
     MIN_WIDTH
 } from '../constants/Node';
@@ -38,7 +40,7 @@ const initialState = {
         {
             ...createNewNode(null, 0, 1),
             id: 1,
-            x: 50, y: 50,
+            x: DEFAULT_X, y: DEFAULT_Y,
             editing: false,
         },
     ],
