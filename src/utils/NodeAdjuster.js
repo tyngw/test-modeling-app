@@ -1,4 +1,5 @@
 import {
+    DEFAULT_X,
     X_OFFSET,
     Y_OFFSET,
     PRESET_Y
@@ -9,7 +10,7 @@ export const adjustNodeAndChildrenPosition = (allNodes, node, currentY, maxHeigh
     const parentNode = allNodes.find(n => n.id === node.parentId);
 
     if (!parentNode) {
-        node.x = 50;
+        node.x = DEFAULT_X;
     } else {
         // node.xに親ノードのx座標を設定 + X_OFFSET + 親ノードのwidthをセットする
         node.x = parentNode.x + parentNode.width + X_OFFSET;

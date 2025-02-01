@@ -3,7 +3,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import { calculateNodeWidth } from '../utils/TextNodeHelpers';
 import { getNodeById } from '../utils/NodeSelector';
 import {
-    NODE_HEIGHT,
     CURVE_CONTROL_OFFSET,
     ARROW_OFFSET,
 } from '../constants/Node';
