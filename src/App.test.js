@@ -1,8 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import App from './App';
 
-test('renders learn react link', () => {
+test('view-areaが表示されていることを確認', () => {
   render(<App />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
+  
+  const viewArea = screen.getByTestId('view-area');
+  expect(viewArea).toBeInTheDocument();
 });
