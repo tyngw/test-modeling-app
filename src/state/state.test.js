@@ -1,8 +1,19 @@
 // src/state/state.test.js
 import { renderHook, act } from '@testing-library/react';
 import { useStore, initialState } from './state';
+import { adjustNodePositions } from '../utils/NodeAdjuster';
+
+// windowサイズをモック
+const originalInnerWidth = window.innerWidth;
+const originalInnerHeight = window.innerHeight;
 
 describe('state reducer', () => {
+    beforeEach(() => {
+        // 各テスト前にwindowサイズをリセット
+        window.innerWidth = originalInnerWidth;
+        window.innerHeight = originalInnerHeight;
+    });
+
     it('初期状態', () => {
         const { result } = renderHook(() => useStore());
         const state = result.current.state;
@@ -153,8 +164,8 @@ describe('state reducer', () => {
         const { result } = renderHook(() => useStore());
         const { dispatch } = result.current;
 
-        // 初期状態を保存
-        const initialState = result.current.state.nodes;
+        // 初期状態を取得
+        const initialNodes = initialState.nodes;
 
         // ノードを追加
         act(() => {
@@ -162,13 +173,12 @@ describe('state reducer', () => {
         });
         const afterAddState = result.current.state.nodes;
 
-        // UNDOで元に戻す
+        // UNDO→REDOを実行する
         act(() => {
             dispatch({ type: 'UNDO' });
         });
-        expect(result.current.state.nodes).toEqual(initialState);
+        expect(result.current.state.nodes).toEqual(initialNodes);
 
-        // REDOで再適用
         act(() => {
             dispatch({ type: 'REDO' });
         });
@@ -278,6 +288,11 @@ describe('state reducer', () => {
         });
 
         const loadedState = result.current.state;
-        expect(loadedState.nodes).toEqual(initialState.nodes);
+        expect(loadedState).toEqual({
+            ...initialState,
+            nodes: adjustNodePositions(initialState.nodes), // プロダクションロジックを反映
+            width: window.innerWidth,
+            height: window.innerHeight
+        });
     });
 });
