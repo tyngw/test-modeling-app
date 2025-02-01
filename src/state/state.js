@@ -35,7 +35,7 @@ const createNewNode = (parentId, order, depth) => ({
     visible: true,
 });
 
-const initialState = {
+export const initialState = {  // exportを追加
     nodes: [
         {
             ...createNewNode(null, 0, 1),
@@ -44,7 +44,7 @@ const initialState = {
             editing: false,
         },
     ],
-    width: Window.innerWidth,
+    width: window.innerWidth,  // タイポ修正（Window → window）
     height: window.innerHeight,
     zoomRatio: 1,
 };
