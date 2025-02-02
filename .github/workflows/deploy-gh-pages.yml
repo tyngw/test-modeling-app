@@ -40,8 +40,8 @@ jobs:
       - name: List build directory
         run: ls -la ./build
       - name: Upload artifact
-        # uses: actions/upload-pages-artifact@v3
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-pages-artifact@v3
+        # uses: actions/upload-artifact@v4
         with:
           path: './build'
           name: github-pages
