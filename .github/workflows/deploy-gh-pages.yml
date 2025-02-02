@@ -35,8 +35,8 @@ jobs:
         run: npm install
       - name: 🔨 Build
         run: CI=false npm run build
-        # env:
-        #   PUBLIC_URL: /test-modeling-app
+        env:
+          PUBLIC_URL: /test-modeling-app
       - name: 🚀 Deploy
         uses: peaceiris/actions-gh-pages@v4
         with:
