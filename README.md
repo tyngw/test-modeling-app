@@ -12,6 +12,7 @@ This is an application for describing test architecture in a notation similar to
 ### Deployed application
 The application is deployed at [https://tyngw.github.io/test-modeling-app/](https://tyngw.github.io/test-modeling-app/)
 
+
 ### Application usage
 #### Keyboard shortcuts
 - `Tab`: Add a child element to the selected element
