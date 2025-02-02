@@ -134,10 +134,9 @@ const ViewBox = () => {
                 >
                     <Marker />
                     {state.nodes.filter(node => node.visible).map(node => {
-                        // node.idをparentIdとして持つノードのうち、visibleがfalseのものがあるかどうか
                         const hasHiddenChildren = state.nodes.some(n => n.parentId === node.id && !n.visible);
                         return (
-                            <>
+                            <React.Fragment key={node.id}>
                                 <Node
                                     key={node.id}
                                     nodes={state.nodes}
@@ -151,7 +150,7 @@ const ViewBox = () => {
                                     updateNodeSize={updateNodeSize}
                                 />
                                 {hasHiddenChildren && <FoldingIcon node={node} />}
-                            </>
+                            </React.Fragment>
                         );
                     })}
                 </svg>
