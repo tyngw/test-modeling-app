@@ -1,3 +1,4 @@
+//constants/Node.js
 export const DEFAULT_X = 50;
 export const DEFAULT_Y = 50;
 export const PRESET_Y = 50;
