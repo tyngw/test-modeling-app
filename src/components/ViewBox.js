@@ -40,7 +40,7 @@ const ViewBox = () => {
         if (nodeList) {
             dispatch({ type: 'LOAD_NODES', payload: nodeList });
         }
-    }, []);
+    }, [dispatch]);
 
     const endEditing = () => {
         dispatch({ type: 'END_EDITING' });
