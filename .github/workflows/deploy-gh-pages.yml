@@ -43,7 +43,7 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: './docs'
-          name: github-pages
+          name: pages-artifact
 
   deploy:
     needs: build
@@ -52,14 +52,14 @@ jobs:
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
-          name: github-pages
+          name: pages-artifact
           path: './artifact'
-      # - name: Extract artifact
-      #   run: tar -xvf artifact.tar
+      - name: Extract artifact
+        run: tar -xvf artifact.tar
       - name: List downloaded files
         run: ls -la ./artifact
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v2
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          path: './artifact'
