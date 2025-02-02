@@ -27,6 +27,9 @@ const createNewNode = (parentId, order, depth) => ({
     y: 0,
     width: MIN_WIDTH,
     height: NODE_HEIGHT,
+    section1Height: 20,
+    section2Height: 20,
+    section3Height: 20,
     parentId,
     order,
     depth,
@@ -247,8 +250,15 @@ const actionHandlers = {
         ...state,
         nodes: state.nodes.map(node =>
             node.id === action.payload.id
-                ? { ...node, ...action.payload }
-                : node
+              ? { 
+                  ...node, 
+                  width: action.payload.width,
+                  height: action.payload.height,
+                  section1Height: action.payload.sectionHeights[0],
+                  section2Height: action.payload.sectionHeights[1],
+                  section3Height: action.payload.sectionHeights[2]
+                }
+              : node
         )
     })
 };

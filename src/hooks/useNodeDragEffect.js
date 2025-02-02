@@ -60,7 +60,7 @@ export const useNodeDragEffect = (state, dispatch) => {
                 document.removeEventListener('mousemove', handleMouseMove);
             };
         }
-    }, [dragging, startPosition, dispatch]);
+    }, [dragging, startPosition, state.zoomRatio, state.nodes, dispatch]);
 
     const handleMouseUp = useCallback((e) => {
         if (dragging !== null) {
@@ -78,7 +78,7 @@ export const useNodeDragEffect = (state, dispatch) => {
             setDragging(null);
             setOverDropTarget(null);
         }
-    }, [overDropTarget, originalPosition.x, originalPosition.y]);
+    }, [dispatch, overDropTarget, originalPosition.x, originalPosition.y, dragging, state.nodes]);
 
     return { handleMouseDown, handleMouseUp, overDropTarget };
 };
