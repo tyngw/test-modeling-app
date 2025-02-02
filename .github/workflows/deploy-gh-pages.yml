@@ -38,7 +38,7 @@ jobs:
         env:
           PUBLIC_URL: /test-modeling-app
       - name: Move build to docs
-        run: mv build docs
+        run: cp -r build docs
       - name: List build directory
         run: ls -la ./docs
       - name: Upload artifact
