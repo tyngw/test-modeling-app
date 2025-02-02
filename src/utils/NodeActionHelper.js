@@ -30,7 +30,6 @@ export const pasteNodes = (nodeList, cutNodes, parentNode) => {
     const rootNodeDepth = rootNode.depth;
     const baseDepth = parentNode.depth + 1;
     const depthDelta = baseDepth - rootNodeDepth;
-    // let newId = Math.max(...nodeList.map(node => node.id), 0) + 1;
     const idMap = new Map();
 
     const newNodes = cutNodes.map(cutNode => {
