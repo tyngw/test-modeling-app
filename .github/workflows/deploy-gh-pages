@@ -37,10 +37,13 @@ jobs:
         run: CI=false npm run build
         env:
           PUBLIC_URL: /test-modeling-app
+      - name: List build directory
+        run: ls -la ./build
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: './build'
+          name: github-pages
 
   deploy:
     environment:
