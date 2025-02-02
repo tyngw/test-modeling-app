@@ -1,3 +1,5 @@
+import { v4 as uuidv4 } from 'uuid';
+
 export const getSelectedNodeAndChildren = (nodeList, targetNode, selectedNode) => {
     let cutNodes = [];
 
@@ -23,40 +25,42 @@ export const getSelectedNodeAndChildren = (nodeList, targetNode, selectedNode) =
 export const pasteNodes = (nodeList, cutNodes, parentNode) => {
     const rootNode = cutNodes.find(node => node.parentId === null);
     if (!rootNode) {
-        return [...nodeList, ...cutNodes];
+        return [...nodeList, ...cutNodes]
     }
     const rootNodeDepth = rootNode.depth;
     const baseDepth = parentNode.depth + 1;
     const depthDelta = baseDepth - rootNodeDepth;
-    let newId = Math.max(...nodeList.map(node => node.id), 0) + 1;
+    // let newId = Math.max(...nodeList.map(node => node.id), 0) + 1;
     const idMap = new Map();
 
     const newNodes = cutNodes.map(cutNode => {
         const newNode = { ...cutNode };
-        if (nodeList.find(node => node.id === cutNode.id)) {
-            idMap.set(cutNode.id, newId);
-            newNode.id = newId;
-            newId++;
-        }
-        newNode.depth = cutNode.depth + depthDelta;
+        const newUUID = uuidv4(); // UUID を生成
 
+        idMap.set(cutNode.id, newUUID);
+        newNode.id = newUUID;
+
+        newNode.depth = cutNode.depth + depthDelta;
+        
         if (cutNode.id === rootNode.id) {
             newNode.parentId = parentNode.id;
-            // parentIdのchildrenを新しいorderに設定する
             const children = nodeList.find(node => node.id === parentNode.id).children;
             newNode.order = children;
             newNode.selected = false;
-        } else if (idMap.has(cutNode.parentId)) {
-            newNode.parentId = idMap.get(cutNode.parentId);
         }
 
         return newNode;
     });
 
-    const updatedNodes = nodeList.concat(newNodes);
+    const updatedNodes = nodeList.concat(newNodes.map(node => {
+        if (idMap.has(node.parentId)) {
+            node.parentId = idMap.get(node.parentId);
+        }
+        return node;
+    }));
 
     return updatedNodes;
-};
+}
 
 // 指定されたノードの子ノードのdepthを再帰的に親ノードのdepth+1に設定する関数
 export const setDepthRecursive = (nodeList, parentNode) => {

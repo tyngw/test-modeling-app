@@ -5,14 +5,20 @@ import {
     PRESET_Y
 } from "../constants/Node";
 
-export const adjustNodeAndChildrenPosition = (allNodes, node, currentY, maxHeight) => {
+export const adjustNodeAndChildrenPosition = (allNodes, node, currentY, maxHeight, visited = new Set()) => {
+    // 循環参照を防ぐために、既に訪問したノードは処理しない
+    if (visited.has(node.id)) {
+        return currentY;
+    }
+    visited.add(node.id);
+
     const childNodes = allNodes.filter(n => n.parentId === node.id);
     const parentNode = allNodes.find(n => n.id === node.parentId);
 
     if (!parentNode) {
         node.x = DEFAULT_X;
     } else {
-        // node.xに親ノードのx座標を設定 + X_OFFSET + 親ノードのwidthをセットする
+         // node.xに親ノードのx座標を設定 + X_OFFSET + 親ノードのwidthをセットする
         node.x = parentNode.x + parentNode.width + X_OFFSET;
     }
 
@@ -23,7 +29,9 @@ export const adjustNodeAndChildrenPosition = (allNodes, node, currentY, maxHeigh
 
     if (childNodes.length > 0) {
         childNodes.forEach(childNode => {
-            currentY = adjustNodeAndChildrenPosition(allNodes, childNode, currentY, maxHeight);
+            if (!visited.has(childNode.id)) {
+                currentY = adjustNodeAndChildrenPosition(allNodes, childNode, currentY, maxHeight, visited);
+            }
         });
     } else {
         if (node.visible || node.order === 0) {
@@ -41,7 +49,7 @@ export const adjustNodePositions = (allNodes) => {
     const adjust = true;
 
     rootNodes.forEach(rootNode => {
-        adjustNodeAndChildrenPosition(allNodes, rootNode, PRESET_Y, rootNode.height);
+        adjustNodeAndChildrenPosition(allNodes, rootNode, PRESET_Y, rootNode.height, new Set());
     });
 
     // 親ノードのY座標を子ノードに基づいて更新
@@ -59,5 +67,5 @@ export const adjustNodePositions = (allNodes) => {
             }
         });
     }
-    return sortedNodes; // 更新されたノードの配列を返却
+    return sortedNodes;
 };
