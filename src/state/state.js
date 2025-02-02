@@ -16,9 +16,10 @@ import {
     pasteNodes,
     setVisibilityRecursive
 } from '../utils/NodeActionHelper';
+import { v4 as uuidv4 } from 'uuid';
 
 const createNewNode = (parentId, order, depth) => ({
-    id: 0, // この値は後で上書きされます
+    id: uuidv4(),
     text: '',
     text2: '',
     text3: '',
@@ -49,12 +50,10 @@ export const initialState = {  // exportを追加
     zoomRatio: 1,
 };
 
-const addNode = (allNodes, parentNode) => {
-    const newId = Math.max(...allNodes.map(node => node.id), 0) + 1;
+const addNode = (allNodes, parentNode, cutNodes = null) => {
     const newOrder = parentNode.children;
     const newRect = {
-        ...createNewNode(parentNode.id, newOrder, parentNode.depth + 1),
-        id: newId,
+        ...createNewNode(parentNode.id, newOrder, parentNode.depth + 1)
     };
     const updatedNodes = allNodes.map(node => {
         if (node.id === parentNode.id) {
@@ -121,7 +120,7 @@ function reducer(state, action) {
         case 'ADD_NODE':
             if (selectedNode) {
                 saveSnapshot(state.nodes);
-                updatedNodes = addNode(state.nodes, selectedNode);
+                updatedNodes = addNode(state.nodes, selectedNode, state.cutNodes);
                 updatedNodes = adjustNodePositions(updatedNodes);
                 return { ...state, nodes: updatedNodes };
             } else {
