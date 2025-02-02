@@ -226,6 +226,65 @@ describe('state reducer', () => {
         expect(pastedNode.depth).toBe(newParent.depth + 1);
     });
 
+    it('DROP_NODE アクション', async () => {
+        const { result } = renderHook(() => useStore());
+        const { dispatch } = result.current;
+    
+        // ルートノードA（ID:1）を選択して子ノードBを追加
+        await act(async () => {
+            dispatch({ type: 'SELECT_NODE', payload: 1 });
+            dispatch({ type: 'ADD_NODE' });
+        });
+        
+        let state = result.current.state;
+        let nodeB = state.nodes.find(n => n.parentId === 1);
+    
+        // ルートノードA（ID:1）を選択して子ノードCを追加
+        await act(async () => {
+            dispatch({ type: 'SELECT_NODE', payload: 1 });
+            dispatch({ type: 'ADD_NODE' });
+        });
+        
+        state = result.current.state;
+        let nodeC = state.nodes.find(n => n.parentId === 1 && n.id !== nodeB.id);
+    
+        // ノードBを選択して子ノードDを追加
+        await act(async () => {
+            dispatch({ type: 'SELECT_NODE', payload: nodeB.id });
+            dispatch({ type: 'ADD_NODE' });
+        });
+        
+        state = result.current.state;
+        const nodeD = state.nodes.find(n => n.parentId === nodeB.id);
+    
+        // ドロップ操作
+        await act(async () => {
+            dispatch({
+                type: 'DROP_NODE',
+                payload: {
+                    id: nodeD.id,
+                    oldParentId: nodeB.id,
+                    newParentId: nodeC.id,
+                    draggingNodeOrder: nodeD.order,
+                    depth: nodeC.depth + 1
+                }
+            });
+        });
+    
+
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        state = result.current.state;
+        const oldParentB = state.nodes.find(n => n.id === nodeB.id);
+        const newParentC = state.nodes.find(n => n.id === nodeC.id);
+        const movedNode = state.nodes.find(n => n.id === nodeD.id);
+        
+        expect(movedNode.parentId).toBe(newParentC.id);
+        expect(oldParentB.children).toBe(0);
+        expect(newParentC.children).toBe(1);
+        
+    });
+
     it('EXPAND_NODE と COLLAPSE_NODE アクション', () => {
         const { result } = renderHook(() => useStore());
         const { dispatch } = result.current;

@@ -165,11 +165,11 @@ function reducer(state, action) {
                 order: node.parentId === action.payload.oldParentId && node.order > action.payload.draggingNodeOrder ? node.order - 1 : node.order,
             }));
             // 移動元の親ノードの情報を更新
-            updatedNodes = updateChildren(state.nodes, action.payload.oldParentId, -1);
+            updatedNodes = updateChildren(updatedNodes, action.payload.oldParentId, -1);
             // 移動先の親ノードの情報を更新
-            updatedNodes = updateChildren(state.nodes, action.payload.newParentId, 1);
+            updatedNodes = updateChildren(updatedNodes, action.payload.newParentId, 1);
             // 移動先のノードの情報を更新
-            updatedNodes = setDepthRecursive(state.nodes, action.payload);
+            updatedNodes = setDepthRecursive(updatedNodes, action.payload);
             // 移動先のノードのorderを更新
             updatedNodes = updatedNodes.map(node => node.id === action.payload.id ? { ...node, parentId: action.payload.newParentId, order: maxOrder, depth: action.payload.depth } : node);
             updatedNodes = adjustNodePositions(updatedNodes);
