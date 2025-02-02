@@ -9,6 +9,9 @@ This is an application for describing test architecture in a notation similar to
 3. Run `npm start` to start the application
 4. Open a web browser and navigate to `http://localhost:3000`
 
+### Deployment to GitHub Pages
+If you push to the main branch, the application will be automatically deployed.
+
 ### Deployed application
 The application is deployed at [https://tyngw.github.io/test-modeling-app/](https://tyngw.github.io/test-modeling-app/)
 
