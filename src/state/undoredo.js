@@ -23,7 +23,7 @@ export const Redo = (nodes) => {
 };
 
 export const saveSnapshot = (nodes) => {
-    // console.log(`saveSnapshot snapshotIndex: ${snapshotIndex}`);
+    console.log(`saveSnapshot snapshotIndex: ${snapshotIndex}`);
     const newSnapshots = snapshots.slice(0, snapshotIndex + 1);
 
     newSnapshots.push(nodes);

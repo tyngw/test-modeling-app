@@ -111,7 +111,7 @@ function reducer(state, action) {
             const selectNode = state.nodes.find(node => node.id === action.payload);
             if (selectNode) {
                 const { text, text2, text3, selected, editing, visible, section1Height, section2Height, section3Height, ...selectNodeWithoutText } = selectNode;
-                // console.log(`[SELECT_NODE] selectNode: ${JSON.stringify(selectNodeWithoutText, null, 2)}`);
+                console.log(`[SELECT_NODE] selectNode: ${JSON.stringify(selectNodeWithoutText, null, 2)}`);
             }
             return { ...state, nodes: state.nodes.map(node => node.id === action.payload ? { ...node, selected: true } : { ...node, selected: false, editing: false }) };
         case 'DESELECT_ALL':
@@ -206,7 +206,7 @@ function reducer(state, action) {
         case 'EXPAND_NODE':
             updatedNodes = setVisibilityRecursive(state.nodes, selectedNode, true);
             // updatedNodesをコンソールログにjson形式で整形して出力
-            // console.log(`[reducer]EXPAND_NODE updatedNodes: ${JSON.stringify(updatedNodes, null, 2)}`);
+            console.log(`[reducer]EXPAND_NODE updatedNodes: ${JSON.stringify(updatedNodes, null, 2)}`);
             updatedNodes = adjustNodePositions(updatedNodes);
             return { ...state, nodes: updatedNodes };
         case 'COLLAPSE_NODE':
