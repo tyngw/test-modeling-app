@@ -40,5 +40,5 @@ jobs:
       - name: 🚀 Deploy
         uses: peaceiris/actions-gh-pages@v4
         with:
-          ACTIONS_DEPLOY_KEY: ${{ secrets.ACTIONS_DEPLOY_KEY }}
+          deploy_key: ${{ secrets.ACTIONS_DEPLOY_KEY }}
           publish_dir: ./build
