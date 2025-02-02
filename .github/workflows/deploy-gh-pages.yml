@@ -54,8 +54,8 @@ jobs:
         with:
           name: github-pages
           path: './artifact'
-      - name: Extract artifact
-        run: tar -xvf artifact.tar
+      # - name: Extract artifact
+        # run: tar -xvf artifact.tar
       - name: List downloaded files
         run: ls -la ./artifact
       - name: Deploy to GitHub Pages
