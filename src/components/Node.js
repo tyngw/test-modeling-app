@@ -53,7 +53,7 @@ const Node = ({
         node.section2Height = section2Height;
         node.section3Height = section3Height;
         node.height = totalHeight;
-    }, [section1Height, section2Height, section3Height]);
+    }, [section1Height, section2Height, section3Height, node, updateNodeSize]);
 
     const sections = [
         { height: section1Height, text: node.text, divRef: div1Ref },
