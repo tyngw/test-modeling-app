@@ -42,4 +42,8 @@ jobs:
         with:
           deploy_key: ${{ secrets.ACTIONS_DEPLOY_KEY }}
           publish_branch: gh-pages
-          publish_dir: ./build
+          publish_dir: build
+      - name: Upload
+        uses: actions/upload-pages-artifact@v1
+        with:
+           path: build
