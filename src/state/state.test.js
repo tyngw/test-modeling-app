@@ -404,6 +404,93 @@ describe('state reducer', () => {
         expect(updatedParentNode.children).toBe(1); // 新しい親ノードの子ノード数が1になっている
     });
 
+    it('切り取ったノードが貼り付けられることを確認する(切り取るノードに子が存在するケース)', () => {
+        const { result } = renderHook(() => useStore());
+        const { dispatch } = result.current;
+    
+        // 初期状態のルートノードを選択
+        act(() => {
+            dispatch({ type: 'SELECT_NODE', payload: 1 });
+        });
+    
+        // 子ノードを追加
+        act(() => {
+            dispatch({ type: 'ADD_NODE' });
+        });
+    
+        // 追加された子ノードを取得
+        let state = result.current.state;
+        const childNode = state.nodes.find(n => n.parentId === 1);
+        expect(childNode).toBeDefined(); // 子ノードが正しく追加されていることを確認
+    
+        // 子ノードを選択
+        act(() => {
+            dispatch({ type: 'SELECT_NODE', payload: childNode.id });
+            dispatch({ type: 'ADD_NODE' }); // 新しい子ノードを追加
+        });
+    
+        // 子ノードを切り取り
+        act(() => {
+            dispatch({ type: 'SELECT_NODE', payload: childNode.id });
+            dispatch({ type: 'CUT_NODE' });
+        });
+    
+        // 切り取り後の状態を確認
+        const afterCutState = result.current.state;
+        expect(afterCutState.nodes.length).toBe(1); // ルートノードのみ残る
+        expect(afterCutState.nodes.some(n => n.id === childNode.id)).toBe(false); // 子ノードが削除されている
+        expect(afterCutState.cutNodes).toBeDefined(); // cutNodesが設定されている
+        expect(afterCutState.cutNodes.length).toBe(2); // 切り取られたノードが1つ
+        expect(afterCutState.cutNodes[0].id).toBe(childNode.id); // 切り取られたノードのIDが一致する
+    
+        // 新しい親ノードを作成
+        act(() => {
+            dispatch({ type: 'SELECT_NODE', payload: 1 }); // ルートノードを選択
+            dispatch({ type: 'ADD_NODE' }); // 新しい子ノードを追加
+        });
+    
+        // 新しい親ノードを取得
+        state = result.current.state;
+        console.log('State after adding new parent node:', JSON.stringify(state, null, 2)); // デバッグ用
+    
+        const newParentNode = state.nodes.find(n => n.parentId === 1);
+        expect(newParentNode).toBeDefined(); // 新しい親ノードが正しく追加されていることを確認
+        console.log('New Parent Node:', JSON.stringify(newParentNode, null, 2)); // デバッグ用
+    
+        // 新しい親ノードを選択
+        act(() => {
+            dispatch({ type: 'SELECT_NODE', payload: newParentNode.id });
+        });
+    
+        // 切り取ったノードを貼り付け
+        act(() => {
+            dispatch({ type: 'PASTE_NODE' });
+        });
+    
+        // 貼り付け後の状態を確認
+        const afterPasteState = result.current.state;
+        console.log('After Paste State:', JSON.stringify(afterPasteState, null, 2)); // デバッグ用
+    
+        const pastedNode = afterPasteState.nodes.find(n => n.parentId === newParentNode.id);
+        expect(pastedNode).toBeDefined(); // 貼り付けられたノードが存在する
+        expect(pastedNode.parentId).toBe(newParentNode.id); // 貼り付けられたノードのIDが一致する
+        expect(pastedNode.depth).toBe(newParentNode.depth + 1); // 深さが親ノードの深さ + 1 になっている
+        expect(pastedNode.visible).toBe(true); // 貼り付けられたノードが表示されている
+
+        const pastedChildNode = afterPasteState.nodes.find(n => n.parentId === pastedNode.id);
+        expect(pastedChildNode).toBeDefined(); // 貼り付けられた子ノードが存在する
+        expect(pastedChildNode.depth).toBe(pastedNode.depth + 1); // 深さが親ノードの深さ + 1 になっている
+        expect(pastedChildNode.visible).toBe(true); // 貼り付けられた子ノードが表示されている
+    
+        // 新しい親ノードの子ノード数を確認
+        const updatedParentNode = afterPasteState.nodes.find(n => n.id === newParentNode.id);
+        expect(updatedParentNode.children).toBe(1); // 新しい親ノードの子ノード数が1になっている
+
+        // idに重複がないことを確認
+        const ids = afterPasteState.nodes.map(n => n.id);
+        expect(new Set(ids).size).toBe(ids.length);
+    });
+
     it('ノードをドロップした時に移動できることを確認する', async () => {
         const { result } = renderHook(() => useStore());
         const { dispatch } = result.current;
