@@ -1,53 +1,41 @@
-// util/TextNodeHelpers.js
-import { 
-    MIN_WIDTH,
-    MAX_WIDTH,
- } from "../constants/Node";
-
-export const calculateNodeWidth = (texts) => {
-    // 配列内のテキストから最も長いテキストの幅を計算
-    const maxTextLength = texts.reduce((max, text) => {
-        if (text === undefined) return MIN_WIDTH;
-        const textLength = calculateTextWidth(text); // この関数はテキストの幅を計算します
-        return Math.max(max, textLength);
-    }, 0);
-    const widthBasedOnText = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, maxTextLength));
-    return widthBasedOnText;
-};
+// utils/TextNodeHelpers.js
+import { MIN_WIDTH, MAX_WIDTH, MULTIBYTE_CHAR_WIDTH, SINGLEBYTE_CHAR_WIDTH } from '../constants/Node';
 
 export const calculateTextWidth = (text) => {
-    // 改行ごとに分割し、最も長い行の幅を計算
-    const lines = text.split('\n');
-    const regexMultibyte = /[^\u0000-\u00ff]/g;
-    // 改行ごとに分割し、最も長い行の幅を計算
-    const width = Math.max(...lines.map(line => {
-        const multibyteChars = line.match(regexMultibyte) || [];
-        const multibyteLength = multibyteChars.length * 14; // マルチバイト文字は1文字20で計算
-        const singleByteLength = (line.length - multibyteChars.length) * 7; // それ以外は1文字10で計算
-        return multibyteLength + singleByteLength;
-    }));
-    return width;
+  const lines = text?.split('\n') || [];
+  const regexMultibyte = /[\u{3000}-\u{FFFF}]/gu;
+  
+  return Math.max(...lines.map(line => {
+    const multibyteCount = (line.match(regexMultibyte) || []).length;
+    return multibyteCount * MULTIBYTE_CHAR_WIDTH + 
+      (line.length - multibyteCount) * SINGLEBYTE_CHAR_WIDTH;
+  }));
 };
 
+export const calculateNodeWidth = (texts) => {
+  const maxWidth = texts.reduce((max, text) => {
+    const width = calculateTextWidth(text || '');
+    return Math.max(max, width);
+  }, 0);
+  
+  return Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, maxWidth));
+};
 
 export const wrapText = (text, maxWidth) => {
-    const lines = [];
-    let currentLine = '';
+  const lines = [];
+  let currentLine = '';
 
-    text.split('').forEach(char => {
-        const testLine = currentLine + char;
-        const testWidth = calculateTextWidth(testLine);
+  const pushLine = () => {
+    lines.push(currentLine);
+    currentLine = '';
+  };
 
-        if (testWidth <= maxWidth || currentLine === '') {
-            currentLine = testLine;
-        } else {
-            lines.push(currentLine);
-            currentLine = char;
-        }
-    });
+  for (const char of text) {
+    const testLine = currentLine + char;
+    if (calculateTextWidth(testLine) > maxWidth) pushLine();
+    currentLine += char;
+  }
 
-    if (currentLine) {
-        lines.push(currentLine);
-    }
-    return lines;
+  if (currentLine) pushLine();
+  return lines;
 };

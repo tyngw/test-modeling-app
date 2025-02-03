@@ -1,8 +1,8 @@
-// src/components/ViewBox.js
+// src/components/DisplayArea.js
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import Node from './Node';
 import { Marker } from './Marker';
-import IconBar from './IconBar';
+import QuickMenuBar from './QuickMenuBar';
 import InputFields from './InputFields';
 import { useStore } from '../state/state';
 import useResizeEffect from '../hooks/useResizeEffect';
@@ -14,12 +14,12 @@ import FoldingIcon from './FoldingIcon';
 import CustomWindow from './CustomWindow';
 import { helpContent } from '../constants/HelpContent';
 
-const ViewBox = () => {
+const DisplayArea = () => {
     const svgRef = useRef();
     const { state, dispatch } = useStore();
 
     const [canvasSize, setCanvasSize] = useState({ width: window.innerWidth, height: window.innerHeight });
-    const [viewBox, setViewBox] = useState(`0 0 ${canvasSize.width} ${canvasSize.height}`);
+    const [displayArea, setDisplayArea] = useState(`0 0 ${canvasSize.width} ${canvasSize.height}`);
 
     const [isHelpOpen, setHelpOpen] = useState(false);
 
@@ -47,7 +47,7 @@ const ViewBox = () => {
         svgRef.current.focus();
     };
 
-    useResizeEffect({ setCanvasSize, setViewBox, state });
+    useResizeEffect({ setCanvasSize, setDisplayArea, state });
 
     useClickOutside(svgRef, dispatch, editingNode, endEditing);
 
@@ -103,14 +103,13 @@ const ViewBox = () => {
         dispatch({ type: 'SELECT_NODE', payload: id });
     }, [dispatch]);
 
-    const updateNodeSize = useCallback((id, width, height) => {
-        dispatch({ type: 'UPDATE_NODE_SIZE', payload: { id, width, height } });
+    const updateNodeSize = useCallback((id, width, height, { sectionHeights }) => {
+        dispatch({ type: 'UPDATE_NODE_SIZE',  payload: { id, width, height, sectionHeights } });
     }, [dispatch]);
 
     return (
         <>
-
-            <IconBar
+            <QuickMenuBar
                 handleButtonClick={handleButtonClick}
                 saveSvg={() => saveSvg(svgRef.current, 'download.svg')}
                 loadNodes={handleFileSelect}
@@ -125,18 +124,18 @@ const ViewBox = () => {
                     ref={svgRef}
                     width={canvasSize.width}
                     height={canvasSize.height}
-                    viewBox={viewBox}
+                    viewBox={displayArea}
                     tabIndex="0"
                     onKeyDown={(e) => handleKeyDown(e)}
                     style={{ outline: 'none' }}
                     className="svg-element"
-                    data-testid="view-area"
                 >
                     <Marker />
                     {state.nodes.filter(node => node.visible).map(node => {
+                        // node.idをparentIdとして持つノードのうち、visibleがfalseのものがあるかどうか
                         const hasHiddenChildren = state.nodes.some(n => n.parentId === node.id && !n.visible);
                         return (
-                            <React.Fragment key={node.id}>
+                            <>
                                 <Node
                                     key={node.id}
                                     nodes={state.nodes}
@@ -150,7 +149,7 @@ const ViewBox = () => {
                                     updateNodeSize={updateNodeSize}
                                 />
                                 {hasHiddenChildren && <FoldingIcon node={node} />}
-                            </React.Fragment>
+                            </>
                         );
                     })}
                 </svg>
@@ -166,4 +165,4 @@ const ViewBox = () => {
     );
 }
 
-export default ViewBox;
+export default DisplayArea;

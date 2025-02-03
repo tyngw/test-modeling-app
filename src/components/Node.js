@@ -1,125 +1,125 @@
 // components/Node.js
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { calculateNodeWidth } from '../utils/TextNodeHelpers';
 import { getNodeById } from '../utils/NodeSelector';
-import {
-    CURVE_CONTROL_OFFSET,
-    ARROW_OFFSET,
-} from '../constants/Node';
-import TextSection from './TextSection';
+import { CURVE_CONTROL_OFFSET, ARROW_OFFSET } from '../constants/Node';
+import TextSection from './TextDisplayArea';
+
+const SECTION_KEYS = ['text', 'text2', 'text3'];
+
+const useSectionDimensions = (node, updateNodeSize) => {
+    const refs = useRef(SECTION_KEYS.map(() => React.createRef()));
+    const [heights, setHeights] = useState(SECTION_KEYS.map(() => 20));
+  
+    const updateDimensions = useCallback(() => {
+      const newHeights = refs.current.map(ref => ref.current?.offsetHeight || 20);
+      const newWidths = refs.current.map(ref => ref.current?.offsetWidth || 0);
+      const maxWidth = Math.max(...newWidths);
+      const totalHeight = newHeights.reduce((sum, h) => sum + h, 0);
+      
+      setHeights(newHeights);
+      updateNodeSize(node.id, maxWidth, totalHeight, { sectionHeights: newHeights });
+    }, [node.id, updateNodeSize]);
+  
+    useEffect(() => {
+      updateDimensions();
+    }, [node.text, node.text2, node.text3, updateDimensions]);
+  
+    return { refs: refs.current, heights };
+  };
 
 const Node = ({
-    nodes,
-    node,
-    zoomRatio,
-    selectNode,
-    handleMouseDown,
-    handleMouseUp,
-    handleDoubleClick,
-    overDropTarget,
-    updateNodeSize,
+  nodes,
+  node,
+  zoomRatio,
+  selectNode,
+  handleMouseDown,
+  handleMouseUp,
+  handleDoubleClick,
+  overDropTarget,
+  updateNodeSize,
 }) => {
-    const parentNode = getNodeById(nodes, node.parentId);
-    const overDropTargetId = overDropTarget ? overDropTarget.id : -1;
+  const parentNode = getNodeById(nodes, node.parentId);
+  const { refs: sectionRefs, heights: sectionHeights } = useSectionDimensions(node, updateNodeSize);
+  const totalHeight = sectionHeights.reduce((sum, h) => sum + h, 0);
+  const overDropTargetId = overDropTarget?.id || -1;
 
-    // div要素へのrefを作成
-    const div1Ref = useRef(null);
-    const div2Ref = useRef(null);
-    const div3Ref = useRef(null);
+  const sections = SECTION_KEYS.map((key, index) => ({
+    height: sectionHeights[index],
+    text: node[key],
+    divRef: sectionRefs[index],
+  }));
 
-    // div要素の高さをstateとして保持
-    const [section1Height, setSection1Height] = useState(20);
-    const [section2Height, setSection2Height] = useState(20);
-    const [section3Height, setSection3Height] = useState(20);
-
-    useEffect(() => {
-        // div要素の高さを取得し、stateを更新
-        setSection1Height(div1Ref.current.offsetHeight);
-        setSection2Height(div2Ref.current.offsetHeight);
-        setSection3Height(div3Ref.current.offsetHeight);
-    }, [node.text, node.text2, node.text3]);
-
-    useEffect(() => {
-        const div1Width = div1Ref.current.offsetWidth;
-        const div2Width = div2Ref.current.offsetWidth;
-        const div3Width = div3Ref.current.offsetWidth;
-        const maxWidth = Math.max(div1Width, div2Width, div3Width)
-        const totalHeight = section1Height + section2Height + section3Height;
-
-        // ノードの幅と高さを更新する関数を呼び出し
-        updateNodeSize(node.id, maxWidth, totalHeight);
-
-        node.section1Height = section1Height;
-        node.section2Height = section2Height;
-        node.section3Height = section3Height;
-        node.height = totalHeight;
-    }, [section1Height, section2Height, section3Height, node, updateNodeSize]);
-
-    const sections = [
-        { height: section1Height, text: node.text, divRef: div1Ref },
-        { height: section2Height, text: node.text2, divRef: div2Ref },
-        { height: section3Height, text: node.text3, divRef: div3Ref },
-    ];
+  const renderConnectionPath = useCallback(() => {
+    if (!parentNode) return null;
+    
+    const parentWidth = calculateNodeWidth(SECTION_KEYS.map(k => parentNode[k]));
+    const pathCommands = [
+      `M ${node.x},${node.y + totalHeight / 2}`,
+      `C ${node.x - CURVE_CONTROL_OFFSET},${node.y + totalHeight / 2}`,
+      `${parentNode.x + parentWidth + CURVE_CONTROL_OFFSET},${parentNode.y + parentNode.height / 2}`,
+      `${parentNode.x + parentWidth + ARROW_OFFSET},${parentNode.y + parentNode.height / 2}`
+    ].join(' ');
 
     return (
-        <React.Fragment key={node.id}>
-            {parentNode && (
-                <path
-                    d={`M ${node.x},${node.y + node.height / 2}
-            C ${node.x - CURVE_CONTROL_OFFSET},${node.y + node.height / 2} 
-            ${parentNode.x + calculateNodeWidth([parentNode.text, parentNode.text2, parentNode.text3]) + CURVE_CONTROL_OFFSET},${parentNode.y + parentNode.height / 2} 
-            ${parentNode.x + calculateNodeWidth([parentNode.text, parentNode.text2, parentNode.text3]) + ARROW_OFFSET},${parentNode.y + parentNode.height / 2}`}
-                    stroke="black"
-                    strokeWidth="2"
-                    fill="none"
-                    markerEnd="url(#arrowhead)"
-                />
-            )}
-
-            <rect
-                x={node.x}
-                y={node.y}
-                width={node.width}
-                height={section1Height + section2Height + section3Height}
-                className={`node ${node.selected ? 'node-selected' : 'node-unselected'}`}
-                rx="2"
-                onClick={() => selectNode(node.id)}
-                onDoubleClick={() => handleDoubleClick(node.id)}
-                onMouseDown={(e) => handleMouseDown(e, node.id)}
-                onMouseUp={(e) => handleMouseUp(e)}
-                style={{
-                    fill: node.id === overDropTargetId ? 'lightblue' : 'white',
-                }}
-            />
-            {sections.map((section, index) => (
-                <React.Fragment key={index}>
-                    <TextSection
-                        x={node.x}
-                        y={node.y + sections.slice(0, index).reduce((total, section) => total + section.height, 0)}
-                        width={node.width}
-                        height={section.height}
-                        text={section.text}
-                        zoomRatio={zoomRatio}
-                        selectNode={() => selectNode(node.id)}
-                        handleDoubleClick={() => handleDoubleClick(node.id)}
-                        handleMouseDown={(e) => handleMouseDown(e, node)}
-                        handleMouseUp={(e) => handleMouseUp(e)}
-                        divRef={section.divRef}
-                    />
-                    {index < sections.length - 1 && (
-                        <line
-                            x1={node.x}
-                            y1={node.y + sections.slice(0, index + 1).reduce((total, section) => total + section.height, 0)}
-                            x2={node.x + node.width}
-                            y2={node.y + sections.slice(0, index + 1).reduce((total, section) => total + section.height, 0)}
-                            stroke="black"
-                            strokeWidth="1"
-                        />
-                    )}
-                </React.Fragment>
-            ))}
-        </React.Fragment>
+      <path
+        d={pathCommands}
+        stroke="black"
+        strokeWidth="2"
+        fill="none"
+        markerEnd="url(#arrowhead)"
+      />
     );
+  }, [parentNode, node, totalHeight]);
+
+  return (
+    <React.Fragment key={node.id}>
+      {renderConnectionPath()}
+
+      <rect
+        x={node.x}
+        y={node.y}
+        width={node.width}
+        height={totalHeight}
+        className={`node ${node.selected ? 'node-selected' : 'node-unselected'}`}
+        rx="2"
+        onClick={() => selectNode(node.id)}
+        onDoubleClick={() => handleDoubleClick(node.id)}
+        onMouseDown={(e) => handleMouseDown(e, node.id)}
+        onMouseUp={handleMouseUp}
+        style={{ fill: node.id === overDropTargetId ? 'lightblue' : 'white' }}
+      />
+
+      {sections.map((section, index) => (
+        <React.Fragment key={index}>
+          <TextSection
+            x={node.x}
+            y={node.y + sections.slice(0, index).reduce((sum, s) => sum + s.height, 0)}
+            width={node.width}
+            height={section.height}
+            text={section.text}
+            zoomRatio={zoomRatio}
+            divRef={section.divRef}
+            selectNode={() => selectNode(node.id)}
+            handleDoubleClick={() => handleDoubleClick(node.id)}
+            handleMouseDown={(e) => handleMouseDown(e, node.id)}
+            handleMouseUp={handleMouseUp}
+          />
+          
+          {index < sections.length - 1 && (
+            <line
+              x1={node.x}
+              y1={node.y + sections.slice(0, index + 1).reduce((sum, s) => sum + s.height, 0)}
+              x2={node.x + node.width}
+              y2={node.y + sections.slice(0, index + 1).reduce((sum, s) => sum + s.height, 0)}
+              stroke="black"
+              strokeWidth="1"
+            />
+          )}
+        </React.Fragment>
+      ))}
+    </React.Fragment>
+  );
 };
 
-export default Node;
+export default React.memo(Node);
