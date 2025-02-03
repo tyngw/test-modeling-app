@@ -26,7 +26,7 @@ export const useNodeDragEffect = (state, dispatch) => {
             x: node.x, 
             y: node.y, 
         });
-    }, [dispatch, state.zoomRatio]);
+    }, []);
 
     useEffect(() => {
         if (dragging !== null) {
