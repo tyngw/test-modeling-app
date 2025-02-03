@@ -1,6 +1,7 @@
 // components/InputFields.js
 import React, { useRef } from 'react';
 import { calculateNodeWidth } from '../utils/TextNodeHelpers';
+import { DEFAULT_SECTION_HEIGHT, DEFAULT_FONT_SIZE } from '../constants/Node';
 
 // 入力フィールドを描画する部分
 const InputFields = ({ node, updateText, endEditing, zoomRatio }) => {
@@ -61,10 +62,10 @@ const InputFields = ({ node, updateText, endEditing, zoomRatio }) => {
                         height = node.section3Height;
                         break;
                     default:
-                        height = 20; // デフォルトの高さ
+                        height = DEFAULT_SECTION_HEIGHT;
                 }
 
-                let y = node.y;
+                let y = 0;
                 for (let i = 0; i < index; i++) {
                     // それぞれのsectionHeightの値を使用
                     y += node[`section${i + 1}Height`];
@@ -81,10 +82,10 @@ const InputFields = ({ node, updateText, endEditing, zoomRatio }) => {
                         style={{
                             position: 'absolute',
                             left: `${node.x * zoomRatio}px`,
-                            top: `${y * zoomRatio}px`, // 計算したY座標を設定
-                            width: `${maxWidth * zoomRatio}px`, // 全フィールドで共通の最大幅を使用
-                            height: `${height * zoomRatio}px`, // 計算した高さを設定
-                            fontSize: `${12 * zoomRatio}px`,
+                            top: `${(node.y + y) * zoomRatio}px`, // node.yをベースに相対位置を追加
+                            width: `${maxWidth * zoomRatio}px`,
+                            height: `${height * zoomRatio}px`,
+                            fontSize: `${DEFAULT_FONT_SIZE * zoomRatio}px`,
                             resize: 'none',
                         }}
                         autoFocus={field === 'text'}

@@ -12,7 +12,7 @@ import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutl
 import { ICONBAR_HEIGHT } from '../constants/Node';
 
 
-const IconBar = ({
+const QuickMenuBar = ({
     handleButtonClick,
     saveSvg,
     loadNodes,
@@ -64,4 +64,4 @@ const IconBar = ({
     );
 }
 
-export default IconBar;
+export default QuickMenuBar;
