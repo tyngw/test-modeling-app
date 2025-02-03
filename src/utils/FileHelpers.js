@@ -1,3 +1,4 @@
+// utils/FileHelpers.js
 export const loadNodes = (event) => {
     return new Promise((resolve, reject) => {
         const file = event.target.files[0];

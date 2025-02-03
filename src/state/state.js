@@ -1,22 +1,25 @@
 // src/state/state.js
 import { useReducer } from 'react';
-import { adjustNodePositions } from '../utils/NodeAdjuster';
+// import { adjustNodePositions } from '../utils/NodeAdjuster';
 import { Undo, Redo, saveSnapshot, clearSnapshots } from './undoredo';
 import { handleArrowUp, handleArrowDown, handleArrowRight, handleArrowLeft } from '../utils/NodeSelector';
 import {
+    X_OFFSET,   // add
+    Y_OFFSET,   // add
+    PRESET_Y,   // add
     DEFAULT_X,
     DEFAULT_Y,
     NODE_HEIGHT,
     MIN_WIDTH,
     DEFAULT_SECTION_HEIGHT
 } from '../constants/Node';
-import {
-    deleteNodeRecursive,
-    setDepthRecursive,
-    getSelectedNodeAndChildren,
-    pasteNodes,
-    setVisibilityRecursive
-} from '../utils/NodeActionHelper';
+// import {
+//     deleteNodeRecursive,
+//     setDepthRecursive,
+//     getSelectedNodeAndChildren,
+//     pasteNodes,
+//     setVisibilityRecursive
+// } from '../utils/NodeActionHelper';
 import { v4 as uuidv4 } from 'uuid';
 
 // ノード生成関数
@@ -56,15 +59,198 @@ const initialState = {
     zoomRatio: 1,
 };
 
+const getSelectedNodeAndChildren = (nodeList, targetNode, selectedNode) => {
+    let cutNodes = [];
+
+
+    if (targetNode.id === selectedNode.id) {
+        cutNodes.push({ ...targetNode, parentId: null });
+    } else {
+        cutNodes.push(targetNode);
+    }
+
+    // 選択対象のノードIdと一致するparentIdを持つノードを再帰的に取得
+    const childNodes = nodeList.filter(node => node.parentId === targetNode.id);
+    if (childNodes.length > 0) {
+        childNodes.forEach(childNode => {
+            cutNodes = [...cutNodes, ...getSelectedNodeAndChildren(nodeList, childNode, selectedNode)];
+        });
+    }
+
+    return cutNodes;
+};
+
+// cutNodesに含まれるノードをnodesに追加できるように新しいノードを作成する関数
+const pasteNodes = (nodeList, cutNodes, parentNode) => {
+    const rootNode = cutNodes.find(node => node.parentId === null);
+    if (!rootNode) {
+        return [...nodeList, ...cutNodes]
+    }
+    const rootNodeDepth = rootNode.depth;
+    const baseDepth = parentNode.depth + 1;
+    const depthDelta = baseDepth - rootNodeDepth;
+    const idMap = new Map();
+
+    const newNodes = cutNodes.map(cutNode => {
+        const newNode = { ...cutNode };
+        const newUUID = uuidv4(); // UUID を生成
+
+        idMap.set(cutNode.id, newUUID);
+        newNode.id = newUUID;
+
+        newNode.depth = cutNode.depth + depthDelta;
+        
+        if (cutNode.id === rootNode.id) {
+            newNode.parentId = parentNode.id;
+            const children = nodeList.find(node => node.id === parentNode.id).children;
+            newNode.order = children;
+            newNode.selected = false;
+        }
+
+        return newNode;
+    });
+
+    const updatedNodes = nodeList.concat(newNodes.map(node => {
+        if (idMap.has(node.parentId)) {
+            node.parentId = idMap.get(node.parentId);
+        }
+        return node;
+    }));
+
+    return updatedNodes;
+}
+
+// 指定されたノードの子ノードのdepthを再帰的に親ノードのdepth+1に設定する関数
+const setDepthRecursive = (nodeList, parentNode) => {
+    return nodeList.reduce((updatedNodes, node) => {
+        let newNode = node;
+        if (node.parentId === parentNode.id) {
+            newNode = { ...node, depth: parentNode.depth + 1 };
+            updatedNodes = setDepthRecursive(updatedNodes, newNode);
+        }
+        return [...updatedNodes, newNode];
+    }, []);
+};
+
+// 指定されたノードの子ノードのvisibleを再帰的にtrueまたはfalseに設定する関数
+// 戻り値として、visibleを更新した新しいノードのリストを返す
+const setVisibilityRecursive = (nodeList, parentNode, visible) => {
+    return nodeList.reduce((updatedNodes, node) => {
+        let newNode = node;
+        if (node.parentId === parentNode.id) {
+            newNode = { ...node, visible: visible };
+            updatedNodes = setVisibilityRecursive(updatedNodes, newNode, visible);
+        }
+        return [...updatedNodes, newNode];
+    }, []);
+};
+
+// 与えられたノードを再帰的に削除する関数
+// 引数としてノードのリストと削除対象のノードを受け取る
+const deleteNodeRecursive = (nodeList, nodeToDelete) => {
+
+    // 与えられたnodeToDeleteのparentIdがnullの場合は処理を終了
+    if (nodeToDelete.parentId === null) {
+        return nodeList;
+    }
+    // 指定されたノードを除外して新しいノードのリストを作成
+    let updatedNodes = nodeList.filter(node => node.id !== nodeToDelete.id);
+
+    // 削除対象のノードIdと一致するparentIdを持つノードも削除する
+    // 再起的に自身のdeleteNode関数を呼び出して処理する
+    const childNodes = updatedNodes.filter(node => node.parentId === nodeToDelete.id);
+    if (childNodes.length > 0) {
+        childNodes.forEach(childNode => {
+            updatedNodes = deleteNodeRecursive(updatedNodes, childNode);
+        });
+    }
+
+    // 指定されたノードのIdと一致するparentIdを持つノードのchildrenをデクリメント
+    updatedNodes = updatedNodes.map(node => {
+        if (nodeToDelete.parentId === node.id) {
+            return { ...node, children: node.children - 1 };
+        }
+        return node;
+    });
+
+    return updatedNodes;
+};
+
 const updateChildren = (nodes, id, increment) =>
     nodes.map(node =>
         node.id === id ? { ...node, children: node.children + increment } : node
     );
 
+const adjustNodeAndChildrenPosition = (allNodes, node, currentY, maxHeight, visited = new Set()) => {
+    // 循環参照を防ぐために、既に訪問したノードは処理しない
+    if (visited.has(node.id)) {
+        return currentY;
+    }
+    visited.add(node.id);
+
+    const childNodes = allNodes.filter(n => n.parentId === node.id);
+    const parentNode = allNodes.find(n => n.id === node.parentId);
+
+    if (!parentNode) {
+        node.x = DEFAULT_X;
+    } else {
+        // node.xに親ノードのx座標を設定 + X_OFFSET + 親ノードのwidthをセットする
+        node.x = parentNode.x + parentNode.width + X_OFFSET;
+    }
+
+    node.y = currentY;
+    maxHeight = Math.max(maxHeight, node.height);
+
+    // console.log(`[adjustNodeAndChildrenPosition] ${node.id} 「${node.text}」 ${node.x}x${node.y}`);
+
+    if (childNodes.length > 0) {
+        childNodes.forEach(childNode => {
+            if (!visited.has(childNode.id)) {
+                currentY = adjustNodeAndChildrenPosition(allNodes, childNode, currentY, maxHeight, visited);
+            }
+        });
+    } else {
+        if (node.visible || node.order === 0) {
+            currentY += maxHeight + Y_OFFSET;
+        }
+    }
+    return currentY;
+}
+
+const adjustNodePositions = (allNodes) => {
+    const rootNodes = allNodes.filter(n => n.parentId === null);
+
+    // depthが小さい順にノードをソートし、同じdepth内ではparentId, その後orderでソート
+    let sortedNodes = [...allNodes].sort((a, b) => b.depth - a.depth || a.parentId - b.parentId || a.order - b.order);
+    const adjust = true;
+
+    rootNodes.forEach(rootNode => {
+        adjustNodeAndChildrenPosition(allNodes, rootNode, PRESET_Y, rootNode.height, new Set());
+    });
+
+    // 親ノードのY座標を子ノードに基づいて更新
+    if (adjust) {
+        sortedNodes.forEach(parentNode => {
+            const children = sortedNodes.filter(n => n.parentId === parentNode.id);
+            const visibleChildren = children.filter(n => n.visible);
+            if (visibleChildren.length > 0) {
+                const minY = Math.min(...children.map(n => n.y));
+                const maxY = Math.max(...children.map(n => n.y + n.height));
+                const newHeight = minY + (maxY - minY) / 2 - parentNode.height / 2;
+                if (parentNode.y < newHeight) {
+                    parentNode.y = newHeight;
+                }
+            }
+        });
+    }
+    return sortedNodes;
+};
+
+
 const createNodeAdder = (allNodes, parentNode) => {
     const newId = uuidv4();
     const newOrder = parentNode.children;
-    
+
     const updatedParentNodes = allNodes.map(node =>
         node.id === parentNode.id
             ? { ...node, children: node.children + 1, selected: false }
@@ -83,8 +269,8 @@ const createNodeAdder = (allNodes, parentNode) => {
 const handleZoomIn = state => ({
     ...state,
     zoomRatio: state.zoomRatio + 0.1
-  });
-  
+});
+
 const handleZoomOut = state => ({
     ...state,
     zoomRatio: Math.max(state.zoomRatio - 0.1, 0.1) // 最小値制限を追加
@@ -236,31 +422,31 @@ const actionHandlers = {
         return adjustNodePositions(updateChildren(pastedNodes, selectedNode.id, 1));
     }),
 
-    EXPAND_NODE: state => handleNodeMutation(state, (nodes, selectedNode) => 
+    EXPAND_NODE: state => handleNodeMutation(state, (nodes, selectedNode) =>
         adjustNodePositions(
-          setVisibilityRecursive(nodes, selectedNode, true)
+            setVisibilityRecursive(nodes, selectedNode, true)
         )
-      ),
+    ),
 
-    COLLAPSE_NODE: state => handleNodeMutation(state, (nodes, selectedNode) => 
-    adjustNodePositions(
-      setVisibilityRecursive(nodes, selectedNode, false)
-    )
-  ),
+    COLLAPSE_NODE: state => handleNodeMutation(state, (nodes, selectedNode) =>
+        adjustNodePositions(
+            setVisibilityRecursive(nodes, selectedNode, false)
+        )
+    ),
 
     UPDATE_NODE_SIZE: (state, action) => ({
         ...state,
         nodes: state.nodes.map(node =>
             node.id === action.payload.id
-              ? { 
-                  ...node, 
-                  width: action.payload.width,
-                  height: action.payload.height,
-                  section1Height: action.payload.sectionHeights[0],
-                  section2Height: action.payload.sectionHeights[1],
-                  section3Height: action.payload.sectionHeights[2]
+                ? {
+                    ...node,
+                    width: action.payload.width,
+                    height: action.payload.height,
+                    section1Height: action.payload.sectionHeights[0],
+                    section2Height: action.payload.sectionHeights[1],
+                    section3Height: action.payload.sectionHeights[2]
                 }
-              : node
+                : node
         )
     })
 };
@@ -282,7 +468,7 @@ function handleNodeMutation(state, mutationFn) {
 
     saveSnapshot(state.nodes);
     const mutationResult = mutationFn(state.nodes, selectedNode);
-    
+
     return {
         ...state,
         nodes: Array.isArray(mutationResult) ? mutationResult : mutationResult.nodes,
