@@ -7,7 +7,8 @@ import {
     DEFAULT_X,
     DEFAULT_Y,
     NODE_HEIGHT,
-    MIN_WIDTH
+    MIN_WIDTH,
+    DEFAULT_SECTION_HEIGHT
 } from '../constants/Node';
 import {
     deleteNodeRecursive,
@@ -28,9 +29,9 @@ const createNewNode = (parentId, order, depth) => ({
     y: 0,
     width: MIN_WIDTH,
     height: NODE_HEIGHT,
-    section1Height: 20,
-    section2Height: 20,
-    section3Height: 20,
+    section1Height: DEFAULT_SECTION_HEIGHT,
+    section2Height: DEFAULT_SECTION_HEIGHT,
+    section3Height: DEFAULT_SECTION_HEIGHT,
     parentId,
     order,
     depth,
