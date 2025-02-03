@@ -2,7 +2,7 @@
 import { useEffect } from 'react';
 import { calculateCanvasSize } from '../utils/LayoutUtilities';
 
-const useResizeEffect = ({ setCanvasSize, setViewBox, state }) => {
+const useResizeEffect = ({ setCanvasSize, setDisplayArea, state }) => {
     useEffect(() => {
         const newCanvasSize = calculateCanvasSize(state.nodes);
         newCanvasSize.width = Math.max(newCanvasSize.width, window.innerWidth);
@@ -15,8 +15,8 @@ const useResizeEffect = ({ setCanvasSize, setViewBox, state }) => {
         newCanvasSize.height = newCanvasSize.height * state.zoomRatio;
         
         setCanvasSize(newCanvasSize);
-        setViewBox(`0 0 ${newViewSize.width} ${newViewSize.height}`);
-    }, [state.nodes, state.zoomRatio]);
+        setDisplayArea(`0 0 ${newViewSize.width} ${newViewSize.height}`);
+    }, [state.nodes, state.zoomRatio, setCanvasSize, setDisplayArea]);
 };
 
 export default useResizeEffect;
