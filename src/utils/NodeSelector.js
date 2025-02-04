@@ -1,15 +1,16 @@
-// utils/NodeSelector.js
-export const getNodeById = (nodes, id) => nodes.find(node => node.id === id);
-export const getSelectedNode = (nodes) => nodes.find(node => node.selected);
+// src/utils/NodeSelector.js
+export const getNodeById = (nodes, id) => nodes[id];
+export const getSelectedNode = (nodes) => Object.values(nodes).find(node => node.selected);
 
 const getSiblings = (nodes, nodeId) => {
   const node = getNodeById(nodes, nodeId);
-  return node ? nodes.filter(n => n.parentId === node.parentId) : [];
+  return node ? Object.values(nodes).filter(n => n.parentId === node.parentId) : [];
 };
 
 const getParentSiblings = (nodes, nodeId) => {
-  const parent = getNodeById(nodes, getNodeById(nodes, nodeId)?.parentId);
-  return parent ? nodes.filter(n => n.parentId === parent.parentId) : [];
+  const node = getNodeById(nodes, nodeId);
+  const parent = node ? getNodeById(nodes, node.parentId) : null;
+  return parent ? Object.values(nodes).filter(n => n.parentId === parent.parentId) : [];
 };
 
 const handleVerticalMove = (nodes, selected, offset) => {
@@ -37,9 +38,8 @@ const handleParentLevelMove = (nodes, selected, offset) => {
 };
 
 const getNodeChildren = (nodes, parentId) => 
-  nodes.filter(node => node.parentId === parentId);
+  Object.values(nodes).filter(node => node.parentId === parentId);
 
-// 既存コードとの互換性を保つため、個別の関数を再エクスポート
 export const handleArrowUp = (nodes) => handleArrowNavigation(nodes, 'up');
 export const handleArrowDown = (nodes) => handleArrowNavigation(nodes, 'down');
 export const handleArrowLeft = (nodes) => handleArrowNavigation(nodes, 'left');

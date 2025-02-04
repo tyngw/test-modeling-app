@@ -1,25 +1,27 @@
 // src/state/state.js
 import { useReducer } from 'react';
-import { adjustNodePositions } from '../utils/NodeAdjuster';
+// import { adjustNodePositions } from '../utils/NodeAdjuster';
 import { Undo, Redo, saveSnapshot, clearSnapshots } from './undoredo';
 import { handleArrowUp, handleArrowDown, handleArrowRight, handleArrowLeft } from '../utils/NodeSelector';
 import {
+    X_OFFSET,   // add
+    Y_OFFSET,   // add
+    PRESET_Y,   // add
     DEFAULT_X,
     DEFAULT_Y,
     NODE_HEIGHT,
     MIN_WIDTH,
     DEFAULT_SECTION_HEIGHT
 } from '../constants/Node';
-import {
-    deleteNodeRecursive,
-    setDepthRecursive,
-    getSelectedNodeAndChildren,
-    pasteNodes,
-    setVisibilityRecursive
-} from '../utils/NodeActionHelper';
+// import {
+//     deleteNodeRecursive,
+//     setDepthRecursive,
+//     getSelectedNodeAndChildren,
+//     pasteNodes,
+//     setVisibilityRecursive
+// } from '../utils/NodeActionHelper';
 import { v4 as uuidv4 } from 'uuid';
 
-// ノード生成関数
 const createNewNode = (parentId, order, depth) => ({
     id: uuidv4(),
     text: '',
@@ -41,56 +43,224 @@ const createNewNode = (parentId, order, depth) => ({
     visible: true,
 });
 
-const initialState = {
-    nodes: [
-        {
+export const initialState = {
+    nodes: {
+        1: {
             ...createNewNode(null, 0, 1),
             id: 1,
             x: DEFAULT_X,
             y: DEFAULT_Y,
             editing: false,
-        },
-    ],
+        }
+    },
     width: window.innerWidth,
     height: window.innerHeight,
     zoomRatio: 1,
 };
 
-const updateChildren = (nodes, id, increment) =>
-    nodes.map(node =>
-        node.id === id ? { ...node, children: node.children + increment } : node
-    );
+const getSelectedNodeAndChildren = (nodes, targetNode, selectedNode) => {
+    let cutNodes = {};
+    const nodeList = Object.values(nodes);
 
-const createNodeAdder = (allNodes, parentNode) => {
+    if (targetNode.id === selectedNode.id) {
+        cutNodes[targetNode.id] = { ...targetNode, parentId: null };
+    } else {
+        cutNodes[targetNode.id] = targetNode;
+    }
+
+    const childNodes = nodeList.filter(node => node.parentId === targetNode.id);
+    if (childNodes.length > 0) {
+        childNodes.forEach(childNode => {
+            const childCutNodes = getSelectedNodeAndChildren(nodes, childNode, selectedNode);
+            cutNodes = { ...cutNodes, ...childCutNodes };
+        });
+    }
+
+    return cutNodes;
+};
+
+const pasteNodes = (nodes, cutNodes, parentNode) => {
+    const rootNode = Object.values(cutNodes).find(node => node.parentId === null);
+    if (!rootNode) {
+        return { ...nodes, ...cutNodes };
+    }
+
+    const rootNodeDepth = rootNode.depth;
+    const baseDepth = parentNode.depth + 1;
+    const depthDelta = baseDepth - rootNodeDepth;
+    const idMap = new Map();
+
+    const newNodes = Object.values(cutNodes).reduce((acc, cutNode) => {
+        const newNode = { ...cutNode };
+        const newUUID = uuidv4();
+        idMap.set(cutNode.id, newUUID);
+        newNode.id = newUUID;
+        newNode.depth = cutNode.depth + depthDelta;
+
+        if (cutNode.id === rootNode.id) {
+            newNode.parentId = parentNode.id;
+            newNode.order = nodes[parentNode.id].children;
+            newNode.selected = false;
+        }
+
+        acc[newUUID] = newNode;
+        return acc;
+    }, {});
+
+    const updatedNodes = Object.values(newNodes).reduce((acc, node) => {
+        const updatedNode = idMap.has(node.parentId) 
+            ? { ...node, parentId: idMap.get(node.parentId) }
+            : node;
+        acc[updatedNode.id] = updatedNode;
+        return acc;
+    }, { ...nodes });
+
+    // 親ノードのchildrenを更新
+    const updatedParent = { ...parentNode, children: parentNode.children + 1 };
+    updatedNodes[updatedParent.id] = updatedParent;
+
+    return updatedNodes;
+};
+
+const setDepthRecursive = (nodes, parentNode) => {
+    const updatedNodes = { ...nodes };
+    const processChildren = (parentId) => {
+        const children = Object.values(updatedNodes).filter(n => n.parentId === parentId);
+        children.forEach(child => {
+            updatedNodes[child.id] = { ...child, depth: updatedNodes[parentId].depth + 1 };
+            processChildren(child.id);
+        });
+    };
+    processChildren(parentNode.id);
+    return updatedNodes;
+};
+
+const setVisibilityRecursive = (nodes, parentNode, visible) => {
+    const updatedNodes = { ...nodes };
+    const processChildren = (parentId) => {
+        const children = Object.values(updatedNodes).filter(n => n.parentId === parentId);
+        children.forEach(child => {
+            updatedNodes[child.id] = { ...child, visible };
+            processChildren(child.id);
+        });
+    };
+    processChildren(parentNode.id);
+    return updatedNodes;
+};
+
+const deleteNodeRecursive = (nodes, nodeToDelete) => {
+    if (nodeToDelete.parentId === null) return nodes;
+
+    const updatedNodes = { ...nodes };
+
+    // 子ノードを再帰的に削除
+    const deleteChildren = (parentId) => {
+        const children = Object.values(updatedNodes).filter(n => n.parentId === parentId);
+        children.forEach(child => {
+            delete updatedNodes[child.id]; // 子ノードを削除
+            deleteChildren(child.id); // さらに子ノードがあれば再帰的に削除
+        });
+    };
+
+    // 対象ノードとその子ノードを削除
+    delete updatedNodes[nodeToDelete.id];
+    deleteChildren(nodeToDelete.id);
+
+    // 親ノードのchildrenを更新
+    if (nodeToDelete.parentId) {
+        const parent = updatedNodes[nodeToDelete.parentId];
+        if (parent) {
+            updatedNodes[parent.id] = { ...parent, children: parent.children - 1 };
+        }
+    }
+
+    return updatedNodes;
+};
+
+const adjustNodeAndChildrenPosition = (nodes, node, currentY, maxHeight, visited = new Set()) => {
+    if (visited.has(node.id)) return currentY;
+    visited.add(node.id);
+
+    const updatedNodes = { ...nodes };
+    const parentNode = node.parentId ? updatedNodes[node.parentId] : null;
+
+    if (!parentNode) {
+        node.x = DEFAULT_X;
+    } else {
+        node.x = parentNode.x + parentNode.width + X_OFFSET;
+    }
+
+    node.y = currentY;
+    maxHeight = Math.max(maxHeight, node.height);
+    updatedNodes[node.id] = node;
+
+    const childNodes = Object.values(updatedNodes).filter(n => n.parentId === node.id);
+    if (childNodes.length > 0) {
+        childNodes.forEach(childNode => {
+            if (!visited.has(childNode.id)) {
+                currentY = adjustNodeAndChildrenPosition(updatedNodes, childNode, currentY, maxHeight, visited);
+            }
+        });
+    } else {
+        if (node.visible || node.order === 0) {
+            currentY += maxHeight + Y_OFFSET;
+        }
+    }
+
+    return currentY;
+};
+
+const adjustNodePositions = (nodes) => {
+    const updatedNodes = { ...nodes };
+    const rootNodes = Object.values(updatedNodes).filter(n => n.parentId === null);
+
+    rootNodes.forEach(rootNode => {
+        adjustNodeAndChildrenPosition(updatedNodes, rootNode, PRESET_Y, rootNode.height, new Set());
+    });
+
+    const sortedNodes = Object.values(updatedNodes).sort((a, b) => b.depth - a.depth || a.parentId - b.parentId || a.order - b.order);
+    sortedNodes.forEach(parentNode => {
+        const children = sortedNodes.filter(n => n.parentId === parentNode.id);
+        const visibleChildren = children.filter(n => n.visible);
+        if (visibleChildren.length > 0) {
+            const minY = Math.min(...children.map(n => n.y));
+            const maxY = Math.max(...children.map(n => n.y + n.height));
+            const newHeight = minY + (maxY - minY) / 2 - parentNode.height / 2;
+            if (parentNode.y < newHeight) {
+                updatedNodes[parentNode.id] = { ...parentNode, y: newHeight };
+            }
+        }
+    });
+
+    return updatedNodes;
+};
+
+const createNodeAdder = (nodes, parentNode) => {
     const newId = uuidv4();
     const newOrder = parentNode.children;
-    
-    const updatedParentNodes = allNodes.map(node =>
-        node.id === parentNode.id
-            ? { ...node, children: node.children + 1, selected: false }
-            : node
-    );
 
-    return [
-        ...updatedParentNodes,
-        {
+    const updatedNodes = {
+        ...nodes,
+        [parentNode.id]: { ...parentNode, children: parentNode.children + 1, selected: false },
+        [newId]: {
             ...createNewNode(parentNode.id, newOrder, parentNode.depth + 1),
             id: newId,
         }
-    ];
+    };
+
+    return adjustNodePositions(updatedNodes);
 };
 
 const handleZoomIn = state => ({
     ...state,
     zoomRatio: state.zoomRatio + 0.1
-  });
-  
-const handleZoomOut = state => ({
-    ...state,
-    zoomRatio: Math.max(state.zoomRatio - 0.1, 0.1) // 最小値制限を追加
 });
 
-// アクションハンドラー群
+const handleZoomOut = state => ({
+    ...state,
+    zoomRatio: Math.max(state.zoomRatio - 0.1, 0.1)
+});
+
 const actionHandlers = {
     NEW: () => {
         clearSnapshots();
@@ -106,51 +276,55 @@ const actionHandlers = {
     ARROW_LEFT: handleArrowAction(handleArrowLeft),
 
     LOAD_NODES: (state, action) => {
-        if (action.payload.length === 0) return initialState;
+        if (Object.keys(action.payload).length === 0) return initialState;
 
-        const updatedVisibilityNodes = action.payload.map(node =>
-            node.parentId === null ? { ...node, visible: true } : node
-        );
+        const updatedNodes = Object.values(action.payload).reduce((acc, node) => {
+            acc[node.id] = node.parentId === null ? { ...node, visible: true } : node;
+            return acc;
+        }, {});
 
         return {
             ...state,
-            nodes: adjustNodePositions(updatedVisibilityNodes)
+            nodes: adjustNodePositions(updatedNodes)
         };
     },
 
     SELECT_NODE: (state, action) => {
-        const selectedNode = state.nodes.find(node => node.id === action.payload);
+        const selectedNode = state.nodes[action.payload];
         if (!selectedNode) return state;
 
         const { text, text2, text3, selected, editing, visible, ...rest } = selectedNode;
         console.log('[SELECT_NODE] selectNode:', rest);
 
-        return {
-            ...state,
-            nodes: state.nodes.map(node => ({
+        const updatedNodes = Object.values(state.nodes).reduce((acc, node) => {
+            acc[node.id] = {
                 ...node,
                 selected: node.id === action.payload,
                 editing: node.id === action.payload ? node.editing : false
-            }))
-        };
+            };
+            return acc;
+        }, {});
+
+        return { ...state, nodes: updatedNodes };
     },
 
     DESELECT_ALL: state => ({
         ...state,
-        nodes: state.nodes.map(node => ({
-            ...node,
-            selected: false,
-            editing: false
-        }))
+        nodes: Object.values(state.nodes).reduce((acc, node) => {
+            acc[node.id] = { ...node, selected: false, editing: false };
+            return acc;
+        }, {})
     }),
 
     UPDATE_TEXT: (state, action) => ({
         ...state,
-        nodes: state.nodes.map(node =>
-            node.id === action.payload.id
-                ? { ...node, [action.payload.field]: action.payload.value }
-                : node
-        )
+        nodes: {
+            ...state.nodes,
+            [action.payload.id]: {
+                ...state.nodes[action.payload.id],
+                [action.payload.field]: action.payload.value
+            }
+        }
     }),
 
     ADD_NODE: state => handleNodeMutation(state, (nodes, selectedNode) => {
@@ -163,17 +337,19 @@ const actionHandlers = {
     ),
 
     EDIT_NODE: state => handleSelectedNodeAction(state, selectedNode => ({
-        nodes: state.nodes.map(node =>
-            node.id === selectedNode.id
-                ? { ...node, editing: true }
-                : node
-        )
+        nodes: {
+            ...state.nodes,
+            [selectedNode.id]: { ...selectedNode, editing: true }
+        }
     })),
 
     END_EDITING: state => ({
         ...state,
-        nodes: adjustNodePositions(state.nodes).map(node =>
-            ({ ...node, editing: false })
+        nodes: adjustNodePositions(
+            Object.values(state.nodes).reduce((acc, node) => {
+                acc[node.id] = { ...node, editing: false };
+                return acc;
+            }, {})
         )
     }),
 
@@ -183,27 +359,39 @@ const actionHandlers = {
 
     DROP_NODE: (state, action) => {
         const { payload } = action;
-        const siblings = state.nodes.filter(node =>
-            node.parentId === payload.newParentId
-        );
+        const siblings = Object.values(state.nodes).filter(n => n.parentId === payload.newParentId);
+        const maxOrder = siblings.length > 0 ? Math.max(...siblings.map(n => n.order)) + 1 : 0;
 
-        const maxOrder = siblings.length > 0
-            ? Math.max(...siblings.map(node => node.order)) + 1
-            : 0;
+        const updatedNodes = Object.values(state.nodes).reduce((acc, node) => {
+            let updatedNode = node;
 
-        const updatedNodes = state.nodes
-            .map(updateOldParentNodes(payload))
-            .map(updateNewParentNodes(payload, maxOrder));
+            if (node.parentId === payload.oldParentId && node.order > payload.draggingNodeOrder) {
+                updatedNode = { ...node, order: node.order - 1 };
+            }
+
+            if (node.id === payload.id) {
+                updatedNode = {
+                    ...node,
+                    parentId: payload.newParentId,
+                    order: maxOrder,
+                    depth: payload.depth
+                };
+            }
+
+            acc[updatedNode.id] = updatedNode;
+            return acc;
+        }, {});
+
+        const parentUpdates = {
+            [payload.oldParentId]: { ...state.nodes[payload.oldParentId], children: state.nodes[payload.oldParentId].children - 1 },
+            [payload.newParentId]: { ...state.nodes[payload.newParentId], children: state.nodes[payload.newParentId].children + 1 }
+        };
 
         return {
             ...state,
             nodes: adjustNodePositions(
                 setDepthRecursive(
-                    updateChildren(
-                        updateChildren(updatedNodes, payload.oldParentId, -1),
-                        payload.newParentId,
-                        1
-                    ),
+                    { ...updatedNodes, ...parentUpdates },
                     payload
                 )
             )
@@ -212,11 +400,14 @@ const actionHandlers = {
 
     MOVE_NODE: (state, action) => ({
         ...state,
-        nodes: state.nodes.map(node =>
-            node.id === action.payload.id
-                ? { ...node, x: action.payload.x, y: action.payload.y }
-                : node
-        )
+        nodes: {
+            ...state.nodes,
+            [action.payload.id]: {
+                ...state.nodes[action.payload.id],
+                x: action.payload.x,
+                y: action.payload.y
+            }
+        }
     }),
 
     CUT_NODE: state => handleNodeMutation(state, (nodes, selectedNode) => {
@@ -233,84 +424,64 @@ const actionHandlers = {
 
     PASTE_NODE: state => handleNodeMutation(state, (nodes, selectedNode) => {
         const pastedNodes = pasteNodes(nodes, state.cutNodes, selectedNode);
-        return adjustNodePositions(updateChildren(pastedNodes, selectedNode.id, 1));
+        const updatedParent = { ...selectedNode, children: selectedNode.children + 1 };
+        return adjustNodePositions({ ...pastedNodes, [updatedParent.id]: updatedParent });
     }),
 
-    EXPAND_NODE: state => handleNodeMutation(state, (nodes, selectedNode) => 
-        adjustNodePositions(
-          setVisibilityRecursive(nodes, selectedNode, true)
-        )
-      ),
+    EXPAND_NODE: state => handleNodeMutation(state, (nodes, selectedNode) =>
+        adjustNodePositions(setVisibilityRecursive(nodes, selectedNode, true))
+    ),
 
-    COLLAPSE_NODE: state => handleNodeMutation(state, (nodes, selectedNode) => 
-    adjustNodePositions(
-      setVisibilityRecursive(nodes, selectedNode, false)
-    )
-  ),
+    COLLAPSE_NODE: state => handleNodeMutation(state, (nodes, selectedNode) =>
+        adjustNodePositions(setVisibilityRecursive(nodes, selectedNode, false))
+    ),
 
     UPDATE_NODE_SIZE: (state, action) => ({
         ...state,
-        nodes: state.nodes.map(node =>
-            node.id === action.payload.id
-              ? { 
-                  ...node, 
-                  width: action.payload.width,
-                  height: action.payload.height,
-                  section1Height: action.payload.sectionHeights[0],
-                  section2Height: action.payload.sectionHeights[1],
-                  section3Height: action.payload.sectionHeights[2]
-                }
-              : node
-        )
+        nodes: {
+            ...state.nodes,
+            [action.payload.id]: {
+                ...state.nodes[action.payload.id],
+                width: action.payload.width,
+                height: action.payload.height,
+                section1Height: action.payload.sectionHeights[0],
+                section2Height: action.payload.sectionHeights[1],
+                section3Height: action.payload.sectionHeights[2]
+            }
+        }
     })
 };
 
-// 共通処理ヘルパー
 function handleArrowAction(handler) {
-    return state => ({
-        ...state,
-        nodes: state.nodes.map(node => ({
-            ...node,
-            selected: node.id === handler(state.nodes)
-        }))
-    });
+    return state => {
+        const selectedId = handler(Object.values(state.nodes));
+        return {
+            ...state,
+            nodes: Object.values(state.nodes).reduce((acc, node) => {
+                acc[node.id] = { ...node, selected: node.id === selectedId };
+                return acc;
+            }, {})
+        };
+    };
 }
 
 function handleNodeMutation(state, mutationFn) {
-    const selectedNode = state.nodes.find(node => node.selected);
+    const selectedNode = Object.values(state.nodes).find(node => node.selected);
     if (!selectedNode) return state;
 
     saveSnapshot(state.nodes);
     const mutationResult = mutationFn(state.nodes, selectedNode);
-    
+
     return {
         ...state,
-        nodes: Array.isArray(mutationResult) ? mutationResult : mutationResult.nodes,
+        nodes: mutationResult.nodes || mutationResult,
         ...(mutationResult.cutNodes && { cutNodes: mutationResult.cutNodes })
     };
 }
 
 function handleSelectedNodeAction(state, actionFn) {
-    const selectedNode = state.nodes.find(node => node.selected);
+    const selectedNode = Object.values(state.nodes).find(node => node.selected);
     return selectedNode ? { ...state, ...actionFn(selectedNode) } : state;
-}
-
-function updateOldParentNodes(payload) {
-    return node => ({
-        ...node,
-        order: node.parentId === payload.oldParentId && node.order > payload.draggingNodeOrder
-            ? node.order - 1
-            : node.order
-    });
-}
-
-function updateNewParentNodes(payload, maxOrder) {
-    return node => node.id === payload.id ? {
-        ...node,
-        parentId: payload.newParentId,
-        order: maxOrder,
-        depth: payload.depth
-    } : node;
 }
 
 function reducer(state, action) {
