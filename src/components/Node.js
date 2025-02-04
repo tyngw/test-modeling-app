@@ -26,7 +26,7 @@ const useSectionDimensions = (node, updateNodeSize) => {
     }, [node.text, node.text2, node.text3, updateDimensions]);
   
     return { refs: refs.current, heights };
-  };
+};
 
 const Node = ({
   nodes,
@@ -39,7 +39,7 @@ const Node = ({
   overDropTarget,
   updateNodeSize,
 }) => {
-  const parentNode = getNodeById(nodes, node.parentId);
+  const parentNode = nodes[node.parentId]; // 直接オブジェクトから取得
   const { refs: sectionRefs, heights: sectionHeights } = useSectionDimensions(node, updateNodeSize);
   const totalHeight = sectionHeights.reduce((sum, h) => sum + h, 0);
   const overDropTargetId = overDropTarget?.id || -1;
@@ -57,8 +57,8 @@ const Node = ({
     const pathCommands = [
       `M ${node.x},${node.y + totalHeight / 2}`,
       `C ${node.x - CURVE_CONTROL_OFFSET},${node.y + totalHeight / 2}`,
-      `${parentNode.x + parentWidth + CURVE_CONTROL_OFFSET},${parentNode.y + parentNode.height / 2}`,
-      `${parentNode.x + parentWidth + ARROW_OFFSET},${parentNode.y + parentNode.height / 2}`
+      `${parentNode.x + parentNode.width + CURVE_CONTROL_OFFSET},${parentNode.y + parentNode.height / 2}`,
+      `${parentNode.x + parentNode.width + ARROW_OFFSET},${parentNode.y + parentNode.height / 2}`
     ].join(' ');
 
     return (
@@ -85,13 +85,13 @@ const Node = ({
         rx="2"
         onClick={() => selectNode(node.id)}
         onDoubleClick={() => handleDoubleClick(node.id)}
-        onMouseDown={(e) => handleMouseDown(e, node.id)}
+        onMouseDown={(e) => handleMouseDown(e, node)}
         onMouseUp={handleMouseUp}
         style={{ fill: node.id === overDropTargetId ? 'lightblue' : 'white' }}
       />
 
       {sections.map((section, index) => (
-        <React.Fragment key={index}>
+        <React.Fragment key={`${node.id}-section-${index}`}>
           <TextSection
             x={node.x}
             y={node.y + sections.slice(0, index).reduce((sum, s) => sum + s.height, 0)}
@@ -102,7 +102,7 @@ const Node = ({
             divRef={section.divRef}
             selectNode={() => selectNode(node.id)}
             handleDoubleClick={() => handleDoubleClick(node.id)}
-            handleMouseDown={(e) => handleMouseDown(e, node.id)}
+            handleMouseDown={(e) => handleMouseDown(e, node)}
             handleMouseUp={handleMouseUp}
           />
           
