@@ -1,12 +1,10 @@
-// util/LayoutUtilities.js
+// src/utils/LayoutUtilities.js
 import { useState, useEffect } from 'react';
 import {
   NODE_HEIGHT,
   X_OFFSET,
 } from '../constants/Node';
 
-
-// ウィンドウサイズを管理するカスタムフック
 export const useWindowSize = () => {
   const [windowSize, setWindowSize] = useState({
     width: window.innerWidth,
@@ -25,13 +23,13 @@ export const useWindowSize = () => {
   return windowSize;
 };
 
-// キャンバスサイズを計算する関数
 export const calculateCanvasSize = (nodes) => {
-  const maxNodeX = Math.max(...nodes.map(node => node.x + node.width));
-  const maxNodeY = Math.max(...nodes.map(node => node.y + node.height));
+  const nodeList = Object.values(nodes);
+  const maxNodeX = Math.max(...nodeList.map(node => node.x + node.width));
+  const maxNodeY = Math.max(...nodeList.map(node => node.y + node.height));
 
-   return {
-    width: maxNodeX  + X_OFFSET,
-    height: maxNodeY  + NODE_HEIGHT,
+  return {
+    width: maxNodeX + X_OFFSET,
+    height: maxNodeY + NODE_HEIGHT,
   };
 };
