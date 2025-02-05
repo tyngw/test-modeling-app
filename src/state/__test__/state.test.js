@@ -1,7 +1,6 @@
-// src/state/state.test.js
+// src/state/__test__/state.test.js
 import { renderHook, act } from '@testing-library/react';
-import { useStore, initialState } from './state';
-import { adjustNodePositions } from '../utils/NodeAdjuster';
+import { useStore, initialState } from '../state';
 
 // windowサイズをモック
 const originalInnerWidth = window.innerWidth;
