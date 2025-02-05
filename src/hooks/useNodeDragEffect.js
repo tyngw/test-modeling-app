@@ -1,4 +1,4 @@
-// ./hooks/useNodeDragEffect.js
+// src/hooks/useNodeDragEffect.js
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 export const useNodeDragEffect = (state, dispatch) => {

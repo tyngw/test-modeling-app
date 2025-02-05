@@ -1,4 +1,4 @@
-// components/TextDisplayArea.js
+// src/components/TextDisplayArea.js
 import React, { memo } from 'react';
 import { DEFAULT_SECTION_HEIGHT, DEFAULT_FONT_SIZE } from '../constants/Node';
 

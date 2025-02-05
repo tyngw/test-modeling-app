@@ -1,4 +1,4 @@
-// hooks/useResizeEffect.js
+// src/hooks/useResizeEffect.js
 import { useEffect } from 'react';
 import { calculateCanvasSize } from '../utils/LayoutUtilities';
 
