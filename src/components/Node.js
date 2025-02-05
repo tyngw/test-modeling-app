@@ -1,4 +1,4 @@
-// components/Node.js
+// src/components/Node.js
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { calculateNodeWidth } from '../utils/TextNodeHelpers';
 import { getNodeById } from '../utils/NodeSelector';

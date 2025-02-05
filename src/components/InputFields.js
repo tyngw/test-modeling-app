@@ -1,4 +1,4 @@
-// components/InputFields.js
+// src/components/InputFields.js
 import React, { useRef } from 'react';
 import { calculateNodeWidth } from '../utils/TextNodeHelpers';
 import { DEFAULT_SECTION_HEIGHT, DEFAULT_FONT_SIZE } from '../constants/Node';

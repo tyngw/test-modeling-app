@@ -1,3 +1,4 @@
+// src/utils/NodeAdjuster.js
 import {
     DEFAULT_X,
     X_OFFSET,
