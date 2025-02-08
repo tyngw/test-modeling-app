@@ -25,24 +25,24 @@
 }
 
 /* ノードの基本スタイル */
-.node {
+.element {
   stroke-width: 2;
   stroke: black;
   fill: transparent;
 }
 
 /* 選択されたノードのスタイル */
-.node-selected {
+.element-selected {
   stroke: blue;
 }
 
 /* ノードが選択されていないときのスタイル */
-.node-unselected {
+.element-unselected {
   stroke: black;
 }
 
-/* ノード内のテキストのスタイル */
-.node-text {
+/* ノード内のテキストのスタイル(参照していないclass) */
+.element-text {
   fill: black;
   pointer-events: none;
   /* テキストをクリック可能なエリアとして扱わない */
