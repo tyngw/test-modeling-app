@@ -27,7 +27,7 @@ const CanvasArea = () => {
     const [isHelpOpen, setHelpOpen] = useState(false);
     const toggleHelp = () => setHelpOpen(!isHelpOpen);
 
-    const editingNode = Object.values(state.nodes).find(node => node.editing);
+    const editingNode = Object.values(state.nodes).find(element => element.editing);
 
     const updateText = (text, field) => {
         if (!editingNode) return;
@@ -54,7 +54,7 @@ const CanvasArea = () => {
 
     const handleFileSelect = event => {
         loadNodes(event)
-            .then(nodes => dispatch({ type: 'LOAD_NODES', payload: nodes }))
+            .then(elements => dispatch({ type: 'LOAD_NODES', payload: elements }))
             .catch(alert);
     };
 
@@ -128,7 +128,7 @@ const CanvasArea = () => {
                 </svg>
 
                 <InputFields
-                    node={editingNode}
+                    element={editingNode}
                     updateText={updateText}
                     endEditing={endEditing}
                     zoomRatio={state.zoomRatio}
