@@ -97,7 +97,7 @@ const IdeaElement = ({
         y={element.y}
         width={element.width}
         height={totalHeight}
-        className={`node ${element.selected ? 'node-selected' : 'node-unselected'}`}
+        className={`element ${element.selected ? 'element-selected' : 'element-unselected'}`}
         rx="2"
         onClick={() => selectNode(element.id)}
         onDoubleClick={() => handleDoubleClick(element.id)}
