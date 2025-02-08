@@ -1,7 +1,7 @@
 // src/components/InputFields.js
 import React, { useRef } from 'react';
 import { calculateNodeWidth } from '../utils/TextNodeHelpers';
-import { DEFAULT_SECTION_HEIGHT, DEFAULT_FONT_SIZE } from '../constants/Node';
+import { DEFAULT_SECTION_HEIGHT, DEFAULT_FONT_SIZE } from '../constants/NodeSettings';
 
 // 入力フィールドを描画する部分
 const InputFields = ({ node, updateText, endEditing, zoomRatio }) => {

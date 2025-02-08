@@ -1,18 +1,20 @@
 // src/components/Node.js
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { calculateNodeWidth } from '../utils/TextNodeHelpers';
-import { getNodeById } from '../utils/NodeSelector';
-import { CURVE_CONTROL_OFFSET, ARROW_OFFSET } from '../constants/Node';
+import { 
+  CURVE_CONTROL_OFFSET,
+  ARROW_OFFSET,
+  DEFAULT_SECTION_HEIGHT
+ } from '../constants/NodeSettings';
 import TextSection from './TextDisplayArea';
 
 const SECTION_KEYS = ['text', 'text2', 'text3'];
 
 const useSectionDimensions = (node, updateNodeSize) => {
     const refs = useRef(SECTION_KEYS.map(() => React.createRef()));
-    const [heights, setHeights] = useState(SECTION_KEYS.map(() => 20));
+    const [heights, setHeights] = useState(SECTION_KEYS.map(() => DEFAULT_SECTION_HEIGHT));
   
     const updateDimensions = useCallback(() => {
-      const newHeights = refs.current.map(ref => ref.current?.offsetHeight || 20);
+      const newHeights = refs.current.map(ref => ref.current?.offsetHeight || DEFAULT_SECTION_HEIGHT);
       const newWidths = refs.current.map(ref => ref.current?.offsetWidth || 0);
       const maxWidth = Math.max(...newWidths);
       const totalHeight = newHeights.reduce((sum, h) => sum + h, 0);
@@ -53,7 +55,6 @@ const Node = ({
   const renderConnectionPath = useCallback(() => {
     if (!parentNode) return null;
     
-    const parentWidth = calculateNodeWidth(SECTION_KEYS.map(k => parentNode[k]));
     const pathCommands = [
       `M ${node.x},${node.y + totalHeight / 2}`,
       `C ${node.x - CURVE_CONTROL_OFFSET},${node.y + totalHeight / 2}`,

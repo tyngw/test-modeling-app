@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import App from './App';
+import App from '../App';
 
 test('view-areaが表示されていることを確認', () => {
   render(<App />);
