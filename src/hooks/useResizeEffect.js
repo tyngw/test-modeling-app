@@ -4,7 +4,7 @@ import { calculateCanvasSize } from '../utils/LayoutUtilities';
 
 const useResizeEffect = ({ setCanvasSize, setDisplayArea, state }) => {
     useEffect(() => {
-        const newCanvasSize = calculateCanvasSize(state.nodes);
+        const newCanvasSize = calculateCanvasSize(state.elements);
         newCanvasSize.width = Math.max(newCanvasSize.width, window.innerWidth);
         newCanvasSize.height = Math.max(newCanvasSize.height, window.innerHeight);
         const newViewSize = {
@@ -16,7 +16,7 @@ const useResizeEffect = ({ setCanvasSize, setDisplayArea, state }) => {
         
         setCanvasSize(newCanvasSize);
         setDisplayArea(`0 0 ${newViewSize.width} ${newViewSize.height}`);
-    }, [state.nodes, state.zoomRatio, setCanvasSize, setDisplayArea]);
+    }, [state.elements, state.zoomRatio, setCanvasSize, setDisplayArea]);
 };
 
 export default useResizeEffect;
