@@ -296,11 +296,11 @@ const actionHandlers = {
         const { text, text2, text3, selected, editing, visible, ...rest } = selectedNode;
         console.log('[SELECT_NODE] selectNode:', rest);
 
-        const updatedNodes = Object.values(state.nodes).reduce((acc, node) => {
-            acc[node.id] = {
-                ...node,
-                selected: node.id === action.payload,
-                editing: node.id === action.payload ? node.editing : false
+        const updatedNodes = Object.values(state.nodes).reduce((acc, element) => {
+            acc[element.id] = {
+                ...element,
+                selected: element.id === action.payload,
+                editing: element.id === action.payload ? element.editing : false
             };
             return acc;
         }, {});
@@ -310,8 +310,8 @@ const actionHandlers = {
 
     DESELECT_ALL: state => ({
         ...state,
-        nodes: Object.values(state.nodes).reduce((acc, node) => {
-            acc[node.id] = { ...node, selected: false, editing: false };
+        nodes: Object.values(state.nodes).reduce((acc, element) => {
+            acc[element.id] = { ...element, selected: false, editing: false };
             return acc;
         }, {})
     }),
@@ -327,8 +327,8 @@ const actionHandlers = {
         }
     }),
 
-    ADD_NODE: state => handleNodeMutation(state, (nodes, selectedNode) => {
-        const newNodes = createNodeAdder(nodes, selectedNode);
+    ADD_NODE: state => handleNodeMutation(state, (elements, selectedNode) => {
+        const newNodes = createNodeAdder(elements, selectedNode);
         return adjustNodePositions(newNodes);
     }),
 
@@ -457,8 +457,8 @@ function handleArrowAction(handler) {
         const selectedId = handler(Object.values(state.nodes));
         return {
             ...state,
-            nodes: Object.values(state.nodes).reduce((acc, node) => {
-                acc[node.id] = { ...node, selected: node.id === selectedId };
+            nodes: Object.values(state.nodes).reduce((acc, element) => {
+                acc[element.id] = { ...element, selected: element.id === selectedId };
                 return acc;
             }, {})
         };
@@ -466,7 +466,7 @@ function handleArrowAction(handler) {
 }
 
 function handleNodeMutation(state, mutationFn) {
-    const selectedNode = Object.values(state.nodes).find(node => node.selected);
+    const selectedNode = Object.values(state.nodes).find(element => element.selected);
     if (!selectedNode) return state;
 
     saveSnapshot(state.nodes);
@@ -480,7 +480,7 @@ function handleNodeMutation(state, mutationFn) {
 }
 
 function handleSelectedNodeAction(state, actionFn) {
-    const selectedNode = Object.values(state.nodes).find(node => node.selected);
+    const selectedNode = Object.values(state.nodes).find(element => element.selected);
     return selectedNode ? { ...state, ...actionFn(selectedNode) } : state;
 }
 
