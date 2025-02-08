@@ -4,7 +4,7 @@ import { calculateNodeWidth } from '../utils/TextNodeHelpers';
 import { DEFAULT_SECTION_HEIGHT, DEFAULT_FONT_SIZE } from '../constants/NodeSettings';
 
 // 入力フィールドを描画する部分
-const InputFields = ({ node, updateText, endEditing, zoomRatio }) => {
+const InputFields = ({ node: element, updateText, endEditing, zoomRatio }) => {
     const fields = ['text', 'text2', 'text3'];
     const fieldRefs = {
         text: useRef(null),
@@ -12,10 +12,10 @@ const InputFields = ({ node, updateText, endEditing, zoomRatio }) => {
         text3: useRef(null),
     };
 
-    if (!node) return null;
+    if (!element) return null;
 
-    const maxWidth = calculateNodeWidth([node.text, node.text2, node.text3]);
-    node.width = maxWidth;
+    const maxWidth = calculateNodeWidth([element.text, element.text2, element.text3]);
+    element.width = maxWidth;
 
     const handleKeyDown = (e, field, index) => {
         // タブキーが押された場合、次のフィールドにフォーカスを移動
@@ -52,14 +52,14 @@ const InputFields = ({ node, updateText, endEditing, zoomRatio }) => {
                 let height;
                 switch (field) {
                     case 'text':
-                        console.log(`[InputFields.js] text: ${node.text} height: ${node.section1Height}`);
-                        height = node.section1Height;
+                        console.log(`[InputFields.js] text: ${element.text} height: ${element.section1Height}`);
+                        height = element.section1Height;
                         break;
                     case 'text2':
-                        height = node.section2Height;
+                        height = element.section2Height;
                         break;
                     case 'text3':
-                        height = node.section3Height;
+                        height = element.section3Height;
                         break;
                     default:
                         height = DEFAULT_SECTION_HEIGHT;
@@ -68,21 +68,21 @@ const InputFields = ({ node, updateText, endEditing, zoomRatio }) => {
                 let y = 0;
                 for (let i = 0; i < index; i++) {
                     // それぞれのsectionHeightの値を使用
-                    y += node[`section${i + 1}Height`];
+                    y += element[`section${i + 1}Height`];
                 }
 
                 return (
                     <textarea
                         key={field}
                         ref={fieldRefs[field]}
-                        value={node[field]}
+                        value={element[field]}
                         onChange={(e) => updateText(e.target.value, field)}
                         onKeyDown={(e) => handleKeyDown(e, field, index)}
                         className={`editable editable-${field}`}
                         style={{
                             position: 'absolute',
-                            left: `${node.x * zoomRatio}px`,
-                            top: `${(node.y + y) * zoomRatio}px`, // node.yをベースに相対位置を追加
+                            left: `${element.x * zoomRatio}px`,
+                            top: `${(element.y + y) * zoomRatio}px`, // element.yをベースに相対位置を追加
                             width: `${maxWidth * zoomRatio}px`,
                             height: `${height * zoomRatio}px`,
                             fontSize: `${DEFAULT_FONT_SIZE * zoomRatio}px`,

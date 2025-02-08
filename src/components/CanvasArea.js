@@ -111,8 +111,8 @@ const CanvasArea = () => {
                             return (
                                 <React.Fragment key={node.id}>
                                     <IdeaElement
-                                        nodes={state.nodes}
-                                        node={node}
+                                        elements={state.nodes}
+                                        element={node}
                                         zoomRatio={state.zoomRatio}
                                         selectNode={selectNode}
                                         handleMouseUp={handleMouseUp}

@@ -12,27 +12,27 @@ export const useNodeDragEffect = (state, dispatch) => {
         stateRef.current = state;
     }, [state]);
 
-    const handleMouseDown = useCallback((e, node) => {
-        if (!node.id || !node.parentId) return;
+    const handleMouseDown = useCallback((e, element) => {
+        if (!element.id || !element.parentId) return;
         e.stopPropagation();
-        setDragging(node);
+        setDragging(element);
         setStartPosition({ 
-            x: (e.pageX / stateRef.current.zoomRatio ) - node.x, 
-            y: (e.pageY / stateRef.current.zoomRatio ) - node.y
+            x: (e.pageX / stateRef.current.zoomRatio ) - element.x, 
+            y: (e.pageY / stateRef.current.zoomRatio ) - element.y
         });
-        setOriginalPosition({ x: node.x, y: node.y });
+        setOriginalPosition({ x: element.x, y: element.y });
     }, []);
 
     useEffect(() => {
         if (dragging) {
             const handleMouseMove = (e) => {
-                const overNode = Object.values(state.nodes).find(node => {
+                const overNode = Object.values(state.nodes).find(element => {
                     const x = e.pageX / state.zoomRatio;
                     const y = e.pageY / state.zoomRatio;
-                    return x >= node.x && x <= node.x + node.width &&
-                           y >= node.y && y <= node.y + node.height &&
-                           node.id !== dragging.id &&
-                           node.id !== dragging.parentId;
+                    return x >= element.x && x <= element.x + element.width &&
+                           y >= element.y && y <= element.y + element.height &&
+                           element.id !== dragging.id &&
+                           element.id !== dragging.parentId;
                 });
 
                 setOverDropTarget(overNode || null);

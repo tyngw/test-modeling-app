@@ -12,8 +12,8 @@ export const loadNodes = (event) => {
             reader.onload = function (e) {
                 const contents = e.target.result;
                 try {
-                    const nodes = JSON.parse(contents);
-                    resolve(nodes);
+                    const elements = JSON.parse(contents);
+                    resolve(elements);
                 } catch (error) {
                     throw new Error('Error: ファイルの読み込みに失敗しました');
                 }
@@ -61,16 +61,16 @@ export const saveSvg = (svgElement, name) => {
     document.body.removeChild(downloadLink);
 }
 
-export const saveNodes = (nodes) => {
-    const rootText = nodes.find(node => node.parentId === null).text;
+export const saveNodes = (elements) => {
+    const rootText = elements.find(element => element.parentId === null).text;
     const fileName = rootText || 'Untitled';
 
-    const nodesToSave = nodes.map(node => {
-        const { x, y, ...nodeWithoutXY } = node;
-        return nodeWithoutXY;
+    const elementsToSave = elements.map(element => {
+        const { x, y, ...elementWithoutXY } = element;
+        return elementWithoutXY;
     });
 
-    const json = JSON.stringify(nodesToSave);
+    const json = JSON.stringify(elementsToSave);
     const blob = new Blob([json], { type: "application/json" });
     const url = URL.createObjectURL(blob);
 

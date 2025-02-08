@@ -58,20 +58,20 @@ export const initialState = {
     zoomRatio: 1,
 };
 
-const getSelectedNodeAndChildren = (nodes, targetNode, selectedNode) => {
+const getSelectedNodeAndChildren = (elements, targetNode, selectedElement) => {
     let cutNodes = {};
-    const nodeList = Object.values(nodes);
+    const elementList = Object.values(elements);
 
-    if (targetNode.id === selectedNode.id) {
+    if (targetNode.id === selectedElement.id) {
         cutNodes[targetNode.id] = { ...targetNode, parentId: null };
     } else {
         cutNodes[targetNode.id] = targetNode;
     }
 
-    const childNodes = nodeList.filter(node => node.parentId === targetNode.id);
+    const childNodes = elementList.filter(element => element.parentId === targetNode.id);
     if (childNodes.length > 0) {
         childNodes.forEach(childNode => {
-            const childCutNodes = getSelectedNodeAndChildren(nodes, childNode, selectedNode);
+            const childCutNodes = getSelectedNodeAndChildren(elements, childNode, selectedElement);
             cutNodes = { ...cutNodes, ...childCutNodes };
         });
     }
@@ -79,27 +79,27 @@ const getSelectedNodeAndChildren = (nodes, targetNode, selectedNode) => {
     return cutNodes;
 };
 
-const pasteNodes = (nodes, cutNodes, parentNode) => {
-    const rootNode = Object.values(cutNodes).find(node => node.parentId === null);
+const pasteNodes = (elements, cutElements, parentElement) => {
+    const rootNode = Object.values(cutElements).find(element => element.parentId === null);
     if (!rootNode) {
-        return { ...nodes, ...cutNodes };
+        return { ...elements, ...cutElements };
     }
 
     const rootNodeDepth = rootNode.depth;
-    const baseDepth = parentNode.depth + 1;
+    const baseDepth = parentElement.depth + 1;
     const depthDelta = baseDepth - rootNodeDepth;
     const idMap = new Map();
 
-    const newNodes = Object.values(cutNodes).reduce((acc, cutNode) => {
-        const newNode = { ...cutNode };
+    const newNodes = Object.values(cutElements).reduce((acc, cutElement) => {
+        const newNode = { ...cutElement };
         const newUUID = uuidv4();
-        idMap.set(cutNode.id, newUUID);
+        idMap.set(cutElement.id, newUUID);
         newNode.id = newUUID;
-        newNode.depth = cutNode.depth + depthDelta;
+        newNode.depth = cutElement.depth + depthDelta;
 
-        if (cutNode.id === rootNode.id) {
-            newNode.parentId = parentNode.id;
-            newNode.order = nodes[parentNode.id].children;
+        if (cutElement.id === rootNode.id) {
+            newNode.parentId = parentElement.id;
+            newNode.order = elements[parentElement.id].children;
             newNode.selected = false;
         }
 
@@ -107,23 +107,23 @@ const pasteNodes = (nodes, cutNodes, parentNode) => {
         return acc;
     }, {});
 
-    const updatedNodes = Object.values(newNodes).reduce((acc, node) => {
-        const updatedNode = idMap.has(node.parentId) 
-            ? { ...node, parentId: idMap.get(node.parentId) }
-            : node;
+    const updatedNodes = Object.values(newNodes).reduce((acc, element) => {
+        const updatedNode = idMap.has(element.parentId) 
+            ? { ...element, parentId: idMap.get(element.parentId) }
+            : element;
         acc[updatedNode.id] = updatedNode;
         return acc;
-    }, { ...nodes });
+    }, { ...elements });
 
     // 親ノードのchildrenを更新
-    const updatedParent = { ...parentNode, children: parentNode.children + 1 };
+    const updatedParent = { ...parentElement, children: parentElement.children + 1 };
     updatedNodes[updatedParent.id] = updatedParent;
 
     return updatedNodes;
 };
 
-const setDepthRecursive = (nodes, parentNode) => {
-    const updatedNodes = { ...nodes };
+const setDepthRecursive = (elements, parentElement) => {
+    const updatedNodes = { ...elements };
     const processChildren = (parentId) => {
         const children = Object.values(updatedNodes).filter(n => n.parentId === parentId);
         children.forEach(child => {
@@ -131,12 +131,12 @@ const setDepthRecursive = (nodes, parentNode) => {
             processChildren(child.id);
         });
     };
-    processChildren(parentNode.id);
+    processChildren(parentElement.id);
     return updatedNodes;
 };
 
-const setVisibilityRecursive = (nodes, parentNode, visible) => {
-    const updatedNodes = { ...nodes };
+const setVisibilityRecursive = (elements, parentElement, visible) => {
+    const updatedNodes = { ...elements };
     const processChildren = (parentId) => {
         const children = Object.values(updatedNodes).filter(n => n.parentId === parentId);
         children.forEach(child => {
@@ -144,14 +144,14 @@ const setVisibilityRecursive = (nodes, parentNode, visible) => {
             processChildren(child.id);
         });
     };
-    processChildren(parentNode.id);
+    processChildren(parentElement.id);
     return updatedNodes;
 };
 
-const deleteNodeRecursive = (nodes, nodeToDelete) => {
-    if (nodeToDelete.parentId === null) return nodes;
+const deleteNodeRecursive = (elements, deleteElement) => {
+    if (deleteElement.parentId === null) return elements;
 
-    const updatedNodes = { ...nodes };
+    const updatedNodes = { ...elements };
 
     // 子ノードを再帰的に削除
     const deleteChildren = (parentId) => {
@@ -163,12 +163,12 @@ const deleteNodeRecursive = (nodes, nodeToDelete) => {
     };
 
     // 対象ノードとその子ノードを削除
-    delete updatedNodes[nodeToDelete.id];
-    deleteChildren(nodeToDelete.id);
+    delete updatedNodes[deleteElement.id];
+    deleteChildren(deleteElement.id);
 
     // 親ノードのchildrenを更新
-    if (nodeToDelete.parentId) {
-        const parent = updatedNodes[nodeToDelete.parentId];
+    if (deleteElement.parentId) {
+        const parent = updatedNodes[deleteElement.parentId];
         if (parent) {
             updatedNodes[parent.id] = { ...parent, children: parent.children - 1 };
         }
@@ -177,24 +177,24 @@ const deleteNodeRecursive = (nodes, nodeToDelete) => {
     return updatedNodes;
 };
 
-const adjustNodeAndChildrenPosition = (nodes, node, currentY, maxHeight, visited = new Set()) => {
-    if (visited.has(node.id)) return currentY;
-    visited.add(node.id);
+const adjustNodeAndChildrenPosition = (elements, element, currentY, maxHeight, visited = new Set()) => {
+    if (visited.has(element.id)) return currentY;
+    visited.add(element.id);
 
-    const updatedNodes = { ...nodes };
-    const parentNode = node.parentId ? updatedNodes[node.parentId] : null;
+    const updatedNodes = { ...elements };
+    const parentNode = element.parentId ? updatedNodes[element.parentId] : null;
 
     if (!parentNode) {
-        node.x = DEFAULT_X;
+        element.x = DEFAULT_X;
     } else {
-        node.x = parentNode.x + parentNode.width + X_OFFSET;
+        element.x = parentNode.x + parentNode.width + X_OFFSET;
     }
 
-    node.y = currentY;
-    maxHeight = Math.max(maxHeight, node.height);
-    updatedNodes[node.id] = node;
+    element.y = currentY;
+    maxHeight = Math.max(maxHeight, element.height);
+    updatedNodes[element.id] = element;
 
-    const childNodes = Object.values(updatedNodes).filter(n => n.parentId === node.id);
+    const childNodes = Object.values(updatedNodes).filter(n => n.parentId === element.id);
     if (childNodes.length > 0) {
         childNodes.forEach(childNode => {
             if (!visited.has(childNode.id)) {
@@ -202,7 +202,7 @@ const adjustNodeAndChildrenPosition = (nodes, node, currentY, maxHeight, visited
             }
         });
     } else {
-        if (node.visible || node.order === 0) {
+        if (element.visible || element.order === 0) {
             currentY += maxHeight + Y_OFFSET;
         }
     }
@@ -210,8 +210,8 @@ const adjustNodeAndChildrenPosition = (nodes, node, currentY, maxHeight, visited
     return currentY;
 };
 
-const adjustNodePositions = (nodes) => {
-    const updatedNodes = { ...nodes };
+const adjustNodePositions = (elements) => {
+    const updatedNodes = { ...elements };
     const rootNodes = Object.values(updatedNodes).filter(n => n.parentId === null);
 
     rootNodes.forEach(rootNode => {
@@ -235,15 +235,15 @@ const adjustNodePositions = (nodes) => {
     return updatedNodes;
 };
 
-const createNodeAdder = (nodes, parentNode) => {
+const createNodeAdder = (elements, parentElement) => {
     const newId = uuidv4();
-    const newOrder = parentNode.children;
+    const newOrder = parentElement.children;
 
     const updatedNodes = {
-        ...nodes,
-        [parentNode.id]: { ...parentNode, children: parentNode.children + 1, selected: false },
+        ...elements,
+        [parentElement.id]: { ...parentElement, children: parentElement.children + 1, selected: false },
         [newId]: {
-            ...createNewNode(parentNode.id, newOrder, parentNode.depth + 1),
+            ...createNewNode(parentElement.id, newOrder, parentElement.depth + 1),
             id: newId,
         }
     };
@@ -278,8 +278,8 @@ const actionHandlers = {
     LOAD_NODES: (state, action) => {
         if (Object.keys(action.payload).length === 0) return initialState;
 
-        const updatedNodes = Object.values(action.payload).reduce((acc, node) => {
-            acc[node.id] = node.parentId === null ? { ...node, visible: true } : node;
+        const updatedNodes = Object.values(action.payload).reduce((acc, element) => {
+            acc[element.id] = element.parentId === null ? { ...element, visible: true } : element;
             return acc;
         }, {});
 
@@ -332,22 +332,22 @@ const actionHandlers = {
         return adjustNodePositions(newNodes);
     }),
 
-    DELETE_NODE: state => handleNodeMutation(state, (nodes, selectedNode) =>
-        adjustNodePositions(deleteNodeRecursive(nodes, selectedNode))
+    DELETE_NODE: state => handleNodeMutation(state, (elements, selectedElement) =>
+        adjustNodePositions(deleteNodeRecursive(elements, selectedElement))
     ),
 
-    EDIT_NODE: state => handleSelectedNodeAction(state, selectedNode => ({
+    EDIT_NODE: state => handleSelectedNodeAction(state, selectedElement => ({
         nodes: {
             ...state.nodes,
-            [selectedNode.id]: { ...selectedNode, editing: true }
+            [selectedElement.id]: { ...selectedElement, editing: true }
         }
     })),
 
     END_EDITING: state => ({
         ...state,
         nodes: adjustNodePositions(
-            Object.values(state.nodes).reduce((acc, node) => {
-                acc[node.id] = { ...node, editing: false };
+            Object.values(state.nodes).reduce((acc, element) => {
+                acc[element.id] = { ...element, editing: false };
                 return acc;
             }, {})
         )
@@ -362,16 +362,16 @@ const actionHandlers = {
         const siblings = Object.values(state.nodes).filter(n => n.parentId === payload.newParentId);
         const maxOrder = siblings.length > 0 ? Math.max(...siblings.map(n => n.order)) + 1 : 0;
 
-        const updatedNodes = Object.values(state.nodes).reduce((acc, node) => {
-            let updatedNode = node;
+        const updatedNodes = Object.values(state.nodes).reduce((acc, element) => {
+            let updatedNode = element;
 
-            if (node.parentId === payload.oldParentId && node.order > payload.draggingNodeOrder) {
-                updatedNode = { ...node, order: node.order - 1 };
+            if (element.parentId === payload.oldParentId && element.order > payload.draggingNodeOrder) {
+                updatedNode = { ...element, order: element.order - 1 };
             }
 
-            if (node.id === payload.id) {
+            if (element.id === payload.id) {
                 updatedNode = {
-                    ...node,
+                    ...element,
                     parentId: payload.newParentId,
                     order: maxOrder,
                     depth: payload.depth
@@ -410,10 +410,10 @@ const actionHandlers = {
         }
     }),
 
-    CUT_NODE: state => handleNodeMutation(state, (nodes, selectedNode) => {
-        const cutNodes = getSelectedNodeAndChildren(nodes, selectedNode, selectedNode);
+    CUT_NODE: state => handleNodeMutation(state, (elements, selectedNode) => {
+        const cutNodes = getSelectedNodeAndChildren(elements, selectedNode, selectedNode);
         return {
-            nodes: adjustNodePositions(deleteNodeRecursive(nodes, selectedNode)),
+            nodes: adjustNodePositions(deleteNodeRecursive(elements, selectedNode)),
             cutNodes
         };
     }),
@@ -422,18 +422,18 @@ const actionHandlers = {
         cutNodes: getSelectedNodeAndChildren(state.nodes, selectedNode, selectedNode)
     })),
 
-    PASTE_NODE: state => handleNodeMutation(state, (nodes, selectedNode) => {
-        const pastedNodes = pasteNodes(nodes, state.cutNodes, selectedNode);
+    PASTE_NODE: state => handleNodeMutation(state, (elements, selectedNode) => {
+        const pastedNodes = pasteNodes(elements, state.cutNodes, selectedNode);
         const updatedParent = { ...selectedNode, children: selectedNode.children + 1 };
         return adjustNodePositions({ ...pastedNodes, [updatedParent.id]: updatedParent });
     }),
 
-    EXPAND_NODE: state => handleNodeMutation(state, (nodes, selectedNode) =>
-        adjustNodePositions(setVisibilityRecursive(nodes, selectedNode, true))
+    EXPAND_NODE: state => handleNodeMutation(state, (elements, selectedNode) =>
+        adjustNodePositions(setVisibilityRecursive(elements, selectedNode, true))
     ),
 
-    COLLAPSE_NODE: state => handleNodeMutation(state, (nodes, selectedNode) =>
-        adjustNodePositions(setVisibilityRecursive(nodes, selectedNode, false))
+    COLLAPSE_NODE: state => handleNodeMutation(state, (elements, selectedNode) =>
+        adjustNodePositions(setVisibilityRecursive(elements, selectedNode, false))
     ),
 
     UPDATE_NODE_SIZE: (state, action) => ({
