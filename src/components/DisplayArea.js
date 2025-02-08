@@ -1,6 +1,6 @@
 // src/components/DisplayArea.js
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import Node from './Node';
+import IdeaElement from './IdeaElement';
 import { Marker } from './Marker';
 import QuickMenuBar from './QuickMenuBar';
 import InputFields from './InputFields';
@@ -22,7 +22,7 @@ const DisplayArea = () => {
     const { state, dispatch } = useStore();
 
     const [canvasSize, setCanvasSize] = useState({ width: window.innerWidth, height: window.innerHeight });
-    const [displayArea, setDisplayArea] = useState(`0 0 ${canvasSize.width} ${canvasSize.height} - ICONBAR_HEIGHT`);
+    const [displayArea, setDisplayArea] = useState(`0 0 ${canvasSize.width} ${canvasSize.height  - ICONBAR_HEIGHT}`);
 
     const [isHelpOpen, setHelpOpen] = useState(false);
     const toggleHelp = () => setHelpOpen(!isHelpOpen);
@@ -110,7 +110,7 @@ const DisplayArea = () => {
                                 .some(n => n.parentId === node.id && !n.visible);
                             return (
                                 <React.Fragment key={node.id}>
-                                    <Node
+                                    <IdeaElement
                                         nodes={state.nodes}
                                         node={node}
                                         zoomRatio={state.zoomRatio}

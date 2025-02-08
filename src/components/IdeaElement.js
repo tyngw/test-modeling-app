@@ -1,4 +1,4 @@
-// src/components/Node.js
+// src/components/IdeaElement.js
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { 
   CURVE_CONTROL_OFFSET,
@@ -9,6 +9,13 @@ import TextSection from './TextDisplayArea';
 
 const SECTION_KEYS = ['text', 'text2', 'text3'];
 
+// ```
+// useSectionDimensions
+// 説明:
+// useSectionDimensionsは、ノードの各セクションの高さを計算するためのカスタムフックです。
+// このカスタムフックは、ノードのテキストが変更されたときに高さを更新し、
+// ノードのサイズを更新するためのコールバック関数を呼び出します。
+// ```
 const useSectionDimensions = (node, updateNodeSize) => {
     const refs = useRef(SECTION_KEYS.map(() => React.createRef()));
     const [heights, setHeights] = useState(SECTION_KEYS.map(() => DEFAULT_SECTION_HEIGHT));
@@ -30,7 +37,7 @@ const useSectionDimensions = (node, updateNodeSize) => {
     return { refs: refs.current, heights };
 };
 
-const Node = ({
+const IdeaElement = ({
   nodes,
   node,
   zoomRatio,
@@ -51,6 +58,14 @@ const Node = ({
     text: node[key],
     divRef: sectionRefs[index],
   }));
+
+  
+  // ```
+  // renderConnectionPath
+  // 説明:
+  // renderConnectionPathは、ノードとその親ノードの間に接続線を描画するための関数です。
+  // ベジェ曲線を使用して、接続線を描画し、矢印を追加します。
+  // ```
 
   const renderConnectionPath = useCallback(() => {
     if (!parentNode) return null;
@@ -123,4 +138,4 @@ const Node = ({
   );
 };
 
-export default React.memo(Node);
+export default React.memo(IdeaElement);
