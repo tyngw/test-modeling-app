@@ -13,13 +13,16 @@ import { saveSvg, loadNodes, saveNodes } from '../utils/FileHelpers';
 import FoldingIcon from './FoldingIcon';
 import CustomWindow from './CustomWindow';
 import { helpContent } from '../constants/HelpContent';
+import {
+    ICONBAR_HEIGHT,
+  } from '../constants/Node';
 
 const DisplayArea = () => {
     const svgRef = useRef();
     const { state, dispatch } = useStore();
 
     const [canvasSize, setCanvasSize] = useState({ width: window.innerWidth, height: window.innerHeight });
-    const [displayArea, setDisplayArea] = useState(`0 0 ${canvasSize.width} ${canvasSize.height}`);
+    const [displayArea, setDisplayArea] = useState(`0 0 ${canvasSize.width} ${canvasSize.height} - ICONBAR_HEIGHT`);
 
     const [isHelpOpen, setHelpOpen] = useState(false);
     const toggleHelp = () => setHelpOpen(!isHelpOpen);
@@ -83,7 +86,7 @@ const DisplayArea = () => {
                 toggleHelp={toggleHelp}
             />
 
-            <div style={{ position: 'absolute', top: 0, left: 0, overflow: 'auto' }}>
+            <div style={{ position: 'absolute', top: ICONBAR_HEIGHT, left: 0, overflow: 'auto' }}>
                 <CustomWindow isOpen={isHelpOpen} onClose={toggleHelp}>
                     <div dangerouslySetInnerHTML={{ __html: helpContent }} />
                 </CustomWindow>
