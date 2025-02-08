@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import {
   NODE_HEIGHT,
   X_OFFSET,
-} from '../constants/Node';
+} from '../constants/NodeSettings';
 
 export const useWindowSize = () => {
   const [windowSize, setWindowSize] = useState({

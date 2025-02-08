@@ -12,7 +12,7 @@ import {
     NODE_HEIGHT,
     MIN_WIDTH,
     DEFAULT_SECTION_HEIGHT
-} from '../constants/Node';
+} from '../constants/NodeSettings';
 // import {
 //     deleteNodeRecursive,
 //     setDepthRecursive,

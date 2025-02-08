@@ -1,5 +1,5 @@
-// utils/TextNodeHelpers.js
-import { MIN_WIDTH, MAX_WIDTH, MULTIBYTE_CHAR_WIDTH, SINGLEBYTE_CHAR_WIDTH } from '../constants/Node';
+// src/utils/TextNodeHelpers.js
+import { MIN_WIDTH, MAX_WIDTH, MULTIBYTE_CHAR_WIDTH, SINGLEBYTE_CHAR_WIDTH } from '../constants/NodeSettings';
 
 export const calculateTextWidth = (text) => {
   const lines = text?.split('\n') || [];

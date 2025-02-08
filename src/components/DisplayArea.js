@@ -15,7 +15,7 @@ import CustomWindow from './CustomWindow';
 import { helpContent } from '../constants/HelpContent';
 import {
     ICONBAR_HEIGHT,
-  } from '../constants/Node';
+  } from '../constants/NodeSettings';
 
 const DisplayArea = () => {
     const svgRef = useRef();

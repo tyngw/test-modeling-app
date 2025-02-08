@@ -1,3 +1,4 @@
+// src/components/QuickMenuBar.js
 import React, { useRef } from 'react';
 import Button from '@mui/material/Button';
 import UndoIcon from '@mui/icons-material/Undo';
@@ -9,7 +10,7 @@ import SaveAsOutlinedIcon from '@mui/icons-material/SaveAsOutlined';
 import SaveAltIcon from '@mui/icons-material/SaveAlt';
 import HelpOutlineOutlinedIcon from '@mui/icons-material/HelpOutlineOutlined';
 import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined';
-import { ICONBAR_HEIGHT } from '../constants/Node';
+import { ICONBAR_HEIGHT } from '../constants/NodeSettings';
 
 
 const QuickMenuBar = ({
@@ -26,7 +27,7 @@ const QuickMenuBar = ({
 
     return (
         // フォーカスを無効にするためにdiv:focus outline: noneを設定
-        <div style={{ position: 'fixed', width: '100%', height: ICONBAR_HEIGHT, zIndex: 100, }}>
+        <div style={{ position: 'fixed', width: '100%', height: ICONBAR_HEIGHT, zIndex: 10000, }}>
             <div style={{ display: 'flex', justifyContent: 'left', alignItems: 'center', height: '100%', backgroundColor: '#f1f1f1', borderRadius: '30px', padding: '0 20px', }}>
                 <input type="file" ref={fileInput} onChange={loadNodes} style={{ display: 'none' }} />
                 <Button variant="text" className="iconbar-button" onClick={handleButtonClick.bind(null, 'NEW')} >

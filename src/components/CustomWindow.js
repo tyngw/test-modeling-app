@@ -1,3 +1,4 @@
+// src/components/CustomWindow.js
 import React from 'react';
 
 const CustomWindow = ({ isOpen, onClose, children }) => {

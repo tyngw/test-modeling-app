@@ -1,3 +1,4 @@
+// src/components/FoldingIcon.js
 import React from 'react';
 
 const FoldingIcon = ({ node }) => {
