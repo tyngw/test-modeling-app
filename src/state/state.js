@@ -44,7 +44,7 @@ const createNewNode = (parentId, order, depth) => ({
 });
 
 export const initialState = {
-    nodes: {
+    elements: {
         1: {
             ...createNewNode(null, 0, 1),
             id: 1,
@@ -285,18 +285,18 @@ const actionHandlers = {
 
         return {
             ...state,
-            nodes: adjustNodePositions(updatedNodes)
+            elements: adjustNodePositions(updatedNodes)
         };
     },
 
     SELECT_NODE: (state, action) => {
-        const selectedNode = state.nodes[action.payload];
+        const selectedNode = state.elements[action.payload];
         if (!selectedNode) return state;
 
         const { text, text2, text3, selected, editing, visible, ...rest } = selectedNode;
         console.log('[SELECT_NODE] selectNode:', rest);
 
-        const updatedNodes = Object.values(state.nodes).reduce((acc, element) => {
+        const updatedNodes = Object.values(state.elements).reduce((acc, element) => {
             acc[element.id] = {
                 ...element,
                 selected: element.id === action.payload,
@@ -305,12 +305,12 @@ const actionHandlers = {
             return acc;
         }, {});
 
-        return { ...state, nodes: updatedNodes };
+        return { ...state, elements: updatedNodes };
     },
 
     DESELECT_ALL: state => ({
         ...state,
-        nodes: Object.values(state.nodes).reduce((acc, element) => {
+        elements: Object.values(state.elements).reduce((acc, element) => {
             acc[element.id] = { ...element, selected: false, editing: false };
             return acc;
         }, {})
@@ -318,10 +318,10 @@ const actionHandlers = {
 
     UPDATE_TEXT: (state, action) => ({
         ...state,
-        nodes: {
-            ...state.nodes,
+        elements: {
+            ...state.elements,
             [action.payload.id]: {
-                ...state.nodes[action.payload.id],
+                ...state.elements[action.payload.id],
                 [action.payload.field]: action.payload.value
             }
         }
@@ -337,32 +337,32 @@ const actionHandlers = {
     ),
 
     EDIT_NODE: state => handleSelectedNodeAction(state, selectedElement => ({
-        nodes: {
-            ...state.nodes,
+        elements: {
+            ...state.elements,
             [selectedElement.id]: { ...selectedElement, editing: true }
         }
     })),
 
     END_EDITING: state => ({
         ...state,
-        nodes: adjustNodePositions(
-            Object.values(state.nodes).reduce((acc, element) => {
+        elements: adjustNodePositions(
+            Object.values(state.elements).reduce((acc, element) => {
                 acc[element.id] = { ...element, editing: false };
                 return acc;
             }, {})
         )
     }),
 
-    UNDO: state => ({ ...state, nodes: Undo(state.nodes) }),
-    REDO: state => ({ ...state, nodes: Redo(state.nodes) }),
-    SNAPSHOT: state => { saveSnapshot(state.nodes); return state; },
+    UNDO: state => ({ ...state, elements: Undo(state.elements) }),
+    REDO: state => ({ ...state, elements: Redo(state.elements) }),
+    SNAPSHOT: state => { saveSnapshot(state.elements); return state; },
 
     DROP_NODE: (state, action) => {
         const { payload } = action;
-        const siblings = Object.values(state.nodes).filter(n => n.parentId === payload.newParentId);
+        const siblings = Object.values(state.elements).filter(n => n.parentId === payload.newParentId);
         const maxOrder = siblings.length > 0 ? Math.max(...siblings.map(n => n.order)) + 1 : 0;
 
-        const updatedNodes = Object.values(state.nodes).reduce((acc, element) => {
+        const updatedNodes = Object.values(state.elements).reduce((acc, element) => {
             let updatedNode = element;
 
             if (element.parentId === payload.oldParentId && element.order > payload.draggingNodeOrder) {
@@ -383,13 +383,13 @@ const actionHandlers = {
         }, {});
 
         const parentUpdates = {
-            [payload.oldParentId]: { ...state.nodes[payload.oldParentId], children: state.nodes[payload.oldParentId].children - 1 },
-            [payload.newParentId]: { ...state.nodes[payload.newParentId], children: state.nodes[payload.newParentId].children + 1 }
+            [payload.oldParentId]: { ...state.elements[payload.oldParentId], children: state.elements[payload.oldParentId].children - 1 },
+            [payload.newParentId]: { ...state.elements[payload.newParentId], children: state.elements[payload.newParentId].children + 1 }
         };
 
         return {
             ...state,
-            nodes: adjustNodePositions(
+            elements: adjustNodePositions(
                 setDepthRecursive(
                     { ...updatedNodes, ...parentUpdates },
                     payload
@@ -400,10 +400,10 @@ const actionHandlers = {
 
     MOVE_NODE: (state, action) => ({
         ...state,
-        nodes: {
-            ...state.nodes,
+        elements: {
+            ...state.elements,
             [action.payload.id]: {
-                ...state.nodes[action.payload.id],
+                ...state.elements[action.payload.id],
                 x: action.payload.x,
                 y: action.payload.y
             }
@@ -413,13 +413,13 @@ const actionHandlers = {
     CUT_NODE: state => handleNodeMutation(state, (elements, selectedNode) => {
         const cutNodes = getSelectedNodeAndChildren(elements, selectedNode, selectedNode);
         return {
-            nodes: adjustNodePositions(deleteNodeRecursive(elements, selectedNode)),
+            elements: adjustNodePositions(deleteNodeRecursive(elements, selectedNode)),
             cutNodes
         };
     }),
 
     COPY_NODE: state => handleSelectedNodeAction(state, selectedNode => ({
-        cutNodes: getSelectedNodeAndChildren(state.nodes, selectedNode, selectedNode)
+        cutNodes: getSelectedNodeAndChildren(state.elements, selectedNode, selectedNode)
     })),
 
     PASTE_NODE: state => handleNodeMutation(state, (elements, selectedNode) => {
@@ -438,10 +438,10 @@ const actionHandlers = {
 
     UPDATE_NODE_SIZE: (state, action) => ({
         ...state,
-        nodes: {
-            ...state.nodes,
+        elements: {
+            ...state.elements,
             [action.payload.id]: {
-                ...state.nodes[action.payload.id],
+                ...state.elements[action.payload.id],
                 width: action.payload.width,
                 height: action.payload.height,
                 section1Height: action.payload.sectionHeights[0],
@@ -454,10 +454,10 @@ const actionHandlers = {
 
 function handleArrowAction(handler) {
     return state => {
-        const selectedId = handler(Object.values(state.nodes));
+        const selectedId = handler(Object.values(state.elements));
         return {
             ...state,
-            nodes: Object.values(state.nodes).reduce((acc, element) => {
+            elements: Object.values(state.elements).reduce((acc, element) => {
                 acc[element.id] = { ...element, selected: element.id === selectedId };
                 return acc;
             }, {})
@@ -466,21 +466,21 @@ function handleArrowAction(handler) {
 }
 
 function handleNodeMutation(state, mutationFn) {
-    const selectedNode = Object.values(state.nodes).find(element => element.selected);
+    const selectedNode = Object.values(state.elements).find(element => element.selected);
     if (!selectedNode) return state;
 
-    saveSnapshot(state.nodes);
-    const mutationResult = mutationFn(state.nodes, selectedNode);
+    saveSnapshot(state.elements);
+    const mutationResult = mutationFn(state.elements, selectedNode);
 
     return {
         ...state,
-        nodes: mutationResult.nodes || mutationResult,
+        elements: mutationResult.elements || mutationResult,
         ...(mutationResult.cutNodes && { cutNodes: mutationResult.cutNodes })
     };
 }
 
 function handleSelectedNodeAction(state, actionFn) {
-    const selectedNode = Object.values(state.nodes).find(element => element.selected);
+    const selectedNode = Object.values(state.elements).find(element => element.selected);
     return selectedNode ? { ...state, ...actionFn(selectedNode) } : state;
 }
 

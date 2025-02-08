@@ -44,14 +44,14 @@ export const clearLocalStorage = () => {
 };
 
 export const saveToLocalStorage = (elements) => {
-    localStorage.setItem('nodes', JSON.stringify(elements));
+    localStorage.setItem('elements', JSON.stringify(elements));
 };
 
 export const loadFromLocalStorage = () => {
     // localStorageに値がない場合は空の配列を返す
-    if (!localStorage.getItem('nodes')) {
+    if (!localStorage.getItem('elements')) {
         return [];
     }
-    const elements = JSON.parse(localStorage.getItem('nodes'));
+    const elements = JSON.parse(localStorage.getItem('elements'));
     return elements;
 };
