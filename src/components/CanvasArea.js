@@ -104,15 +104,15 @@ const CanvasArea = () => {
                 >
                     <Marker />
                     {Object.values(state.nodes)
-                        .filter(node => node.visible)
-                        .map(node => {
+                        .filter(element => element.visible)
+                        .map(element => {
                             const hasHiddenChildren = Object.values(state.nodes)
-                                .some(n => n.parentId === node.id && !n.visible);
+                                .some(n => n.parentId === element.id && !n.visible);
                             return (
-                                <React.Fragment key={node.id}>
+                                <React.Fragment key={element.id}>
                                     <IdeaElement
                                         elements={state.nodes}
-                                        element={node}
+                                        element={element}
                                         zoomRatio={state.zoomRatio}
                                         selectNode={selectNode}
                                         handleMouseUp={handleMouseUp}
@@ -121,7 +121,7 @@ const CanvasArea = () => {
                                         overDropTarget={overDropTarget}
                                         updateNodeSize={updateNodeSize}
                                     />
-                                    {hasHiddenChildren && <FoldingIcon node={node} />}
+                                    {hasHiddenChildren && <FoldingIcon element={element} />}
                                 </React.Fragment>
                             );
                         })}
