@@ -26,7 +26,7 @@ export const useNodeDragEffect = (state, dispatch) => {
     useEffect(() => {
         if (dragging) {
             const handleMouseMove = (e) => {
-                const overNode = Object.values(state.nodes).find(element => {
+                const overNode = Object.values(state.elements).find(element => {
                     const x = e.pageX / state.zoomRatio;
                     const y = e.pageY / state.zoomRatio;
                     return x >= element.x && x <= element.x + element.width &&
@@ -48,7 +48,7 @@ export const useNodeDragEffect = (state, dispatch) => {
             document.addEventListener('mousemove', handleMouseMove);
             return () => document.removeEventListener('mousemove', handleMouseMove);
         }
-    }, [dragging, startPosition, state.zoomRatio, state.nodes, dispatch]);
+    }, [dragging, startPosition, state.zoomRatio, state.elements, dispatch]);
 
     const handleMouseUp = useCallback(() => {
         if (dragging) {
