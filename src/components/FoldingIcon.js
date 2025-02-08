@@ -1,7 +1,7 @@
 // src/components/FoldingIcon.js
 import React from 'react';
 
-const FoldingIcon = ({ element }) => {
+const FoldingIcon = ({ node: element }) => {
     return (
         <g>
             <circle
