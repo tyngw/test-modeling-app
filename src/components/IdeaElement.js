@@ -16,7 +16,7 @@ const SECTION_KEYS = ['text', 'text2', 'text3'];
 // このカスタムフックは、ノードのテキストが変更されたときに高さを更新し、
 // ノードのサイズを更新するためのコールバック関数を呼び出します。
 // ```
-const useSectionDimensions = (node, updateNodeSize) => {
+const useSectionDimensions = (element, updateNodeSize) => {
     const refs = useRef(SECTION_KEYS.map(() => React.createRef()));
     const [heights, setHeights] = useState(SECTION_KEYS.map(() => DEFAULT_SECTION_HEIGHT));
   
@@ -27,19 +27,19 @@ const useSectionDimensions = (node, updateNodeSize) => {
       const totalHeight = newHeights.reduce((sum, h) => sum + h, 0);
       
       setHeights(newHeights);
-      updateNodeSize(node.id, maxWidth, totalHeight, { sectionHeights: newHeights });
-    }, [node.id, updateNodeSize]);
+      updateNodeSize(element.id, maxWidth, totalHeight, { sectionHeights: newHeights });
+    }, [element.id, updateNodeSize]);
   
     useEffect(() => {
       updateDimensions();
-    }, [node.text, node.text2, node.text3, updateDimensions]);
+    }, [element.text, element.text2, element.text3, updateDimensions]);
   
     return { refs: refs.current, heights };
 };
 
 const IdeaElement = ({
-  nodes,
-  node,
+  elements,
+  element,
   zoomRatio,
   selectNode,
   handleMouseDown,
@@ -48,14 +48,14 @@ const IdeaElement = ({
   overDropTarget,
   updateNodeSize,
 }) => {
-  const parentNode = nodes[node.parentId]; // 直接オブジェクトから取得
-  const { refs: sectionRefs, heights: sectionHeights } = useSectionDimensions(node, updateNodeSize);
+  const parentNode = elements[element.parentId]; // 直接オブジェクトから取得
+  const { refs: sectionRefs, heights: sectionHeights } = useSectionDimensions(element, updateNodeSize);
   const totalHeight = sectionHeights.reduce((sum, h) => sum + h, 0);
   const overDropTargetId = overDropTarget?.id || -1;
 
   const sections = SECTION_KEYS.map((key, index) => ({
     height: sectionHeights[index],
-    text: node[key],
+    text: element[key],
     divRef: sectionRefs[index],
   }));
 
@@ -71,8 +71,8 @@ const IdeaElement = ({
     if (!parentNode) return null;
     
     const pathCommands = [
-      `M ${node.x},${node.y + totalHeight / 2}`,
-      `C ${node.x - CURVE_CONTROL_OFFSET},${node.y + totalHeight / 2}`,
+      `M ${element.x},${element.y + totalHeight / 2}`,
+      `C ${element.x - CURVE_CONTROL_OFFSET},${element.y + totalHeight / 2}`,
       `${parentNode.x + parentNode.width + CURVE_CONTROL_OFFSET},${parentNode.y + parentNode.height / 2}`,
       `${parentNode.x + parentNode.width + ARROW_OFFSET},${parentNode.y + parentNode.height / 2}`
     ].join(' ');
@@ -86,48 +86,48 @@ const IdeaElement = ({
         markerEnd="url(#arrowhead)"
       />
     );
-  }, [parentNode, node, totalHeight]);
+  }, [parentNode, element, totalHeight]);
 
   return (
-    <React.Fragment key={node.id}>
+    <React.Fragment key={element.id}>
       {renderConnectionPath()}
 
       <rect
-        x={node.x}
-        y={node.y}
-        width={node.width}
+        x={element.x}
+        y={element.y}
+        width={element.width}
         height={totalHeight}
-        className={`node ${node.selected ? 'node-selected' : 'node-unselected'}`}
+        className={`node ${element.selected ? 'node-selected' : 'node-unselected'}`}
         rx="2"
-        onClick={() => selectNode(node.id)}
-        onDoubleClick={() => handleDoubleClick(node.id)}
-        onMouseDown={(e) => handleMouseDown(e, node)}
+        onClick={() => selectNode(element.id)}
+        onDoubleClick={() => handleDoubleClick(element.id)}
+        onMouseDown={(e) => handleMouseDown(e, element)}
         onMouseUp={handleMouseUp}
-        style={{ fill: node.id === overDropTargetId ? 'lightblue' : 'white' }}
+        style={{ fill: element.id === overDropTargetId ? 'lightblue' : 'white' }}
       />
 
       {sections.map((section, index) => (
-        <React.Fragment key={`${node.id}-section-${index}`}>
+        <React.Fragment key={`${element.id}-section-${index}`}>
           <TextSection
-            x={node.x}
-            y={node.y + sections.slice(0, index).reduce((sum, s) => sum + s.height, 0)}
-            width={node.width}
+            x={element.x}
+            y={element.y + sections.slice(0, index).reduce((sum, s) => sum + s.height, 0)}
+            width={element.width}
             height={section.height}
             text={section.text}
             zoomRatio={zoomRatio}
             divRef={section.divRef}
-            selectNode={() => selectNode(node.id)}
-            handleDoubleClick={() => handleDoubleClick(node.id)}
-            handleMouseDown={(e) => handleMouseDown(e, node)}
+            selectNode={() => selectNode(element.id)}
+            handleDoubleClick={() => handleDoubleClick(element.id)}
+            handleMouseDown={(e) => handleMouseDown(e, element)}
             handleMouseUp={handleMouseUp}
           />
           
           {index < sections.length - 1 && (
             <line
-              x1={node.x}
-              y1={node.y + sections.slice(0, index + 1).reduce((sum, s) => sum + s.height, 0)}
-              x2={node.x + node.width}
-              y2={node.y + sections.slice(0, index + 1).reduce((sum, s) => sum + s.height, 0)}
+              x1={element.x}
+              y1={element.y + sections.slice(0, index + 1).reduce((sum, s) => sum + s.height, 0)}
+              x2={element.x + element.width}
+              y2={element.y + sections.slice(0, index + 1).reduce((sum, s) => sum + s.height, 0)}
               stroke="black"
               strokeWidth="1"
             />

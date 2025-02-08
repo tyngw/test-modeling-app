@@ -3,31 +3,31 @@
 let snapshots = [];
 let snapshotIndex = 0;
 
-export const Undo = (nodes) => {
+export const Undo = (elements) => {
     if (snapshotIndex > 0) {
-        snapshots[snapshotIndex] = nodes;
+        snapshots[snapshotIndex] = elements;
         snapshotIndex--;
         return snapshots[snapshotIndex];
     } else {
-        return nodes;
+        return elements;
     }
 };
 
-export const Redo = (nodes) => {
+export const Redo = (elements) => {
     if (snapshotIndex < snapshots.length - 1) {
         snapshotIndex++;
         return snapshots[snapshotIndex];
     } else {
-        return nodes;
+        return elements;
     }
 };
 
-export const saveSnapshot = (nodes) => {
+export const saveSnapshot = (elements) => {
     console.log(`saveSnapshot snapshotIndex: ${snapshotIndex}`);
     const newSnapshots = snapshots.slice(0, snapshotIndex + 1);
 
-    newSnapshots.push(nodes);
-    saveToLocalStorage(nodes);
+    newSnapshots.push(elements);
+    saveToLocalStorage(elements);
     snapshots = newSnapshots;
     snapshotIndex++;
 };
@@ -43,8 +43,8 @@ export const clearLocalStorage = () => {
     localStorage.clear();
 };
 
-export const saveToLocalStorage = (nodes) => {
-    localStorage.setItem('nodes', JSON.stringify(nodes));
+export const saveToLocalStorage = (elements) => {
+    localStorage.setItem('nodes', JSON.stringify(elements));
 };
 
 export const loadFromLocalStorage = () => {
@@ -52,6 +52,6 @@ export const loadFromLocalStorage = () => {
     if (!localStorage.getItem('nodes')) {
         return [];
     }
-    const nodes = JSON.parse(localStorage.getItem('nodes'));
-    return nodes;
+    const elements = JSON.parse(localStorage.getItem('nodes'));
+    return elements;
 };
