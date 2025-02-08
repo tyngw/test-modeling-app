@@ -27,7 +27,7 @@ const CanvasArea = () => {
     const [isHelpOpen, setHelpOpen] = useState(false);
     const toggleHelp = () => setHelpOpen(!isHelpOpen);
 
-    const editingNode = Object.values(state.nodes).find(element => element.editing);
+    const editingNode = Object.values(state.elements).find(element => element.editing);
 
     const updateText = (text, field) => {
         if (!editingNode) return;
@@ -35,8 +35,8 @@ const CanvasArea = () => {
     };
 
     useEffect(() => {
-        const nodeList = loadFromLocalStorage();
-        if (nodeList) dispatch({ type: 'LOAD_NODES', payload: nodeList });
+        const elementList = loadFromLocalStorage();
+        if (elementList) dispatch({ type: 'LOAD_NODES', payload: elementList });
     }, [dispatch]);
 
     const endEditing = () => {
@@ -82,7 +82,7 @@ const CanvasArea = () => {
                 handleButtonClick={handleButtonClick}
                 saveSvg={() => saveSvg(svgRef.current, 'download.svg')}
                 loadNodes={handleFileSelect}
-                saveNodes={() => saveNodes(Object.values(state.nodes))}
+                saveNodes={() => saveNodes(Object.values(state.elements))}
                 toggleHelp={toggleHelp}
             />
 
@@ -103,15 +103,15 @@ const CanvasArea = () => {
                     className="svg-element"
                 >
                     <Marker />
-                    {Object.values(state.nodes)
+                    {Object.values(state.elements)
                         .filter(element => element.visible)
                         .map(element => {
-                            const hasHiddenChildren = Object.values(state.nodes)
+                            const hasHiddenChildren = Object.values(state.elements)
                                 .some(n => n.parentId === element.id && !n.visible);
                             return (
                                 <React.Fragment key={element.id}>
                                     <IdeaElement
-                                        elements={state.nodes}
+                                        elements={state.elements}
                                         element={element}
                                         zoomRatio={state.zoomRatio}
                                         selectNode={selectNode}
