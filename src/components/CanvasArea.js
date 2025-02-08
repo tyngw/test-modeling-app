@@ -1,4 +1,4 @@
-// src/components/DisplayArea.js
+// src/components/CanvasArea.js
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import IdeaElement from './IdeaElement';
 import { Marker } from './Marker';
@@ -17,12 +17,12 @@ import {
     ICONBAR_HEIGHT,
   } from '../constants/NodeSettings';
 
-const DisplayArea = () => {
+const CanvasArea = () => {
     const svgRef = useRef();
     const { state, dispatch } = useStore();
 
-    const [canvasSize, setCanvasSize] = useState({ width: window.innerWidth, height: window.innerHeight });
-    const [displayArea, setDisplayArea] = useState(`0 0 ${canvasSize.width} ${canvasSize.height  - ICONBAR_HEIGHT}`);
+    const [displayScopeSize, setCanvasSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+    const [displayArea, setDisplayArea] = useState(`0 0 ${displayScopeSize.width} ${displayScopeSize.height  - ICONBAR_HEIGHT}`);
 
     const [isHelpOpen, setHelpOpen] = useState(false);
     const toggleHelp = () => setHelpOpen(!isHelpOpen);
@@ -94,8 +94,8 @@ const DisplayArea = () => {
                 <svg
                     data-testid="view-area"
                     ref={svgRef}
-                    width={canvasSize.width}
-                    height={canvasSize.height}
+                    width={displayScopeSize.width}
+                    height={displayScopeSize.height}
                     viewBox={displayArea}
                     tabIndex="0"
                     onKeyDown={handleKeyDown}
@@ -138,4 +138,4 @@ const DisplayArea = () => {
     );
 };
 
-export default React.memo(DisplayArea);
+export default React.memo(CanvasArea);
