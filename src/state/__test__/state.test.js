@@ -422,7 +422,7 @@ describe('state reducer', () => {
         state = result.current.state;
         const nodeD = Object.values(state.elements).find(n => n.parentId === nodeB.id);
     
-        // ドロップ操作
+        // ドロップ操作(ノードDをノードCの子ノードに移動)
         await act(async () => {
             dispatch({
                 type: 'DROP_NODE',
@@ -448,6 +448,99 @@ describe('state reducer', () => {
         expect(oldParentB.children).toBe(0);
         expect(newParentC.children).toBe(1);
         
+    });
+
+    it('子ノードにドラッグした時に移動できないことを確認する', async () => {
+        const { result } = renderHook(() => useStore());
+        const { dispatch } = result.current;
+    
+        // ルートノードA（ID:1）を選択して子ノードBを追加
+        await act(async () => {
+            dispatch({ type: 'SELECT_NODE', payload: 1 });
+            dispatch({ type: 'ADD_NODE' });
+        });
+
+        let state = result.current.state;
+        let nodeB = Object.values(state.elements).find(n => n.parentId === 1);
+
+        // ノードBを選択して子ノードCを追加
+        await act(async () => {
+            dispatch({ type: 'SELECT_NODE', payload: nodeB.id });
+            dispatch({ type: 'ADD_NODE' });
+        });
+
+        state = result.current.state;
+        let nodeC = Object.values(state.elements).find(n => n.parentId === nodeB.id);
+
+        // ドロップ操作(ノードBをノードCの子ノードに移動)
+        await act(async () => {
+            dispatch({
+                type: 'DROP_NODE',
+                payload: {
+                    id: nodeB.id,
+                    oldParentId: 1,
+                    newParentId: nodeC.id,
+                    draggingNodeOrder: nodeB.order,
+                    depth: nodeC.depth + 1
+                }
+            });
+        });
+
+        const dragAfterState = result.current.state;
+        // assertion(ドロップ前後で状態が変化していないことを確認)
+        expect(dragAfterState).toEqual(state);
+
+    });
+
+    it('孫ノードにドラッグした時に移動できないことを確認する', async () => {
+        const { result } = renderHook(() => useStore());
+        const { dispatch } = result.current;
+    
+        // ルートノードA（ID:1）を選択して子ノードBを追加
+        await act(async () => {
+            dispatch({ type: 'SELECT_NODE', payload: 1 });
+            dispatch({ type: 'ADD_NODE' });
+        });
+
+        let state = result.current.state;
+        let nodeB = Object.values(state.elements).find(n => n.parentId === 1);
+
+        // ノードBを選択して子ノードCを追加
+        await act(async () => {
+            dispatch({ type: 'SELECT_NODE', payload: nodeB.id });
+            dispatch({ type: 'ADD_NODE' });
+        });
+
+        state = result.current.state;
+        let nodeC = Object.values(state.elements).find(n => n.parentId === nodeB.id);
+
+        // ノードCを選択して子ノードDを追加
+        await act(async () => {
+            dispatch({ type: 'SELECT_NODE', payload: nodeC.id });
+            dispatch({ type: 'ADD_NODE' });
+        });
+
+        state = result.current.state;
+        let nodeD = Object.values(state.elements).find(n => n.parentId === nodeC.id);
+
+        // ドロップ操作(ノードBをノードDの子ノードに移動)
+        await act(async () => {
+            dispatch({
+                type: 'DROP_NODE',
+                payload: {
+                    id: nodeB.id,
+                    oldParentId: 1,
+                    newParentId: nodeC.id,
+                    draggingNodeOrder: nodeB.order,
+                    depth: nodeC.depth + 1
+                }
+            });
+        });
+
+        const dragAfterState = result.current.state;
+        // assertion(ドロップ前後で状態が変化していないことを確認)
+        expect(dragAfterState).toEqual(state);
+
     });
 
     it('ノードを折りたたみ、展開できることを確認する', () => {
