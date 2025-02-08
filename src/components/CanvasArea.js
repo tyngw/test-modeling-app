@@ -11,7 +11,7 @@ import { useClickOutside } from '../hooks/useClickOutside';
 import { loadFromLocalStorage } from '../state/undoredo';
 import { saveSvg, loadNodes, saveNodes } from '../utils/FileHelpers';
 import FoldingIcon from './FoldingIcon';
-import CustomWindow from './CustomWindow';
+import ModalWindow from './ModalWindow';
 import { helpContent } from '../constants/HelpContent';
 import {
     ICONBAR_HEIGHT,
@@ -87,9 +87,9 @@ const CanvasArea = () => {
             />
 
             <div style={{ position: 'absolute', top: ICONBAR_HEIGHT, left: 0, overflow: 'auto' }}>
-                <CustomWindow isOpen={isHelpOpen} onClose={toggleHelp}>
+                <ModalWindow isOpen={isHelpOpen} onClose={toggleHelp}>
                     <div dangerouslySetInnerHTML={{ __html: helpContent }} />
-                </CustomWindow>
+                </ModalWindow>
 
                 <svg
                     data-testid="view-area"

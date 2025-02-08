@@ -1,7 +1,7 @@
-// src/components/CustomWindow.js
+// src/components/ModalWindow.js
 import React from 'react';
 
-const CustomWindow = ({ isOpen, onClose, children }) => {
+const ModalWindow = ({ isOpen, onClose, children }) => {
     if (!isOpen) {
         return null;
     }
@@ -18,4 +18,4 @@ const CustomWindow = ({ isOpen, onClose, children }) => {
     );
 };
 
-export default CustomWindow;
+export default ModalWindow;
