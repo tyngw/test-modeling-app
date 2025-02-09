@@ -17,8 +17,6 @@ const TextDisplayArea = memo(({
   const prevText = useRef(text);
   const prevWidth = useRef(width);
 
-  console.log('[TextDisplayArea] Current zoomRatio:', zoomRatio);
-
   useEffect(() => {
     let animationFrame;
     const updateHeight = () => {
@@ -67,7 +65,7 @@ const TextDisplayArea = memo(({
             sans-serif
           `,
           width: `${width}px`,
-          minHeight: `${DEFAULT_SECTION_HEIGHT * zoomRatio}px`,
+          minHeight: `${DEFAULT_SECTION_HEIGHT}px`,
           padding: '2px 3px',
           overflow: 'hidden',
           whiteSpace: 'pre-wrap',

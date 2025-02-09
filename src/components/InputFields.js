@@ -15,8 +15,6 @@ const InputFields = ({ element }) => {
 
     if (!element) return null;
 
-    console.log('[InputFields] Current zoomRatio:', state.zoomRatio);
-
     const sectionHeights = [
         element.section1Height,
         element.section2Height,
