@@ -55,7 +55,7 @@ const TextDisplayArea = memo(({
       <div
         ref={textRef}
         style={{
-          fontSize: `${DEFAULT_FONT_SIZE * zoomRatio}px`,
+          fontSize: `${DEFAULT_FONT_SIZE}px`,
           lineHeight: `${LINE_HEIGHT_RATIO}em`,
           fontFamily: `
             -apple-system,
