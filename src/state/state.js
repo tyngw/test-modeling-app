@@ -1,5 +1,5 @@
 // src/state/state.js
-import { useReducer } from 'react';
+// import { useReducer } from 'react';
 // import { adjustNodePositions } from '../utils/NodeAdjuster';
 import { Undo, Redo, saveSnapshot, clearSnapshots } from './undoredo';
 import { handleArrowUp, handleArrowDown, handleArrowRight, handleArrowLeft } from '../utils/NodeSelector';
@@ -436,20 +436,24 @@ const actionHandlers = {
         adjustNodePositions(setVisibilityRecursive(elements, selectedNode, false))
     ),
 
-    UPDATE_NODE_SIZE: (state, action) => ({
-        ...state,
-        elements: {
+    UPDATE_NODE_SIZE: (state, action) => {
+        const updatedElement = {
+          ...state.elements[action.payload.id],
+          width: action.payload.width,
+          height: action.payload.height,
+          section1Height: action.payload.sectionHeights[0],
+          section2Height: action.payload.sectionHeights[1],
+          section3Height: action.payload.sectionHeights[2]
+        };
+    
+        return {
+          ...state,
+          elements: adjustNodePositions({
             ...state.elements,
-            [action.payload.id]: {
-                ...state.elements[action.payload.id],
-                width: action.payload.width,
-                height: action.payload.height,
-                section1Height: action.payload.sectionHeights[0],
-                section2Height: action.payload.sectionHeights[1],
-                section3Height: action.payload.sectionHeights[2]
-            }
-        }
-    })
+            [action.payload.id]: updatedElement
+          })
+        };
+      },    
 };
 
 function handleArrowAction(handler) {
@@ -489,7 +493,4 @@ function reducer(state, action) {
     return handler ? handler(state, action) : state;
 }
 
-export function useStore() {
-    const [state, dispatch] = useReducer(reducer, initialState);
-    return { state, dispatch };
-}
+export { reducer };
