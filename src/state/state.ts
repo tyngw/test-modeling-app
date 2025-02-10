@@ -179,6 +179,17 @@ const deleteNodeRecursive = (elements: { [key: string]: Node }, deleteElement: N
     return updatedNodes;
 };
 
+const isDescendant = (elements: { [key: string]: Node }, nodeId: string, targetParentId: string): boolean => {
+    let currentId: string | null = targetParentId;
+    while (currentId !== null) {
+        if (currentId === nodeId) {
+            return true;
+        }
+        currentId = elements[currentId]?.parentId ?? null;
+    }
+    return false;
+};
+
 const adjustNodeAndChildrenPosition = (
     elements: { [key: string]: Node },
     element: Node,
@@ -368,6 +379,14 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
 
     DROP_NODE: (state, action) => {
         const { payload } = action;
+
+        if (
+            payload.id === payload.newParentId ||
+            isDescendant(state.elements, payload.id, payload.newParentId)
+        ) {
+            return state;
+        }
+        
         const siblings = Object.values(state.elements).filter(n => n.parentId === payload.newParentId);
         const maxOrder = siblings.length > 0 ? Math.max(...siblings.map(n => n.order)) + 1 : 0;
 
