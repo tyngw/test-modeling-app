@@ -1,4 +1,4 @@
-// src/utils/NodeActionHelper.js
+// src/utils/ElementActionHelper.js
 // import { v4 as uuidv4 } from 'uuid';
 
 // export const getSelectedNodeAndChildren = (nodeList, targetNode, selectedNode) => {

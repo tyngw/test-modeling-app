@@ -7,14 +7,14 @@ import QuickMenuBar from './QuickMenuBar';
 import InputFields from './InputFields';
 import useResizeEffect from '../hooks/useResizeEffect';
 import { useClickOutside } from '../hooks/useClickOutside';
-import { useNodeDragEffect } from '../hooks/useNodeDragEffect';
+import { useElementDragEffect } from '../hooks/useElementDragEffect';
 import { loadFromLocalStorage } from '../state/undoredo';
-import { saveSvg, loadNodes, saveNodes } from '../utils/FileHelpers';
+import { saveSvg, loadElements, saveElements } from '../utils/FileHelpers';
 import FoldingIcon from './FoldingIcon';
 import ModalWindow from './ModalWindow';
 import { helpContent } from '../constants/HelpContent';
-import { ICONBAR_HEIGHT } from '../constants/NodeSettings';
-import { Node } from '../types';
+import { ICONBAR_HEIGHT } from '../constants/ElementSettings';
+import { Element } from '../types';
 
 const CanvasArea: React.FC = () => {
     const svgRef = useRef<SVGSVGElement>(null);
@@ -29,7 +29,7 @@ const CanvasArea: React.FC = () => {
     const [isHelpOpen, setHelpOpen] = useState(false);
 
     const toggleHelp = () => setHelpOpen(!isHelpOpen);
-    const editingNode = Object.values(state.elements).find((element: Node) => element.editing);
+    const editingNode = Object.values(state.elements).find((element: Element) => element.editing);
 
     useEffect(() => {
         const elementList = loadFromLocalStorage();
@@ -38,7 +38,7 @@ const CanvasArea: React.FC = () => {
 
     useResizeEffect({ setCanvasSize, setDisplayArea, state });
     useClickOutside(svgRef, !!editingNode);
-    const { handleMouseDown, handleMouseUp, overDropTarget } = useNodeDragEffect();
+    const { handleMouseDown, handleMouseUp, overDropTarget } = useElementDragEffect();
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         e.preventDefault();
@@ -68,10 +68,10 @@ const CanvasArea: React.FC = () => {
         <>
             <QuickMenuBar
                 saveSvg={() => saveSvg(svgRef.current!, 'download.svg')}
-                loadNodes={(event) => loadNodes(event.nativeEvent)
+                loadElements={(event) => loadElements(event.nativeEvent)
                     .then(elements => dispatch({ type: 'LOAD_NODES', payload: elements }))
                     .catch(alert)}
-                saveNodes={() => saveNodes(Object.values(state.elements))}
+                saveElements={() => saveElements(Object.values(state.elements))}
                 toggleHelp={toggleHelp}
             />
 
@@ -93,16 +93,16 @@ const CanvasArea: React.FC = () => {
                 >
                     <Marker />
                     {Object.values(state.elements)
-                        .filter((element): element is Node => element.visible)
+                        .filter((element): element is Element => element.visible)
                         .map(element => {
                             const hasHiddenChildren = Object.values(state.elements)
-                                .some((n): n is Node => n.parentId === element.id && !n.visible);
+                                .some((n): n is Element => n.parentId === element.id && !n.visible);
                             return (
                                 <React.Fragment key={element.id}>
                                     <IdeaElement
                                         element={element}
-                                        overDropTarget={overDropTarget as Node | null}
-                                        handleMouseDown={handleMouseDown as unknown as (e: React.MouseEvent<SVGElement>, element: Node) => void}
+                                        overDropTarget={overDropTarget as Element | null}
+                                        handleMouseDown={handleMouseDown as unknown as (e: React.MouseEvent<SVGElement>, element: Element) => void}
                                         handleMouseUp={handleMouseUp}
                                     />
                                     {hasHiddenChildren && <FoldingIcon element={element} />}
