@@ -13,15 +13,35 @@ import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutl
 import { ICONBAR_HEIGHT } from '../constants/NodeSettings';
 import { useCanvas } from '../context/CanvasContext';
 
-const QuickMenuBar = ({ saveSvg, loadNodes, saveNodes, toggleHelp }) => {
-  const { dispatch } = useCanvas();
-  const fileInput = useRef(null);
+interface QuickMenuBarProps {
+  saveSvg: () => void;
+  loadNodes: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  saveNodes: () => void;
+  toggleHelp: () => void;
+}
+
+type CanvasActionType = 
+  | 'NEW'
+  | 'UNDO'
+  | 'REDO'
+  | 'ZOOM_IN'
+  | 'ZOOM_OUT';
+
+
+  const QuickMenuBar = ({ 
+    saveSvg,
+    loadNodes,
+    saveNodes,
+    toggleHelp
+  }: QuickMenuBarProps) => {
+    const { dispatch } = useCanvas();
+    const fileInput = useRef<HTMLInputElement>(null);
 
   const handleFileOpen = () => {
-    fileInput.current.click();
+    fileInput.current?.click();
   };
 
-  const handleAction = (action) => () => {
+  const handleAction = (action: CanvasActionType) => () => {
     dispatch({ type: action });
   };
 

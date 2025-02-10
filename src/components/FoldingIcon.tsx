@@ -1,7 +1,12 @@
 // src/components/FoldingIcon.js
 import React from 'react';
+import { Node } from '../types';
 
-const FoldingIcon = ({ element }) => {
+interface FoldingIconProps {
+    element: Node;
+}
+
+const FoldingIcon: React.FC<FoldingIconProps> = ({ element }) => {
     return (
         <g>
             <circle

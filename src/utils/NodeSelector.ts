@@ -1,19 +1,21 @@
-// src/utils/NodeSelector.js
-export const getNodeById = (elements, id) => elements[id];
-export const getSelectedNode = (elements) => Object.values(elements).find(element => element.selected);
+// src/utils/NodeSelector.ts
+import { Node } from '../types';
 
-const getSiblings = (elements, elementId) => {
+export const getNodeById = (elements: Record<string, Node>, id: string): Node | undefined => elements[id];
+export const getSelectedNode = (elements: Record<string, Node>): Node | undefined => Object.values(elements).find(element => element.selected);
+
+const getSiblings = (elements: Record<string, Node>, elementId: string): Node[] => {
   const element = getNodeById(elements, elementId);
   return element ? Object.values(elements).filter(n => n.parentId === element.parentId) : [];
 };
 
-const getParentSiblings = (elements, elementId) => {
+const getParentSiblings = (elements: Record<string, Node>, elementId: string): Node[] => {
   const element = getNodeById(elements, elementId);
-  const parent = element ? getNodeById(elements, element.parentId) : null;
+  const parent = element?.parentId ? getNodeById(elements, element.parentId) : null;
   return parent ? Object.values(elements).filter(n => n.parentId === parent.parentId) : [];
 };
 
-const handleVerticalMove = (elements, selected, offset) => {
+const handleVerticalMove = (elements: Record<string, Node>, selected: Node, offset: number): string | undefined => {
   const siblings = getSiblings(elements, selected.id);
   const index = siblings.findIndex(n => n.id === selected.id);
   const newIndex = index + offset;
@@ -25,8 +27,13 @@ const handleVerticalMove = (elements, selected, offset) => {
   return handleParentLevelMove(elements, selected, offset);
 };
 
-const handleParentLevelMove = (elements, selected, offset) => {
+const handleParentLevelMove = (elements: Record<string, Node>, selected: Node, offset: number): string | undefined => {
   const parentSiblings = getParentSiblings(elements, selected.id);
+
+  if (!selected.parentId) {
+    return undefined;
+  }
+
   const parent = getNodeById(elements, selected.parentId);
   const parentIndex = parentSiblings.findIndex(n => n.id === parent?.id);
   
@@ -37,17 +44,17 @@ const handleParentLevelMove = (elements, selected, offset) => {
     : children[0]?.id ?? selected.id;
 };
 
-const getNodeChildren = (elements, parentId) => 
+const getNodeChildren = (elements: Record<string, Node>, parentId?: string): Node[] => 
   Object.values(elements).filter(element => element.parentId === parentId);
 
-export const handleArrowUp = (elements) => handleArrowNavigation(elements, 'up');
-export const handleArrowDown = (elements) => handleArrowNavigation(elements, 'down');
-export const handleArrowLeft = (elements) => handleArrowNavigation(elements, 'left');
-export const handleArrowRight = (elements) => handleArrowNavigation(elements, 'right');
+export const handleArrowUp = (elements: Record<string, Node>): string | undefined => handleArrowNavigation(elements, 'up');
+export const handleArrowDown = (elements: Record<string, Node>): string | undefined => handleArrowNavigation(elements, 'down');
+export const handleArrowLeft = (elements: Record<string, Node>): string | undefined => handleArrowNavigation(elements, 'left');
+export const handleArrowRight = (elements: Record<string, Node>): string | undefined => handleArrowNavigation(elements, 'right');
 
-export const handleArrowNavigation = (elements, direction) => {
+export const handleArrowNavigation = (elements: Record<string, Node>, direction: 'up' | 'down' | 'left' | 'right'): string | undefined => {
   const selected = getSelectedNode(elements);
-  if (!selected) return selected?.id;
+  if (!selected) return undefined;
 
   switch(direction) {
     case 'up': return handleVerticalMove(elements, selected, -1);
