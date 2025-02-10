@@ -1,7 +1,8 @@
-// src/utils/FileHelpers.js
-export const loadNodes = (event) => {
+// src/utils/FileHelpers.ts
+export const loadNodes = (event: Event): Promise<any> => {
     return new Promise((resolve, reject) => {
-        const file = event.target.files[0];
+        const input = event.target as HTMLInputElement;
+        const file = input.files ? input.files[0] : null;
         if (file) {
             const fileName = file.name;
             const fileExtension = fileName.slice((fileName.lastIndexOf(".") - 1 >>> 0) + 2);
@@ -10,22 +11,26 @@ export const loadNodes = (event) => {
             }
             const reader = new FileReader();
             reader.onload = function (e) {
-                const contents = e.target.result;
-                try {
-                    const elements = JSON.parse(contents);
-                    resolve(elements);
-                } catch (error) {
+                const contents = e.target?.result;
+                if (typeof contents === 'string') {
+                    try {
+                        const elements = JSON.parse(contents);
+                        resolve(elements);
+                    } catch (error) {
+                        throw new Error('Error: ファイルの読み込みに失敗しました');
+                    }
+                } else {
                     throw new Error('Error: ファイルの読み込みに失敗しました');
                 }
             };
             reader.readAsText(file);
         }
-        event.target.value = null;
+        input.value = '';
     });
 }
 
-export const saveSvg = (svgElement, name) => {
-    const svgElementClone = svgElement.cloneNode(true);
+export const saveSvg = (svgElement: SVGSVGElement, name: string) => {
+    const svgElementClone = svgElement.cloneNode(true) as SVGSVGElement;
 
     svgElementClone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
 
@@ -34,8 +39,8 @@ export const saveSvg = (svgElement, name) => {
 
     // 各要素に対してループを行います
     for (let i = 0; i < elements.length; i++) {
-        const element = elements[i];
-        const clonedElement = clonedElements[i];
+        const element = elements[i] as HTMLElement;
+        const clonedElement = clonedElements[i] as HTMLElement;
 
         // 元の要素の計算されたスタイルを取得します
         const computedStyle = window.getComputedStyle(element);
@@ -44,7 +49,7 @@ export const saveSvg = (svgElement, name) => {
         for (let j = 0; j < computedStyle.length; j++) {
             const styleName = computedStyle[j];
             const styleValue = computedStyle.getPropertyValue(styleName);
-            clonedElement.style[styleName] = styleValue;
+            clonedElement.style[styleName as any] = styleValue;
         }
     }
 
@@ -61,8 +66,8 @@ export const saveSvg = (svgElement, name) => {
     document.body.removeChild(downloadLink);
 }
 
-export const saveNodes = (elements) => {
-    const rootText = elements.find(element => element.parentId === null).text;
+export const saveNodes = (elements: any[]) => {
+    const rootText = elements.find(element => element.parentId === null)?.text;
     const fileName = rootText || 'Untitled';
 
     const elementsToSave = elements.map(element => {

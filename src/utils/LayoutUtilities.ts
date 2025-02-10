@@ -23,10 +23,17 @@ export const useWindowSize = () => {
   return windowSize;
 };
 
-export const calculateCanvasSize = (elements) => {
-  const elementList = Object.values(elements);
-  const maxNodeX = Math.max(...elementList.map(element => element.x + element.width));
-  const maxNodeY = Math.max(...elementList.map(element => element.y + element.height));
+interface Element {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export const calculateCanvasSize = (elements: { [key: string]: Element }) => {
+  const elementList: Element[] = Object.values(elements);
+  const maxNodeX = Math.max(...elementList.map((element: Element) => element.x + element.width));
+  const maxNodeY = Math.max(...elementList.map((element: Element) => element.y + element.height));
 
   return {
     width: maxNodeX + X_OFFSET,

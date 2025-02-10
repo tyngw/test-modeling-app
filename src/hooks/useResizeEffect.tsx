@@ -1,8 +1,31 @@
-// src/hooks/useResizeEffect.js
+// src/hooks/useResizeEffect.tsx
 import { useEffect } from 'react';
 import { calculateCanvasSize } from '../utils/LayoutUtilities';
 
-const useResizeEffect = ({ setCanvasSize, setDisplayArea, state }) => {
+interface ElementWithDimensions {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+interface ResizeEffectProps {
+  setCanvasSize: React.Dispatch<React.SetStateAction<{
+    width: number;
+    height: number;
+  }>>;
+  setDisplayArea: React.Dispatch<React.SetStateAction<string>>;
+  state: {
+    elements: { [key: string]: ElementWithDimensions };
+    zoomRatio: number;
+  };
+}
+
+const useResizeEffect = ({ 
+  setCanvasSize, 
+  setDisplayArea, 
+  state 
+}: ResizeEffectProps) => {
     useEffect(() => {
         const newCanvasSize = calculateCanvasSize(state.elements);
         newCanvasSize.width = Math.max(newCanvasSize.width, window.innerWidth);

@@ -1,3 +1,4 @@
+// src/components/CanvasArea.tsx
 import React, { useRef, useState, useEffect } from 'react';
 import { useCanvas } from '../context/CanvasContext';
 import IdeaElement from './IdeaElement';
@@ -12,19 +13,23 @@ import { saveSvg, loadNodes, saveNodes } from '../utils/FileHelpers';
 import FoldingIcon from './FoldingIcon';
 import ModalWindow from './ModalWindow';
 import { helpContent } from '../constants/HelpContent';
-import {
-    ICONBAR_HEIGHT,
-  } from '../constants/NodeSettings';
+import { ICONBAR_HEIGHT } from '../constants/NodeSettings';
+import { Node } from '../types';
 
-const CanvasArea = () => {
-    const svgRef = useRef();
+const CanvasArea: React.FC = () => {
+    const svgRef = useRef<SVGSVGElement>(null);
     const { state, dispatch } = useCanvas();
-    const [displayScopeSize, setCanvasSize] = useState({ width: window.innerWidth, height: window.innerHeight });
-    const [displayArea, setDisplayArea] = useState(`0 0 ${displayScopeSize.width} ${displayScopeSize.height - ICONBAR_HEIGHT}`);
+    const [displayScopeSize, setCanvasSize] = useState({
+        width: window.innerWidth,
+        height: window.innerHeight
+    });
+    const [displayArea, setDisplayArea] = useState(
+        `0 0 ${displayScopeSize.width} ${displayScopeSize.height - ICONBAR_HEIGHT}`
+    );
     const [isHelpOpen, setHelpOpen] = useState(false);
 
     const toggleHelp = () => setHelpOpen(!isHelpOpen);
-    const editingNode = Object.values(state.elements).find(element => element.editing);
+    const editingNode = Object.values(state.elements).find((element: Node) => element.editing);
 
     useEffect(() => {
         const elementList = loadFromLocalStorage();
@@ -32,37 +37,40 @@ const CanvasArea = () => {
     }, [dispatch]);
 
     useResizeEffect({ setCanvasSize, setDisplayArea, state });
-    useClickOutside(svgRef, editingNode);
+    useClickOutside(svgRef, !!editingNode);
     const { handleMouseDown, handleMouseUp, overDropTarget } = useNodeDragEffect();
 
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: React.KeyboardEvent) => {
         e.preventDefault();
         const keyCombo = `${e.ctrlKey || e.metaKey ? 'Ctrl+' : ''}${e.shiftKey ? 'Shift+' : ''}${e.key}`;
-        const keyActionMap = {
-            'Ctrl+z': 'UNDO', 
-            'Ctrl+Shift+z': 'REDO', 
+        const keyActionMap: { [key: string]: string } = {
+            'Ctrl+z': 'UNDO',
+            'Ctrl+Shift+z': 'REDO',
             'ArrowUp': 'ARROW_UP',
-            'ArrowDown': 'ARROW_DOWN', 
-            'ArrowRight': 'ARROW_RIGHT', 
+            'ArrowDown': 'ARROW_DOWN',
+            'ArrowRight': 'ARROW_RIGHT',
             'Ctrl+ArrowRight': 'EXPAND_NODE',
-            'ArrowLeft': 'ARROW_LEFT', 
-            'Ctrl+ArrowLeft': 'COLLAPSE_NODE', 
+            'ArrowLeft': 'ARROW_LEFT',
+            'Ctrl+ArrowLeft': 'COLLAPSE_NODE',
             'Ctrl+x': 'CUT_NODE',
-            'Ctrl+c': 'COPY_NODE', 
-            'Ctrl+v': 'PASTE_NODE', 
+            'Ctrl+c': 'COPY_NODE',
+            'Ctrl+v': 'PASTE_NODE',
             'Tab': 'ADD_NODE',
-            'Delete': 'DELETE_NODE', 
-            'Backspace': 'DELETE_NODE', 
+            'Delete': 'DELETE_NODE',
+            'Backspace': 'DELETE_NODE',
             'Enter': 'EDIT_NODE'
         };
-        if (keyActionMap[keyCombo]) dispatch({ type: keyActionMap[keyCombo] });
+        const actionType = keyActionMap[keyCombo];
+        if (actionType) dispatch({ type: actionType });
     };
 
     return (
         <>
             <QuickMenuBar
-                saveSvg={() => saveSvg(svgRef.current, 'download.svg')}
-                loadNodes={(event) => loadNodes(event).then(elements => dispatch({ type: 'LOAD_NODES', payload: elements })).catch(alert)}
+                saveSvg={() => saveSvg(svgRef.current!, 'download.svg')}
+                loadNodes={(event) => loadNodes(event.nativeEvent)
+                    .then(elements => dispatch({ type: 'LOAD_NODES', payload: elements }))
+                    .catch(alert)}
                 saveNodes={() => saveNodes(Object.values(state.elements))}
                 toggleHelp={toggleHelp}
             />
@@ -78,30 +86,29 @@ const CanvasArea = () => {
                     width={displayScopeSize.width}
                     height={displayScopeSize.height}
                     viewBox={displayArea}
-                    tabIndex="0"
+                    tabIndex={0}
                     onKeyDown={handleKeyDown}
                     style={{ outline: 'none' }}
                     className="svg-element"
                 >
                     <Marker />
                     {Object.values(state.elements)
-                        .filter(element => element.visible)
+                        .filter((element): element is Node => element.visible)
                         .map(element => {
                             const hasHiddenChildren = Object.values(state.elements)
-                              .some(n => n.parentId === element.id && !n.visible);
+                                .some((n): n is Node => n.parentId === element.id && !n.visible);
                             return (
-                            <React.Fragment key={element.id}>
-                                <IdeaElement
-                                    element={element}
-                                    overDropTarget={overDropTarget}
-                                    handleMouseDown={handleMouseDown}
-                                    handleMouseUp={handleMouseUp}
-                                />
-                                {hasHiddenChildren && <FoldingIcon element={element} />}
-                            </React.Fragment>
-                            )
-                        }
-                    )}
+                                <React.Fragment key={element.id}>
+                                    <IdeaElement
+                                        element={element}
+                                        overDropTarget={overDropTarget as Node | null}
+                                        handleMouseDown={handleMouseDown as unknown as (e: React.MouseEvent<SVGElement>, element: Node) => void}
+                                        handleMouseUp={handleMouseUp}
+                                    />
+                                    {hasHiddenChildren && <FoldingIcon element={element} />}
+                                </React.Fragment>
+                            );
+                        })}
                 </svg>
 
                 <InputFields element={editingNode} />
