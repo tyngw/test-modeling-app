@@ -1,4 +1,4 @@
-// src/components/QuickMenuBar.js
+// src/components/QuickMenuBar.tsx
 import React, { useRef } from 'react';
 import Button from '@mui/material/Button';
 import UndoIcon from '@mui/icons-material/Undo';
