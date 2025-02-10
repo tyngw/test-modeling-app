@@ -1,4 +1,4 @@
-// src/utils/TextNodeHelpers.js
+// src/utils/TextNodeHelpers.ts
 import { DEFAULT_ZOOM_RATIO, DEFAULT_FONT_SIZE, MIN_WIDTH, MAX_WIDTH, MULTIBYTE_CHAR_COEFFICIENT, SINGLEBYTE_CHAR_COEFFICIENT } from '../constants/NodeSettings';
 
 export const calculateTextWidth = (text: string, zoomRatio: number = DEFAULT_ZOOM_RATIO): number => {

@@ -1,4 +1,4 @@
-// src/App.js
+// src/App.tsx
 import React from 'react';
 import CanvasArea from './components/CanvasArea';
 import './App.css';

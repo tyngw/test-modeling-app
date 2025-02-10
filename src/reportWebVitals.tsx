@@ -1,3 +1,4 @@
+// src/reportWebVitals.tsx
 import type { ReportHandler } from 'web-vitals';
 
 const reportWebVitals = (onPerfEntry: ReportHandler) => {

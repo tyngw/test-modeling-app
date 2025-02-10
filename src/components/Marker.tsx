@@ -1,4 +1,4 @@
-// src/components/Marker.js
+// src/components/Marker.tsx
 import React from 'react';
 
 export function Marker() {

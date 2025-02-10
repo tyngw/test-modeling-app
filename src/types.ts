@@ -1,4 +1,4 @@
-// types.ts
+// src/types.ts
 export interface Node {
     id: string;
     text: string;
