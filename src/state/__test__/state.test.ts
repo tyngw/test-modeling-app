@@ -1,4 +1,4 @@
-// src/state/__test__/state.test.js
+// src/state/__test__/state.test.ts
 import { renderHook, act } from '@testing-library/react';
 import { useReducer } from 'react';
 import { initialState, reducer } from '../state';

@@ -1,4 +1,4 @@
-// src/utils/LayoutUtilities.js
+// src/utils/LayoutUtilities.ts
 import { useState, useEffect } from 'react';
 import {
   NODE_HEIGHT,
