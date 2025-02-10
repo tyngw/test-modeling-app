@@ -1,4 +1,4 @@
-// src/constants/Node.js
+// src/constants/Node.ts
 export const DEFAULT_ZOOM_RATIO = 1;
 export const DEFAULT_X = 50;
 export const DEFAULT_Y = 50;

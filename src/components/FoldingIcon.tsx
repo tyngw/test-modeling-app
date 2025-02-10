@@ -1,4 +1,4 @@
-// src/components/FoldingIcon.js
+// src/components/FoldingIcon.tsx
 import React from 'react';
 import { Node } from '../types';
 
