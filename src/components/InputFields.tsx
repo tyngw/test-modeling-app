@@ -1,16 +1,16 @@
 // src/components/InputFields.tsx
 import React, { useRef, useEffect } from 'react';
 import { useCanvas } from '../context/CanvasContext';
-import { calculateNodeWidth } from '../utils/TextNodeHelpers';
+import { calculateElementWidth } from '../utils/TextareaHelpers';
 import { 
     DEFAULT_SECTION_HEIGHT, 
     DEFAULT_FONT_SIZE, 
     LINE_HEIGHT_RATIO 
-} from '../constants/NodeSettings';
-import { Node } from '../types';
+} from '../constants/ElementSettings';
+import { Element } from '../types';
 
 interface InputFieldsProps {
-    element?: Node;
+    element?: Element;
 }
 
 type TextField = 'text' | 'text2' | 'text3';
@@ -26,7 +26,7 @@ const InputFields: React.FC<InputFieldsProps> = ({ element }) => {
     if (!element) return null;
 
     const getSectionHeight = (index: number): number => {
-        const sectionKey = `section${index + 1}Height` as keyof Node;
+        const sectionKey = `section${index + 1}Height` as keyof Element;
         return element[sectionKey] as number;
     };
 
@@ -36,7 +36,7 @@ const InputFields: React.FC<InputFieldsProps> = ({ element }) => {
         getSectionHeight(2)
     ];
 
-    const maxWidth = calculateNodeWidth(
+    const maxWidth = calculateElementWidth(
         [element.text, element.text2, element.text3],
         state.zoomRatio
     );

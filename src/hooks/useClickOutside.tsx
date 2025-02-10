@@ -5,7 +5,7 @@ import type { MutableRefObject } from 'react';
 
 export const useClickOutside = (
   svgRef: MutableRefObject<SVGSVGElement | null>,
-  editingNode: boolean
+  editingElement: boolean
 ) => {
   const { dispatch } = useCanvas();
   useEffect(() => {
@@ -13,12 +13,12 @@ export const useClickOutside = (
     const handleMouseDown = (e: MouseEvent) => {
       if (e.target instanceof SVGElement && e.target.tagName === 'svg') {
         dispatch({ type: 'DESELECT_ALL' });
-        if (editingNode) dispatch({ type: 'END_EDITING' });
+        if (editingElement) dispatch({ type: 'END_EDITING' });
       }
     };
     svg?.addEventListener('mousedown', handleMouseDown);
     return () => {
       svg?.removeEventListener('mousedown', handleMouseDown);
     };
-  }, [svgRef, editingNode, dispatch]);
+  }, [svgRef, editingElement, dispatch]);
 };

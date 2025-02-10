@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import {
   NODE_HEIGHT,
   X_OFFSET,
-} from '../constants/NodeSettings';
+} from '../constants/ElementSettings';
 
 export const useWindowSize = () => {
   const [windowSize, setWindowSize] = useState({
@@ -32,11 +32,11 @@ interface Element {
 
 export const calculateCanvasSize = (elements: { [key: string]: Element }) => {
   const elementList: Element[] = Object.values(elements);
-  const maxNodeX = Math.max(...elementList.map((element: Element) => element.x + element.width));
-  const maxNodeY = Math.max(...elementList.map((element: Element) => element.y + element.height));
+  const maxElementX = Math.max(...elementList.map((element: Element) => element.x + element.width));
+  const maxElementY = Math.max(...elementList.map((element: Element) => element.y + element.height));
 
   return {
-    width: maxNodeX + X_OFFSET,
-    height: maxNodeY + NODE_HEIGHT,
+    width: maxElementX + X_OFFSET,
+    height: maxElementY + NODE_HEIGHT,
   };
 };

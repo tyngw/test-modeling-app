@@ -1,35 +1,37 @@
-// src/hooks/useNodeDragEffect.tsx
+// src/hooks/useElementDragEffect.tsx
 import { useState, useEffect, useCallback } from 'react';
 import { useCanvas } from '../context/CanvasContext';
-import { ICONBAR_HEIGHT } from '../constants/NodeSettings';
+import { ICONBAR_HEIGHT } from '../constants/ElementSettings';
+import { Element } from '../types';
+import { isDescendant } from '../state/state';
 
-interface Node {
-  id: string;
-  parentId: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  depth: number;
-}
+// interface Element {
+//   id: string;
+//   parentId: string;
+//   x: number;
+//   y: number;
+//   width: number;
+//   height: number;
+//   depth: number;
+// }
 
 interface State {
   zoomRatio: number;
-  elements: { [key: string]: Node };
+  elements: { [key: string]: Element };
 }
 
 type MouseHandler = (e: globalThis.MouseEvent) => void;
 
-export const useNodeDragEffect = () => {
+export const useElementDragEffect = () => {
   const { state, dispatch } = useCanvas() as { state: State; dispatch: React.Dispatch<any> };
-  const [dragging, setDragging] = useState<Node | null>(null);
+  const [dragging, setDragging] = useState<Element | null>(null);
   const [startPosition, setStartPosition] = useState({ x: 0, y: 0 });
   const [originalPosition, setOriginalPosition] = useState({ x: 0, y: 0 });
-  const [overDropTarget, setOverDropTarget] = useState<Node | null>(null);
+  const [overDropTarget, setOverDropTarget] = useState<Element | null>(null);
 
   const handleMouseDown = useCallback((
     e: React.MouseEvent<HTMLElement>,
-    element: Node
+    element: Element
   ) => {
     if (!element.id || !element.parentId) return;
     e.stopPropagation();
@@ -70,23 +72,46 @@ export const useNodeDragEffect = () => {
 
   const handleMouseUp = useCallback(() => {
     if (dragging) {
+      let shouldResetPosition = false;
+      
       if (overDropTarget) {
-        dispatch({ type: 'SNAPSHOT' });
-        dispatch({ 
-          type: 'DROP_NODE', 
-          payload: { 
-            id: dragging.id, 
-            oldParentId: dragging.parentId, 
-            newParentId: overDropTarget.id, 
-            depth: overDropTarget.depth + 1 
-          }
-        });
+        // 無効なドロップ条件をチェック
+        const isInvalidDrop = 
+          overDropTarget.id === dragging.id ||
+          isDescendant(state.elements, overDropTarget.id, dragging.id) ||
+          isDescendant(state.elements, dragging.id, overDropTarget.id);
+
+        if (!isInvalidDrop) {
+          dispatch({ type: 'SNAPSHOT' });
+          dispatch({ 
+            type: 'DROP_NODE', 
+            payload: { 
+              id: dragging.id, 
+              oldParentId: dragging.parentId, 
+              newParentId: overDropTarget.id, 
+              depth: overDropTarget.depth + 1,
+              draggingElementOrder: dragging.order
+            }
+          });
+        } else {
+          shouldResetPosition = true;
+        }
       } else {
+        shouldResetPosition = true;
+      }
+
+      // 位置リセットが必要な場合
+      if (shouldResetPosition) {
         dispatch({ 
           type: 'MOVE_NODE', 
-          payload: { id: dragging.id, x: originalPosition.x, y: originalPosition.y } 
+          payload: { 
+            id: dragging.id, 
+            x: originalPosition.x, 
+            y: originalPosition.y 
+          } 
         });
       }
+
       setDragging(null);
       setOverDropTarget(null);
     }
