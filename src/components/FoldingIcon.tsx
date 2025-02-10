@@ -1,9 +1,9 @@
 // src/components/FoldingIcon.tsx
 import React from 'react';
-import { Node } from '../types';
+import { Element } from '../types';
 
 interface FoldingIconProps {
-    element: Node;
+    element: Element;
 }
 
 const FoldingIcon: React.FC<FoldingIconProps> = ({ element }) => {

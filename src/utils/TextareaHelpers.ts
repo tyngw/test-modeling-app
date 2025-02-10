@@ -1,5 +1,5 @@
-// src/utils/TextNodeHelpers.ts
-import { DEFAULT_ZOOM_RATIO, DEFAULT_FONT_SIZE, MIN_WIDTH, MAX_WIDTH, MULTIBYTE_CHAR_COEFFICIENT, SINGLEBYTE_CHAR_COEFFICIENT } from '../constants/NodeSettings';
+// src/utils/TextareaHelpers.ts
+import { DEFAULT_ZOOM_RATIO, DEFAULT_FONT_SIZE, MIN_WIDTH, MAX_WIDTH, MULTIBYTE_CHAR_COEFFICIENT, SINGLEBYTE_CHAR_COEFFICIENT } from '../constants/ElementSettings';
 
 export const calculateTextWidth = (text: string, zoomRatio: number = DEFAULT_ZOOM_RATIO): number => {
   // const effectiveFontSize = DEFAULT_FONT_SIZE * Math.sqrt(zoomRatio);
@@ -15,7 +15,7 @@ export const calculateTextWidth = (text: string, zoomRatio: number = DEFAULT_ZOO
   );
 };
 
-export const calculateNodeWidth = (texts: string[], zoomRatio: number = DEFAULT_ZOOM_RATIO): number => {
+export const calculateElementWidth = (texts: string[], zoomRatio: number = DEFAULT_ZOOM_RATIO): number => {
   const maxTextWidth = texts.reduce((max: number, text: string) => {
     return Math.max(max, calculateTextWidth(text || '', zoomRatio));
   }, 0);

@@ -2,7 +2,7 @@
 import { renderHook, act } from '@testing-library/react';
 import { useReducer } from 'react';
 import { initialState, reducer } from '../state';
-import { Node } from '../../types';
+import { Element } from '../../types';
 
 
 const useStore = () => {
@@ -26,67 +26,67 @@ describe('state reducer', () => {
         const state = result.current.state;
 
         expect(Object.keys(state.elements).length).toBe(1);
-        const rootNode = Object.values(state.elements)[0] as Node;
-        expect(rootNode.parentId).toBeNull();
-        expect(rootNode.selected).toBe(true);
-        expect(rootNode.children).toBe(0);
-        expect(rootNode.editing).toBe(false);
+        const rootElement = Object.values(state.elements)[0] as Element;
+        expect(rootElement.parentId).toBeNull();
+        expect(rootElement.selected).toBe(true);
+        expect(rootElement.children).toBe(0);
+        expect(rootElement.editing).toBe(false);
     });
 
     it('新しいノードを追加する', () => {
         const { result } = renderHook(() => useStore());
         const { state, dispatch } = result.current;
 
-        const initialNode = Object.values(state.elements)[0] as Node;
-        const initialNodeLength = Object.keys(state.elements).length;
+        const initialElement = Object.values(state.elements)[0] as Element;
+        const initialElementLength = Object.keys(state.elements).length;
 
         act(() => {
             dispatch({ type: 'ADD_NODE' });
         });
 
         const afterState = result.current.state;
-        const addedNode = Object.values(afterState.elements).find(
-            (node: Node) => node.id !== initialNode.id
-        ) as Node;
-        const parentNode = Object.values(afterState.elements).find(
-            (node: Node) => node.id === initialNode.id
-        ) as Node;
+        const addedElement = Object.values(afterState.elements).find(
+            (element: Element) => element.id !== initialElement.id
+        ) as Element;
+        const parentElement = Object.values(afterState.elements).find(
+            (element: Element) => element.id === initialElement.id
+        ) as Element;
 
-        expect(Object.keys(afterState.elements).length).toBe(initialNodeLength + 1);
-        expect(parentNode.children).toBe(1);
-        expect(parentNode.selected).toBe(false);
-        expect(addedNode.parentId).toBe(initialNode.id);
-        expect(addedNode.selected).toBe(true);
-        expect(addedNode.editing).toBe(true);
-        expect(addedNode.depth).toBe(2);
+        expect(Object.keys(afterState.elements).length).toBe(initialElementLength + 1);
+        expect(parentElement.children).toBe(1);
+        expect(parentElement.selected).toBe(false);
+        expect(addedElement.parentId).toBe(initialElement.id);
+        expect(addedElement.selected).toBe(true);
+        expect(addedElement.editing).toBe(true);
+        expect(addedElement.depth).toBe(2);
     });
 
     it('子ノードを持たないノードを削除する', () => {
         const { result } = renderHook(() => useStore());
         const { dispatch } = result.current;
 
-        const initialNodeLength = Object.keys(result.current.state.elements).length;
+        const initialElementLength = Object.keys(result.current.state.elements).length;
 
         act(() => {
             dispatch({ type: 'ADD_NODE' });
         });
 
         const afterAddState = result.current.state;
-        expect(Object.keys(afterAddState.elements).length).toBe(initialNodeLength + 1);
+        expect(Object.keys(afterAddState.elements).length).toBe(initialElementLength + 1);
 
-        const addedNode = Object.values(afterAddState.elements).find(
-            (n: Node) => n.id !== '1'
-        ) as Node;
-        const nodeId = addedNode.id;
+        const addedElement = Object.values(afterAddState.elements).find(
+            (elm: Element) => elm.id !== '1'
+        ) as Element;
+        const elementId = addedElement.id;
 
         act(() => {
             dispatch({ type: 'DELETE_NODE' });
         });
 
         const afterDeleteState = result.current.state;
-        expect(Object.keys(afterDeleteState.elements).length).toBe(initialNodeLength);
-        expect((Object.values(afterDeleteState.elements)[0] as Node).children).toBe(0);
-        expect(Object.values(afterDeleteState.elements).some((n: Node) => n.id === nodeId)).toBe(false);
+        expect(Object.keys(afterDeleteState.elements).length).toBe(initialElementLength);
+        expect((Object.values(afterDeleteState.elements)[0] as Element).children).toBe(0);
+        expect(Object.values(afterDeleteState.elements).some((elm: Element) => elm.id === elementId)).toBe(false);
     });
 
     it('子ノードを持つノードを削除する', () => {
@@ -98,36 +98,36 @@ describe('state reducer', () => {
         });
 
         let state = result.current.state;
-        let childNode = Object.values(state.elements).find(
-            (n: Node) => n.id !== '1'
-        ) as Node;
+        let childElement = Object.values(state.elements).find(
+            (elm: Element) => elm.id !== '1'
+        ) as Element;
 
         act(() => {
-            dispatch({ type: 'SELECT_NODE', payload: childNode.id });
+            dispatch({ type: 'SELECT_NODE', payload: childElement.id });
             dispatch({ type: 'ADD_NODE' });
         });
 
         state = result.current.state;
-        childNode = Object.values(state.elements).find(
-            (n: Node) => n.id === childNode.id
-        ) as Node;
-        const grandchildNode = Object.values(state.elements).find(
-            (n: Node) => n.parentId === childNode.id
-        ) as Node;
+        childElement = Object.values(state.elements).find(
+            (elm: Element) => elm.id === childElement.id
+        ) as Element;
+        const grandchildElement = Object.values(state.elements).find(
+            (elm: Element) => elm.parentId === childElement.id
+        ) as Element;
 
         expect(Object.keys(state.elements).length).toBe(3);
-        expect(childNode.children).toBe(1);
+        expect(childElement.children).toBe(1);
 
         act(() => {
-            dispatch({ type: 'SELECT_NODE', payload: childNode.id });
+            dispatch({ type: 'SELECT_NODE', payload: childElement.id });
             dispatch({ type: 'DELETE_NODE' });
         });
 
         const afterState = result.current.state;
         expect(Object.keys(afterState.elements).length).toBe(1);
-        expect(Object.values(afterState.elements).some((n: Node) => n.id === '1')).toBe(true);
-        expect(Object.values(afterState.elements).some((n: Node) => n.id === childNode.id)).toBe(false);
-        expect(Object.values(afterState.elements).some((n: Node) => n.id === grandchildNode.id)).toBe(false);
+        expect(Object.values(afterState.elements).some((elm: Element) => elm.id === '1')).toBe(true);
+        expect(Object.values(afterState.elements).some((elm: Element) => elm.id === childElement.id)).toBe(false);
+        expect(Object.values(afterState.elements).some((elm: Element) => elm.id === grandchildElement.id)).toBe(false);
     });
 
     it('テキストを更新できることを確認する', () => {
@@ -145,9 +145,9 @@ describe('state reducer', () => {
         });
 
         const newState = result.current.state;
-        const node = Object.values(newState.elements)[0] as Node;
-        expect(node[field]).toBe(newText);
-        expect(node.editing).toBe(false);
+        const element = Object.values(newState.elements)[0] as Element;
+        expect(element[field]).toBe(newText);
+        expect(element.editing).toBe(false);
     });
 
     it('ノードが選択できることを確認する', () => {
@@ -159,11 +159,11 @@ describe('state reducer', () => {
         });
 
         const newState = result.current.state;
-        const elements = Object.values(newState.elements) as Node[];
+        const elements = Object.values(newState.elements) as Element[];
         expect(elements[0].selected).toBe(true);
         expect(elements[0].editing).toBe(false);
-        elements.filter(n => n.id !== '1').forEach(node => {
-            expect(node.selected).toBe(false);
+        elements.filter(elm =>elm.id !== '1').forEach(element => {
+            expect(element.selected).toBe(false);
         });
     });
 
@@ -175,9 +175,9 @@ describe('state reducer', () => {
         act(() => { dispatch({ type: 'DESELECT_ALL' }); });
 
         const newState = result.current.state;
-        (Object.values(newState.elements) as Node[]).forEach(node => {
-            expect(node.selected).toBe(false);
-            expect(node.editing).toBe(false);
+        (Object.values(newState.elements) as Element[]).forEach(element => {
+            expect(element.selected).toBe(false);
+            expect(element.editing).toBe(false);
         });
     });
 
@@ -185,12 +185,12 @@ describe('state reducer', () => {
         const { result } = renderHook(() => useStore());
         const { dispatch } = result.current;
 
-        const initialNodes = result.current.state.elements;
+        const initialElements = result.current.state.elements;
         act(() => { dispatch({ type: 'ADD_NODE' }); });
         const afterAddState = result.current.state.elements;
 
         act(() => { dispatch({ type: 'UNDO' }); });
-        expect(result.current.state.elements).toEqual(initialNodes);
+        expect(result.current.state.elements).toEqual(initialElements);
 
         act(() => { dispatch({ type: 'REDO' }); });
         expect(result.current.state.elements).toEqual(afterAddState);
@@ -208,9 +208,9 @@ describe('state reducer', () => {
             });
         });
 
-        const movedNode = Object.values(result.current.state.elements)[0] as Node;
-        expect(movedNode.x).toBe(newPosition.x);
-        expect(movedNode.y).toBe(newPosition.y);
+        const movedElement = Object.values(result.current.state.elements)[0] as Element;
+        expect(movedElement.x).toBe(newPosition.x);
+        expect(movedElement.y).toBe(newPosition.y);
     });
 
     it('ノードをコピーして貼り付けられることを確認する', () => {
@@ -221,19 +221,19 @@ describe('state reducer', () => {
         act(() => { dispatch({ type: 'ADD_NODE' }); });
         act(() => { dispatch({ type: 'COPY_NODE' }); });
 
-        const parentNode = Object.values(result.current.state.elements).find(
-            (n: Node) => n.id === '1'
-        ) as Node;
+        const parentElement = Object.values(result.current.state.elements).find(
+            (elm: Element) => elm.id === '1'
+        ) as Element;
 
         act(() => { dispatch({ type: 'SELECT_NODE', payload: '1' }); });
         act(() => { dispatch({ type: 'PASTE_NODE' }); });
 
-        const pastedNode = Object.values(result.current.state.elements)
-            .find((n: Node) => n.parentId === parentNode.id) as Node;
+        const pastedElement = Object.values(result.current.state.elements)
+            .find((elm: Element) => elm.parentId === parentElement.id) as Element;
 
-        expect(pastedNode).toBeDefined();
-        expect(parentNode.children).toBe(1);
-        expect(pastedNode.depth).toBe(parentNode.depth + 1);
+        expect(pastedElement).toBeDefined();
+        expect(parentElement.children).toBe(1);
+        expect(pastedElement.depth).toBe(parentElement.depth + 1);
     });
 
     it('ノードを切り取ることができることを確認する', () => {
@@ -244,21 +244,21 @@ describe('state reducer', () => {
         act(() => { dispatch({ type: 'ADD_NODE' }); });
 
         let state = result.current.state;
-        const childNode = Object.values(state.elements).find(
-            (n: Node) => n.parentId === '1'
-        ) as Node;
+        const childElement = Object.values(state.elements).find(
+            (elm: Element) => elm.parentId === '1'
+        ) as Element;
 
-        act(() => { dispatch({ type: 'SELECT_NODE', payload: childNode.id }); });
+        act(() => { dispatch({ type: 'SELECT_NODE', payload: childElement.id }); });
         act(() => { dispatch({ type: 'CUT_NODE' }); });
 
         const afterCutState = result.current.state;
         expect(Object.keys(afterCutState.elements).length).toBe(1);
         expect(Object.values(afterCutState.elements).some(
-            (n: Node) => n.id === childNode.id
+            (elm: Element) => elm.id === childElement.id
         )).toBe(false);
-        expect(Object.keys(afterCutState.cutNodes ?? {}).length).toBe(1);
-        expect(Object.values(afterCutState.cutNodes ?? {}).some(
-            (n: Node) => n.id === childNode.id
+        expect(Object.keys(afterCutState.cutElements ?? {}).length).toBe(1);
+        expect(Object.values(afterCutState.cutElements ?? {}).some(
+            (elm: Element) => elm.id === childElement.id
         )).toBe(true);
     });
 
@@ -275,24 +275,24 @@ describe('state reducer', () => {
         });
 
         let state = result.current.state;
-        const childNode = Object.values(state.elements).find(
-            (n: Node) => n.parentId === '1'
-        ) as Node;
+        const childElement = Object.values(state.elements).find(
+            (elm: Element) => elm.parentId === '1'
+        ) as Element;
 
         act(() => {
-            dispatch({ type: 'SELECT_NODE', payload: childNode.id });
+            dispatch({ type: 'SELECT_NODE', payload: childElement.id });
             dispatch({ type: 'CUT_NODE' });
         });
 
         const afterCutState = result.current.state;
         expect(Object.keys(afterCutState.elements).length).toBe(1);
         expect(Object.values(afterCutState.elements).some(
-            (n: Node) => n.id === childNode.id
+            (elm: Element) => elm.id === childElement.id
         )).toBe(false);
-        expect(afterCutState.cutNodes).toBeDefined();
-        expect(Object.keys(afterCutState.cutNodes ?? {}).length).toBe(1);
-        expect(Object.values(afterCutState.cutNodes ?? {}).some(
-            (n: Node) => n.id === childNode.id
+        expect(afterCutState.cutElements).toBeDefined();
+        expect(Object.keys(afterCutState.cutElements ?? {}).length).toBe(1);
+        expect(Object.values(afterCutState.cutElements ?? {}).some(
+            (elm: Element) => elm.id === childElement.id
         )).toBe(true);
 
         act(() => {
@@ -301,28 +301,28 @@ describe('state reducer', () => {
         });
 
         state = result.current.state;
-        const newParentNode = Object.values(state.elements).find(
-            (n: Node) => n.parentId === '1' && n.id !== childNode.id
-        ) as Node;
+        const newParentElement = Object.values(state.elements).find(
+            (elm: Element) => elm.parentId === '1' &&elm.id !== childElement.id
+        ) as Element;
 
         act(() => {
-            dispatch({ type: 'SELECT_NODE', payload: newParentNode.id });
+            dispatch({ type: 'SELECT_NODE', payload: newParentElement.id });
             dispatch({ type: 'PASTE_NODE' });
         });
 
         const afterPasteState = result.current.state;
-        const pastedNode = Object.values(afterPasteState.elements).find(
-            (n: Node) => n.parentId === newParentNode.id
-        ) as Node;
+        const pastedElement = Object.values(afterPasteState.elements).find(
+            (elm: Element) => elm.parentId === newParentElement.id
+        ) as Element;
 
-        expect(pastedNode).toBeDefined();
-        expect(pastedNode.parentId).toBe(newParentNode.id);
-        expect(pastedNode.depth).toBe(newParentNode.depth + 1);
+        expect(pastedElement).toBeDefined();
+        expect(pastedElement.parentId).toBe(newParentElement.id);
+        expect(pastedElement.depth).toBe(newParentElement.depth + 1);
 
-        const updatedParentNode = Object.values(afterPasteState.elements).find(
-            (n: Node) => n.id === newParentNode.id
-        ) as Node;
-        expect(updatedParentNode.children).toBe(1);
+        const updatedParentElement = Object.values(afterPasteState.elements).find(
+            (elm: Element) => elm.id === newParentElement.id
+        ) as Element;
+        expect(updatedParentElement.children).toBe(1);
     });
 
     it('切り取ったノードが貼り付けられることを確認する(切り取るノードに子が存在するケース)', () => {
@@ -335,28 +335,28 @@ describe('state reducer', () => {
         });
 
         let state = result.current.state;
-        const childNode = Object.values(state.elements).find(
-            (n: Node) => n.parentId === '1'
-        ) as Node;
+        const childElement = Object.values(state.elements).find(
+            (elm: Element) => elm.parentId === '1'
+        ) as Element;
 
         act(() => {
-            dispatch({ type: 'SELECT_NODE', payload: childNode.id });
+            dispatch({ type: 'SELECT_NODE', payload: childElement.id });
             dispatch({ type: 'ADD_NODE' });
         });
 
         act(() => {
-            dispatch({ type: 'SELECT_NODE', payload: childNode.id });
+            dispatch({ type: 'SELECT_NODE', payload: childElement.id });
             dispatch({ type: 'CUT_NODE' });
         });
 
         const afterCutState = result.current.state;
         expect(Object.keys(afterCutState.elements).length).toBe(1);
         expect(Object.values(afterCutState.elements).some(
-            (n: Node) => n.id === childNode.id
+            (elm: Element) => elm.id === childElement.id
         )).toBe(false);
-        expect(Object.keys(afterCutState.cutNodes ?? {}).length).toBe(2);
-        expect(Object.values(afterCutState.cutNodes ?? {}).some(
-            (n: Node) => n.id === childNode.id
+        expect(Object.keys(afterCutState.cutElements ?? {}).length).toBe(2);
+        expect(Object.values(afterCutState.cutElements ?? {}).some(
+            (elm: Element) => elm.id === childElement.id
         )).toBe(true);
 
         act(() => {
@@ -365,35 +365,35 @@ describe('state reducer', () => {
         });
 
         state = result.current.state;
-        const newParentNode = Object.values(state.elements).find(
-            (n: Node) => n.parentId === '1' && n.id !== childNode.id
-        ) as Node;
+        const newParentElement = Object.values(state.elements).find(
+            (elm: Element) => elm.parentId === '1' &&elm.id !== childElement.id
+        ) as Element;
 
         act(() => {
-            dispatch({ type: 'SELECT_NODE', payload: newParentNode.id });
+            dispatch({ type: 'SELECT_NODE', payload: newParentElement.id });
             dispatch({ type: 'PASTE_NODE' });
         });
 
         const afterPasteState = result.current.state;
-        const pastedNode = Object.values(afterPasteState.elements).find(
-            (n: Node) => n.parentId === newParentNode.id
-        ) as Node;
+        const pastedElement = Object.values(afterPasteState.elements).find(
+            (elm: Element) => elm.parentId === newParentElement.id
+        ) as Element;
 
-        expect(pastedNode.visible).toBe(true);
-        expect(pastedNode.depth).toBe(newParentNode.depth + 1);
+        expect(pastedElement.visible).toBe(true);
+        expect(pastedElement.depth).toBe(newParentElement.depth + 1);
 
-        const pastedChildNode = Object.values(afterPasteState.elements).find(
-            (n: Node) => n.parentId === pastedNode.id
-        ) as Node;
-        expect(pastedChildNode.depth).toBe(pastedNode.depth + 1);
-        expect(pastedChildNode.visible).toBe(true);
+        const pastedChildElement = Object.values(afterPasteState.elements).find(
+            (elm: Element) => elm.parentId === pastedElement.id
+        ) as Element;
+        expect(pastedChildElement.depth).toBe(pastedElement.depth + 1);
+        expect(pastedChildElement.visible).toBe(true);
 
-        const updatedParentNode = Object.values(afterPasteState.elements).find(
-            (n: Node) => n.id === newParentNode.id
-        ) as Node;
-        expect(updatedParentNode.children).toBe(1);
+        const updatedParentElement = Object.values(afterPasteState.elements).find(
+            (elm: Element) => elm.id === newParentElement.id
+        ) as Element;
+        expect(updatedParentElement.children).toBe(1);
 
-        const ids = Object.values(afterPasteState.elements).map((n: Node) => n.id);
+        const ids = Object.values(afterPasteState.elements).map((elm: Element) => elm.id);
         expect(new Set(ids).size).toBe(ids.length);
     });
 
@@ -407,9 +407,9 @@ describe('state reducer', () => {
         });
 
         let state = result.current.state;
-        let nodeB = Object.values(state.elements).find(
-            (n: Node) => n.parentId === '1'
-        ) as Node;
+        let elementB = Object.values(state.elements).find(
+            (elm: Element) => elm.parentId === '1'
+        ) as Element;
 
         await act(async () => {
             dispatch({ type: 'SELECT_NODE', payload: '1' });
@@ -417,29 +417,29 @@ describe('state reducer', () => {
         });
 
         state = result.current.state;
-        let nodeC = Object.values(state.elements).find(
-            (n: Node) => n.parentId === '1' && n.id !== nodeB.id
-        ) as Node;
+        let elementC = Object.values(state.elements).find(
+            (elm: Element) => elm.parentId === '1' &&elm.id !== elementB.id
+        ) as Element;
 
         await act(async () => {
-            dispatch({ type: 'SELECT_NODE', payload: nodeB.id });
+            dispatch({ type: 'SELECT_NODE', payload: elementB.id });
             dispatch({ type: 'ADD_NODE' });
         });
 
         state = result.current.state;
-        const nodeD = Object.values(state.elements).find(
-            (n: Node) => n.parentId === nodeB.id
-        ) as Node;
+        const elementD = Object.values(state.elements).find(
+            (elm: Element) => elm.parentId === elementB.id
+        ) as Element;
 
         await act(async () => {
             dispatch({
                 type: 'DROP_NODE',
                 payload: {
-                    id: nodeD.id,
-                    oldParentId: nodeB.id,
-                    newParentId: nodeC.id,
-                    draggingNodeOrder: nodeD.order,
-                    depth: nodeC.depth + 1
+                    id: elementD.id,
+                    oldParentId: elementB.id,
+                    newParentId: elementC.id,
+                    draggingElementOrder: elementD.order,
+                    depth: elementC.depth + 1
                 }
             });
         });
@@ -448,16 +448,16 @@ describe('state reducer', () => {
 
         state = result.current.state;
         const oldParentB = Object.values(state.elements).find(
-            (n: Node) => n.id === nodeB.id
-        ) as Node;
+            (elm: Element) => elm.id === elementB.id
+        ) as Element;
         const newParentC = Object.values(state.elements).find(
-            (n: Node) => n.id === nodeC.id
-        ) as Node;
-        const movedNode = Object.values(state.elements).find(
-            (n: Node) => n.id === nodeD.id
-        ) as Node;
+            (elm: Element) => elm.id === elementC.id
+        ) as Element;
+        const movedElement = Object.values(state.elements).find(
+            (elm: Element) => elm.id === elementD.id
+        ) as Element;
 
-        expect(movedNode.parentId).toBe(newParentC.id);
+        expect(movedElement.parentId).toBe(newParentC.id);
         expect(oldParentB.children).toBe(0);
         expect(newParentC.children).toBe(1);
     });
@@ -473,21 +473,21 @@ describe('state reducer', () => {
         });
     
         const initialState = result.current.state;
-        const parentNode = initialState.elements['1'];
-        const childNode = Object.values(initialState.elements).find(
-            (n: Node) => n.parentId === '1'
-        ) as Node;
+        const parentElement = initialState.elements['1'];
+        const childElement = Object.values(initialState.elements).find(
+            (elm: Element) => elm.parentId === '1'
+        ) as Element;
     
         // 親ノードを子ノードにドロップしようとする
         await act(async () => {
             dispatch({
                 type: 'DROP_NODE',
                 payload: {
-                    id: parentNode.id,
+                    id: parentElement.id,
                     oldParentId: null,
-                    newParentId: childNode.id,
-                    draggingNodeOrder: 0,
-                    depth: childNode.depth + 1
+                    newParentId: childElement.id,
+                    draggingElementOrder: 0,
+                    depth: childElement.depth + 1
                 }
             });
         });
@@ -496,8 +496,8 @@ describe('state reducer', () => {
         
         // 状態が変化していないことを確認
         expect(afterState.elements).toEqual(initialState.elements);
-        expect(afterState.elements[parentNode.id].parentId).toBeNull();
-        expect(afterState.elements[childNode.id].children).toBe(0);
+        expect(afterState.elements[parentElement.id].parentId).toBeNull();
+        expect(afterState.elements[childElement.id].children).toBe(0);
     });
 
     it('親ノードを孫ノードにドロップできないことを確認する', async () => {
@@ -507,23 +507,23 @@ describe('state reducer', () => {
         // 3階層のノードを作成 (1 -> 2 -> 3)
         act(() => {
             dispatch({ type: 'SELECT_NODE', payload: '1' });
-            dispatch({ type: 'ADD_NODE' }); // Node 2
+            dispatch({ type: 'ADD_NODE' }); // Element 2
         });
     
         let state = result.current.state;
-        const node2 = Object.values(state.elements).find(
-            (n: Node) => n.parentId === '1'
-        ) as Node;
+        const elementB = Object.values(state.elements).find(
+            (elm: Element) => elm.parentId === '1'
+        ) as Element;
     
         act(() => {
-            dispatch({ type: 'SELECT_NODE', payload: node2.id });
-            dispatch({ type: 'ADD_NODE' }); // Node 3
+            dispatch({ type: 'SELECT_NODE', payload: elementB.id });
+            dispatch({ type: 'ADD_NODE' }); // Element 3
         });
     
         state = result.current.state;
-        const node3 = Object.values(state.elements).find(
-            (n: Node) => n.parentId === node2.id
-        ) as Node;
+        const elementC = Object.values(state.elements).find(
+            (elm: Element) => elm.parentId === elementB.id
+        ) as Element;
     
         // ルートノード(1)を孫ノード(3)にドロップしようとする
         await act(async () => {
@@ -532,9 +532,9 @@ describe('state reducer', () => {
                 payload: {
                     id: '1',
                     oldParentId: null,
-                    newParentId: node3.id,
-                    draggingNodeOrder: 0,
-                    depth: node3.depth + 1
+                    newParentId: elementC.id,
+                    draggingElementOrder: 0,
+                    depth: elementC.depth + 1
                 }
             });
         });
@@ -543,14 +543,14 @@ describe('state reducer', () => {
         
         // 状態が変化していないことを確認
         expect(afterState.elements['1'].parentId).toBeNull();
-        expect(afterState.elements[node3.id].children).toBe(0);
+        expect(afterState.elements[elementC.id].children).toBe(0);
     });
 
     it('ノードを自身にドロップできないことを確認する', async () => {
         const { result } = renderHook(() => useStore());
         const { dispatch } = result.current;
     
-        const initialNode = result.current.state.elements['1'];
+        const initialElement = result.current.state.elements['1'];
     
         // 自分自身にドロップしようとする
         await act(async () => {
@@ -560,8 +560,8 @@ describe('state reducer', () => {
                     id: '1',
                     oldParentId: null,
                     newParentId: '1',
-                    draggingNodeOrder: 0,
-                    depth: initialNode.depth + 1
+                    draggingElementOrder: 0,
+                    depth: initialElement.depth + 1
                 }
             });
         });
@@ -582,9 +582,9 @@ describe('state reducer', () => {
             dispatch({ type: 'ADD_NODE' });
         });
 
-        const childNode = Object.values(result.current.state.elements).find(
-            (n: Node) => n.parentId === '1'
-        ) as Node;
+        const childElement = Object.values(result.current.state.elements).find(
+            (elm: Element) => elm.parentId === '1'
+        ) as Element;
 
         act(() => {
             dispatch({ type: 'SELECT_NODE', payload: '1' });
@@ -593,8 +593,8 @@ describe('state reducer', () => {
 
         let collapsedState = result.current.state.elements;
         expect((Object.values(collapsedState).find(
-            (n: Node) => n.id === childNode.id
-        ) as Node).visible).toBe(false);
+            (elm: Element) => elm.id === childElement.id
+        ) as Element).visible).toBe(false);
 
         act(() => {
             dispatch({ type: 'SELECT_NODE', payload: '1' });
@@ -603,8 +603,8 @@ describe('state reducer', () => {
 
         const expandedState = result.current.state.elements;
         expect((Object.values(expandedState).find(
-            (n: Node) => n.id === childNode.id
-        ) as Node).visible).toBe(true);
+            (elm: Element) => elm.id === childElement.id
+        ) as Element).visible).toBe(true);
     });
 
     it('UPDATE_NODE_SIZE アクション', () => {
@@ -624,9 +624,9 @@ describe('state reducer', () => {
             });
         });
 
-        const updatedNode = Object.values(result.current.state.elements)[0] as Node;
-        expect(updatedNode.width).toBe(newSize.width);
-        expect(updatedNode.height).toBe(newSize.height);
+        const updatedElement = Object.values(result.current.state.elements)[0] as Element;
+        expect(updatedElement.width).toBe(newSize.width);
+        expect(updatedElement.height).toBe(newSize.height);
     });
 
     it('LOAD_NODES アクション（空の場合）', () => {
