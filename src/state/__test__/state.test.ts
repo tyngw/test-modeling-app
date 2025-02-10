@@ -462,6 +462,117 @@ describe('state reducer', () => {
         expect(newParentC.children).toBe(1);
     });
 
+    it('親ノードを子ノードにドロップできないことを確認する', async () => {
+        const { result } = renderHook(() => useStore());
+        const { dispatch } = result.current;
+    
+        // 親ノードと子ノードを作成
+        act(() => {
+            dispatch({ type: 'SELECT_NODE', payload: '1' });
+            dispatch({ type: 'ADD_NODE' });
+        });
+    
+        const initialState = result.current.state;
+        const parentNode = initialState.elements['1'];
+        const childNode = Object.values(initialState.elements).find(
+            (n: Node) => n.parentId === '1'
+        ) as Node;
+    
+        // 親ノードを子ノードにドロップしようとする
+        await act(async () => {
+            dispatch({
+                type: 'DROP_NODE',
+                payload: {
+                    id: parentNode.id,
+                    oldParentId: null,
+                    newParentId: childNode.id,
+                    draggingNodeOrder: 0,
+                    depth: childNode.depth + 1
+                }
+            });
+        });
+    
+        const afterState = result.current.state;
+        
+        // 状態が変化していないことを確認
+        expect(afterState.elements).toEqual(initialState.elements);
+        expect(afterState.elements[parentNode.id].parentId).toBeNull();
+        expect(afterState.elements[childNode.id].children).toBe(0);
+    });
+
+    it('親ノードを孫ノードにドロップできないことを確認する', async () => {
+        const { result } = renderHook(() => useStore());
+        const { dispatch } = result.current;
+    
+        // 3階層のノードを作成 (1 -> 2 -> 3)
+        act(() => {
+            dispatch({ type: 'SELECT_NODE', payload: '1' });
+            dispatch({ type: 'ADD_NODE' }); // Node 2
+        });
+    
+        let state = result.current.state;
+        const node2 = Object.values(state.elements).find(
+            (n: Node) => n.parentId === '1'
+        ) as Node;
+    
+        act(() => {
+            dispatch({ type: 'SELECT_NODE', payload: node2.id });
+            dispatch({ type: 'ADD_NODE' }); // Node 3
+        });
+    
+        state = result.current.state;
+        const node3 = Object.values(state.elements).find(
+            (n: Node) => n.parentId === node2.id
+        ) as Node;
+    
+        // ルートノード(1)を孫ノード(3)にドロップしようとする
+        await act(async () => {
+            dispatch({
+                type: 'DROP_NODE',
+                payload: {
+                    id: '1',
+                    oldParentId: null,
+                    newParentId: node3.id,
+                    draggingNodeOrder: 0,
+                    depth: node3.depth + 1
+                }
+            });
+        });
+    
+        const afterState = result.current.state;
+        
+        // 状態が変化していないことを確認
+        expect(afterState.elements['1'].parentId).toBeNull();
+        expect(afterState.elements[node3.id].children).toBe(0);
+    });
+
+    it('ノードを自身にドロップできないことを確認する', async () => {
+        const { result } = renderHook(() => useStore());
+        const { dispatch } = result.current;
+    
+        const initialNode = result.current.state.elements['1'];
+    
+        // 自分自身にドロップしようとする
+        await act(async () => {
+            dispatch({
+                type: 'DROP_NODE',
+                payload: {
+                    id: '1',
+                    oldParentId: null,
+                    newParentId: '1',
+                    draggingNodeOrder: 0,
+                    depth: initialNode.depth + 1
+                }
+            });
+        });
+    
+        const afterState = result.current.state;
+        
+        // 状態が変化していないことを確認
+        expect(afterState.elements['1'].parentId).toBeNull();
+        expect(afterState.elements['1'].children).toBe(0);
+    });
+
     it('ノードを折りたたみ、展開できることを確認する', () => {
         const { result } = renderHook(() => useStore());
         const { dispatch } = result.current;
