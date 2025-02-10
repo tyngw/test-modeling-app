@@ -1,19 +1,19 @@
 // state/undoredo.js
 
-let snapshots = [];
+let snapshots: any[] = [];
 let snapshotIndex = 0;
 
-export const Undo = (elements) => {
+export const Undo = (elements: any) => {
     if (snapshotIndex > 0) {
         snapshots[snapshotIndex] = elements;
         snapshotIndex--;
-        return snapshots[snapshotIndex];
+        return snapshots[snapshotIndex] as any;
     } else {
         return elements;
     }
 };
 
-export const Redo = (elements) => {
+export const Redo = (elements: any) => {
     if (snapshotIndex < snapshots.length - 1) {
         snapshotIndex++;
         return snapshots[snapshotIndex];
@@ -22,9 +22,9 @@ export const Redo = (elements) => {
     }
 };
 
-export const saveSnapshot = (elements) => {
+export const saveSnapshot = (elements: any) => {
     console.log(`saveSnapshot snapshotIndex: ${snapshotIndex}`);
-    const newSnapshots = snapshots.slice(0, snapshotIndex + 1);
+    const newSnapshots: any[] = snapshots.slice(0, snapshotIndex + 1);
 
     newSnapshots.push(elements);
     saveToLocalStorage(elements);
@@ -43,7 +43,7 @@ export const clearLocalStorage = () => {
     localStorage.clear();
 };
 
-export const saveToLocalStorage = (elements) => {
+export const saveToLocalStorage = (elements: any) => {
     localStorage.setItem('elements', JSON.stringify(elements));
 };
 
@@ -52,6 +52,6 @@ export const loadFromLocalStorage = () => {
     if (!localStorage.getItem('elements')) {
         return [];
     }
-    const elements = JSON.parse(localStorage.getItem('elements'));
+    const elements = JSON.parse(localStorage.getItem('elements') || '[]');
     return elements;
 };

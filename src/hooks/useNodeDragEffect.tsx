@@ -1,28 +1,49 @@
+// src/hooks/useNodeDragEffect.tsx
 import { useState, useEffect, useCallback } from 'react';
 import { useCanvas } from '../context/CanvasContext';
 import { ICONBAR_HEIGHT } from '../constants/NodeSettings';
 
+interface Node {
+  id: string;
+  parentId: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  depth: number;
+}
+
+interface State {
+  zoomRatio: number;
+  elements: { [key: string]: Node };
+}
+
+type MouseHandler = (e: globalThis.MouseEvent) => void;
+
 export const useNodeDragEffect = () => {
-  const { state, dispatch } = useCanvas();
-  const [dragging, setDragging] = useState(null);
+  const { state, dispatch } = useCanvas() as { state: State; dispatch: React.Dispatch<any> };
+  const [dragging, setDragging] = useState<Node | null>(null);
   const [startPosition, setStartPosition] = useState({ x: 0, y: 0 });
   const [originalPosition, setOriginalPosition] = useState({ x: 0, y: 0 });
-  const [overDropTarget, setOverDropTarget] = useState(null);
+  const [overDropTarget, setOverDropTarget] = useState<Node | null>(null);
 
-  const handleMouseDown = useCallback((e, element) => {
+  const handleMouseDown = useCallback((
+    e: React.MouseEvent<HTMLElement>,
+    element: Node
+  ) => {
     if (!element.id || !element.parentId) return;
     e.stopPropagation();
     setDragging(element);
     setStartPosition({ 
-      x: (e.pageX / state.zoomRatio ) - element.x, 
-      y: (e.pageY / state.zoomRatio ) - element.y
+      x: (e.pageX / state.zoomRatio) - element.x, 
+      y: (e.pageY / state.zoomRatio) - element.y 
     });
     setOriginalPosition({ x: element.x, y: element.y });
   }, [state.zoomRatio]);
 
   useEffect(() => {
     if (dragging) {
-      const handleMouseMove = (e) => {
+      const handleMouseMove: MouseHandler = (e) => {
         const overNode = Object.values(state.elements).find(element => {
           const x = e.pageX / state.zoomRatio;
           const y = (e.pageY / state.zoomRatio) - ICONBAR_HEIGHT;
@@ -33,13 +54,13 @@ export const useNodeDragEffect = () => {
         });
         
         setOverDropTarget(overNode || null);
-                const newX = (e.pageX / state.zoomRatio ) - startPosition.x;
-                const newY = (e.pageY / state.zoomRatio ) - startPosition.y;
-                
-                dispatch({ 
-                    type: 'MOVE_NODE', 
-                    payload: { id: dragging.id, x: newX, y: newY } 
-                });
+        const newX = (e.pageX / state.zoomRatio) - startPosition.x;
+        const newY = (e.pageY / state.zoomRatio) - startPosition.y;
+        
+        dispatch({ 
+          type: 'MOVE_NODE', 
+          payload: { id: dragging.id, x: newX, y: newY } 
+        });
       };
 
       document.addEventListener('mousemove', handleMouseMove);

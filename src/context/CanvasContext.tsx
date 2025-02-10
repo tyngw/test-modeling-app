@@ -1,10 +1,19 @@
-// src/context/CanvasContext.js
-import React, { createContext, useReducer, useContext } from 'react';
-import { initialState, reducer } from '../state/state';
+// src/context/CanvasContext.tsx
+import React, { createContext, useReducer, useContext, ReactNode, Dispatch } from 'react';
+import { initialState, reducer, State, Action } from '../state/state';
 
-const CanvasContext = createContext();
+interface CanvasContextProps {
+  state: State;
+  dispatch: Dispatch<Action>;
+}
 
-export const CanvasProvider = ({ children }) => {
+const CanvasContext = createContext<CanvasContextProps | undefined>(undefined);
+
+interface CanvasProviderProps {
+  children: ReactNode;
+}
+
+export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(reducer, initialState);
   return (
     <CanvasContext.Provider value={{ state, dispatch }}>
@@ -13,4 +22,10 @@ export const CanvasProvider = ({ children }) => {
   );
 };
 
-export const useCanvas = () => useContext(CanvasContext);
+export const useCanvas = (): CanvasContextProps => {
+  const context = useContext(CanvasContext);
+  if (context === undefined) {
+    throw new Error('useCanvas must be used within a CanvasProvider');
+  }
+  return context;
+};

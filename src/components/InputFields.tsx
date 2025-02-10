@@ -1,24 +1,39 @@
-import React, { useRef } from 'react';
+// src/components/InputFields.tsx
+import React, { useRef, useEffect } from 'react';
 import { useCanvas } from '../context/CanvasContext';
 import { calculateNodeWidth } from '../utils/TextNodeHelpers';
-import { DEFAULT_SECTION_HEIGHT, DEFAULT_FONT_SIZE, LINE_HEIGHT_RATIO } from '../constants/NodeSettings';
+import { 
+    DEFAULT_SECTION_HEIGHT, 
+    DEFAULT_FONT_SIZE, 
+    LINE_HEIGHT_RATIO 
+} from '../constants/NodeSettings';
+import { Node } from '../types';
 
-const InputFields = ({ element }) => {
-    const { dispatch } = useCanvas();
-    const { state } = useCanvas();
-    const fields = ['text', 'text2', 'text3'];
-    const fieldRefs = useRef({
-        text: null,
-        text2: null,
-        text3: null
-    });
+interface InputFieldsProps {
+    element?: Node;
+}
+
+type TextField = 'text' | 'text2' | 'text3';
+
+const InputFields: React.FC<InputFieldsProps> = ({ element }) => {
+    const { dispatch, state } = useCanvas();
+    const fieldRefs = useRef<{
+        text: HTMLTextAreaElement | null;
+        text2: HTMLTextAreaElement | null;
+        text3: HTMLTextAreaElement | null;
+    }>({ text: null, text2: null, text3: null });
 
     if (!element) return null;
 
+    const getSectionHeight = (index: number): number => {
+        const sectionKey = `section${index + 1}Height` as keyof Node;
+        return element[sectionKey] as number;
+    };
+
     const sectionHeights = [
-        element.section1Height,
-        element.section2Height,
-        element.section3Height
+        getSectionHeight(0),
+        getSectionHeight(1),
+        getSectionHeight(2)
     ];
 
     const maxWidth = calculateNodeWidth(
@@ -27,25 +42,32 @@ const InputFields = ({ element }) => {
     );
     element.width = maxWidth;
 
-    const handleKeyDown = (e, field, index) => {
+    const handleKeyDown = (
+        e: React.KeyboardEvent<HTMLTextAreaElement>,
+        field: TextField,
+        index: number
+    ) => {
         if (e.key === 'Tab') {
             e.preventDefault();
-            if (index === fields.length - 1) {
+            if (index === 2) {
                 dispatch({ type: 'END_EDITING' });
             } else {
                 const nextIndex = index + 1;
+                const fields: TextField[] = ['text', 'text2', 'text3'];
                 const nextField = fields[nextIndex];
-
-                if (fieldRefs.current[nextField]) {
-                    fieldRefs.current[nextField].focus();
-                }
+                (fieldRefs.current[nextField] as HTMLTextAreaElement)?.focus();
             }
         }
         if (e.key === 'Enter' && e.shiftKey) {
             e.preventDefault();
-            const cursorPosition = e.target.selectionStart;
-            const newValue = e.target.value.substring(0, cursorPosition) + '\n' + e.target.value.substring(cursorPosition);
-            dispatch({ type: 'UPDATE_TEXT', payload: { id: element.id, field, value: newValue } });
+            const cursorPosition = e.currentTarget.selectionStart;
+            const newValue = e.currentTarget.value.substring(0, cursorPosition) + 
+                            '\n' + 
+                            e.currentTarget.value.substring(cursorPosition);
+            dispatch({ 
+                type: 'UPDATE_TEXT', 
+                payload: { id: element.id, field, value: newValue } 
+            });
         }
         if (e.key === 'Escape') {
             e.preventDefault();
@@ -55,27 +77,11 @@ const InputFields = ({ element }) => {
 
     return (
         <>
-            {fields.map((field, index) => {
-                let height;
-                switch (field) {
-                    case 'text':
-                        console.log(`[InputFields.js] text: ${element.text} height: ${element.section1Height}`);
-                        height = element.section1Height;
-                        break;
-                    case 'text2':
-                        height = element.section2Height;
-                        break;
-                    case 'text3':
-                        height = element.section3Height;
-                        break;
-                    default:
-                        height = DEFAULT_SECTION_HEIGHT;
-                }
-
+            {(['text', 'text2', 'text3'] as TextField[]).map((field, index) => {
+                const height = getSectionHeight(index);
                 let yPosition = 0;
                 for (let i = 0; i < index; i++) {
-                    // それぞれのsectionHeightの値を使用
-                    yPosition += element[`section${i + 1}Height`];
+                    yPosition += getSectionHeight(i);
                 }
 
                 return (
@@ -102,23 +108,14 @@ const InputFields = ({ element }) => {
                             padding: '2px 3px',
                             fontSize: `${DEFAULT_FONT_SIZE * state.zoomRatio}px`,
                             lineHeight: `${LINE_HEIGHT_RATIO}em`,
-                            fontFamily: `
-                            -apple-system,
-                            BlinkMacSystemFont,
-                            "Segoe UI",
-                            Roboto,
-                            "Helvetica Neue",
-                            Arial,
-                            sans-serif
-                            `,
-                            border: 'none', // border を無効化
-                            boxSizing: 'border-box', // box-sizing を統一
-                            fontSmoothing: 'antialiased', // フォントのアンチエイリアス
-                            WebkitFontSmoothing: 'antialiased', // Safari 用
-                            MozOsxFontSmoothing: 'grayscale', // Firefox 用
+                            fontFamily: `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`,
+                            border: 'none',
+                            boxSizing: 'border-box',
+                            WebkitFontSmoothing: 'antialiased',
+                            MozOsxFontSmoothing: 'grayscale',
                             overflow: 'hidden', // スクロールバーを非表示にする
                             whiteSpace: 'pre-wrap',
-                             wordWrap: 'break-word',
+                            wordWrap: 'break-word',
                             resize: 'none',
                         }}
                         autoFocus={field === 'text'}
