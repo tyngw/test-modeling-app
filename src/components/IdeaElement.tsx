@@ -2,20 +2,20 @@
 import React, { useCallback } from 'react';
 import { useCanvas } from '../context/CanvasContext';
 import TextSection from './TextDisplayArea';
-import { calculateNodeWidth } from '../utils/TextNodeHelpers';
+import { calculateElementWidth } from '../utils/TextareaHelpers';
 import { 
     CURVE_CONTROL_OFFSET, 
     ARROW_OFFSET, 
     DEFAULT_FONT_SIZE 
-} from '../constants/NodeSettings';
-import { Node as CanvasNode } from '../types';
+} from '../constants/ElementSettings';
+import { Element as CanvasElement } from '../types';
 
 const SECTION_KEYS = ['text', 'text2', 'text3'] as const;
 
 interface IdeaElementProps {
-  element: CanvasNode;
-  overDropTarget: CanvasNode | null;
-  handleMouseDown: (e: React.MouseEvent<SVGElement>, element: CanvasNode) => void;
+  element: CanvasElement;
+  overDropTarget: CanvasElement | null;
+  handleMouseDown: (e: React.MouseEvent<SVGElement>, element: CanvasElement) => void;
   handleMouseUp: () => void;
 }
 
@@ -26,7 +26,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
     handleMouseUp 
 }) => {
     const { state, dispatch } = useCanvas();
-    const parentNode = state.elements[element.parentId!];
+    const parentElement = state.elements[element.parentId!];
     const overDropTargetId = overDropTarget?.id || -1;
 
     const sectionHeights = [
@@ -37,14 +37,14 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
 
     const handleHeightChange = useCallback((sectionIndex: number, newHeight: number) => {
         const sectionKey = `section${sectionIndex + 1}Height`;
-        const currentHeight = element[sectionKey as keyof CanvasNode] as number;
+        const currentHeight = element[sectionKey as keyof CanvasElement] as number;
         
         if (currentHeight !== null && Math.abs(newHeight - currentHeight) > 1) {
             const newSectionHeights = [...sectionHeights];
             newSectionHeights[sectionIndex] = newHeight;
 
             const texts = [element.text, element.text2, element.text3];
-            const newWidth = calculateNodeWidth(texts);
+            const newWidth = calculateElementWidth(texts);
 
             dispatch({
                 type: 'UPDATE_NODE_SIZE',
@@ -64,13 +64,13 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
     };
 
     const renderConnectionPath = useCallback(() => {
-        if (!parentNode) return null;
+        if (!parentElement) return null;
         const totalHeight = element.height;
         const pathCommands = [
             `M ${element.x},${element.y + totalHeight / 2}`,
             `C ${element.x - CURVE_CONTROL_OFFSET},${element.y + totalHeight / 2}`,
-            `${parentNode.x + parentNode.width + CURVE_CONTROL_OFFSET},${parentNode.y + parentNode.height / 2}`,
-            `${parentNode.x + parentNode.width + ARROW_OFFSET},${parentNode.y + parentNode.height / 2}`
+            `${parentElement.x + parentElement.width + CURVE_CONTROL_OFFSET},${parentElement.y + parentElement.height / 2}`,
+            `${parentElement.x + parentElement.width + ARROW_OFFSET},${parentElement.y + parentElement.height / 2}`
         ].join(' ');
         return (
             <path
@@ -81,7 +81,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
                 markerEnd="url(#arrowhead)"
             />
         );
-    }, [parentNode, element]);
+    }, [parentElement, element]);
 
     return (
         <React.Fragment key={element.id}>
