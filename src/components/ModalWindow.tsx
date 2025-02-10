@@ -1,7 +1,13 @@
-// src/components/ModalWindow.js
-import React from 'react';
+// src/components/ModalWindow.tsx
+import React, { ReactNode } from 'react';
 
-const ModalWindow = ({ isOpen, onClose, children }) => {
+interface ModalWindowProps {
+  isOpen: boolean;
+  onClose: () => void;
+  children: ReactNode;
+}
+
+const ModalWindow: React.FC<ModalWindowProps> = ({ isOpen, onClose, children }) => {
     if (!isOpen) {
         return null;
     }

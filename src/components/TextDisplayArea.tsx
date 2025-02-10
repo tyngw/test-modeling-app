@@ -1,9 +1,20 @@
-// src/components/TextDisplayArea.js
+// src/components/TextDisplayArea.tsx
 import React, { memo, useEffect, useRef, useState } from 'react';
 import { DEFAULT_SECTION_HEIGHT, DEFAULT_FONT_SIZE, LINE_HEIGHT_RATIO } from '../constants/NodeSettings';
 import { wrapText, calculateTextWidth } from '../utils/TextNodeHelpers';
 
-const TextDisplayArea = memo(({
+interface TextDisplayAreaProps {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  text: string;
+  zoomRatio: number;
+  fontSize: number;
+  onHeightChange: (newHeight: number) => void;
+}
+
+const TextDisplayArea: React.FC<TextDisplayAreaProps> = memo(({
   x,
   y,
   width,
@@ -13,12 +24,12 @@ const TextDisplayArea = memo(({
   onHeightChange
 }) => {
   const [currentHeight, setCurrentHeight] = useState(height);
-  const textRef = useRef(null);
+  const textRef = useRef<HTMLDivElement>(null);
   const prevText = useRef(text);
   const prevWidth = useRef(width);
 
   useEffect(() => {
-    let animationFrame;
+    let animationFrame: number;
     const updateHeight = () => {
       if (!textRef.current) return;
 
