@@ -13,8 +13,13 @@ import { saveSvg, loadNodes, saveNodes } from '../utils/FileHelpers';
 import FoldingIcon from './FoldingIcon';
 import ModalWindow from './ModalWindow';
 import { helpContent } from '../constants/HelpContent';
-import { ICONBAR_HEIGHT } from '../constants/NodeSettings';
-import { Node } from '../types';
+import { ICONBAR_HEIGHT } from '../constants/ElementSettings';
+import { Element } from '../types';
+
+interface Toast {
+    id: string;
+    message: string;
+}
 
 const CanvasArea: React.FC = () => {
     const svgRef = useRef<SVGSVGElement>(null);
@@ -27,6 +32,7 @@ const CanvasArea: React.FC = () => {
         `0 0 ${displayScopeSize.width} ${displayScopeSize.height - ICONBAR_HEIGHT}`
     );
     const [isHelpOpen, setHelpOpen] = useState(false);
+    const [toasts, setToasts] = useState<Toast[]>([]);
 
     const toggleHelp = () => setHelpOpen(!isHelpOpen);
     const editingNode = Object.values(state.elements).find((element: Node) => element.editing);
@@ -38,7 +44,25 @@ const CanvasArea: React.FC = () => {
 
     useResizeEffect({ setCanvasSize, setDisplayArea, state });
     useClickOutside(svgRef, !!editingNode);
-    const { handleMouseDown, handleMouseUp, overDropTarget } = useNodeDragEffect();
+
+    const addToast = (message: string) => {
+        const id = new Date().getTime().toString() + Math.random().toString();
+        const newToast: Toast = { id, message };
+        setToasts(prevToasts => {
+            // 既に表示されているトーストが5つ以上なら最古のものを削除
+            const updatedToasts = [...prevToasts, newToast];
+            if (updatedToasts.length > 5) {
+                updatedToasts.shift();
+            }
+            return updatedToasts;
+        });
+        // 3秒後に自動でトーストを非表示にする
+        setTimeout(() => {
+            setToasts(prevToasts => prevToasts.filter(toast => toast.id !== id));
+        }, 3000);
+    };
+
+    const { handleMouseDown, handleMouseUp, overDropTarget } = useElementDragEffect({ showToast: addToast });
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         e.preventDefault();
@@ -74,6 +98,28 @@ const CanvasArea: React.FC = () => {
                 saveNodes={() => saveNodes(Object.values(state.elements))}
                 toggleHelp={toggleHelp}
             />
+
+            {toasts.map((toast, index) => (
+                <div
+                    key={toast.id}
+                    style={{
+                        position: 'fixed',
+                        bottom: `${20 + index * 60}px`, // 各トーストごとに60pxずつ下方向へずらす
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        backgroundColor: 'rgba(255, 100, 100, 0.9)',
+                        color: 'white',
+                        padding: '10px 20px',
+                        borderRadius: '10px',
+                        transition: 'opacity 0.5s',
+                        opacity: 1,
+                        pointerEvents: 'none',
+                        zIndex: 1000,
+                    }}
+                >
+                    {toast.message}
+                </div>
+            ))}
 
             <div style={{ position: 'absolute', top: ICONBAR_HEIGHT, left: 0, overflow: 'auto' }}>
                 <ModalWindow isOpen={isHelpOpen} onClose={toggleHelp}>
