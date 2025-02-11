@@ -6,16 +6,6 @@ import { Element } from '../types';
 import { isDescendant } from '../state/state';
 import { ToastMessages } from '../constants/ToastMessages';
 
-// interface Element {
-//   id: string;
-//   parentId: string;
-//   x: number;
-//   y: number;
-//   width: number;
-//   height: number;
-//   depth: number;
-// }
-
 interface State {
   zoomRatio: number;
   elements: { [key: string]: Element };

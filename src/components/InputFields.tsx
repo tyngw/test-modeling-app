@@ -1,9 +1,9 @@
 // src/components/InputFields.tsx
-import React, { useRef, useEffect } from 'react';
+import React, { useRef } from 'react';
 import { useCanvas } from '../context/CanvasContext';
 import { calculateElementWidth } from '../utils/TextareaHelpers';
 import { 
-    DEFAULT_SECTION_HEIGHT, 
+    // DEFAULT_SECTION_HEIGHT, 
     DEFAULT_FONT_SIZE, 
     LINE_HEIGHT_RATIO 
 } from '../constants/ElementSettings';
@@ -78,7 +78,7 @@ const InputFields: React.FC<InputFieldsProps> = ({ element }) => {
     return (
         <>
             {(['text', 'text2', 'text3'] as TextField[]).map((field, index) => {
-                const height = getSectionHeight(index);
+                // const height = getSectionHeight(index);
                 let yPosition = 0;
                 for (let i = 0; i < index; i++) {
                     yPosition += getSectionHeight(i);

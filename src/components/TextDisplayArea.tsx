@@ -1,7 +1,7 @@
 // src/components/TextDisplayArea.tsx
 import React, { memo, useEffect, useRef, useState } from 'react';
 import { DEFAULT_SECTION_HEIGHT, DEFAULT_FONT_SIZE, LINE_HEIGHT_RATIO } from '../constants/ElementSettings';
-import { wrapText, calculateTextWidth } from '../utils/TextareaHelpers';
+import { wrapText } from '../utils/TextareaHelpers';
 
 interface TextDisplayAreaProps {
   x: number;
