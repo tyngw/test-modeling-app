@@ -1,5 +1,5 @@
 // src/components/IdeaElement.tsx
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { useCanvas } from '../context/CanvasContext';
 import TextSection from './TextDisplayArea';
 import { calculateElementWidth } from '../utils/TextareaHelpers';
