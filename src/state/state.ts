@@ -255,18 +255,19 @@ const adjustElementPositions = (elements: { [key: string]: Element }): { [key: s
         const children = sortedElements.filter(n => n.parentId === parentElement.id);
         const visibleChildren = children.filter(n => n.visible);
         if (visibleChildren.length > 0) {
-            const minY = Math.min(...children.map(n => n.y));
-            const maxY = Math.max(...children.map(n => n.y + n.height));
-            if (parentElement.id === '10') {
-                console.log('[adjustElementPositions] minY:', minY, 'maxY:', maxY, 'parentElement.height:', parentElement.height);
+            const childrenMinY = Math.min(...children.map(n => n.y));
+            const childrenMaxY = Math.max(...children.map(n => n.y + n.height));
+            const childrenHeight = childrenMaxY - childrenMinY;
+            if (parentElement.id === '10'){
+                console.log('[Debug] childrenMinY:' + childrenMinY + ' childrenMaxY:' + childrenMaxY + ' childrenHeight:' + childrenHeight);
             }
-            if (parentElement.height > (maxY - minY)) {
-                const adjustedParentY = parentElement.y - ((parentElement.height - (maxY - minY)) / 2);
-                updatedElements[parentElement.id] = { ...parentElement, y: adjustedParentY };
+            if (parentElement.height > childrenHeight) {
+                const tallParentNewY = parentElement.y - ((parentElement.height - childrenHeight) / 2);
+                updatedElements[parentElement.id] = { ...parentElement, y: tallParentNewY };
             } else {
-                const newY = minY + (maxY - minY) / 2 - parentElement.height / 2;
-                if (parentElement.y < newY) {
-                    updatedElements[parentElement.id] = { ...parentElement, y: newY };
+                const shortParentNewY = childrenMinY + (childrenHeight / 2) - (parentElement.height / 2);
+                if (parentElement.y < shortParentNewY) {
+                    updatedElements[parentElement.id] = { ...parentElement, y: shortParentNewY };
                 }
             }
         }
