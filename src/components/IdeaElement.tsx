@@ -1,5 +1,5 @@
 // src/components/IdeaElement.tsx
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useCanvas } from '../context/CanvasContext';
 import TextSection from './TextDisplayArea';
 import { calculateElementWidth } from '../utils/TextareaHelpers';
@@ -28,6 +28,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
     const { state, dispatch } = useCanvas();
     const parentElement = state.elements[element.parentId!];
     const overDropTargetId = overDropTarget?.id || -1;
+    const [isHovered, setIsHovered] = useState(false);
 
     const sectionHeights = [
         element.section1Height,
@@ -83,6 +84,8 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
         );
     }, [parentElement, element]);
 
+    const isDebugMode = localStorage.getItem('__debugMode__') === 'true';
+
     return (
         <React.Fragment key={element.id}>
             {renderConnectionPath()}
@@ -97,6 +100,8 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
                 onDoubleClick={() => dispatch({ type: 'EDIT_NODE' })}
                 onMouseDown={(e) => handleMouseDown(e, element)}
                 onMouseUp={handleMouseUp}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
                 style={{ 
                     fill: element.id === overDropTargetId ? 'lightblue' : 'white',
                     pointerEvents: 'all'
@@ -127,6 +132,26 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
                     )}
                 </React.Fragment>
             ))}
+            {isDebugMode && isHovered && (
+                <foreignObject
+                    x={element.x + element.width + 10}
+                    y={element.y - 10}
+                    width="340"
+                    height="130"
+                    style={{ backgroundColor: 'white', border: '1px solid black', padding: '5px', zIndex: 1000, borderRadius: '5px' }}
+                >
+                    <div style={{ fontSize: '12px', color: 'black' }}>
+                        <div>id: {element.id}</div>
+                        <div>parentID: {element.parentId}</div>
+                        <div>order: {element.order}</div>
+                        <div>depth: {element.depth}</div>
+                        <div>children: {element.children}</div>
+                        <div>editing: {element.editing ? 'true' : 'false'}</div>
+                        <div>selected: {element.selected ? 'true' : 'false'}</div>
+                        <div>visible: {element.visible ? 'true' : 'false'}</div>
+                    </div>
+                </foreignObject>
+            )}
         </React.Fragment>
     );
 };
