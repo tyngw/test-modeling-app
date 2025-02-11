@@ -27,6 +27,14 @@ export type Action = {
     payload?: any;
 };
 
+type ElementsMap = { [key: string]: Element };
+
+interface AdjustmentResult {
+    elements: ElementsMap;
+    currentY: number;
+    maxHeight: number;
+}
+
 const createNewElement = (parentId: string | null, order: number, depth: number): Element => ({
     id: uuidv4(),
     text: '',
@@ -203,75 +211,122 @@ export const isDescendant = (elements: { [key: string]: Element }, nodeId: strin
     return false;
 };
 
-const adjustElementAndChildrenPosition = (
-    elements: { [key: string]: Element },
+const calculateElementPosition = (
+    element: Element,
+    parentElement: Element | null,
+    currentY: number
+): Element => ({
+    ...element,
+    x: parentElement ? parentElement.x + parentElement.width + X_OFFSET : DEFAULT_X,
+    y: currentY,
+});
+
+const adjustElementAndChildren = (
+    elements: ElementsMap,
     element: Element,
     currentY: number,
     maxHeight: number,
-    visited: Set<string> = new Set()
-): number => {
-    if (visited.has(element.id)) return currentY;
+    visited: Set<string>
+): AdjustmentResult => {
+    if (visited.has(element.id)) return { elements, currentY, maxHeight };
     visited.add(element.id);
 
-    const updatedElements = { ...elements };
-    const parentElement = element.parentId ? updatedElements[element.parentId] : null;
+    const parentElement = element.parentId ? elements[element.parentId] : null;
+    const positionedElement = calculateElementPosition(element, parentElement, currentY);
+    let updatedElements = { ...elements, [positionedElement.id]: positionedElement };
 
-    if (!parentElement) {
-        element.x = DEFAULT_X;
-    } else {
-        element.x = parentElement.x + parentElement.width + X_OFFSET;
-    }
+    const newMaxHeight = Math.max(maxHeight, positionedElement.height);
+    const children = Object.values(updatedElements).filter(e => e.parentId === positionedElement.id);
 
-    element.y = currentY;
-    maxHeight = Math.max(maxHeight, element.height);
-    updatedElements[element.id] = element;
+    let updatedY = currentY;
+    let currentMaxHeight = newMaxHeight;
 
-    const childElements = Object.values(updatedElements).filter(n => n.parentId === element.id);
-    if (childElements.length > 0) {
-        childElements.forEach(childElement => {
-            if (!visited.has(childElement.id)) {
-                currentY = adjustElementAndChildrenPosition(updatedElements, childElement, currentY, maxHeight, visited);
-            }
-        });
-    } else {
-        if (element.visible || element.order === 0) {
-            currentY += maxHeight + Y_OFFSET;
+    if (children.length > 0) {
+        // 子要素がある場合は再帰的に処理
+        for (const child of children) {
+            const result = adjustElementAndChildren(
+                updatedElements,
+                child,
+                updatedY,
+                currentMaxHeight,
+                visited
+            );
+            updatedElements = result.elements;
+            updatedY = result.currentY;
+            currentMaxHeight = Math.max(currentMaxHeight, result.maxHeight);
         }
+    } else if (positionedElement.visible || positionedElement.order === 0) {
+        // 子要素がない場合は、次の要素のY座標を計算
+        updatedY += currentMaxHeight + Y_OFFSET;
     }
 
-    return currentY;
+    return { elements: updatedElements, currentY: updatedY, maxHeight: currentMaxHeight };
 };
 
-const adjustElementPositions = (elements: { [key: string]: Element }): { [key: string]: Element } => {
-    const updatedElements = { ...elements };
-    const rootElements = Object.values(updatedElements).filter(n => n.parentId === null);
+const calculateParentPosition = (
+    parent: Element,
+    children: Element[]
+): { needsUpdate: boolean; newY: number } => {
+    const visibleChildren = children.filter(child => child.visible);
+    if (visibleChildren.length === 0) return { needsUpdate: false, newY: parent.y };
 
-    rootElements.forEach(rootElement => {
-        adjustElementAndChildrenPosition(updatedElements, rootElement, PRESET_Y, rootElement.height, new Set());
-    });
+    const childrenYValues = visibleChildren.map(child => child.y);
+    const childrenHeights = visibleChildren.map(child => child.height);
+    const childrenMinY = Math.min(...childrenYValues);
+    const childrenMaxY = Math.max(...childrenYValues.map((y, i) => y + childrenHeights[i]));
+    const childrenHeight = childrenMaxY - childrenMinY;
 
-    const sortedElements = Object.values(updatedElements).sort((a, b) => b.depth - a.depth || (a.parentId as string).localeCompare(b.parentId as string) || a.order - b.order);
-    sortedElements.forEach(parentElement => {
-        const children = sortedElements.filter(n => n.parentId === parentElement.id);
-        const visibleChildren = children.filter(n => n.visible);
-        if (visibleChildren.length > 0) {
-            const childrenMinY = Math.min(...children.map(n => n.y));
-            const childrenMaxY = Math.max(...children.map(n => n.y + n.height));
-            const childrenHeight = childrenMaxY - childrenMinY;
-            if (parentElement.id === '10'){
-                console.log('[Debug] childrenMinY:' + childrenMinY + ' childrenMaxY:' + childrenMaxY + ' childrenHeight:' + childrenHeight);
-            }
-            if (parentElement.height > childrenHeight) {
-                const tallParentNewY = parentElement.y - ((parentElement.height - childrenHeight) / 2);
-                updatedElements[parentElement.id] = { ...parentElement, y: tallParentNewY };
-            } else {
-                const shortParentNewY = childrenMinY + (childrenHeight / 2) - (parentElement.height / 2);
-                if (parentElement.y < shortParentNewY) {
-                    updatedElements[parentElement.id] = { ...parentElement, y: shortParentNewY };
-                }
-            }
+    if (parent.height > childrenHeight) {
+        return {
+            needsUpdate: true,
+            newY: parent.y - (parent.height - childrenHeight) / 2,
+        };
+    }
+
+    const calculatedY = childrenMinY + childrenHeight / 2 - parent.height / 2;
+    return {
+        needsUpdate: parent.y < calculatedY,
+        newY: calculatedY,
+    };
+};
+
+const getSortedElements = (elements: ElementsMap): Element[] =>
+    Object.values(elements).sort(
+        (a, b) =>
+            b.depth - a.depth ||
+            (a.parentId ?? "").localeCompare(b.parentId ?? "") ||
+            a.order - b.order
+    );
+
+const adjustElementPositions = (elements: ElementsMap): ElementsMap => {
+    // 初期位置調整
+    let updatedElements = { ...elements };
+    const rootElements = Object.values(updatedElements).filter(e => e.parentId === null);
+
+    for (const root of rootElements) {
+        const result = adjustElementAndChildren(
+            updatedElements,
+            root,
+            PRESET_Y,
+            root.height,
+            new Set<string>()
+        );
+        updatedElements = result.elements;
+    }
+
+    // 親要素の位置再調整
+    const sortedElements = getSortedElements(updatedElements);
+    for (const parentElement of sortedElements) {
+        const children = Object.values(updatedElements).filter(e => e.parentId === parentElement.id);
+        const positionResult = calculateParentPosition(parentElement, children);
+
+        if (positionResult.needsUpdate) {
+            updatedElements = {
+                ...updatedElements,
+                [parentElement.id]: { ...parentElement, y: positionResult.newY },
+            };
         }
-    });
+    }
 
     return updatedElements;
 };
