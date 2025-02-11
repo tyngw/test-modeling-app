@@ -1,5 +1,5 @@
 // src/types.ts
-export interface Node {
+export interface Element {
     id: string;
     text: string;
     text2: string;
@@ -21,15 +21,15 @@ export interface Node {
   }
   
   export interface CanvasState {
-    elements: Record<string, Node>;
+    elements: Record<string, Element>;
     width: number;
     height: number;
     zoomRatio: number;
-    cutNodes?: Record<string, Node>;
+    cutNodes?: Record<string, Element>;
   }
   
   export type CanvasAction = 
-    | { type: 'LOAD_NODES'; payload: Record<string, Node> }
+    | { type: 'LOAD_NODES'; payload: Record<string, Element> }
     | { type: 'SELECT_NODE'; payload: string }
     | { type: 'UPDATE_NODE_SIZE'; payload: { 
         id: string; 

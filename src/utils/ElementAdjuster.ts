@@ -1,10 +1,10 @@
-// src/utils/NodeAdjuster.js
+// src/utils/ElementAdjuster.js
 import {
     DEFAULT_X,
     X_OFFSET,
     Y_OFFSET,
     PRESET_Y
-} from "../constants/NodeSettings";
+} from "../constants/ElementSettings";
 
 // export const adjustNodeAndChildrenPosition = (allNodes, node, currentY, maxHeight, visited = new Set()) => {
 //     // 循環参照を防ぐために、既に訪問したノードは処理しない
