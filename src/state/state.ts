@@ -257,9 +257,17 @@ const adjustElementPositions = (elements: { [key: string]: Element }): { [key: s
         if (visibleChildren.length > 0) {
             const minY = Math.min(...children.map(n => n.y));
             const maxY = Math.max(...children.map(n => n.y + n.height));
-            const newHeight = minY + (maxY - minY) / 2 - parentElement.height / 2;
-            if (parentElement.y < newHeight) {
-                updatedElements[parentElement.id] = { ...parentElement, y: newHeight };
+            if (parentElement.id === '10') {
+                console.log('[adjustElementPositions] minY:', minY, 'maxY:', maxY, 'parentElement.height:', parentElement.height);
+            }
+            if (parentElement.height > (maxY - minY)) {
+                const adjustedParentY = parentElement.y - ((parentElement.height - (maxY - minY)) / 2);
+                updatedElements[parentElement.id] = { ...parentElement, y: adjustedParentY };
+            } else {
+                const newY = minY + (maxY - minY) / 2 - parentElement.height / 2;
+                if (parentElement.y < newY) {
+                    updatedElements[parentElement.id] = { ...parentElement, y: newY };
+                }
             }
         }
     });
