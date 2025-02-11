@@ -329,8 +329,8 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
                 ...element,
                 selected: element.id === action.payload,
                 editing: element.id === action.payload ? element.editing : false,
-                text: element.id,
-                text2: 'order: ' + element.order + ' children:' + element.children,
+                // text: element.id,
+                // text2: 'order: ' + element.order + ' children:' + element.children,
             };
             return acc;
         }, {});
