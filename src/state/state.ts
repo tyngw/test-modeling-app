@@ -113,7 +113,7 @@ const pasteElements = (elements: { [key: string]: Element }, cutElements: { [key
     }, {});
 
     const updatedElements = Object.values(newElements).reduce<{ [key: string]: Element }>((acc, element) => {
-        const parentId = idMap.has(element.parentId as string) 
+        const parentId = idMap.has(element.parentId as string)
             ? idMap.get(element.parentId as string)!
             : element.parentId;
         const updatedElement = { ...element, parentId };
@@ -173,6 +173,14 @@ const deleteElementRecursive = (elements: { [key: string]: Element }, deleteElem
         const parent = updatedElements[deleteElement.parentId];
         if (parent) {
             updatedElements[parent.id] = { ...parent, children: parent.children - 1 };
+
+            // 同じ parentId を持つ要素の order を再計算
+            const siblings = Object.values(updatedElements).filter(n => n.parentId === deleteElement.parentId);
+            siblings.sort((a, b) => a.order - b.order).forEach((sibling, index) => {
+                if (sibling.order !== index) {
+                    updatedElements[sibling.id] = { ...sibling, order: index };
+                }
+            });
         }
     }
 
@@ -320,7 +328,9 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
             acc[element.id] = {
                 ...element,
                 selected: element.id === action.payload,
-                editing: element.id === action.payload ? element.editing : false
+                editing: element.id === action.payload ? element.editing : false,
+                text: element.id,
+                text2: 'order: ' + element.order + ' children:' + element.children,
             };
             return acc;
         }, {});
@@ -386,7 +396,7 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
         ) {
             return state;
         }
-        
+
         const siblings = Object.values(state.elements).filter(n => n.parentId === payload.newParentId);
         const maxOrder = siblings.length > 0 ? Math.max(...siblings.map(n => n.order)) + 1 : 0;
 
