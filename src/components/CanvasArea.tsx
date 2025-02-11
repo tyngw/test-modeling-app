@@ -42,6 +42,12 @@ const CanvasArea: React.FC = () => {
         if (elementList) dispatch({ type: 'LOAD_NODES', payload: elementList });
     }, [dispatch]);
 
+    useEffect(() => {
+        if (!editingNode) {
+            svgRef.current?.focus();
+        }
+    }, [editingNode]);
+
     useResizeEffect({ setCanvasSize, setDisplayArea, state });
     useClickOutside(svgRef, !!editingNode);
 
@@ -157,7 +163,11 @@ const CanvasArea: React.FC = () => {
                         })}
                 </svg>
 
-                <InputFields element={editingNode as Element | undefined} />
+                <InputFields
+                    element={editingNode as Element | undefined}
+                    onEndEditing={() => svgRef.current?.focus()}
+                />
+
             </div>
         </>
     );

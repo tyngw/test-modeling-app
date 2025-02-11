@@ -11,11 +11,12 @@ import { Element } from '../types';
 
 interface InputFieldsProps {
     element?: Element;
+    onEndEditing?: () => void;
 }
 
 type TextField = 'text' | 'text2' | 'text3';
 
-const InputFields: React.FC<InputFieldsProps> = ({ element }) => {
+const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
     const { dispatch, state } = useCanvas();
     const fieldRefs = useRef<{
         text: HTMLTextAreaElement | null;
@@ -51,6 +52,7 @@ const InputFields: React.FC<InputFieldsProps> = ({ element }) => {
             e.preventDefault();
             if (index === 2) {
                 dispatch({ type: 'END_EDITING' });
+                onEndEditing?.();
             } else {
                 const nextIndex = index + 1;
                 const fields: TextField[] = ['text', 'text2', 'text3'];
