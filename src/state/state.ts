@@ -225,42 +225,44 @@ const adjustElementAndChildren = (
     elements: ElementsMap,
     element: Element,
     currentY: number,
-    maxHeight: number,
     visited: Set<string>
-): AdjustmentResult => {
-    if (visited.has(element.id)) return { elements, currentY, maxHeight };
+): { elements: ElementsMap; currentY: number; maxY: number } => {
+    if (visited.has(element.id)) return { elements, currentY, maxY: currentY };
     visited.add(element.id);
 
     const parentElement = element.parentId ? elements[element.parentId] : null;
     const positionedElement = calculateElementPosition(element, parentElement, currentY);
     let updatedElements = { ...elements, [positionedElement.id]: positionedElement };
 
-    const newMaxHeight = Math.max(maxHeight, positionedElement.height);
     const children = Object.values(updatedElements).filter(e => e.parentId === positionedElement.id);
 
     let updatedY = currentY;
-    let currentMaxHeight = newMaxHeight;
+    let maxY = positionedElement.y + positionedElement.height;
 
-    if (children.length > 0) {
-        // 子要素がある場合は再帰的に処理
-        for (const child of children) {
-            const result = adjustElementAndChildren(
-                updatedElements,
-                child,
-                updatedY,
-                currentMaxHeight,
-                visited
-            );
-            updatedElements = result.elements;
-            updatedY = result.currentY;
-            currentMaxHeight = Math.max(currentMaxHeight, result.maxHeight);
-        }
-    } else if (positionedElement.visible || positionedElement.order === 0) {
-        // 子要素がない場合は、次の要素のY座標を計算
-        updatedY += currentMaxHeight + Y_OFFSET;
+    // 子要素を再帰的に処理
+    for (const child of children) {
+        const result = adjustElementAndChildren(
+            updatedElements,
+            child,
+            updatedY,
+            visited
+        );
+        updatedElements = result.elements;
+        updatedY = result.currentY;
+        maxY = Math.max(maxY, result.maxY);
     }
 
-    return { elements: updatedElements, currentY: updatedY, maxHeight: currentMaxHeight };
+    // 子がない場合は自身の高さ分オフセット
+    if (children.length === 0 && (positionedElement.visible || positionedElement.order === 0)) {
+        updatedY = positionedElement.y + positionedElement.height + Y_OFFSET;
+        maxY = positionedElement.y + positionedElement.height;
+    }
+    // 子がある場合は親と子の最大下端を使用
+    else if (children.length > 0) {
+        updatedY = maxY + Y_OFFSET;
+    }
+
+    return { elements: updatedElements, currentY: updatedY, maxY };
 };
 
 const calculateParentPosition = (
@@ -270,17 +272,15 @@ const calculateParentPosition = (
     const visibleChildren = children.filter(child => child.visible);
     if (visibleChildren.length === 0) return { needsUpdate: false, newY: parent.y };
 
-    // 子要素のY座標と高さから中心点を計算
     const childrenCenters = visibleChildren.map(child => child.y + child.height / 2);
     const minChildCenter = Math.min(...childrenCenters);
     const maxChildCenter = Math.max(...childrenCenters);
     
-    // 親の中心が子要素の中心範囲の中央に来るように調整
     const targetCenter = (minChildCenter + maxChildCenter) / 2;
     const newY = targetCenter - parent.height / 2;
 
     return {
-        needsUpdate: Math.abs(parent.y - newY) > 1e-3, // 浮動小数点誤差を考慮
+        needsUpdate: Math.abs(parent.y - newY) > 1e-3,
         newY: newY,
     };
 };
@@ -288,28 +288,27 @@ const calculateParentPosition = (
 const getSortedElements = (elements: ElementsMap): Element[] =>
     Object.values(elements).sort(
         (a, b) =>
-            b.depth - a.depth ||  // 深い要素（子に近い）を先に処理
+            b.depth - a.depth ||
             (a.parentId ?? "").localeCompare(b.parentId ?? "") ||
             a.order - b.order
     );
 
 const adjustElementPositions = (elements: ElementsMap): ElementsMap => {
-    // 初期位置調整（従来通り）
     let updatedElements = { ...elements };
     const rootElements = Object.values(updatedElements).filter(e => e.parentId === null);
 
+    // 初期配置：親→子の順で配置
     for (const root of rootElements) {
         const result = adjustElementAndChildren(
             updatedElements,
             root,
             PRESET_Y,
-            root.height,
             new Set<string>()
         );
         updatedElements = result.elements;
     }
 
-    // 親要素の位置再調整（修正版）
+    // 親要素の位置調整：子→親の順で調整
     const sortedElements = getSortedElements(updatedElements);
     for (const parentElement of sortedElements) {
         const children = Object.values(updatedElements).filter(e => e.parentId === parentElement.id);
@@ -318,9 +317,9 @@ const adjustElementPositions = (elements: ElementsMap): ElementsMap => {
         if (positionResult.needsUpdate) {
             updatedElements = {
                 ...updatedElements,
-                [parentElement.id]: { 
-                    ...parentElement, 
-                    y: positionResult.newY 
+                [parentElement.id]: {
+                    ...parentElement,
+                    y: positionResult.newY,
                 },
             };
         }
