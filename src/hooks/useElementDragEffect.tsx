@@ -78,7 +78,6 @@ export const useElementDragEffect = ({ showToast }: UseElementDragEffectProps) =
         // 無効なドロップ条件をチェック
         const isInvalidDrop =
           overDropTarget.id === dragging.id ||
-          isDescendant(state.elements, overDropTarget.id, dragging.id) ||
           isDescendant(state.elements, dragging.id, overDropTarget.id);
 
         if (!isInvalidDrop) {
