@@ -10,13 +10,13 @@ import SaveAsOutlinedIcon from '@mui/icons-material/SaveAsOutlined';
 import SaveAltIcon from '@mui/icons-material/SaveAlt';
 import HelpOutlineOutlinedIcon from '@mui/icons-material/HelpOutlineOutlined';
 import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined';
-import { ICONBAR_HEIGHT } from '../constants/NodeSettings';
+import { ICONBAR_HEIGHT } from '../constants/ElementSettings';
 import { useCanvas } from '../context/CanvasContext';
 
 interface QuickMenuBarProps {
   saveSvg: () => void;
-  loadNodes: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  saveNodes: () => void;
+  loadElements: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  saveElements: () => void;
   toggleHelp: () => void;
 }
 
@@ -30,8 +30,8 @@ type CanvasActionType =
 
   const QuickMenuBar = ({ 
     saveSvg,
-    loadNodes,
-    saveNodes,
+    loadElements,
+    saveElements,
     toggleHelp
   }: QuickMenuBarProps) => {
     const { dispatch } = useCanvas();
@@ -48,7 +48,7 @@ type CanvasActionType =
   return (
     <div style={{ position: 'fixed', width: '100%', height: ICONBAR_HEIGHT, zIndex: 10000 }}>
       <div style={{ display: 'flex', justifyContent: 'left', alignItems: 'center', height: '100%', backgroundColor: '#f1f1f1', borderRadius: '30px', padding: '0 20px' }}>
-        <input type="file" ref={fileInput} onChange={loadNodes} style={{ display: 'none' }} />
+        <input type="file" ref={fileInput} onChange={loadElements} style={{ display: 'none' }} />
         
         {/* アクションボタンの修正 */}
         <Button variant="text" className="iconbar-button" onClick={handleAction('NEW')}>
@@ -59,7 +59,7 @@ type CanvasActionType =
           <FolderOpenOutlinedIcon sx={{ color: '#666666' }} />
         </Button>
         
-        <Button variant="text" className="iconbar-button" onClick={saveNodes}>
+        <Button variant="text" className="iconbar-button" onClick={saveElements}>
           <SaveAsOutlinedIcon sx={{ color: '#666666' }} />
         </Button>
         

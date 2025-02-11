@@ -1,5 +1,5 @@
 // src/utils/FileHelpers.ts
-export const loadNodes = (event: Event): Promise<any> => {
+export const loadElements = (event: Event): Promise<any> => {
     return new Promise((resolve, reject) => {
         const input = event.target as HTMLInputElement;
         const file = input.files ? input.files[0] : null;
@@ -66,7 +66,7 @@ export const saveSvg = (svgElement: SVGSVGElement, name: string) => {
     document.body.removeChild(downloadLink);
 }
 
-export const saveNodes = (elements: any[]) => {
+export const saveElements = (elements: any[]) => {
     const rootText = elements.find(element => element.parentId === null)?.text;
     const fileName = rootText || 'Untitled';
 
