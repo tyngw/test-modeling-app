@@ -1,4 +1,15 @@
 // src/utils/FileHelpers.ts
+const STORAGE_KEY = 'lastSavedFileName';
+
+export const getLastSavedFileName = (): string | null => {
+    return localStorage.getItem(STORAGE_KEY);
+}
+
+export const setLastSavedFileName = (name: string) => {
+    name = name.replace('.json', '');
+    localStorage.setItem(STORAGE_KEY, name);
+}
+
 export const loadElements = (event: Event): Promise<any> => {
     return new Promise((resolve, reject) => {
         const input = event.target as HTMLInputElement;
@@ -15,6 +26,7 @@ export const loadElements = (event: Event): Promise<any> => {
                 if (typeof contents === 'string') {
                     try {
                         const elements = JSON.parse(contents);
+                        setLastSavedFileName(fileName);
                         resolve(elements);
                     } catch (error) {
                         throw new Error('Error: ファイルの読み込みに失敗しました');
@@ -67,8 +79,10 @@ export const saveSvg = (svgElement: SVGSVGElement, name: string) => {
 }
 
 export const saveElements = (elements: any[]) => {
-    const rootText = elements.find(element => element.parentId === null)?.text;
-    const fileName = rootText || 'Untitled';
+    const defaultName = elements.find(element => element.parentId === null)?.text || 'Untitled';
+    const storedName = getLastSavedFileName();
+    const fileName = storedName || defaultName;
+    setLastSavedFileName(fileName);
 
     const elementsToSave = elements.map(element => {
         const { x, y, ...elementWithoutXY } = element;
