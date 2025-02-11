@@ -35,7 +35,7 @@ const CanvasArea: React.FC = () => {
     const [toasts, setToasts] = useState<Toast[]>([]);
 
     const toggleHelp = () => setHelpOpen(!isHelpOpen);
-    const editingNode = Object.values(state.elements).find((element: Element) => element.editing);
+    const editingNode = Object.values(state.elements).find((element) => (element as Element).editing) as Element | undefined;
 
     useEffect(() => {
         const elementList = loadFromLocalStorage();
@@ -139,10 +139,10 @@ const CanvasArea: React.FC = () => {
                 >
                     <Marker />
                     {Object.values(state.elements)
-                        .filter((element): element is Element => element.visible)
+                        .filter((element): element is Element => (element as Element).visible)
                         .map(element => {
                             const hasHiddenChildren = Object.values(state.elements)
-                                .some((n): n is Element => n.parentId === element.id && !n.visible);
+                                .some((n): n is Element => (n as Element).parentId === element.id && !(n as Element).visible);
                             return (
                                 <React.Fragment key={element.id}>
                                     <IdeaElement
@@ -157,7 +157,7 @@ const CanvasArea: React.FC = () => {
                         })}
                 </svg>
 
-                <InputFields element={editingNode} />
+                <InputFields element={editingNode as Element | undefined} />
             </div>
         </>
     );
