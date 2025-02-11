@@ -95,6 +95,10 @@ const pasteElements = (elements: { [key: string]: Element }, cutElements: { [key
     const depthDelta = baseDepth - rootElementDepth;
     const idMap = new Map<string, string>();
 
+    // 兄弟要素から最大orderを取得
+    const siblings = Object.values(elements).filter(e => e.parentId === parentElement.id);
+    const maxOrder = siblings.length > 0 ? Math.max(...siblings.map(e => e.order)) : -1;
+
     const newElements = Object.values(cutElements).reduce<{ [key: string]: Element }>((acc, cutElement) => {
         const newElement = { ...cutElement };
         const newUUID = uuidv4();
@@ -104,7 +108,7 @@ const pasteElements = (elements: { [key: string]: Element }, cutElements: { [key
 
         if (cutElement.id === rootElement.id) {
             newElement.parentId = parentElement.id;
-            newElement.order = elements[parentElement.id].children;
+            newElement.order = maxOrder + 1; // 最大order+1を設定
             newElement.selected = false;
         }
 
@@ -121,6 +125,7 @@ const pasteElements = (elements: { [key: string]: Element }, cutElements: { [key
         return acc;
     }, { ...elements });
 
+    // 親要素のchildrenを更新
     const updatedParent = { ...parentElement, children: parentElement.children + 1 };
     updatedElements[updatedParent.id] = updatedParent;
 
@@ -462,9 +467,8 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
 
     PASTE_NODE: state => handleElementMutation(state, (elements, selectedElement) => {
         const pastedElements = pasteElements(elements, state.cutElements!, selectedElement);
-        const updatedParent = { ...selectedElement, children: selectedElement.children + 1 };
         return {
-            elements: adjustElementPositions({ ...pastedElements, [updatedParent.id]: updatedParent })
+            elements: adjustElementPositions(pastedElements)
         };
     }),
 
