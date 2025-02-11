@@ -270,36 +270,31 @@ const calculateParentPosition = (
     const visibleChildren = children.filter(child => child.visible);
     if (visibleChildren.length === 0) return { needsUpdate: false, newY: parent.y };
 
-    const childrenYValues = visibleChildren.map(child => child.y);
-    const childrenHeights = visibleChildren.map(child => child.height);
-    const childrenMinY = Math.min(...childrenYValues);
-    const childrenMaxY = Math.max(...childrenYValues.map((y, i) => y + childrenHeights[i]));
-    const childrenHeight = childrenMaxY - childrenMinY;
+    // 子要素のY座標と高さから中心点を計算
+    const childrenCenters = visibleChildren.map(child => child.y + child.height / 2);
+    const minChildCenter = Math.min(...childrenCenters);
+    const maxChildCenter = Math.max(...childrenCenters);
+    
+    // 親の中心が子要素の中心範囲の中央に来るように調整
+    const targetCenter = (minChildCenter + maxChildCenter) / 2;
+    const newY = targetCenter - parent.height / 2;
 
-    if (parent.height > childrenHeight) {
-        return {
-            needsUpdate: true,
-            newY: parent.y - (parent.height - childrenHeight) / 2,
-        };
-    }
-
-    const calculatedY = childrenMinY + childrenHeight / 2 - parent.height / 2;
     return {
-        needsUpdate: parent.y < calculatedY,
-        newY: calculatedY,
+        needsUpdate: Math.abs(parent.y - newY) > 1e-3, // 浮動小数点誤差を考慮
+        newY: newY,
     };
 };
 
 const getSortedElements = (elements: ElementsMap): Element[] =>
     Object.values(elements).sort(
         (a, b) =>
-            b.depth - a.depth ||
+            b.depth - a.depth ||  // 深い要素（子に近い）を先に処理
             (a.parentId ?? "").localeCompare(b.parentId ?? "") ||
             a.order - b.order
     );
 
 const adjustElementPositions = (elements: ElementsMap): ElementsMap => {
-    // 初期位置調整
+    // 初期位置調整（従来通り）
     let updatedElements = { ...elements };
     const rootElements = Object.values(updatedElements).filter(e => e.parentId === null);
 
@@ -314,7 +309,7 @@ const adjustElementPositions = (elements: ElementsMap): ElementsMap => {
         updatedElements = result.elements;
     }
 
-    // 親要素の位置再調整
+    // 親要素の位置再調整（修正版）
     const sortedElements = getSortedElements(updatedElements);
     for (const parentElement of sortedElements) {
         const children = Object.values(updatedElements).filter(e => e.parentId === parentElement.id);
@@ -323,7 +318,10 @@ const adjustElementPositions = (elements: ElementsMap): ElementsMap => {
         if (positionResult.needsUpdate) {
             updatedElements = {
                 ...updatedElements,
-                [parentElement.id]: { ...parentElement, y: positionResult.newY },
+                [parentElement.id]: { 
+                    ...parentElement, 
+                    y: positionResult.newY 
+                },
             };
         }
     }
