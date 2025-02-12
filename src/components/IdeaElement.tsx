@@ -14,20 +14,20 @@ const SECTION_KEYS = ['text', 'text2', 'text3'] as const;
 
 interface IdeaElementProps {
   element: CanvasElement;
-  overDropTarget: CanvasElement | null;
+  currentDropTarget: CanvasElement | null;
   handleMouseDown: (e: React.MouseEvent<SVGElement>, element: CanvasElement) => void;
   handleMouseUp: () => void;
 }
 
 const IdeaElement: React.FC<IdeaElementProps> = ({ 
     element, 
-    overDropTarget, 
+    currentDropTarget, 
     handleMouseDown, 
     handleMouseUp 
 }) => {
     const { state, dispatch } = useCanvas();
     const parentElement = state.elements[element.parentId!];
-    const overDropTargetId = overDropTarget?.id || -1;
+    const currentDropTargetId = currentDropTarget?.id || -1;
     const [isHovered, setIsHovered] = useState(false);
 
     const sectionHeights = [
@@ -103,7 +103,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
                 style={{ 
-                    fill: element.id === overDropTargetId ? 'lightblue' : 'white',
+                    fill: element.id === currentDropTargetId ? 'lightblue' : 'white',
                     pointerEvents: 'all'
                 }}
             />
