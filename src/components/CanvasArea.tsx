@@ -68,7 +68,7 @@ const CanvasArea: React.FC = () => {
         }, 3000);
     };
 
-    const { handleMouseDown, handleMouseUp, overDropTarget } = useElementDragEffect({ showToast: addToast });
+    const { handleMouseDown, handleMouseUp, currentDropTarget } = useElementDragEffect({ showToast: addToast });
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         e.preventDefault();
@@ -153,7 +153,7 @@ const CanvasArea: React.FC = () => {
                                 <React.Fragment key={element.id}>
                                     <IdeaElement
                                         element={element}
-                                        overDropTarget={overDropTarget as Element | null}
+                                        currentDropTarget={currentDropTarget as Element | null}
                                         handleMouseDown={handleMouseDown as unknown as (e: React.MouseEvent<SVGElement>, element: Element) => void}
                                         handleMouseUp={handleMouseUp}
                                     />

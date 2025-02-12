@@ -11,111 +11,130 @@ interface State {
   elements: { [key: string]: Element };
 }
 
-type MouseHandler = (e: globalThis.MouseEvent) => void;
-
 interface UseElementDragEffectProps {
   showToast: (message: string) => void;
 }
 
+type Position = { x: number; y: number };
+
+const isValidDropTarget = (
+  candidate: Element,
+  draggingElement: Element,
+  mouseX: number,
+  mouseY: number
+): boolean => {
+  const isWithinXBounds = mouseX >= candidate.x && mouseX <= candidate.x + candidate.width;
+  const isWithinYBounds = mouseY >= candidate.y && mouseY <= candidate.y + candidate.height;
+  const isNotSelfOrParent = candidate.id !== draggingElement.id && candidate.id !== draggingElement.parentId;
+
+  return isWithinXBounds && isWithinYBounds && isNotSelfOrParent;
+};
+
 export const useElementDragEffect = ({ showToast }: UseElementDragEffectProps) => {
   const { state, dispatch } = useCanvas() as { state: State; dispatch: React.Dispatch<any> };
-  const [dragging, setDragging] = useState<Element | null>(null);
-  const [startPosition, setStartPosition] = useState({ x: 0, y: 0 });
-  const [originalPosition, setOriginalPosition] = useState({ x: 0, y: 0 });
-  const [overDropTarget, setOverDropTarget] = useState<Element | null>(null);
+  const [draggingElement, setDraggingElement] = useState<Element | null>(null);
+  const [dragStartOffset, setDragStartOffset] = useState<Position>({ x: 0, y: 0 });
+  const [originalPosition, setOriginalPosition] = useState<Position>({ x: 0, y: 0 });
+  const [currentDropTarget, setCurrentDropTarget] = useState<Element | null>(null);
+
+  const convertToZoomCoordinates = useCallback((e: { pageX: number; pageY: number }): Position => ({
+    x: e.pageX / state.zoomRatio,
+    y: e.pageY / state.zoomRatio,
+  }), [state.zoomRatio]);
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent<HTMLElement>, element: Element) => {
+      // ルート要素はドラッグできないようにする
       if (!element.id || !element.parentId) return;
       e.stopPropagation();
-      setDragging(element);
-      setStartPosition({
-        x: e.pageX / state.zoomRatio - element.x,
-        y: e.pageY / state.zoomRatio - element.y,
+
+      const zoomAdjustedPos = convertToZoomCoordinates(e);
+      setDraggingElement(element);
+      setDragStartOffset({
+        x: zoomAdjustedPos.x - element.x,
+        y: zoomAdjustedPos.y - element.y,
       });
       setOriginalPosition({ x: element.x, y: element.y });
     },
-    [state.zoomRatio]
+    [convertToZoomCoordinates]
   );
 
   useEffect(() => {
-    if (dragging) {
-      const handleMouseMove: MouseHandler = (e) => {
-        const overNode = Object.values(state.elements).find((element) => {
-          const x = e.pageX / state.zoomRatio;
-          const y = e.pageY / state.zoomRatio - ICONBAR_HEIGHT;
-          return (
-            x >= element.x &&
-            x <= element.x + element.width &&
-            y >= element.y &&
-            y <= element.y + element.height &&
-            element.id !== dragging.id &&
-            element.id !== dragging.parentId
-          );
-        });
+    if (!draggingElement) return;
 
-        setOverDropTarget(overNode || null);
-        const newX = e.pageX / state.zoomRatio - startPosition.x;
-        const newY = e.pageY / state.zoomRatio - startPosition.y;
+    const findDropTarget = (e: MouseEvent): Element | undefined => {
+      const zoomAdjustedPos = convertToZoomCoordinates(e);
+      // アイコンバーの高さを考慮したY座標計算
+      const iconBarAdjustedY = zoomAdjustedPos.y - ICONBAR_HEIGHT;
 
-        dispatch({
-          type: 'MOVE_NODE',
-          payload: { id: dragging.id, x: newX, y: newY },
-        });
+      return Object.values(state.elements).find((element) =>
+        isValidDropTarget(element, draggingElement, zoomAdjustedPos.x, iconBarAdjustedY)
+      );
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const dropTarget = findDropTarget(e) || null;
+      setCurrentDropTarget(dropTarget);
+
+      const zoomAdjustedPos = convertToZoomCoordinates(e);
+      const newPosition = {
+        x: zoomAdjustedPos.x - dragStartOffset.x,
+        y: zoomAdjustedPos.y - dragStartOffset.y,
       };
 
-      document.addEventListener('mousemove', handleMouseMove);
-      return () => document.removeEventListener('mousemove', handleMouseMove);
-    }
-  }, [dragging, startPosition, state.zoomRatio, state.elements, dispatch]);
+      dispatch({
+        type: 'MOVE_NODE',
+        payload: { id: draggingElement.id, ...newPosition },
+      });
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    return () => document.removeEventListener('mousemove', handleMouseMove);
+  }, [draggingElement, dragStartOffset, state.elements, convertToZoomCoordinates, dispatch]);
 
   const handleMouseUp = useCallback(() => {
-    if (dragging) {
-      let shouldResetPosition = false;
-      let needToast = false;
+    if (!draggingElement) return;
 
-      if (overDropTarget) {
-        // 無効なドロップ条件をチェック
-        const isInvalidDrop =
-          overDropTarget.id === dragging.id ||
-          isDescendant(state.elements, dragging.id, overDropTarget.id);
+    const resetElementPosition = () => {
+      dispatch({
+        type: 'MOVE_NODE',
+        payload: { id: draggingElement.id, ...originalPosition },
+      });
+    };
 
-        if (!isInvalidDrop) {
-          dispatch({ type: 'SNAPSHOT' });
-          dispatch({
-            type: 'DROP_NODE',
-            payload: {
-              id: dragging.id,
-              oldParentId: dragging.parentId,
-              newParentId: overDropTarget.id,
-              depth: overDropTarget.depth + 1,
-              draggingElementOrder: dragging.order,
-            },
-          });
-        } else {
-          shouldResetPosition = true;
-          needToast = true;
-        }
+    const validateDropTarget = (target: Element): boolean => {
+      return target.id === draggingElement.id ||
+        isDescendant(state.elements, draggingElement.id, target.id);
+    };
+
+    const processValidDrop = (target: Element) => {
+      dispatch({ type: 'SNAPSHOT' });
+      dispatch({
+        type: 'DROP_NODE',
+        payload: {
+          id: draggingElement.id,
+          oldParentId: draggingElement.parentId,
+          newParentId: target.id,
+          depth: target.depth + 1,
+          draggingElementOrder: draggingElement.order,
+        },
+      });
+    };
+
+    if (currentDropTarget) {
+      if (validateDropTarget(currentDropTarget)) {
+        resetElementPosition();
+        showToast(ToastMessages.invalidDrop);
       } else {
-        shouldResetPosition = true;
+        processValidDrop(currentDropTarget);
       }
-
-      if (shouldResetPosition) {
-        dispatch({
-          type: 'MOVE_NODE',
-          payload: { id: dragging.id, x: originalPosition.x, y: originalPosition.y },
-        });
-
-        if (needToast) {
-          // 無効なドロップの場合、トーストでエラーメッセージを表示
-          showToast(ToastMessages.invalidDrop);
-        }
-      }
-
-      setDragging(null);
-      setOverDropTarget(null);
+    } else {
+      resetElementPosition();
     }
-  }, [dragging, overDropTarget, originalPosition, dispatch, showToast, state.elements]);
 
-  return { handleMouseDown, handleMouseUp, overDropTarget };
+    setDraggingElement(null);
+    setCurrentDropTarget(null);
+  }, [draggingElement, currentDropTarget, originalPosition, state.elements, dispatch, showToast]);
+
+  return { handleMouseDown, handleMouseUp, currentDropTarget };
 };
