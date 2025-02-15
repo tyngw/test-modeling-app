@@ -455,50 +455,75 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
 
     DROP_NODE: (state, action) => {
         const { payload } = action;
-
-        if (
-            payload.id === payload.newParentId ||
-            isDescendant(state.elements, payload.id, payload.newParentId)
-        ) {
+        const { id, oldParentId, newParentId, newOrder, depth } = payload;
+    
+        if (id === newParentId || isDescendant(state.elements, id, newParentId)) {
             return state;
         }
-
-        const siblings = Object.values(state.elements).filter(n => n.parentId === payload.newParentId);
-        const maxOrder = siblings.length > 0 ? Math.max(...siblings.map(n => n.order)) + 1 : 0;
-
-        const updatedElements = Object.values(state.elements).reduce<{ [key: string]: Element }>((acc, element) => {
-            let updatedElement = element;
-
-            if (element.parentId === payload.oldParentId && element.order > payload.draggingElementOrder) {
-                updatedElement = { ...element, order: element.order - 1 };
-            }
-
-            if (element.id === payload.id) {
-                updatedElement = {
-                    ...element,
-                    parentId: payload.newParentId,
-                    order: maxOrder,
-                    depth: payload.depth
+    
+        let updatedElements = { ...state.elements };
+        const element = updatedElements[id];
+        const oldParent = updatedElements[oldParentId];
+        const newParent = updatedElements[newParentId];
+    
+        // 同じ親内での移動かどうか
+        const isSameParent = oldParentId === newParentId;
+    
+        // 古い親のchildren更新（異なる親の場合のみ）
+        if (!isSameParent && oldParent) {
+            updatedElements[oldParentId] = {
+                ...oldParent,
+                children: Math.max(0, oldParent.children - 1)
+            };
+        }
+    
+        updatedElements[id] = {
+            ...element,
+            parentId: newParentId,
+            order: newOrder,
+            depth: depth,
+            x: newParent ? newParent.x + newParent.width + X_OFFSET : DEFAULT_X,
+            y: newParent ? newParent.y : DEFAULT_Y
+        };
+    
+        // 兄弟要素のorder再計算
+        const siblings = Object.values(updatedElements)
+            .filter(e => e.parentId === newParentId && e.id !== id)
+            .sort((a, b) => a.order - b.order);
+    
+        // 新しい順序に基づいて要素を配置
+        const newSiblings = [
+            ...siblings.slice(0, newOrder),
+            updatedElements[id],
+            ...siblings.slice(newOrder)
+        ];
+    
+        // orderプロパティの更新
+        newSiblings.forEach((sibling, index) => {
+            if (sibling.order !== index) {
+                updatedElements[sibling.id] = {
+                    ...sibling,
+                    order: index
                 };
             }
-
-            acc[updatedElement.id] = updatedElement;
-            return acc;
-        }, {});
-
-        const parentUpdates = {
-            [payload.oldParentId]: { ...state.elements[payload.oldParentId], children: state.elements[payload.oldParentId].children - 1 },
-            [payload.newParentId]: { ...state.elements[payload.newParentId], children: state.elements[payload.newParentId].children + 1 }
-        };
-
+        });
+    
+        // 新しい親のchildren更新（異なる親の場合のみ）
+        if (!isSameParent && newParent) {
+            updatedElements[newParentId] = {
+                ...newParent,
+                children: newParent.children + 1
+            };
+        }
+    
+        // 深度の再計算（異なる親の場合）
+        if (!isSameParent) {
+            updatedElements = setDepthRecursive(updatedElements, updatedElements[id]);
+        }
+    
         return {
             ...state,
-            elements: adjustElementPositions(
-                setDepthRecursive(
-                    { ...updatedElements, ...parentUpdates },
-                    payload as Element
-                )
-            )
+            elements: adjustElementPositions(updatedElements)
         };
     },
 
