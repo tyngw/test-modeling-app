@@ -68,7 +68,13 @@ const CanvasArea: React.FC = () => {
         }, 3000);
     };
 
-    const { handleMouseDown, handleMouseUp, currentDropTarget } = useElementDragEffect({ showToast: addToast });
+    const {
+        handleMouseDown,
+        handleMouseUp,
+        currentDropTarget,
+        dropPosition,
+        draggingElement
+    } = useElementDragEffect({ showToast: addToast });
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         e.preventDefault();
@@ -154,6 +160,8 @@ const CanvasArea: React.FC = () => {
                                     <IdeaElement
                                         element={element}
                                         currentDropTarget={currentDropTarget as Element | null}
+                                        dropPosition={dropPosition}
+                                        draggingElement={draggingElement}
                                         handleMouseDown={handleMouseDown as unknown as (e: React.MouseEvent<SVGElement>, element: Element) => void}
                                         handleMouseUp={handleMouseUp}
                                     />
