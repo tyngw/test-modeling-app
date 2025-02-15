@@ -10,9 +10,15 @@ import {
     DEFAULT_Y,
     NODE_HEIGHT,
     MIN_WIDTH,
-    DEFAULT_SECTION_HEIGHT
+    DEFAULT_SECTION_HEIGHT,
+    ICONBAR_HEIGHT
 } from '../constants/ElementSettings';
 import { v4 as uuidv4 } from 'uuid';
+
+type ElementsMap = { [key: string]: Element };
+type Position = { x: number; y: number };
+type DropPosition = 'before' | 'after' | 'child';
+export type DropTargetInfo = { element: Element; position: DropPosition } | null;
 
 export interface State {
     elements: { [key: string]: Element };
@@ -20,20 +26,27 @@ export interface State {
     height: number;
     zoomRatio: number;
     cutElements?: { [key: string]: Element };
+    dragState?: {
+        element: Element;
+        originalPosition: Position;
+        currentPosition: Position;
+        dropTarget?: DropTargetInfo;
+    };
 }
 
 export type Action = {
     type: string;
     payload?: any;
+} | {
+    type: 'DRAG_START';
+    payload: { element: Element; startPosition: Position };
+} | {
+    type: 'DRAG_MOVE';
+    payload: Position;
+} | {
+    type: 'DRAG_END';
+    payload?: DropTargetInfo;
 };
-
-type ElementsMap = { [key: string]: Element };
-
-interface AdjustmentResult {
-    elements: ElementsMap;
-    currentY: number;
-    maxHeight: number;
-}
 
 const createNewElement = (parentId: string | null, order: number, depth: number): Element => ({
     id: uuidv4(),
@@ -278,7 +291,7 @@ const calculateParentPosition = (
     const childrenCenters = visibleChildren.map(child => child.y + child.height / 2);
     const minChildCenter = Math.min(...childrenCenters);
     const maxChildCenter = Math.max(...childrenCenters);
-    
+
     const targetCenter = (minChildCenter + maxChildCenter) / 2;
     const newY = targetCenter - parent.height / 2;
 
@@ -356,6 +369,56 @@ const handleZoomOut = (state: State): State => ({
     ...state,
     zoomRatio: Math.max(state.zoomRatio - 0.1, 0.1)
 });
+
+const calculateDropTarget = (
+    elements: ElementsMap,
+    mousePosition: Position,
+    zoomRatio: number
+): DropTargetInfo => {
+    let bestTarget: DropTargetInfo = null;
+    let closestDistance = Infinity;
+
+    Object.values(elements).forEach(element => {
+        if (!element.visible) return;
+
+        const elemLeft = element.x;
+        const elemRight = element.x + element.width;
+        const elemTop = element.y;
+        const elemBottom = element.y + element.height;
+        const mouseX = mousePosition.x;
+        const mouseY = mousePosition.y;
+
+        // X座標が要素の範囲内にあるか確認（左右10pxの許容範囲）
+        const isInXRange = mouseX > elemLeft - 10 && mouseX < elemRight + 10;
+        if (!isInXRange) return;
+
+        // 挿入位置判定（上下5%を境界）
+        const topThreshold = elemTop + element.height * 0.05;
+        const bottomThreshold = elemBottom - element.height * 0.05;
+        let position: DropPosition = 'child';
+
+        if (mouseY < topThreshold) {
+            position = 'before';
+        } else if (mouseY > bottomThreshold) {
+            position = 'after';
+        }
+
+        // 要素中心からの距離計算
+        const centerX = elemLeft + element.width / 2;
+        const centerY = elemTop + element.height / 2;
+        const distance = Math.sqrt(
+            Math.pow(mouseX - centerX, 2) +
+            Math.pow(mouseY - centerY, 2)
+        );
+
+        if (distance < closestDistance) {
+            closestDistance = distance;
+            bestTarget = { element, position };
+        }
+    });
+
+    return bestTarget;
+};
 
 const actionHandlers: { [key: string]: (state: State, action?: any) => State } = {
     NEW: () => {
@@ -456,22 +519,81 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
     REDO: state => ({ ...state, elements: Redo(state.elements) }),
     SNAPSHOT: state => { saveSnapshot(state.elements); return state; },
 
+    DRAG_START: (state, action) => {
+        const { element, startPosition } = action.payload;
+        return {
+            ...state,
+            dragState: {
+                element,
+                originalPosition: { x: element.x, y: element.y },
+                currentPosition: startPosition,
+                dropTarget: null
+            }
+        };
+    },
+
+    DRAG_MOVE: (state, action) => {
+        if (!state.dragState) return state;
+        const mousePosition = action.payload;
+
+        return {
+            ...state,
+            dragState: {
+                ...state.dragState,
+                currentPosition: mousePosition,
+                dropTarget: calculateDropTarget(
+                    state.elements,
+                    mousePosition,
+                    state.zoomRatio
+                )
+            },
+            elements: {
+                ...state.elements,
+                [state.dragState.element.id]: {
+                    ...state.dragState.element,
+                    ...mousePosition
+                }
+            }
+        };
+    },
+
+    DRAG_END: (state, action) => {
+        if (!state.dragState) return state;
+
+        const { element, originalPosition } = state.dragState;
+        const dropTarget = action.payload;
+        let updatedElements = { ...state.elements };
+
+        if (dropTarget && !isDescendant(updatedElements, element.id, dropTarget.element.id)) {
+            // DROP_NODEロジックを再利用
+            updatedElements = handleDrop(element, dropTarget, updatedElements);
+        } else {
+            updatedElements[element.id] = { ...element, ...originalPosition };
+        }
+
+        return {
+            ...state,
+            elements: adjustElementPositions(updatedElements),
+            dragState: undefined
+        };
+    },
+
     DROP_NODE: (state, action) => {
         const { payload } = action;
         const { id, oldParentId, newParentId, newOrder, depth } = payload;
-    
+
         if (id === newParentId || isDescendant(state.elements, id, newParentId)) {
             return state;
         }
-    
+
         let updatedElements = { ...state.elements };
         const element = updatedElements[id];
         const oldParent = updatedElements[oldParentId];
         const newParent = updatedElements[newParentId];
-    
+
         // 同じ親内での移動かどうか
         const isSameParent = oldParentId === newParentId;
-    
+
         // 古い親のchildren更新（異なる親の場合のみ）
         if (!isSameParent && oldParent) {
             updatedElements[oldParentId] = {
@@ -479,7 +601,7 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
                 children: Math.max(0, oldParent.children - 1)
             };
         }
-    
+
         updatedElements[id] = {
             ...element,
             parentId: newParentId,
@@ -488,19 +610,19 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
             x: newParent ? newParent.x + newParent.width + X_OFFSET : DEFAULT_X,
             y: newParent ? newParent.y : DEFAULT_Y
         };
-    
+
         // 兄弟要素のorder再計算
         const siblings = Object.values(updatedElements)
             .filter(e => e.parentId === newParentId && e.id !== id)
             .sort((a, b) => a.order - b.order);
-    
+
         // 新しい順序に基づいて要素を配置
         const newSiblings = [
             ...siblings.slice(0, newOrder),
             updatedElements[id],
             ...siblings.slice(newOrder)
         ];
-    
+
         // orderプロパティの更新
         newSiblings.forEach((sibling, index) => {
             if (sibling.order !== index) {
@@ -510,7 +632,7 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
                 };
             }
         });
-    
+
         // 新しい親のchildren更新（異なる親の場合のみ）
         if (!isSameParent && newParent) {
             updatedElements[newParentId] = {
@@ -518,12 +640,12 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
                 children: newParent.children + 1
             };
         }
-    
+
         // 深度の再計算（異なる親の場合）
         if (!isSameParent) {
             updatedElements = setDepthRecursive(updatedElements, updatedElements[id]);
         }
-    
+
         return {
             ...state,
             elements: adjustElementPositions(updatedElements)
@@ -627,8 +749,66 @@ function handleSelectedElementAction(state: State, actionFn: (selectedElement: E
     return selectedElement ? { ...state, ...actionFn(selectedElement) } : state;
 }
 
+const handleDrop = (
+    draggingElement: Element,
+    dropTarget: DropTargetInfo,
+    elements: ElementsMap
+): ElementsMap => {
+    if (!dropTarget) return elements;
+
+    const target = dropTarget.element;
+    const position = dropTarget.position;
+    let updatedElements = { ...elements };
+
+    // 子要素としてドロップ
+    if (position === 'child') {
+        const newOrder = target.children;
+        updatedElements = {
+            ...updatedElements,
+            [draggingElement.id]: {
+                ...draggingElement,
+                parentId: target.id,
+                order: newOrder,
+                depth: target.depth + 1
+            },
+            [target.id]: {
+                ...target,
+                children: target.children + 1
+            }
+        };
+    }
+    // 兄弟要素としてドロップ
+    else {
+        const newParentId = target.parentId;
+        const newOrder = position === 'before' ? target.order : target.order + 1;
+
+        // 同じ親の兄弟要素のorderを更新
+        const siblings = Object.values(updatedElements)
+            .filter(e => e.parentId === newParentId && e.id !== draggingElement.id)
+            .sort((a, b) => a.order - b.order);
+
+        siblings.forEach((sibling, index) => {
+            if (sibling.order !== index) {
+                updatedElements[sibling.id] = { ...sibling, order: index };
+            }
+        });
+
+        updatedElements = {
+            ...updatedElements,
+            [draggingElement.id]: {
+                ...draggingElement,
+                parentId: newParentId,
+                order: newOrder,
+                depth: target.depth
+            }
+        };
+    }
+
+    return setDepthRecursive(updatedElements, updatedElements[draggingElement.id]);
+};
+
 function reducer(state: State, action: Action): State {
-    const handler = actionHandlers[action.type];
+    const handler = actionHandlers[action.type as string];
     return handler ? handler(state, action) : state;
 }
 

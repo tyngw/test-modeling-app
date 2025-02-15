@@ -20,7 +20,6 @@ interface IdeaElementProps {
   dropPosition: 'before' | 'after' | 'child' | null;
   draggingElement: CanvasElement | null;
   handleMouseDown: (e: React.MouseEvent<SVGElement>, element: CanvasElement) => void;
-  handleMouseUp: () => void;
 }
 
 const IdeaElement: React.FC<IdeaElementProps> = ({
@@ -29,7 +28,6 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
   dropPosition,
   draggingElement,
   handleMouseDown,
-  handleMouseUp
 }) => {
   const { state, dispatch } = useCanvas();
   const parentElement = state.elements[element.parentId!];
@@ -105,7 +103,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
         onClick={handleSelect}
         onDoubleClick={() => dispatch({ type: 'EDIT_NODE' })}
         onMouseDown={(e) => handleMouseDown(e, element)}
-        onMouseUp={handleMouseUp}
+        // onMouseUp={handleMouseUp}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         style={{

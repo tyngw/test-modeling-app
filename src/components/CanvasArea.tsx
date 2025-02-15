@@ -70,7 +70,6 @@ const CanvasArea: React.FC = () => {
 
     const {
         handleMouseDown,
-        handleMouseUp,
         currentDropTarget,
         dropPosition,
         draggingElement
@@ -161,9 +160,8 @@ const CanvasArea: React.FC = () => {
                                         element={element}
                                         currentDropTarget={currentDropTarget as Element | null}
                                         dropPosition={dropPosition}
-                                        draggingElement={draggingElement}
+                                        draggingElement={draggingElement ?? null}
                                         handleMouseDown={handleMouseDown as unknown as (e: React.MouseEvent<SVGElement>, element: Element) => void}
-                                        handleMouseUp={handleMouseUp}
                                     />
                                     {hasHiddenChildren && <FoldingIcon element={element} />}
                                 </React.Fragment>
