@@ -1,7 +1,7 @@
 // src/hooks/useElementDragEffect.tsx
 import { useState, useEffect, useCallback } from 'react';
 import { useCanvas } from '../context/CanvasContext';
-import { ICONBAR_HEIGHT } from '../constants/ElementSettings';
+import { ICONBAR_HEIGHT, X_OFFSET, Y_OFFSET } from '../constants/ElementSettings';
 import { Element } from '../types';
 import { isDescendant } from '../state/state';
 import { ToastMessages } from '../constants/ToastMessages';
@@ -16,36 +16,25 @@ interface UseElementDragEffectProps {
 }
 
 type Position = { x: number; y: number };
-
-const isValidDropTarget = (
-  candidate: Element,
-  draggingElement: Element,
-  mouseX: number,
-  mouseY: number
-): boolean => {
-  const isWithinXBounds = mouseX >= candidate.x && mouseX <= candidate.x + candidate.width;
-  const isWithinYBounds = mouseY >= candidate.y && mouseY <= candidate.y + candidate.height;
-  const isNotSelfOrParent = candidate.id !== draggingElement.id && candidate.id !== draggingElement.parentId;
-
-  return isWithinXBounds && isWithinYBounds && isNotSelfOrParent;
-};
+type DropPosition = 'before' | 'after' | 'child';
+type DropTargetInfo = { element: Element; position: DropPosition } | null;
 
 export const useElementDragEffect = ({ showToast }: UseElementDragEffectProps) => {
   const { state, dispatch } = useCanvas() as { state: State; dispatch: React.Dispatch<any> };
   const [draggingElement, setDraggingElement] = useState<Element | null>(null);
   const [dragStartOffset, setDragStartOffset] = useState<Position>({ x: 0, y: 0 });
   const [originalPosition, setOriginalPosition] = useState<Position>({ x: 0, y: 0 });
-  const [currentDropTarget, setCurrentDropTarget] = useState<Element | null>(null);
+  const [currentDropTarget, setCurrentDropTarget] = useState<DropTargetInfo>(null);
 
   const convertToZoomCoordinates = useCallback((e: { pageX: number; pageY: number }): Position => ({
     x: e.pageX / state.zoomRatio,
-    y: e.pageY / state.zoomRatio,
+    y: (e.pageY - ICONBAR_HEIGHT) / state.zoomRatio,
   }), [state.zoomRatio]);
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent<HTMLElement>, element: Element) => {
       // ルート要素はドラッグできないようにする
-      if (!element.id || !element.parentId) return;
+      if (!element.parentId) return;
       e.stopPropagation();
 
       const zoomAdjustedPos = convertToZoomCoordinates(e);
@@ -62,30 +51,68 @@ export const useElementDragEffect = ({ showToast }: UseElementDragEffectProps) =
   useEffect(() => {
     if (!draggingElement) return;
 
-    const findDropTarget = (e: MouseEvent): Element | undefined => {
+    const findDropTarget = (e: MouseEvent): DropTargetInfo => {
       const zoomAdjustedPos = convertToZoomCoordinates(e);
-      // アイコンバーの高さを考慮したY座標計算
-      const iconBarAdjustedY = zoomAdjustedPos.y - ICONBAR_HEIGHT;
+      let bestTarget: DropTargetInfo = null;
+      let closestDistance = Infinity;
 
-      return Object.values(state.elements).find((element) =>
-        isValidDropTarget(element, draggingElement, zoomAdjustedPos.x, iconBarAdjustedY)
-      );
+      Object.values(state.elements).forEach(element => {
+        if (element.id === draggingElement.id || !element.visible) return;
+
+        // 要素の境界ボックス計算
+        const elemLeft = element.x;
+        const elemRight = element.x + element.width;
+        const elemTop = element.y;
+        const elemBottom = element.y + element.height;
+        const mouseX = zoomAdjustedPos.x;
+        const mouseY = zoomAdjustedPos.y;
+
+        // X座標が要素の範囲内にあるか確認（左右10pxの許容範囲を追加）
+        const isInXRange = mouseX > elemLeft - 10 && mouseX < elemRight + 10;
+        if (!isInXRange) return;
+
+        // 挿入位置判定（上下5%を境界と判定）
+        const topThreshold = elemTop + element.height * 0.05;
+        const bottomThreshold = elemBottom - element.height * 0.05;
+        let position: DropPosition = 'child';
+
+        if (mouseY < topThreshold) {
+          position = 'before';
+        } else if (mouseY > bottomThreshold) {
+          position = 'after';
+        }
+
+        // 要素中心からの距離計算（X座標も考慮）
+        const centerX = elemLeft + element.width / 2;
+        const centerY = elemTop + element.height / 2;
+        const distance = Math.sqrt(
+          Math.pow(mouseX - centerX, 2) +
+          Math.pow(mouseY - centerY, 2)
+        );
+
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          bestTarget = { element, position };
+        }
+      });
+
+      return bestTarget;
     };
 
     const handleMouseMove = (e: MouseEvent) => {
-      const dropTarget = findDropTarget(e) || null;
+      const dropTarget = findDropTarget(e);
       setCurrentDropTarget(dropTarget);
 
-      const zoomAdjustedPos = convertToZoomCoordinates(e);
-      const newPosition = {
-        x: zoomAdjustedPos.x - dragStartOffset.x,
-        y: zoomAdjustedPos.y - dragStartOffset.y,
-      };
+        const zoomAdjustedPos = convertToZoomCoordinates(e);
+        const newPosition = {
+          x: zoomAdjustedPos.x - dragStartOffset.x,
+          y: zoomAdjustedPos.y - dragStartOffset.y,
+        };
 
-      dispatch({
-        type: 'MOVE_NODE',
-        payload: { id: draggingElement.id, ...newPosition },
-      });
+        dispatch({
+          type: 'MOVE_NODE',
+          payload: { id: draggingElement.id, ...newPosition }
+        });
     };
 
     document.addEventListener('mousemove', handleMouseMove);
@@ -98,16 +125,11 @@ export const useElementDragEffect = ({ showToast }: UseElementDragEffectProps) =
     const resetElementPosition = () => {
       dispatch({
         type: 'MOVE_NODE',
-        payload: { id: draggingElement.id, ...originalPosition },
+        payload: { id: draggingElement.id, ...originalPosition }
       });
     };
 
-    const validateDropTarget = (target: Element): boolean => {
-      return target.id === draggingElement.id ||
-        isDescendant(state.elements, draggingElement.id, target.id);
-    };
-
-    const processValidDrop = (target: Element) => {
+    const processChildDrop = (target: Element) => {
       dispatch({ type: 'SNAPSHOT' });
       dispatch({
         type: 'DROP_NODE',
@@ -115,18 +137,43 @@ export const useElementDragEffect = ({ showToast }: UseElementDragEffectProps) =
           id: draggingElement.id,
           oldParentId: draggingElement.parentId,
           newParentId: target.id,
+          newOrder: target.children,
           depth: target.depth + 1,
-          draggingElementOrder: draggingElement.order,
+        },
+      });
+    };
+
+    const processSiblingDrop = (target: Element, position: DropPosition) => {
+      const newOrder = position === 'before' ? target.order : target.order + 1;
+      const newParentId = target.parentId;
+
+      dispatch({ type: 'SNAPSHOT' });
+      dispatch({
+        type: 'DROP_NODE',
+        payload: {
+          id: draggingElement.id,
+          oldParentId: draggingElement.parentId,
+          newParentId,
+          newOrder,
+          depth: target.depth,
         },
       });
     };
 
     if (currentDropTarget) {
-      if (validateDropTarget(currentDropTarget)) {
+      const { element: target, position } = currentDropTarget;
+
+      if (isDescendant(state.elements, draggingElement.id, target.id)) {
         resetElementPosition();
+        setDraggingElement(null);
         showToast(ToastMessages.invalidDrop);
+        return;
+      }
+
+      if (position === 'child') {
+        processChildDrop(target);
       } else {
-        processValidDrop(currentDropTarget);
+        processSiblingDrop(target, position);
       }
     } else {
       resetElementPosition();
@@ -136,5 +183,11 @@ export const useElementDragEffect = ({ showToast }: UseElementDragEffectProps) =
     setCurrentDropTarget(null);
   }, [draggingElement, currentDropTarget, originalPosition, state.elements, dispatch, showToast]);
 
-  return { handleMouseDown, handleMouseUp, currentDropTarget };
+  return {
+    handleMouseDown,
+    handleMouseUp,
+    currentDropTarget: currentDropTarget?.element || null,
+    dropPosition: currentDropTarget?.position || null,
+    draggingElement
+  };
 };
