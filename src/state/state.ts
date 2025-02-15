@@ -234,7 +234,10 @@ const adjustElementAndChildren = (
     const positionedElement = calculateElementPosition(element, parentElement, currentY);
     let updatedElements = { ...elements, [positionedElement.id]: positionedElement };
 
-    const children = Object.values(updatedElements).filter(e => e.parentId === positionedElement.id);
+    // 子要素をorder順にソートして取得
+    const children = Object.values(updatedElements)
+        .filter(e => e.parentId === positionedElement.id)
+        .sort((a, b) => a.order - b.order);
 
     let updatedY = currentY;
     let maxY = positionedElement.y + positionedElement.height;
