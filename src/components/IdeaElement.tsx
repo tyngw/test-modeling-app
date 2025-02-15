@@ -112,7 +112,8 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
           fill: (element.id === currentDropTargetId && dropPosition === 'child')
             ? "rgba(100, 100, 255, 0.3)"
             : 'white',
-          pointerEvents: 'all'
+          pointerEvents: 'all',
+          cursor: isHovered ? 'pointer' : 'default'
         }}
       />
       {currentDropTarget?.id === element.id && draggingElement && (
