@@ -71,9 +71,9 @@ export const useElementDragEffect = ({ showToast }: UseElementDragEffectProps) =
         const isInXRange = mouseX > elemLeft - 10 && mouseX < elemRight + 10;
         if (!isInXRange) return;
 
-        // 挿入位置判定（上下20%を境界と判定）
-        const topThreshold = elemTop + element.height * 0.2;
-        const bottomThreshold = elemBottom - element.height * 0.2;
+        // 挿入位置判定（上下5%を境界と判定）
+        const topThreshold = elemTop + element.height * 0.05;
+        const bottomThreshold = elemBottom - element.height * 0.05;
         let position: DropPosition = 'child';
 
         if (mouseY < topThreshold) {

@@ -109,18 +109,20 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         style={{
-          fill: element.id === currentDropTargetId ? "rgba(100, 100, 255, 0.3)" : 'white',
+          fill: (element.id === currentDropTargetId && dropPosition === 'child')
+            ? "rgba(100, 100, 255, 0.3)"
+            : 'white',
           pointerEvents: 'all'
         }}
       />
-      {currentDropTarget?.id === element.id && draggingElement && (dropPosition === 'before' || dropPosition === 'after') && (
+      {currentDropTarget?.id === element.id && draggingElement && (
         <rect
           className='drop-preview'
-          x={parentElement 
+          x={parentElement
             ? parentElement.x + parentElement.width + X_OFFSET
             : element.x + element.width}
-          y={dropPosition === 'before' 
-            ? element.y - draggingElement.height - Y_OFFSET // 実際の配置ロジックに合わせ調整
+          y={dropPosition === 'before'
+            ? element.y - draggingElement.height - Y_OFFSET
             : element.y + element.height + Y_OFFSET}
           width={draggingElement.width}
           height={draggingElement.height}
