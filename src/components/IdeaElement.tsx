@@ -7,7 +7,8 @@ import {
   CURVE_CONTROL_OFFSET,
   ARROW_OFFSET,
   DEFAULT_FONT_SIZE,
-  Y_OFFSET
+  Y_OFFSET,
+  X_OFFSET
 } from '../constants/ElementSettings';
 import { Element as CanvasElement } from '../types';
 
@@ -23,12 +24,12 @@ interface IdeaElementProps {
 }
 
 const IdeaElement: React.FC<IdeaElementProps> = ({
-  element, 
-  currentDropTarget, 
+  element,
+  currentDropTarget,
   dropPosition,
   draggingElement,
-  handleMouseDown, 
-  handleMouseUp 
+  handleMouseDown,
+  handleMouseUp
 }) => {
   const { state, dispatch } = useCanvas();
   const parentElement = state.elements[element.parentId!];
@@ -114,10 +115,13 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
       />
       {currentDropTarget?.id === element.id && draggingElement && (dropPosition === 'before' || dropPosition === 'after') && (
         <rect
-          x={element.x}
-          y={dropPosition === 'before'
-            ? element.y - draggingElement.height - Y_OFFSET / 2
-            : element.y + element.height + Y_OFFSET / 2}
+          className='drop-preview'
+          x={parentElement 
+            ? parentElement.x + parentElement.width + X_OFFSET
+            : element.x + element.width}
+          y={dropPosition === 'before' 
+            ? element.y - draggingElement.height - Y_OFFSET // 実際の配置ロジックに合わせ調整
+            : element.y + element.height + Y_OFFSET}
           width={draggingElement.width}
           height={draggingElement.height}
           fill="rgba(100, 100, 255, 0.3)"
