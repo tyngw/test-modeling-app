@@ -60,13 +60,20 @@ export const useElementDragEffect = ({ showToast }: UseElementDragEffectProps) =
         if (element.id === draggingElement.id || !element.visible) return;
 
         // 要素の境界ボックス計算
+        const elemLeft = element.x;
+        const elemRight = element.x + element.width;
         const elemTop = element.y;
         const elemBottom = element.y + element.height;
+        const mouseX = zoomAdjustedPos.x;
         const mouseY = zoomAdjustedPos.y;
 
-        // 挿入位置判定
-        const topThreshold = elemTop + element.height * 0.3;
-        const bottomThreshold = elemBottom - element.height * 0.3;
+        // X座標が要素の範囲内にあるか確認（左右10pxの許容範囲を追加）
+        const isInXRange = mouseX > elemLeft - 10 && mouseX < elemRight + 10;
+        if (!isInXRange) return;
+
+        // 挿入位置判定（上下20%を境界と判定）
+        const topThreshold = elemTop + element.height * 0.2;
+        const bottomThreshold = elemBottom - element.height * 0.2;
         let position: DropPosition = 'child';
 
         if (mouseY < topThreshold) {
@@ -75,8 +82,14 @@ export const useElementDragEffect = ({ showToast }: UseElementDragEffectProps) =
           position = 'after';
         }
 
-        // 最も近い要素を選択
-        const distance = Math.abs(mouseY - (elemTop + element.height / 2));
+        // 要素中心からの距離計算（X座標も考慮）
+        const centerX = elemLeft + element.width / 2;
+        const centerY = elemTop + element.height / 2;
+        const distance = Math.sqrt(
+          Math.pow(mouseX - centerX, 2) +
+          Math.pow(mouseY - centerY, 2)
+        );
+
         if (distance < closestDistance) {
           closestDistance = distance;
           bestTarget = { element, position };
@@ -90,7 +103,6 @@ export const useElementDragEffect = ({ showToast }: UseElementDragEffectProps) =
       const dropTarget = findDropTarget(e);
       setCurrentDropTarget(dropTarget);
 
-      if (!dropTarget) {
         const zoomAdjustedPos = convertToZoomCoordinates(e);
         const newPosition = {
           x: zoomAdjustedPos.x - dragStartOffset.x,
@@ -101,7 +113,6 @@ export const useElementDragEffect = ({ showToast }: UseElementDragEffectProps) =
           type: 'MOVE_NODE',
           payload: { id: draggingElement.id, ...newPosition }
         });
-      }
     };
 
     document.addEventListener('mousemove', handleMouseMove);
@@ -154,6 +165,7 @@ export const useElementDragEffect = ({ showToast }: UseElementDragEffectProps) =
 
       if (isDescendant(state.elements, draggingElement.id, target.id)) {
         resetElementPosition();
+        setDraggingElement(null);
         showToast(ToastMessages.invalidDrop);
         return;
       }
