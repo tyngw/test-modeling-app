@@ -3,9 +3,8 @@ import React, { useRef } from 'react';
 import { useCanvas } from '../context/CanvasContext';
 import { calculateElementWidth } from '../utils/TextareaHelpers';
 import { 
-    // DEFAULT_SECTION_HEIGHT, 
     DEFAULT_FONT_SIZE, 
-    LINE_HEIGHT_RATIO 
+    LINE_HEIGHT_RATIO,
 } from '../constants/ElementSettings';
 import { Element } from '../types';
 

@@ -1,6 +1,9 @@
 // src/components/FoldingIcon.tsx
 import React from 'react';
 import { Element } from '../types';
+import {
+    DEFAULT_FONT_SIZE,
+  } from '../constants/ElementSettings';
 
 interface FoldingIconProps {
     element: Element;
@@ -22,7 +25,7 @@ const FoldingIcon: React.FC<FoldingIconProps> = ({ element }) => {
                 y={element.y + element.height / 2} // 親ノードのRectの中央に配置
                 textAnchor="middle" // テキストを中央揃えにする
                 dominantBaseline="middle" // テキストを中央揃えにする
-                fontSize="12" // フォントサイズ
+                fontSize={DEFAULT_FONT_SIZE} // フォントサイズ
             >
                 +
             </text>

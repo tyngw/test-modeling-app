@@ -1,17 +1,18 @@
 // src/components/CanvasArea.tsx
 import React, { useRef, useState, useEffect } from 'react';
-import { useCanvas } from '../context/CanvasContext';
 import IdeaElement from './IdeaElement';
-import { Marker } from './Marker';
 import QuickMenuBar from './QuickMenuBar';
 import InputFields from './InputFields';
+import FoldingIcon from './FoldingIcon';
+import ModalWindow from './ModalWindow';
 import useResizeEffect from '../hooks/useResizeEffect';
+import { useCanvas } from '../context/CanvasContext';
+import { Marker } from './Marker';
+import { keyActionMap } from '../constants/KeyActionMap';
 import { useClickOutside } from '../hooks/useClickOutside';
 import { useElementDragEffect } from '../hooks/useElementDragEffect';
 import { loadFromLocalStorage } from '../state/undoredo';
 import { saveSvg, loadElements, saveElements } from '../utils/FileHelpers';
-import FoldingIcon from './FoldingIcon';
-import ModalWindow from './ModalWindow';
 import { helpContent } from '../constants/HelpContent';
 import { ICONBAR_HEIGHT } from '../constants/ElementSettings';
 import { Element } from '../types';
@@ -79,23 +80,6 @@ const CanvasArea: React.FC = () => {
     const handleKeyDown = (e: React.KeyboardEvent) => {
         e.preventDefault();
         const keyCombo = `${e.ctrlKey || e.metaKey ? 'Ctrl+' : ''}${e.shiftKey ? 'Shift+' : ''}${e.key}`;
-        const keyActionMap: { [key: string]: string } = {
-            'Ctrl+z': 'UNDO',
-            'Ctrl+Shift+z': 'REDO',
-            'ArrowUp': 'ARROW_UP',
-            'ArrowDown': 'ARROW_DOWN',
-            'ArrowRight': 'ARROW_RIGHT',
-            'Ctrl+ArrowRight': 'EXPAND_NODE',
-            'ArrowLeft': 'ARROW_LEFT',
-            'Ctrl+ArrowLeft': 'COLLAPSE_NODE',
-            'Ctrl+x': 'CUT_NODE',
-            'Ctrl+c': 'COPY_NODE',
-            'Ctrl+v': 'PASTE_NODE',
-            'Tab': 'ADD_NODE',
-            'Delete': 'DELETE_NODE',
-            'Backspace': 'DELETE_NODE',
-            'Enter': 'EDIT_NODE'
-        };
         const actionType = keyActionMap[keyCombo];
         if (actionType) dispatch({ type: actionType });
     };
