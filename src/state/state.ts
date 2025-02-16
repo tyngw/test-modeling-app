@@ -544,8 +544,6 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
             parentId: newParentId,
             order: newOrder,
             depth: depth,
-            x: newParent ? newParent.x + newParent.width + X_OFFSET : DEFAULT_X,
-            y: newParent ? newParent.y : DEFAULT_Y
         };
 
         // 兄弟要素のorder再計算
