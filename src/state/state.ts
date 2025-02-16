@@ -225,7 +225,6 @@ const layoutSubtree = (
     xOffset: number,
     yOffset: number
 ): { newY: number; minY: number; maxY: number } => {
-    // X位置を決定（親のX + 親の幅 + X_OFFSET）
     node.x = parentX + xOffset;
 
     const children = getChildren(node.id, elements);
@@ -233,7 +232,7 @@ const layoutSubtree = (
     let minY = Infinity;
     let maxY = -Infinity;
 
-    // 子要素を配置
+    // 子要素を再帰的に配置
     for (const child of children) {
         const result = layoutSubtree(
             child,
@@ -248,17 +247,17 @@ const layoutSubtree = (
         maxY = Math.max(maxY, result.maxY);
     }
 
-    // 親要素のY位置を子要素の先頭と末尾の中央に配置
+    // 親要素のY位置計算（子要素の中央配置）
     if (children.length > 0) {
         const firstChild = children[0];
         const lastChild = children[children.length - 1];
-        const centerY = (firstChild.y + (lastChild.y + lastChild.height)) / 2;
+        const centerY = (firstChild.y + lastChild.y + lastChild.height) / 2;
         node.y = centerY - node.height / 2;
     } else {
         node.y = currentY;
     }
 
-    // 衝突チェックと位置調整
+    // 衝突判定の改良（子孫要素を除外）
     let adjustedY = node.y;
     let collisionFound = true;
     
@@ -266,6 +265,7 @@ const layoutSubtree = (
         collisionFound = false;
         for (const elem of Object.values(elements)) {
             if (elem.id === node.id) continue;
+            if (isDescendant(elements, elem.id, node.id)) continue; // 子孫要素を除外
             
             if (checkCollision(node, adjustedY, elem)) {
                 adjustedY = elem.y + elem.height + Y_OFFSET;
@@ -300,12 +300,17 @@ const adjustElementPositions = (elements: ElementsMap): ElementsMap => {
     const rootElements = getChildren(null, newElements);
     let currentY = PRESET_Y;
 
+    // 全要素の座標をリセット
+    Object.values(newElements).forEach(elem => {
+        elem.x = 0;
+        elem.y = 0;
+    });
+
     for (const root of rootElements) {
-        // ルート要素のXはDEFAULT_X固定
         root.x = DEFAULT_X;
         const result = layoutSubtree(
             root,
-            -X_OFFSET, // ルートの親Xは存在しないため、X_OFFSETを相殺
+            -X_OFFSET,
             currentY,
             newElements,
             X_OFFSET,
