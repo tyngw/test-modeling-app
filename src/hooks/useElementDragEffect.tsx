@@ -48,6 +48,78 @@ export const useElementDragEffect = ({ showToast }: UseElementDragEffectProps) =
     [convertToZoomCoordinates]
   );
 
+  const handleMouseUp = useCallback(() => {
+    console.log('handleMouseUp')
+    try {
+      if (!draggingElement) return;
+
+      const resetElementPosition = () => {
+        dispatch({
+          type: 'MOVE_NODE',
+          payload: { id: draggingElement.id, ...originalPosition }
+        });
+      };
+
+      const processChildDrop = (target: Element) => {
+        dispatch({ type: 'SNAPSHOT' });
+        dispatch({
+          type: 'DROP_NODE',
+          payload: {
+            id: draggingElement.id,
+            oldParentId: draggingElement.parentId,
+            newParentId: target.id,
+            newOrder: target.children,
+            depth: target.depth + 1,
+          },
+        });
+      };
+
+      const processSiblingDrop = (target: Element, position: DropPosition) => {
+        const newOrder = position === 'before' ? target.order : target.order + 1;
+        const newParentId = target.parentId;
+
+        dispatch({ type: 'SNAPSHOT' });
+        dispatch({
+          type: 'DROP_NODE',
+          payload: {
+            id: draggingElement.id,
+            oldParentId: draggingElement.parentId,
+            newParentId,
+            newOrder,
+            depth: target.depth,
+          },
+        });
+      };
+
+      if (currentDropTarget) {
+        const { element: target, position } = currentDropTarget;
+        console.log('[Drop] target.text', target.text)
+
+        if (isDescendant(state.elements, draggingElement.id, target.id)) {
+          resetElementPosition();
+          setDraggingElement(null);
+          showToast(ToastMessages.invalidDrop);
+          return;
+        }
+
+        if (position === 'child') {
+          processChildDrop(target);
+        } else {
+          processSiblingDrop(target, position);
+        }
+      } else {
+        console.log('[Drop] reset')
+        resetElementPosition();
+      }
+    } catch (error) {
+      console.error('Drag error:', error);
+    } finally {
+      console.log('[Drop] finally')
+      setDraggingElement(null);
+      setCurrentDropTarget(null);
+    }
+  }, [draggingElement, currentDropTarget, originalPosition, state.elements, dispatch, showToast]);
+
   useEffect(() => {
     if (!draggingElement) return;
 
@@ -68,7 +140,8 @@ export const useElementDragEffect = ({ showToast }: UseElementDragEffectProps) =
         const mouseY = zoomAdjustedPos.y;
 
         // X座標が要素の範囲内にあるか確認（左右10pxの許容範囲を追加）
-        const isInXRange = mouseX > elemLeft - 10 && mouseX < elemRight + 10;
+        // const isInXRange = mouseX > elemLeft - 10 && mouseX < elemRight + 10;
+        const isInXRange = mouseX > elemLeft && mouseX < elemRight;
         if (!isInXRange) return;
 
         // 挿入位置判定（上下5%を境界と判定）
@@ -103,85 +176,29 @@ export const useElementDragEffect = ({ showToast }: UseElementDragEffectProps) =
       const dropTarget = findDropTarget(e);
       setCurrentDropTarget(dropTarget);
 
-        const zoomAdjustedPos = convertToZoomCoordinates(e);
-        const newPosition = {
-          x: zoomAdjustedPos.x - dragStartOffset.x,
-          y: zoomAdjustedPos.y - dragStartOffset.y,
-        };
+      const zoomAdjustedPos = convertToZoomCoordinates(e);
+      const newPosition = {
+        x: zoomAdjustedPos.x - dragStartOffset.x,
+        y: zoomAdjustedPos.y - dragStartOffset.y,
+      };
 
-        dispatch({
-          type: 'MOVE_NODE',
-          payload: { id: draggingElement.id, ...newPosition }
-        });
+      dispatch({
+        type: 'MOVE_NODE',
+        payload: { id: draggingElement.id, ...newPosition }
+      });
+    };
+
+    const handleMouseUpGlobal = () => {
+      handleMouseUp();
     };
 
     document.addEventListener('mousemove', handleMouseMove);
-    return () => document.removeEventListener('mousemove', handleMouseMove);
-  }, [draggingElement, dragStartOffset, state.elements, convertToZoomCoordinates, dispatch]);
-
-  const handleMouseUp = useCallback(() => {
-    if (!draggingElement) return;
-
-    const resetElementPosition = () => {
-      dispatch({
-        type: 'MOVE_NODE',
-        payload: { id: draggingElement.id, ...originalPosition }
-      });
+    document.addEventListener('mouseup', handleMouseUpGlobal);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUpGlobal);
     };
-
-    const processChildDrop = (target: Element) => {
-      dispatch({ type: 'SNAPSHOT' });
-      dispatch({
-        type: 'DROP_NODE',
-        payload: {
-          id: draggingElement.id,
-          oldParentId: draggingElement.parentId,
-          newParentId: target.id,
-          newOrder: target.children,
-          depth: target.depth + 1,
-        },
-      });
-    };
-
-    const processSiblingDrop = (target: Element, position: DropPosition) => {
-      const newOrder = position === 'before' ? target.order : target.order + 1;
-      const newParentId = target.parentId;
-
-      dispatch({ type: 'SNAPSHOT' });
-      dispatch({
-        type: 'DROP_NODE',
-        payload: {
-          id: draggingElement.id,
-          oldParentId: draggingElement.parentId,
-          newParentId,
-          newOrder,
-          depth: target.depth,
-        },
-      });
-    };
-
-    if (currentDropTarget) {
-      const { element: target, position } = currentDropTarget;
-
-      if (isDescendant(state.elements, draggingElement.id, target.id)) {
-        resetElementPosition();
-        setDraggingElement(null);
-        showToast(ToastMessages.invalidDrop);
-        return;
-      }
-
-      if (position === 'child') {
-        processChildDrop(target);
-      } else {
-        processSiblingDrop(target, position);
-      }
-    } else {
-      resetElementPosition();
-    }
-
-    setDraggingElement(null);
-    setCurrentDropTarget(null);
-  }, [draggingElement, currentDropTarget, originalPosition, state.elements, dispatch, showToast]);
+  }, [draggingElement, dragStartOffset, state.elements, convertToZoomCoordinates, dispatch, handleMouseUp]);
 
   return {
     handleMouseDown,

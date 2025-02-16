@@ -29,7 +29,6 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
   dropPosition,
   draggingElement,
   handleMouseDown,
-  handleMouseUp
 }) => {
   const { state, dispatch } = useCanvas();
   const parentElement = state.elements[element.parentId!];
@@ -105,7 +104,6 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
         onClick={handleSelect}
         onDoubleClick={() => dispatch({ type: 'EDIT_NODE' })}
         onMouseDown={(e) => handleMouseDown(e, element)}
-        onMouseUp={handleMouseUp}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         style={{
@@ -116,7 +114,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
           cursor: isHovered ? 'pointer' : 'default'
         }}
       />
-      {currentDropTarget?.id === element.id && draggingElement && (
+      {currentDropTarget?.id === element.id && draggingElement && dropPosition !== 'child' && (
         <rect
           className='drop-preview'
           x={parentElement
