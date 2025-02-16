@@ -4,7 +4,6 @@ export const DEFAULT_X = 50;
 export const DEFAULT_Y = 50;
 export const PRESET_Y = 50;
 export const NODE_HEIGHT = 72;
-export const ARROW_OFFSET = 20;
 export const CURVE_CONTROL_OFFSET = 80;
 export const X_OFFSET = 100;
 export const Y_OFFSET = 10;
