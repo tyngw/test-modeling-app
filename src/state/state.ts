@@ -227,22 +227,24 @@ const adjustElementAndChildren = (
     currentY: number,
     visited: Set<string>
 ): { elements: ElementsMap; currentY: number; maxY: number } => {
-    if (visited.has(element.id)) return { elements, currentY, maxY: currentY };
+    // visibleでない要素は処理しない
+    if (visited.has(element.id) || !element.visible) return { elements, currentY, maxY: currentY };
     visited.add(element.id);
 
     const parentElement = element.parentId ? elements[element.parentId] : null;
     const positionedElement = calculateElementPosition(element, parentElement, currentY);
     let updatedElements = { ...elements, [positionedElement.id]: positionedElement };
 
-    // 子要素をorder順にソートして取得
+    // visibleな子要素のみを取得
     const children = Object.values(updatedElements)
-        .filter(e => e.parentId === positionedElement.id)
+        .filter(e => e.parentId === positionedElement.id && e.visible)
         .sort((a, b) => a.order - b.order);
 
     let updatedY = currentY;
-    let maxY = positionedElement.y + positionedElement.height;
+    const parentY = positionedElement.y + positionedElement.height
+    let maxY = parentY;
+    let childMaxY = 0;
 
-    // 子要素を再帰的に処理
     for (const child of children) {
         const result = adjustElementAndChildren(
             updatedElements,
@@ -252,18 +254,10 @@ const adjustElementAndChildren = (
         );
         updatedElements = result.elements;
         updatedY = result.currentY;
-        maxY = Math.max(maxY, result.maxY);
+        childMaxY = Math.max(childMaxY, result.maxY);
     }
 
-    // 子がない場合は自身の高さ分オフセット
-    if (children.length === 0 && (positionedElement.visible || positionedElement.order === 0)) {
-        updatedY = positionedElement.y + positionedElement.height + Y_OFFSET;
-        maxY = positionedElement.y + positionedElement.height;
-    }
-    // 子がある場合は親と子の最大下端を使用
-    else if (children.length > 0) {
-        updatedY = maxY + Y_OFFSET;
-    }
+    updatedY = Math.max(parentY, childMaxY) + Y_OFFSET;
 
     return { elements: updatedElements, currentY: updatedY, maxY };
 };
@@ -278,7 +272,7 @@ const calculateParentPosition = (
     const childrenCenters = visibleChildren.map(child => child.y + child.height / 2);
     const minChildCenter = Math.min(...childrenCenters);
     const maxChildCenter = Math.max(...childrenCenters);
-    
+
     const targetCenter = (minChildCenter + maxChildCenter) / 2;
     const newY = targetCenter - parent.height / 2;
 
@@ -298,7 +292,8 @@ const getSortedElements = (elements: ElementsMap): Element[] =>
 
 const adjustElementPositions = (elements: ElementsMap): ElementsMap => {
     let updatedElements = { ...elements };
-    const rootElements = Object.values(updatedElements).filter(e => e.parentId === null);
+    // visibleなルート要素のみ処理
+    const rootElements = Object.values(updatedElements).filter(e => e.parentId === null && e.visible);
 
     // 初期配置：親→子の順で配置
     for (const root of rootElements) {
@@ -312,9 +307,9 @@ const adjustElementPositions = (elements: ElementsMap): ElementsMap => {
     }
 
     // 親要素の位置調整：子→親の順で調整
-    const sortedElements = getSortedElements(updatedElements);
+    const sortedElements = getSortedElements(updatedElements).filter(e => e.visible); // visibleな要素のみ調整
     for (const parentElement of sortedElements) {
-        const children = Object.values(updatedElements).filter(e => e.parentId === parentElement.id);
+        const children = Object.values(updatedElements).filter(e => e.parentId === parentElement.id && e.visible);
         const positionResult = calculateParentPosition(parentElement, children);
 
         if (positionResult.needsUpdate) {
@@ -459,19 +454,19 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
     DROP_NODE: (state, action) => {
         const { payload } = action;
         const { id, oldParentId, newParentId, newOrder, depth } = payload;
-    
+
         if (id === newParentId || isDescendant(state.elements, id, newParentId)) {
             return state;
         }
-    
+
         let updatedElements = { ...state.elements };
         const element = updatedElements[id];
         const oldParent = updatedElements[oldParentId];
         const newParent = updatedElements[newParentId];
-    
+
         // 同じ親内での移動かどうか
         const isSameParent = oldParentId === newParentId;
-    
+
         // 古い親のchildren更新（異なる親の場合のみ）
         if (!isSameParent && oldParent) {
             updatedElements[oldParentId] = {
@@ -479,7 +474,7 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
                 children: Math.max(0, oldParent.children - 1)
             };
         }
-    
+
         updatedElements[id] = {
             ...element,
             parentId: newParentId,
@@ -488,19 +483,19 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
             x: newParent ? newParent.x + newParent.width + X_OFFSET : DEFAULT_X,
             y: newParent ? newParent.y : DEFAULT_Y
         };
-    
+
         // 兄弟要素のorder再計算
         const siblings = Object.values(updatedElements)
             .filter(e => e.parentId === newParentId && e.id !== id)
             .sort((a, b) => a.order - b.order);
-    
+
         // 新しい順序に基づいて要素を配置
         const newSiblings = [
             ...siblings.slice(0, newOrder),
             updatedElements[id],
             ...siblings.slice(newOrder)
         ];
-    
+
         // orderプロパティの更新
         newSiblings.forEach((sibling, index) => {
             if (sibling.order !== index) {
@@ -510,7 +505,7 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
                 };
             }
         });
-    
+
         // 新しい親のchildren更新（異なる親の場合のみ）
         if (!isSameParent && newParent) {
             updatedElements[newParentId] = {
@@ -518,12 +513,12 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
                 children: newParent.children + 1
             };
         }
-    
+
         // 深度の再計算（異なる親の場合）
         if (!isSameParent) {
             updatedElements = setDepthRecursive(updatedElements, updatedElements[id]);
         }
-    
+
         return {
             ...state,
             elements: adjustElementPositions(updatedElements)
