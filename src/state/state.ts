@@ -229,22 +229,15 @@ const layoutSubtree = (
     node.x = parentX + xOffset;
 
     const children = getChildren(node.id, elements);
-
-    if (children.length === 0) {
-        // 子要素がない場合、現在のY位置に配置
-        node.y = currentY;
-        const newY = currentY + node.height + yOffset;
-        return { newY, minY: node.y, maxY: node.y + node.height };
-    }
-
     let childY = currentY;
     let minY = Infinity;
     let maxY = -Infinity;
 
+    // 子要素を配置
     for (const child of children) {
         const result = layoutSubtree(
             child,
-            node.x + node.width, // 子要素のXは親のX + 親の幅
+            node.x + node.width,
             childY,
             elements,
             X_OFFSET,
@@ -255,25 +248,51 @@ const layoutSubtree = (
         maxY = Math.max(maxY, result.maxY);
     }
 
-    // 子要素が1つの場合の特別な配置処理
-    if (children.length === 1) {
-        const child = children[0];
-        child.y = node.y + (node.height - child.height) / 2;
-    } else {
-        // 子要素の中央に親を配置
-        const centerY = (minY + maxY) / 2;
+    // 親要素のY位置を子要素の先頭と末尾の中央に配置
+    if (children.length > 0) {
+        const firstChild = children[0];
+        const lastChild = children[children.length - 1];
+        const centerY = (firstChild.y + (lastChild.y + lastChild.height)) / 2;
         node.y = centerY - node.height / 2;
+    } else {
+        node.y = currentY;
     }
 
-    // このノードの下端を計算
+    // 衝突チェックと位置調整
+    let adjustedY = node.y;
+    let collisionFound = true;
+    
+    while (collisionFound) {
+        collisionFound = false;
+        for (const elem of Object.values(elements)) {
+            if (elem.id === node.id) continue;
+            
+            if (checkCollision(node, adjustedY, elem)) {
+                adjustedY = elem.y + elem.height + Y_OFFSET;
+                collisionFound = true;
+                break;
+            }
+        }
+    }
+    
+    node.y = adjustedY;
+
     const nodeBottom = node.y + node.height;
     const newY = Math.max(childY, nodeBottom + Y_OFFSET);
+    minY = Math.min(minY, node.y);
+    maxY = Math.max(maxY, node.y + node.height);
 
-    // 最小・最大Yを更新（自身の位置も含める）
-    const adjustedMinY = Math.min(minY, node.y);
-    const adjustedMaxY = Math.max(maxY, node.y + node.height);
+    return { newY, minY, maxY };
+};
 
-    return { newY, minY: adjustedMinY, maxY: adjustedMaxY };
+// 衝突チェック関数を追加
+const checkCollision = (element: Element, y: number, other: Element): boolean => {
+    return (
+        element.x < other.x + other.width &&
+        element.x + element.width > other.x &&
+        y < other.y + other.height &&
+        y + element.height > other.y
+    );
 };
 
 const adjustElementPositions = (elements: ElementsMap): ElementsMap => {
@@ -296,6 +315,79 @@ const adjustElementPositions = (elements: ElementsMap): ElementsMap => {
     }
 
     return newElements;
+};
+
+const old_adjustElementAndChildrenPosition = (
+    elements: { [key: string]: Element },
+    element: Element,
+    currentY: number,
+    maxHeight: number,
+    visited: Set<string> = new Set()
+): number => {
+    if (visited.has(element.id)) return currentY;
+    visited.add(element.id);
+
+    const updatedElements = { ...elements };
+    const parentElement = element.parentId ? updatedElements[element.parentId] : null;
+
+    if (!parentElement) {
+        element.x = DEFAULT_X;
+    } else {
+        element.x = parentElement.x + parentElement.width + X_OFFSET;
+    }
+
+    element.y = currentY;
+    maxHeight = Math.max(maxHeight, element.height);
+    updatedElements[element.id] = element;
+
+    const childElements = Object.values(updatedElements).filter(n => n.parentId === element.id);
+    if (childElements.length > 0) {
+        childElements.forEach(childElement => {
+            if (!visited.has(childElement.id)) {
+                currentY = old_adjustElementAndChildrenPosition(updatedElements, childElement, currentY, maxHeight, visited);
+            }
+        });
+    } else {
+        if (element.visible || element.order === 0) {
+            currentY += maxHeight + Y_OFFSET;
+        }
+    }
+
+    return currentY;
+};
+
+const old_adjustElementPositions = (elements: { [key: string]: Element }): { [key: string]: Element } => {
+    const updatedElements = { ...elements };
+    const rootElements = Object.values(updatedElements).filter(n => n.parentId === null);
+
+    rootElements.forEach(rootElement => {
+        old_adjustElementAndChildrenPosition(updatedElements, rootElement, PRESET_Y, rootElement.height, new Set());
+    });
+
+    const sortedElements = Object.values(updatedElements).sort((a, b) => b.depth - a.depth || (a.parentId as string).localeCompare(b.parentId as string) || a.order - b.order);
+    sortedElements.forEach(parentElement => {
+        const children = sortedElements.filter(n => n.parentId === parentElement.id);
+        const visibleChildren = children.filter(n => n.visible);
+        if (visibleChildren.length > 0) {
+            const childrenMinY = Math.min(...children.map(n => n.y));
+            const childrenMaxY = Math.max(...children.map(n => n.y + n.height));
+            const childrenHeight = childrenMaxY - childrenMinY;
+            if (parentElement.id === '10'){
+                console.log('[Debug] childrenMinY:' + childrenMinY + ' childrenMaxY:' + childrenMaxY + ' childrenHeight:' + childrenHeight);
+            }
+            if (parentElement.height > childrenHeight) {
+                const tallParentNewY = parentElement.y - ((parentElement.height - childrenHeight) / 2);
+                updatedElements[parentElement.id] = { ...parentElement, y: tallParentNewY };
+            } else {
+                const shortParentNewY = childrenMinY + (childrenHeight / 2) - (parentElement.height / 2);
+                if (parentElement.y < shortParentNewY) {
+                    updatedElements[parentElement.id] = { ...parentElement, y: shortParentNewY };
+                }
+            }
+        }
+    });
+
+    return updatedElements;
 };
 
 const createElementAdder = (elements: { [key: string]: Element }, parentElement: Element): { [key: string]: Element } => {
