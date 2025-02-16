@@ -78,10 +78,10 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
     if (!parentElement) return null;
     const totalHeight = element.height;
     const pathCommands = [
-      `M ${element.x},${element.y + totalHeight / 2}`,
-      `C ${element.x - CURVE_CONTROL_OFFSET},${element.y + totalHeight / 2}`,
-      `${parentElement.x + parentElement.width + CURVE_CONTROL_OFFSET},${parentElement.y + parentElement.height / 2}`,
-      `${parentElement.x + parentElement.width + ARROW_OFFSET},${parentElement.y + parentElement.height / 2}`
+      `M ${parentElement.x + parentElement.width + ARROW_OFFSET},${parentElement.y + parentElement.height / 2}`,
+      `C ${parentElement.x + parentElement.width + CURVE_CONTROL_OFFSET},${parentElement.y + parentElement.height / 2}`,
+      `${element.x - CURVE_CONTROL_OFFSET},${element.y + totalHeight / 2}`,
+      `${element.x},${element.y + totalHeight / 2}`
     ].join(' ');
     return (
       <path
@@ -89,7 +89,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
         stroke="black"
         strokeWidth="2"
         fill="none"
-        markerEnd="url(#arrowhead)"
+        markerStart="url(#arrowhead)"
       />
     );
   }, [parentElement, element]);
