@@ -211,119 +211,85 @@ export const isDescendant = (elements: { [key: string]: Element }, nodeId: strin
     return false;
 };
 
-const calculateElementPosition = (
-    element: Element,
-    parentElement: Element | null,
-    currentY: number
-): Element => ({
-    ...element,
-    x: parentElement ? parentElement.x + parentElement.width + X_OFFSET : DEFAULT_X,
-    y: currentY,
-});
-
-const adjustElementAndChildren = (
-    elements: ElementsMap,
-    element: Element,
-    currentY: number,
-    visited: Set<string>
-): { elements: ElementsMap; currentY: number; maxY: number } => {
-    // visibleでない要素は処理しない
-    if (visited.has(element.id) || !element.visible) return { elements, currentY, maxY: currentY };
-    visited.add(element.id);
-
-    const parentElement = element.parentId ? elements[element.parentId] : null;
-    const positionedElement = calculateElementPosition(element, parentElement, currentY);
-    let updatedElements = { ...elements, [positionedElement.id]: positionedElement };
-
-    // visibleな子要素のみを取得
-    const children = Object.values(updatedElements)
-        .filter(e => e.parentId === positionedElement.id && e.visible)
+const getChildren = (parentId: string | null, elements: ElementsMap): Element[] => {
+    return Object.values(elements)
+        .filter(e => e.parentId === parentId && e.visible)
         .sort((a, b) => a.order - b.order);
+};
 
-    let updatedY = currentY;
-    const parentY = positionedElement.y + positionedElement.height
-    let maxY = parentY;
-    let childMaxY = 0;
+const layoutSubtree = (
+    node: Element,
+    parentX: number,
+    currentY: number,
+    elements: ElementsMap,
+    xOffset: number,
+    yOffset: number
+): { newY: number; minY: number; maxY: number } => {
+    // X位置を決定（親のX + 親の幅 + X_OFFSET）
+    node.x = parentX + xOffset;
+
+    const children = getChildren(node.id, elements);
+
+    if (children.length === 0) {
+        // 子要素がない場合、現在のY位置に配置
+        node.y = currentY;
+        const newY = currentY + node.height + yOffset;
+        return { newY, minY: node.y, maxY: node.y + node.height };
+    }
+
+    let childY = currentY;
+    let minY = Infinity;
+    let maxY = -Infinity;
 
     for (const child of children) {
-        const result = adjustElementAndChildren(
-            updatedElements,
+        const result = layoutSubtree(
             child,
-            updatedY,
-            visited
+            node.x + node.width, // 子要素のXは親のX + 親の幅
+            childY,
+            elements,
+            X_OFFSET,
+            Y_OFFSET
         );
-        updatedElements = result.elements;
-        updatedY = result.currentY;
-        childMaxY = Math.max(childMaxY, result.maxY);
+        childY = result.newY;
+        minY = Math.min(minY, result.minY);
+        maxY = Math.max(maxY, result.maxY);
     }
 
-    updatedY = Math.max(parentY, childMaxY) + Y_OFFSET;
+    // 子要素の中央に親を配置
+    const centerY = (minY + maxY) / 2;
+    node.y = centerY - node.height / 2;
 
-    return { elements: updatedElements, currentY: updatedY, maxY };
+    // このノードの下端を計算
+    const nodeBottom = node.y + node.height;
+    const newY = Math.max(childY, nodeBottom + Y_OFFSET);
+
+    // 最小・最大Yを更新（自身の位置も含める）
+    const adjustedMinY = Math.min(minY, node.y);
+    const adjustedMaxY = Math.max(maxY, node.y + node.height);
+
+    return { newY, minY: adjustedMinY, maxY: adjustedMaxY };
 };
-
-const calculateParentPosition = (
-    parent: Element,
-    children: Element[]
-): { needsUpdate: boolean; newY: number } => {
-    const visibleChildren = children.filter(child => child.visible);
-    if (visibleChildren.length === 0) return { needsUpdate: false, newY: parent.y };
-
-    const childrenCenters = visibleChildren.map(child => child.y + child.height / 2);
-    const minChildCenter = Math.min(...childrenCenters);
-    const maxChildCenter = Math.max(...childrenCenters);
-
-    const targetCenter = (minChildCenter + maxChildCenter) / 2;
-    const newY = targetCenter - parent.height / 2;
-
-    return {
-        needsUpdate: Math.abs(parent.y - newY) > 1e-3,
-        newY: newY,
-    };
-};
-
-const getSortedElements = (elements: ElementsMap): Element[] =>
-    Object.values(elements).sort(
-        (a, b) =>
-            b.depth - a.depth ||
-            (a.parentId ?? "").localeCompare(b.parentId ?? "") ||
-            a.order - b.order
-    );
 
 const adjustElementPositions = (elements: ElementsMap): ElementsMap => {
-    let updatedElements = { ...elements };
-    // visibleなルート要素のみ処理
-    const rootElements = Object.values(updatedElements).filter(e => e.parentId === null && e.visible);
+    const newElements = { ...elements };
+    const rootElements = getChildren(null, newElements);
+    let currentY = PRESET_Y;
 
-    // 初期配置：親→子の順で配置
     for (const root of rootElements) {
-        const result = adjustElementAndChildren(
-            updatedElements,
+        // ルート要素のXはDEFAULT_X固定
+        root.x = DEFAULT_X;
+        const result = layoutSubtree(
             root,
-            PRESET_Y,
-            new Set<string>()
+            -X_OFFSET, // ルートの親Xは存在しないため、X_OFFSETを相殺
+            currentY,
+            newElements,
+            X_OFFSET,
+            Y_OFFSET
         );
-        updatedElements = result.elements;
+        currentY = result.newY;
     }
 
-    // 親要素の位置調整：子→親の順で調整
-    const sortedElements = getSortedElements(updatedElements).filter(e => e.visible); // visibleな要素のみ調整
-    for (const parentElement of sortedElements) {
-        const children = Object.values(updatedElements).filter(e => e.parentId === parentElement.id && e.visible);
-        const positionResult = calculateParentPosition(parentElement, children);
-
-        if (positionResult.needsUpdate) {
-            updatedElements = {
-                ...updatedElements,
-                [parentElement.id]: {
-                    ...parentElement,
-                    y: positionResult.newY,
-                },
-            };
-        }
-    }
-
-    return updatedElements;
+    return newElements;
 };
 
 const createElementAdder = (elements: { [key: string]: Element }, parentElement: Element): { [key: string]: Element } => {
