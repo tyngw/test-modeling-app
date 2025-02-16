@@ -11,6 +11,7 @@ import {
   X_OFFSET
 } from '../constants/ElementSettings';
 import { Element as CanvasElement } from '../types';
+import { isDescendant } from '../state/state';
 
 const SECTION_KEYS = ['text', 'text2', 'text3'] as const;
 
@@ -34,6 +35,10 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
   const parentElement = state.elements[element.parentId!];
   const currentDropTargetId = currentDropTarget?.id || -1;
   const [isHovered, setIsHovered] = useState(false);
+
+  const isDraggedOrDescendant = draggingElement
+    ? draggingElement.id === element.id || isDescendant(state.elements, draggingElement.id, element.id)
+    : false;
 
   const sectionHeights = [
     element.section1Height,
@@ -93,6 +98,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
 
   return (
     <React.Fragment key={element.id}>
+      <g opacity={isDraggedOrDescendant ? 0.3 : 1}>
       {renderConnectionPath()}
       <rect
         x={element.x}
@@ -176,6 +182,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
           </div>
         </foreignObject>
       )}
+    </g>
     </React.Fragment>
   );
 };
