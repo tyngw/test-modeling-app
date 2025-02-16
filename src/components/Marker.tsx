@@ -1,12 +1,15 @@
 // src/components/Marker.tsx
 import React from 'react';
-import { POLYGON_HEIGHT } from '../constants/MarkerSetting';
+import { 
+    ARROW_HEIGHT,
+    ARROW_WIDTH
+ } from '../constants/MarkerSetting';
 
 export function Marker() {
     return (
-        <marker id="arrowhead" markerWidth="10" markerHeight={POLYGON_HEIGHT} refX="0" refY={POLYGON_HEIGHT / 2} orient="auto" fill="none" stroke="black">
+        <marker id="arrowhead" markerWidth="10" markerHeight={ARROW_HEIGHT} refX={ARROW_WIDTH} refY={ARROW_HEIGHT / 2} orient="auto" fill="none" stroke="black">
             <polygon 
-                points={`0 0, 10 ${POLYGON_HEIGHT / 2}, 0 ${POLYGON_HEIGHT}`} 
+                points={`${ARROW_WIDTH} 0, ${ARROW_WIDTH} ${ARROW_HEIGHT}, 0 ${ARROW_HEIGHT / 2}`} 
                 fill="none" 
                 stroke="black" 
             />
