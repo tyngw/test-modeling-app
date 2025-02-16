@@ -255,9 +255,15 @@ const layoutSubtree = (
         maxY = Math.max(maxY, result.maxY);
     }
 
-    // 子要素の中央に親を配置
-    const centerY = (minY + maxY) / 2;
-    node.y = centerY - node.height / 2;
+    // 子要素が1つの場合の特別な配置処理
+    if (children.length === 1) {
+        const child = children[0];
+        child.y = node.y + (node.height - child.height) / 2;
+    } else {
+        // 子要素の中央に親を配置
+        const centerY = (minY + maxY) / 2;
+        node.y = centerY - node.height / 2;
+    }
 
     // このノードの下端を計算
     const nodeBottom = node.y + node.height;
