@@ -5,11 +5,11 @@ import TextSection from './TextDisplayArea';
 import { calculateElementWidth } from '../utils/TextareaHelpers';
 import {
   CURVE_CONTROL_OFFSET,
-  ARROW_OFFSET,
   DEFAULT_FONT_SIZE,
   Y_OFFSET,
-  X_OFFSET
+  X_OFFSET,
 } from '../constants/ElementSettings';
+import { ARROW_OFFSET } from '../constants/MarkerSetting';
 import { Element as CanvasElement } from '../types';
 import { isDescendant } from '../state/state';
 
