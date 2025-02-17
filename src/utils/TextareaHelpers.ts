@@ -1,5 +1,5 @@
 // src/utils/TextareaHelpers.ts
-import { DEFAULT_ZOOM_RATIO, DEFAULT_FONT_SIZE, MIN_WIDTH, MAX_WIDTH, MULTIBYTE_CHAR_COEFFICIENT, SINGLEBYTE_CHAR_COEFFICIENT } from '../constants/ElementSettings';
+import { DEFAULT_ZOOM_RATIO, DEFAULT_FONT_SIZE, SIZE, MULTIBYTE_CHAR_COEFFICIENT, SINGLEBYTE_CHAR_COEFFICIENT } from '../constants/ElementSettings';
 
 export const calculateTextWidth = (text: string, zoomRatio: number = DEFAULT_ZOOM_RATIO): number => {
   // const effectiveFontSize = DEFAULT_FONT_SIZE * Math.sqrt(zoomRatio);
@@ -20,7 +20,7 @@ export const calculateElementWidth = (texts: string[], zoomRatio: number = DEFAU
     return Math.max(max, calculateTextWidth(text || '', zoomRatio));
   }, 0);
 
-  return Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, maxTextWidth));
+  return Math.min(SIZE.WIDTH.MAX, Math.max(SIZE.WIDTH.MIN, maxTextWidth));
 };
 
 export const wrapText = (text: string, maxWidth: number, zoomRatio: number = DEFAULT_ZOOM_RATIO): string[] => {
