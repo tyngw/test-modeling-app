@@ -1,6 +1,6 @@
 // src/components/TextDisplayArea.tsx
 import React, { memo, useEffect, useRef, useState } from 'react';
-import { DEFAULT_SECTION_HEIGHT, DEFAULT_FONT_SIZE, LINE_HEIGHT_RATIO } from '../constants/ElementSettings';
+import { SIZE, DEFAULT_FONT_SIZE, LINE_HEIGHT_RATIO } from '../constants/ElementSettings';
 import { wrapText } from '../utils/TextareaHelpers';
 
 interface TextDisplayAreaProps {
@@ -40,7 +40,7 @@ const TextDisplayArea: React.FC<TextDisplayAreaProps> = memo(({
       // 最小高さにズーム率を反映
       const newHeight = Math.max(
         wrappedLines.length * lineHeightValue,
-        DEFAULT_SECTION_HEIGHT * zoomRatio
+        SIZE.SECTION_HEIGHT * zoomRatio
       );
 
       if (Math.abs(newHeight - currentHeight) > 1) {
@@ -76,7 +76,7 @@ const TextDisplayArea: React.FC<TextDisplayAreaProps> = memo(({
             sans-serif
           `,
           width: `${width}px`,
-          minHeight: `${DEFAULT_SECTION_HEIGHT}px`,
+          minHeight: `${SIZE.SECTION_HEIGHT}px`,
           padding: '2px 3px',
           overflow: 'hidden',
           whiteSpace: 'pre-wrap',
