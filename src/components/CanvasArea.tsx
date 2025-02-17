@@ -3,9 +3,9 @@ import React, { useRef, useState, useEffect } from 'react';
 import IdeaElement from './IdeaElement';
 import QuickMenuBar from './QuickMenuBar';
 import InputFields from './InputFields';
-import FoldingIcon from './FoldingIcon';
 import ModalWindow from './ModalWindow';
 import useResizeEffect from '../hooks/useResizeEffect';
+import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import { useCanvas } from '../context/CanvasContext';
 import { Marker } from './Marker';
 import { keyActionMap } from '../constants/KeyActionMap';
@@ -149,7 +149,43 @@ const CanvasArea: React.FC = () => {
                                         handleMouseDown={handleMouseDown as unknown as (e: React.MouseEvent<SVGElement>, element: Element) => void}
                                         handleMouseUp={handleMouseUp}
                                     />
-                                    {hasHiddenChildren && <FoldingIcon element={element} />}
+                                    {hasHiddenChildren && (
+                                        <g
+                                            transform={`translate(${element.x + element.width * 1.05},${element.y})`}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                dispatch({ type: 'SELECT_NODE', payload: element.id });
+                                                dispatch({ type: 'EXPAND_NODE' });
+                                            }}
+                                            style={{ cursor: 'pointer' }}
+                                        >
+                                            <rect
+                                                x="0"
+                                                y="0"
+                                                width="24"
+                                                height="24"
+                                                rx="4"
+                                                fill="white"
+                                                stroke="#e0e0e0"
+                                                strokeWidth="1"
+                                            />
+                                            <svg
+                                                x="4"
+                                                y="4"
+                                                width="16"
+                                                height="16"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <OpenInFullIcon
+                                                    sx={{ color: '#666666' }}
+                                                    style={{
+                                                        width: '100%',
+                                                        height: '100%'
+                                                    }}
+                                                />
+                                            </svg>
+                                        </g>
+                                    )}
                                 </React.Fragment>
                             );
                         })}
