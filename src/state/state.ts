@@ -3,14 +3,10 @@ import { Undo, Redo, saveSnapshot, clearSnapshots } from './undoredo';
 import { handleArrowUp, handleArrowDown, handleArrowRight, handleArrowLeft } from '../utils/ElementSelector';
 import { Element } from '../types';
 import {
-    X_OFFSET,
-    Y_OFFSET,
-    PRESET_Y,
-    DEFAULT_X,
-    DEFAULT_Y,
-    NODE_HEIGHT,
-    MIN_WIDTH,
-    DEFAULT_SECTION_HEIGHT
+    OFFSET,
+    // OFFSET.Y,
+    DEFAULT_POSITION,
+    SIZE,
 } from '../constants/ElementSettings';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -42,11 +38,11 @@ const createNewElement = (parentId: string | null, order: number, depth: number)
     text3: '',
     x: 0,
     y: 0,
-    width: MIN_WIDTH,
-    height: NODE_HEIGHT,
-    section1Height: DEFAULT_SECTION_HEIGHT,
-    section2Height: DEFAULT_SECTION_HEIGHT,
-    section3Height: DEFAULT_SECTION_HEIGHT,
+    width: SIZE.WIDTH.MIN,
+    height: SIZE.NODE_HEIGHT,
+    section1Height: SIZE.SECTION_HEIGHT,
+    section2Height: SIZE.SECTION_HEIGHT,
+    section3Height: SIZE.SECTION_HEIGHT,
     parentId,
     order,
     depth,
@@ -61,8 +57,8 @@ export const initialState: State = {
         '1': {
             ...createNewElement(null, 0, 1),
             id: '1',
-            x: DEFAULT_X,
-            y: DEFAULT_Y,
+            x: DEFAULT_POSITION.X,
+            y: DEFAULT_POSITION.Y,
             editing: false,
         }
     },
@@ -239,8 +235,8 @@ const layoutSubtree = (
             node.x + node.width,
             childY,
             elements,
-            X_OFFSET,
-            Y_OFFSET
+            OFFSET.X,
+            OFFSET.Y
         );
         childY = result.newY;
         minY = Math.min(minY, result.minY);
@@ -268,7 +264,7 @@ const layoutSubtree = (
             if (isDescendant(elements, elem.id, node.id)) continue; // 子孫要素を除外
             
             if (checkCollision(node, adjustedY, elem)) {
-                adjustedY = elem.y + elem.height + Y_OFFSET;
+                adjustedY = elem.y + elem.height + OFFSET.Y;
                 collisionFound = true;
                 break;
             }
@@ -278,7 +274,7 @@ const layoutSubtree = (
     node.y = adjustedY;
 
     const nodeBottom = node.y + node.height;
-    const newY = Math.max(childY, nodeBottom + Y_OFFSET);
+    const newY = Math.max(childY, nodeBottom + OFFSET.Y);
     minY = Math.min(minY, node.y);
     maxY = Math.max(maxY, node.y + node.height);
 
@@ -298,7 +294,7 @@ const checkCollision = (element: Element, y: number, other: Element): boolean =>
 const adjustElementPositions = (elements: ElementsMap): ElementsMap => {
     const newElements = { ...elements };
     const rootElements = getChildren(null, newElements);
-    let currentY = PRESET_Y;
+    let currentY = OFFSET.Y;
 
     // 全要素の座標をリセット
     Object.values(newElements).forEach(elem => {
@@ -307,14 +303,14 @@ const adjustElementPositions = (elements: ElementsMap): ElementsMap => {
     });
 
     for (const root of rootElements) {
-        root.x = DEFAULT_X;
+        root.x = DEFAULT_POSITION.X;
         const result = layoutSubtree(
             root,
             0,
             currentY,
             newElements,
-            X_OFFSET,
-            Y_OFFSET
+            OFFSET.X,
+            OFFSET.Y
         );
         currentY = result.newY;
     }
@@ -336,9 +332,9 @@ const old_adjustElementAndChildrenPosition = (
     const parentElement = element.parentId ? updatedElements[element.parentId] : null;
 
     if (!parentElement) {
-        element.x = DEFAULT_X;
+        element.x = DEFAULT_POSITION.X;
     } else {
-        element.x = parentElement.x + parentElement.width + X_OFFSET;
+        element.x = parentElement.x + parentElement.width + OFFSET.X;
     }
 
     element.y = currentY;
@@ -354,7 +350,7 @@ const old_adjustElementAndChildrenPosition = (
         });
     } else {
         if (element.visible || element.order === 0) {
-            currentY += maxHeight + Y_OFFSET;
+            currentY += maxHeight + OFFSET.Y;
         }
     }
 
@@ -366,7 +362,7 @@ const old_adjustElementPositions = (elements: { [key: string]: Element }): { [ke
     const rootElements = Object.values(updatedElements).filter(n => n.parentId === null);
 
     rootElements.forEach(rootElement => {
-        old_adjustElementAndChildrenPosition(updatedElements, rootElement, PRESET_Y, rootElement.height, new Set());
+        old_adjustElementAndChildrenPosition(updatedElements, rootElement, OFFSET.Y, rootElement.height, new Set());
     });
 
     const sortedElements = Object.values(updatedElements).sort((a, b) => b.depth - a.depth || (a.parentId as string).localeCompare(b.parentId as string) || a.order - b.order);

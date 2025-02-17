@@ -6,10 +6,9 @@ import { calculateElementWidth } from '../utils/TextareaHelpers';
 import {
   CURVE_CONTROL_OFFSET,
   DEFAULT_FONT_SIZE,
-  Y_OFFSET,
-  X_OFFSET,
+  OFFSET,
   SHADOW_OFFSET,
-  SHADOW_COLOR,
+  ELEM_STYLE,
 } from '../constants/ElementSettings';
 import { ARROW_OFFSET } from '../constants/MarkerSetting';
 import { Element as CanvasElement } from '../types';
@@ -89,7 +88,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
       <path
         d={pathCommands}
         stroke="black"
-        strokeWidth="2"
+        strokeWidth={ELEM_STYLE.STROKE}
         fill="none"
         markerStart="url(#arrowhead)"
       />
@@ -115,10 +114,10 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
             y={element.y + SHADOW_OFFSET}
             width={element.width}
             height={element.height}
-            rx="2"
+            rx={ELEM_STYLE.RX}
             fill="none"
-            stroke={SHADOW_COLOR}
-            strokeWidth="2"
+            stroke={ELEM_STYLE.SHADDOW.COLOR}
+            strokeWidth={ELEM_STYLE.STROKE}
           />
         )}
         <rect
@@ -126,8 +125,9 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
           y={element.y}
           width={element.width}
           height={element.height}
-          className={`element ${element.selected ? 'element-selected' : 'element-unselected'}`}
-          rx="2"
+          rx={ELEM_STYLE.RX}
+          strokeWidth={ELEM_STYLE.STROKE}
+          stroke={`${element.selected ? ELEM_STYLE.SELECTED.STROKE_COLOR : ELEM_STYLE.NORMAL.STROKE_COLOR}`}
           onClick={handleSelect}
           onDoubleClick={() => dispatch({ type: 'EDIT_NODE' })}
           onMouseDown={(e) => handleMouseDown(e, element)}
@@ -135,8 +135,8 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
           onMouseLeave={() => setIsHovered(false)}
           style={{
             fill: (element.id === currentDropTargetId && dropPosition === 'child')
-              ? "rgba(100, 100, 255, 0.3)"
-              : 'white',
+              ? ELEM_STYLE.DRAGGING.COLOR
+              : ELEM_STYLE.NORMAL.COLOR,
             pointerEvents: 'all',
             cursor: isHovered ? 'pointer' : 'default'
           }}
@@ -145,17 +145,17 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
           <rect
             className='drop-preview'
             x={parentElement
-              ? parentElement.x + parentElement.width + X_OFFSET
+              ? parentElement.x + parentElement.width + OFFSET.X
               : element.x + element.width}
             y={dropPosition === 'before'
-              ? element.y - draggingElement.height - Y_OFFSET
-              : element.y + element.height + Y_OFFSET}
+              ? element.y - draggingElement.height - OFFSET.Y
+              : element.y + element.height + OFFSET.Y}
             width={draggingElement.width}
             height={draggingElement.height}
-            fill="rgba(100, 100, 255, 0.3)"
-            rx="2"
-            stroke="rgba(0, 0, 255, 0.5)"
-            strokeWidth="1"
+            fill={ELEM_STYLE.DRAGGING.COLOR}
+            rx={ELEM_STYLE.RX}
+            stroke={ELEM_STYLE.DRAGGING.COLOR}
+            strokeWidth={ELEM_STYLE.STROKE}
           />
         )}
         {SECTION_KEYS.map((key, index) => (
@@ -177,7 +177,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
                 y1={element.y + sectionHeights.slice(0, index + 1).reduce((sum, h) => sum + h, 0)}
                 x2={element.x + element.width}
                 y2={element.y + sectionHeights.slice(0, index + 1).reduce((sum, h) => sum + h, 0)}
-                stroke="black"
+                stroke={ELEM_STYLE.NORMAL.STROKE_COLOR}
                 strokeWidth="1"
               />
             )}
