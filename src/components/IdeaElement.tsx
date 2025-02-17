@@ -67,7 +67,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
       const newWidth = calculateElementWidth(texts);
 
       dispatch({
-        type: 'UPDATE_NODE_SIZE',
+        type: 'UPDATE_ELEMENT_SIZE',
         payload: {
           id: element.id,
           width: newWidth,
@@ -80,7 +80,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
 
   const handleSelect = (e: React.MouseEvent) => {
     e.stopPropagation();
-    dispatch({ type: 'SELECT_NODE', payload: element.id });
+    dispatch({ type: 'SELECT_ELEMENT', payload: element.id });
   };
 
   const renderConnectionPath = useCallback(() => {
@@ -126,8 +126,8 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
               transform={`translate(${element.x + element.width * 1.1},${element.y})`}
               onClick={(e) => {
                 e.stopPropagation();
-                dispatch({ type: 'SELECT_NODE', payload: element.id });
-                dispatch({ type: 'EXPAND_NODE' });
+                dispatch({ type: 'SELECT_ELEMENT', payload: element.id });
+                dispatch({ type: 'EXPAND_ELEMENT' });
               }}
               style={{ cursor: 'pointer' }}
             >
@@ -165,7 +165,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
           strokeWidth={ELEM_STYLE.STROKE}
           stroke={`${element.selected ? ELEM_STYLE.SELECTED.STROKE_COLOR : ELEM_STYLE.NORMAL.STROKE_COLOR}`}
           onClick={handleSelect}
-          onDoubleClick={() => dispatch({ type: 'EDIT_NODE' })}
+          onDoubleClick={() => dispatch({ type: 'EDIT_ELEMENT' })}
           onMouseDown={(e) => handleMouseDown(e, element)}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}

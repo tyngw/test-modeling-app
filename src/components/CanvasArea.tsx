@@ -39,7 +39,7 @@ const CanvasArea: React.FC = () => {
 
     useEffect(() => {
         const elementList = loadFromLocalStorage();
-        if (elementList) dispatch({ type: 'LOAD_NODES', payload: elementList });
+        if (elementList) dispatch({ type: 'LOAD_ELEMENTS', payload: elementList });
     }, [dispatch]);
 
     useEffect(() => {
@@ -88,7 +88,7 @@ const CanvasArea: React.FC = () => {
             <QuickMenuBar
                 saveSvg={() => saveSvg(svgRef.current!, 'download.svg')}
                 loadElements={(event) => loadElements(event.nativeEvent)
-                    .then(elements => dispatch({ type: 'LOAD_NODES', payload: elements }))
+                    .then(elements => dispatch({ type: 'LOAD_ELEMENTS', payload: elements }))
                     .catch(alert)}
                 saveElements={() => saveElements(Object.values(state.elements))}
                 toggleHelp={toggleHelp}

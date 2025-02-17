@@ -41,7 +41,7 @@ describe('state reducer', () => {
         const initialElementLength = Object.keys(state.elements).length;
 
         act(() => {
-            dispatch({ type: 'ADD_NODE' });
+            dispatch({ type: 'ADD_ELEMENT' });
         });
 
         const afterState = result.current.state;
@@ -68,7 +68,7 @@ describe('state reducer', () => {
         const initialElementLength = Object.keys(result.current.state.elements).length;
 
         act(() => {
-            dispatch({ type: 'ADD_NODE' });
+            dispatch({ type: 'ADD_ELEMENT' });
         });
 
         const afterAddState = result.current.state;
@@ -80,7 +80,7 @@ describe('state reducer', () => {
         const elementId = addedElement.id;
 
         act(() => {
-            dispatch({ type: 'DELETE_NODE' });
+            dispatch({ type: 'DELETE_ELEMENT' });
         });
 
         const afterDeleteState = result.current.state;
@@ -94,7 +94,7 @@ describe('state reducer', () => {
         const { dispatch } = result.current;
 
         act(() => {
-            dispatch({ type: 'ADD_NODE' });
+            dispatch({ type: 'ADD_ELEMENT' });
         });
 
         let state = result.current.state;
@@ -103,8 +103,8 @@ describe('state reducer', () => {
         ) as Element;
 
         act(() => {
-            dispatch({ type: 'SELECT_NODE', payload: childElement.id });
-            dispatch({ type: 'ADD_NODE' });
+            dispatch({ type: 'SELECT_ELEMENT', payload: childElement.id });
+            dispatch({ type: 'ADD_ELEMENT' });
         });
 
         state = result.current.state;
@@ -119,8 +119,8 @@ describe('state reducer', () => {
         expect(childElement.children).toBe(1);
 
         act(() => {
-            dispatch({ type: 'SELECT_NODE', payload: childElement.id });
-            dispatch({ type: 'DELETE_NODE' });
+            dispatch({ type: 'SELECT_ELEMENT', payload: childElement.id });
+            dispatch({ type: 'DELETE_ELEMENT' });
         });
 
         const afterState = result.current.state;
@@ -155,7 +155,7 @@ describe('state reducer', () => {
         const { dispatch } = result.current;
 
         act(() => {
-            dispatch({ type: 'SELECT_NODE', payload: '1' });
+            dispatch({ type: 'SELECT_ELEMENT', payload: '1' });
         });
 
         const newState = result.current.state;
@@ -171,7 +171,7 @@ describe('state reducer', () => {
         const { result } = renderHook(() => useStore());
         const { dispatch } = result.current;
 
-        act(() => { dispatch({ type: 'SELECT_NODE', payload: '1' }); });
+        act(() => { dispatch({ type: 'SELECT_ELEMENT', payload: '1' }); });
         act(() => { dispatch({ type: 'DESELECT_ALL' }); });
 
         const newState = result.current.state;
@@ -186,7 +186,7 @@ describe('state reducer', () => {
         const { dispatch } = result.current;
 
         const initialElements = result.current.state.elements;
-        act(() => { dispatch({ type: 'ADD_NODE' }); });
+        act(() => { dispatch({ type: 'ADD_ELEMENT' }); });
         const afterAddState = result.current.state.elements;
 
         act(() => { dispatch({ type: 'UNDO' }); });
@@ -203,7 +203,7 @@ describe('state reducer', () => {
         const newPosition = { x: 100, y: 200 };
         act(() => {
             dispatch({
-                type: 'MOVE_NODE',
+                type: 'MOVE_ELEMENT',
                 payload: { id: '1', ...newPosition }
             });
         });
@@ -217,16 +217,16 @@ describe('state reducer', () => {
         const { result } = renderHook(() => useStore());
         const { dispatch } = result.current;
 
-        act(() => { dispatch({ type: 'SELECT_NODE', payload: '1' }); });
-        act(() => { dispatch({ type: 'ADD_NODE' }); });
-        act(() => { dispatch({ type: 'COPY_NODE' }); });
+        act(() => { dispatch({ type: 'SELECT_ELEMENT', payload: '1' }); });
+        act(() => { dispatch({ type: 'ADD_ELEMENT' }); });
+        act(() => { dispatch({ type: 'COPY_ELEMENT' }); });
 
         const parentElement = Object.values(result.current.state.elements).find(
             (elm: Element) => elm.id === '1'
         ) as Element;
 
-        act(() => { dispatch({ type: 'SELECT_NODE', payload: '1' }); });
-        act(() => { dispatch({ type: 'PASTE_NODE' }); });
+        act(() => { dispatch({ type: 'SELECT_ELEMENT', payload: '1' }); });
+        act(() => { dispatch({ type: 'PASTE_ELEMENT' }); });
 
         const pastedElement = Object.values(result.current.state.elements)
             .find((elm: Element) => elm.parentId === parentElement.id) as Element;
@@ -240,16 +240,16 @@ describe('state reducer', () => {
         const { result } = renderHook(() => useStore());
         const { dispatch } = result.current;
 
-        act(() => { dispatch({ type: 'SELECT_NODE', payload: '1' }); });
-        act(() => { dispatch({ type: 'ADD_NODE' }); });
+        act(() => { dispatch({ type: 'SELECT_ELEMENT', payload: '1' }); });
+        act(() => { dispatch({ type: 'ADD_ELEMENT' }); });
 
         let state = result.current.state;
         const childElement = Object.values(state.elements).find(
             (elm: Element) => elm.parentId === '1'
         ) as Element;
 
-        act(() => { dispatch({ type: 'SELECT_NODE', payload: childElement.id }); });
-        act(() => { dispatch({ type: 'CUT_NODE' }); });
+        act(() => { dispatch({ type: 'SELECT_ELEMENT', payload: childElement.id }); });
+        act(() => { dispatch({ type: 'CUT_ELEMENT' }); });
 
         const afterCutState = result.current.state;
         expect(Object.keys(afterCutState.elements).length).toBe(1);
@@ -267,11 +267,11 @@ describe('state reducer', () => {
         const { dispatch } = result.current;
 
         act(() => {
-            dispatch({ type: 'SELECT_NODE', payload: '1' });
+            dispatch({ type: 'SELECT_ELEMENT', payload: '1' });
         });
 
         act(() => {
-            dispatch({ type: 'ADD_NODE' });
+            dispatch({ type: 'ADD_ELEMENT' });
         });
 
         let state = result.current.state;
@@ -280,8 +280,8 @@ describe('state reducer', () => {
         ) as Element;
 
         act(() => {
-            dispatch({ type: 'SELECT_NODE', payload: childElement.id });
-            dispatch({ type: 'CUT_NODE' });
+            dispatch({ type: 'SELECT_ELEMENT', payload: childElement.id });
+            dispatch({ type: 'CUT_ELEMENT' });
         });
 
         const afterCutState = result.current.state;
@@ -296,8 +296,8 @@ describe('state reducer', () => {
         )).toBe(true);
 
         act(() => {
-            dispatch({ type: 'SELECT_NODE', payload: '1' });
-            dispatch({ type: 'ADD_NODE' });
+            dispatch({ type: 'SELECT_ELEMENT', payload: '1' });
+            dispatch({ type: 'ADD_ELEMENT' });
         });
 
         state = result.current.state;
@@ -306,8 +306,8 @@ describe('state reducer', () => {
         ) as Element;
 
         act(() => {
-            dispatch({ type: 'SELECT_NODE', payload: newParentElement.id });
-            dispatch({ type: 'PASTE_NODE' });
+            dispatch({ type: 'SELECT_ELEMENT', payload: newParentElement.id });
+            dispatch({ type: 'PASTE_ELEMENT' });
         });
 
         const afterPasteState = result.current.state;
@@ -330,8 +330,8 @@ describe('state reducer', () => {
         const { dispatch } = result.current;
 
         act(() => {
-            dispatch({ type: 'SELECT_NODE', payload: '1' });
-            dispatch({ type: 'ADD_NODE' });
+            dispatch({ type: 'SELECT_ELEMENT', payload: '1' });
+            dispatch({ type: 'ADD_ELEMENT' });
         });
 
         let state = result.current.state;
@@ -340,13 +340,13 @@ describe('state reducer', () => {
         ) as Element;
 
         act(() => {
-            dispatch({ type: 'SELECT_NODE', payload: childElement.id });
-            dispatch({ type: 'ADD_NODE' });
+            dispatch({ type: 'SELECT_ELEMENT', payload: childElement.id });
+            dispatch({ type: 'ADD_ELEMENT' });
         });
 
         act(() => {
-            dispatch({ type: 'SELECT_NODE', payload: childElement.id });
-            dispatch({ type: 'CUT_NODE' });
+            dispatch({ type: 'SELECT_ELEMENT', payload: childElement.id });
+            dispatch({ type: 'CUT_ELEMENT' });
         });
 
         const afterCutState = result.current.state;
@@ -360,8 +360,8 @@ describe('state reducer', () => {
         )).toBe(true);
 
         act(() => {
-            dispatch({ type: 'SELECT_NODE', payload: '1' });
-            dispatch({ type: 'ADD_NODE' });
+            dispatch({ type: 'SELECT_ELEMENT', payload: '1' });
+            dispatch({ type: 'ADD_ELEMENT' });
         });
 
         state = result.current.state;
@@ -370,8 +370,8 @@ describe('state reducer', () => {
         ) as Element;
 
         act(() => {
-            dispatch({ type: 'SELECT_NODE', payload: newParentElement.id });
-            dispatch({ type: 'PASTE_NODE' });
+            dispatch({ type: 'SELECT_ELEMENT', payload: newParentElement.id });
+            dispatch({ type: 'PASTE_ELEMENT' });
         });
 
         const afterPasteState = result.current.state;
@@ -402,8 +402,8 @@ describe('state reducer', () => {
         const { dispatch } = result.current;
 
         await act(async () => {
-            dispatch({ type: 'SELECT_NODE', payload: '1' });
-            dispatch({ type: 'ADD_NODE' });
+            dispatch({ type: 'SELECT_ELEMENT', payload: '1' });
+            dispatch({ type: 'ADD_ELEMENT' });
         });
 
         let state = result.current.state;
@@ -412,8 +412,8 @@ describe('state reducer', () => {
         ) as Element;
 
         await act(async () => {
-            dispatch({ type: 'SELECT_NODE', payload: '1' });
-            dispatch({ type: 'ADD_NODE' });
+            dispatch({ type: 'SELECT_ELEMENT', payload: '1' });
+            dispatch({ type: 'ADD_ELEMENT' });
         });
 
         state = result.current.state;
@@ -422,8 +422,8 @@ describe('state reducer', () => {
         ) as Element;
 
         await act(async () => {
-            dispatch({ type: 'SELECT_NODE', payload: elementB.id });
-            dispatch({ type: 'ADD_NODE' });
+            dispatch({ type: 'SELECT_ELEMENT', payload: elementB.id });
+            dispatch({ type: 'ADD_ELEMENT' });
         });
 
         state = result.current.state;
@@ -433,7 +433,7 @@ describe('state reducer', () => {
 
         await act(async () => {
             dispatch({
-                type: 'DROP_NODE',
+                type: 'DROP_ELEMENT',
                 payload: {
                     id: elementD.id,
                     oldParentId: elementB.id,
@@ -468,8 +468,8 @@ describe('state reducer', () => {
     
         // 親ノードと子ノードを作成
         act(() => {
-            dispatch({ type: 'SELECT_NODE', payload: '1' });
-            dispatch({ type: 'ADD_NODE' });
+            dispatch({ type: 'SELECT_ELEMENT', payload: '1' });
+            dispatch({ type: 'ADD_ELEMENT' });
         });
     
         const initialState = result.current.state;
@@ -481,7 +481,7 @@ describe('state reducer', () => {
         // 親ノードを子ノードにドロップしようとする
         await act(async () => {
             dispatch({
-                type: 'DROP_NODE',
+                type: 'DROP_ELEMENT',
                 payload: {
                     id: parentElement.id,
                     oldParentId: null,
@@ -506,8 +506,8 @@ describe('state reducer', () => {
     
         // 3階層のノードを作成 (1 -> 2 -> 3)
         act(() => {
-            dispatch({ type: 'SELECT_NODE', payload: '1' });
-            dispatch({ type: 'ADD_NODE' }); // Element 2
+            dispatch({ type: 'SELECT_ELEMENT', payload: '1' });
+            dispatch({ type: 'ADD_ELEMENT' }); // Element 2
         });
     
         let state = result.current.state;
@@ -516,8 +516,8 @@ describe('state reducer', () => {
         ) as Element;
     
         act(() => {
-            dispatch({ type: 'SELECT_NODE', payload: elementB.id });
-            dispatch({ type: 'ADD_NODE' }); // Element 3
+            dispatch({ type: 'SELECT_ELEMENT', payload: elementB.id });
+            dispatch({ type: 'ADD_ELEMENT' }); // Element 3
         });
     
         state = result.current.state;
@@ -528,7 +528,7 @@ describe('state reducer', () => {
         // ルートノード(1)を孫ノード(3)にドロップしようとする
         await act(async () => {
             dispatch({
-                type: 'DROP_NODE',
+                type: 'DROP_ELEMENT',
                 payload: {
                     id: '1',
                     oldParentId: null,
@@ -555,7 +555,7 @@ describe('state reducer', () => {
         // 自分自身にドロップしようとする
         await act(async () => {
             dispatch({
-                type: 'DROP_NODE',
+                type: 'DROP_ELEMENT',
                 payload: {
                     id: '1',
                     oldParentId: null,
@@ -578,8 +578,8 @@ describe('state reducer', () => {
         const { dispatch } = result.current;
 
         act(() => {
-            dispatch({ type: 'SELECT_NODE', payload: '1' });
-            dispatch({ type: 'ADD_NODE' });
+            dispatch({ type: 'SELECT_ELEMENT', payload: '1' });
+            dispatch({ type: 'ADD_ELEMENT' });
         });
 
         const childElement = Object.values(result.current.state.elements).find(
@@ -587,8 +587,8 @@ describe('state reducer', () => {
         ) as Element;
 
         act(() => {
-            dispatch({ type: 'SELECT_NODE', payload: '1' });
-            dispatch({ type: 'COLLAPSE_NODE' });
+            dispatch({ type: 'SELECT_ELEMENT', payload: '1' });
+            dispatch({ type: 'COLLAPSE_ELEMENT' });
         });
 
         let collapsedState = result.current.state.elements;
@@ -597,8 +597,8 @@ describe('state reducer', () => {
         ) as Element).visible).toBe(false);
 
         act(() => {
-            dispatch({ type: 'SELECT_NODE', payload: '1' });
-            dispatch({ type: 'EXPAND_NODE' });
+            dispatch({ type: 'SELECT_ELEMENT', payload: '1' });
+            dispatch({ type: 'EXPAND_ELEMENT' });
         });
 
         const expandedState = result.current.state.elements;
@@ -607,7 +607,7 @@ describe('state reducer', () => {
         ) as Element).visible).toBe(true);
     });
 
-    it('UPDATE_NODE_SIZE アクション', () => {
+    it('UPDATE_ELEMENT_SIZE アクション', () => {
         const { result } = renderHook(() => useStore());
         const { dispatch } = result.current;
 
@@ -619,7 +619,7 @@ describe('state reducer', () => {
 
         act(() => {
             dispatch({
-                type: 'UPDATE_NODE_SIZE',
+                type: 'UPDATE_ELEMENT_SIZE',
                 payload: { id: '1', ...newSize }
             });
         });
@@ -629,11 +629,11 @@ describe('state reducer', () => {
         expect(updatedElement.height).toBe(newSize.height);
     });
 
-    it('LOAD_NODES アクション（空の場合）', () => {
+    it('LOAD_ELEMENTS アクション（空の場合）', () => {
         const { result } = renderHook(() => useStore());
         const { dispatch } = result.current;
 
-        act(() => { dispatch({ type: 'LOAD_NODES', payload: [] }); });
+        act(() => { dispatch({ type: 'LOAD_ELEMENTS', payload: [] }); });
         const loadedState = result.current.state;
 
         expect(loadedState).toEqual({

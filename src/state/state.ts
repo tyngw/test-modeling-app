@@ -407,6 +407,39 @@ const createElementAdder = (elements: { [key: string]: Element }, parentElement:
     return adjustElementPositions(updatedElements);
 };
 
+const createSiblingElementAdder = (elements: ElementsMap, selectedElement: Element): ElementsMap => {
+    const parentId = selectedElement.parentId;
+    const siblings = Object.values(elements).filter(e => e.parentId === parentId);
+    const newOrder = selectedElement.order + 1;
+
+    const updatedElements = { ...elements };
+
+    // 新しいorder以上の兄弟要素のorderを更新
+    siblings.forEach(sibling => {
+        if (sibling.order >= newOrder) {
+            updatedElements[sibling.id] = {
+                ...sibling,
+                order: sibling.order + 1,
+            };
+        }
+    });
+
+    // 新しい要素を作成
+    const newElement = createNewElement(parentId, newOrder, selectedElement.depth);
+    updatedElements[newElement.id] = newElement;
+
+    // 親要素のchildrenを更新（親が存在する場合）
+    if (parentId !== null) {
+        const parent = updatedElements[parentId];
+        updatedElements[parentId] = {
+            ...parent,
+            children: parent.children + 1,
+        };
+    }
+
+    return updatedElements;
+};
+
 const handleZoomIn = (state: State): State => ({
     ...state,
     zoomRatio: state.zoomRatio + 0.1
@@ -431,7 +464,7 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
     ARROW_RIGHT: handleArrowAction(handleArrowRight),
     ARROW_LEFT: handleArrowAction(handleArrowLeft),
 
-    LOAD_NODES: (state, action) => {
+    LOAD_ELEMENTS: (state, action) => {
         if (Object.keys(action.payload).length === 0) return initialState;
 
         const updatedElements = Object.values(action.payload).reduce<{ [key: string]: Element }>((acc, element: unknown) => {
@@ -446,7 +479,7 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
         };
     },
 
-    SELECT_NODE: (state, action) => {
+    SELECT_ELEMENT: (state, action) => {
         const selectedElement = state.elements[action.payload];
         if (!selectedElement) return state;
 
@@ -486,16 +519,21 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
         }
     }),
 
-    ADD_NODE: state => handleElementMutation(state, (elements, selectedElement) => {
+    ADD_ELEMENT: state => handleElementMutation(state, (elements, selectedElement) => {
         const newElements = createElementAdder(elements, selectedElement);
         return { elements: adjustElementPositions(newElements) };
     }),
 
-    DELETE_NODE: state => handleElementMutation(state, (elements, selectedElement) => ({
+    ADD_SIBLING_ELEMENT: state => handleElementMutation(state, (elements, selectedElement) => {
+        const newElements = createSiblingElementAdder(elements, selectedElement);
+        return { elements: adjustElementPositions(newElements) };
+    }),
+
+    DELETE_ELEMENT: state => handleElementMutation(state, (elements, selectedElement) => ({
         elements: adjustElementPositions(deleteElementRecursive(elements, selectedElement))
     })),
 
-    EDIT_NODE: state => handleSelectedElementAction(state, selectedElement => ({
+    EDIT_ELEMENT: state => handleSelectedElementAction(state, selectedElement => ({
         elements: {
             ...state.elements,
             [selectedElement.id]: { ...selectedElement, editing: true }
@@ -516,7 +554,7 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
     REDO: state => ({ ...state, elements: Redo(state.elements) }),
     SNAPSHOT: state => { saveSnapshot(state.elements); return state; },
 
-    DROP_NODE: (state, action) => {
+    DROP_ELEMENT: (state, action) => {
         const { payload } = action;
         const { id, oldParentId, newParentId, newOrder, depth } = payload;
 
@@ -588,7 +626,7 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
         };
     },
 
-    MOVE_NODE: (state, action) => ({
+    MOVE_ELEMENT: (state, action) => ({
         ...state,
         elements: {
             ...state.elements,
@@ -600,7 +638,7 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
         }
     }),
 
-    CUT_NODE: state => handleElementMutation(state, (elements, selectedElement) => {
+    CUT_ELEMENT: state => handleElementMutation(state, (elements, selectedElement) => {
         const cutElements = getSelectedAndChildren(elements, selectedElement, selectedElement);
         return {
             elements: adjustElementPositions(deleteElementRecursive(elements, selectedElement)),
@@ -608,26 +646,26 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
         };
     }),
 
-    COPY_NODE: state => handleSelectedElementAction(state, selectedElement => ({
+    COPY_ELEMENT: state => handleSelectedElementAction(state, selectedElement => ({
         cutElements: getSelectedAndChildren(state.elements, selectedElement, selectedElement)
     })),
 
-    PASTE_NODE: state => handleElementMutation(state, (elements, selectedElement) => {
+    PASTE_ELEMENT: state => handleElementMutation(state, (elements, selectedElement) => {
         const pastedElements = pasteElements(elements, state.cutElements!, selectedElement);
         return {
             elements: adjustElementPositions(pastedElements)
         };
     }),
 
-    EXPAND_NODE: state => handleElementMutation(state, (elements, selectedElement) => ({
+    EXPAND_ELEMENT: state => handleElementMutation(state, (elements, selectedElement) => ({
         elements: adjustElementPositions(setVisibilityRecursive(elements, selectedElement, true))
     })),
 
-    COLLAPSE_NODE: state => handleElementMutation(state, (elements, selectedElement) => ({
+    COLLAPSE_ELEMENT: state => handleElementMutation(state, (elements, selectedElement) => ({
         elements: adjustElementPositions(setVisibilityRecursive(elements, selectedElement, false))
     })),
 
-    UPDATE_NODE_SIZE: (state, action) => {
+    UPDATE_ELEMENT_SIZE: (state, action) => {
         const updatedElement = {
             ...state.elements[action.payload.id],
             width: action.payload.width,
