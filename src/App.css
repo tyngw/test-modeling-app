@@ -26,16 +26,14 @@
 }
 
 /* ノードの基本スタイル */
-.element {
-  stroke-width: 2;
-  stroke: black;
+/* .element {
   fill: transparent;
-}
+} */
 
 /* 選択されたノードのスタイル */
-.element-selected {
+/* .element-selected {
   stroke: blue;
-}
+} */
 
 /* ノードが選択されていないときのスタイル */
 .element-unselected {

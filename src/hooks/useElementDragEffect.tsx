@@ -1,7 +1,7 @@
 // src/hooks/useElementDragEffect.tsx
 import { useState, useEffect, useCallback } from 'react';
 import { useCanvas } from '../context/CanvasContext';
-import { ICONBAR_HEIGHT, X_OFFSET, Y_OFFSET } from '../constants/ElementSettings';
+import { ICONBAR_HEIGHT } from '../constants/ElementSettings';
 import { Element } from '../types';
 import { isDescendant } from '../state/state';
 import { ToastMessages } from '../constants/ToastMessages';

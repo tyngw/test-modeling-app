@@ -1,8 +1,8 @@
 // src/utils/LayoutUtilities.ts
 import { useState, useEffect } from 'react';
 import {
-  NODE_HEIGHT,
-  X_OFFSET,
+  SIZE,
+  OFFSET,
 } from '../constants/ElementSettings';
 
 export const useWindowSize = () => {
@@ -36,7 +36,7 @@ export const calculateCanvasSize = (elements: { [key: string]: Element }) => {
   const maxElementY = Math.max(...elementList.map((element: Element) => element.y + element.height));
 
   return {
-    width: maxElementX + X_OFFSET,
-    height: maxElementY + NODE_HEIGHT,
+    width: maxElementX + OFFSET.X,
+    height: maxElementY + SIZE.NODE_HEIGHT,
   };
 };
