@@ -5,7 +5,6 @@ import QuickMenuBar from './QuickMenuBar';
 import InputFields from './InputFields';
 import ModalWindow from './ModalWindow';
 import useResizeEffect from '../hooks/useResizeEffect';
-import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import { useCanvas } from '../context/CanvasContext';
 import { Marker } from './Marker';
 import { keyActionMap } from '../constants/KeyActionMap';
@@ -135,10 +134,10 @@ const CanvasArea: React.FC = () => {
                 >
                     <Marker />
                     {Object.values(state.elements)
-                        .filter((element): element is Element => (element as Element).visible)
+                        .filter((element): element is Element => element.visible)
                         .map(element => {
-                            const hasHiddenChildren = Object.values(state.elements)
-                                .some((n): n is Element => (n as Element).parentId === element.id && !(n as Element).visible);
+                            const hiddenChildren = Object.values(state.elements)
+                                .filter((n): n is Element => n.parentId === element.id && !n.visible);
                             return (
                                 <React.Fragment key={element.id}>
                                     <IdeaElement
@@ -149,43 +148,6 @@ const CanvasArea: React.FC = () => {
                                         handleMouseDown={handleMouseDown as unknown as (e: React.MouseEvent<SVGElement>, element: Element) => void}
                                         handleMouseUp={handleMouseUp}
                                     />
-                                    {hasHiddenChildren && (
-                                        <g
-                                            transform={`translate(${element.x + element.width * 1.05},${element.y})`}
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                dispatch({ type: 'SELECT_NODE', payload: element.id });
-                                                dispatch({ type: 'EXPAND_NODE' });
-                                            }}
-                                            style={{ cursor: 'pointer' }}
-                                        >
-                                            <rect
-                                                x="0"
-                                                y="0"
-                                                width="24"
-                                                height="24"
-                                                rx="4"
-                                                fill="white"
-                                                stroke="#e0e0e0"
-                                                strokeWidth="1"
-                                            />
-                                            <svg
-                                                x="4"
-                                                y="4"
-                                                width="16"
-                                                height="16"
-                                                viewBox="0 0 24 24"
-                                            >
-                                                <OpenInFullIcon
-                                                    sx={{ color: '#666666' }}
-                                                    style={{
-                                                        width: '100%',
-                                                        height: '100%'
-                                                    }}
-                                                />
-                                            </svg>
-                                        </g>
-                                    )}
                                 </React.Fragment>
                             );
                         })}

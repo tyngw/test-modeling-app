@@ -2,6 +2,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { useCanvas } from '../context/CanvasContext';
 import TextSection from './TextDisplayArea';
+import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import { calculateElementWidth } from '../utils/TextareaHelpers';
 import {
   CURVE_CONTROL_OFFSET,
@@ -36,6 +37,13 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
   const parentElement = state.elements[element.parentId!];
   const currentDropTargetId = currentDropTarget?.id || -1;
   const [isHovered, setIsHovered] = useState(false);
+
+  const hiddenChildren = useMemo(
+    () => Object.values(state.elements).filter(
+      (el) => el.parentId === element.id && !el.visible
+    ),
+    [state.elements, element.id]
+  );
 
   const isDraggedOrDescendant = draggingElement
     ? draggingElement.id === element.id || isDescendant(state.elements, draggingElement.id, element.id)
@@ -97,28 +105,56 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
 
   const isDebugMode = localStorage.getItem('__debugMode__') === 'true';
 
-  const hiddenChildrenCount = useMemo(() => {
-    return Object.values(state.elements).filter(
-      (el) => el.parentId === element.id && !el.visible
-    ).length;
-  }, [state.elements, element.id]);
-
   return (
     <React.Fragment key={element.id}>
       <g opacity={isDraggedOrDescendant ? 0.3 : 1}>
         {renderConnectionPath()}
-        {hiddenChildrenCount > 0 && (
-          <rect
-            key={`shadow-${element.id}`}
-            x={element.x + SHADOW_OFFSET}
-            y={element.y + SHADOW_OFFSET}
-            width={element.width}
-            height={element.height}
-            rx={ELEM_STYLE.RX}
-            fill="none"
-            stroke={ELEM_STYLE.SHADDOW.COLOR}
-            strokeWidth={ELEM_STYLE.STROKE}
-          />
+        {hiddenChildren.length > 0 && (
+          <>
+            <rect
+              key={`shadow-${element.id}`}
+              x={element.x + SHADOW_OFFSET}
+              y={element.y + SHADOW_OFFSET}
+              width={element.width}
+              height={element.height}
+              rx={ELEM_STYLE.RX}
+              fill="none"
+              stroke={ELEM_STYLE.SHADDOW.COLOR}
+              strokeWidth={ELEM_STYLE.STROKE}
+            />
+            <g
+              transform={`translate(${element.x + element.width * 1.1},${element.y})`}
+              onClick={(e) => {
+                e.stopPropagation();
+                dispatch({ type: 'SELECT_NODE', payload: element.id });
+                dispatch({ type: 'EXPAND_NODE' });
+              }}
+              style={{ cursor: 'pointer' }}
+            >
+              <rect
+                x="0"
+                y="0"
+                width="24"
+                height="24"
+                rx="4"
+                fill="white"
+                stroke="#e0e0e0"
+                strokeWidth="1"
+              />
+              <svg
+                x="4"
+                y="4"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+              >
+                <OpenInFullIcon
+                  sx={{ color: '#666666' }}
+                  style={{ width: '100%', height: '100%' }}
+                />
+              </svg>
+            </g>
+          </>
         )}
         <rect
           x={element.x}
