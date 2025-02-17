@@ -10,6 +10,10 @@ import SaveAsOutlinedIcon from '@mui/icons-material/SaveAsOutlined';
 import SaveAltIcon from '@mui/icons-material/SaveAlt';
 import HelpOutlineOutlinedIcon from '@mui/icons-material/HelpOutlineOutlined';
 import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined';
+import ControlPointIcon from '@mui/icons-material/ControlPoint';
+import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
+import UnfoldLessIcon from '@mui/icons-material/UnfoldLess';
+import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
 import Tooltip from '@mui/material/Tooltip';
 import { ICONBAR_HEIGHT } from '../constants/ElementSettings';
 import { useCanvas } from '../context/CanvasContext';
@@ -27,8 +31,11 @@ type CanvasActionType =
   | 'UNDO'
   | 'REDO'
   | 'ZOOM_IN'
-  | 'ZOOM_OUT';
-
+  | 'ZOOM_OUT'
+  | 'ADD_NODE'
+  | 'DELETE_NODE'
+  | 'EXPAND_NODE'
+  | 'COLLAPSE_NODE';
 
 const QuickMenuBar = ({
   saveSvg,
@@ -59,57 +66,87 @@ const QuickMenuBar = ({
         </Tooltip>
 
         <Tooltip title={tooltipTexts.OPEN}>
-        <Button variant="text" className="iconbar-button" onClick={handleFileOpen}>
-          <FolderOpenOutlinedIcon sx={{ color: '#666666' }} />
-        </Button>
+          <Button variant="text" className="iconbar-button" onClick={handleFileOpen}>
+            <FolderOpenOutlinedIcon sx={{ color: '#666666' }} />
+          </Button>
         </Tooltip>
 
         <Tooltip title={tooltipTexts.SAVE}>
-        <Button variant="text" className="iconbar-button" onClick={saveElements}>
-          <SaveAsOutlinedIcon sx={{ color: '#666666' }} />
-        </Button>
+          <Button variant="text" className="iconbar-button" onClick={saveElements}>
+            <SaveAsOutlinedIcon sx={{ color: '#666666' }} />
+          </Button>
         </Tooltip>
 
         <Tooltip title={tooltipTexts.SAVE_SVG}>
-        <Button variant="text" className="iconbar-button" onClick={saveSvg}>
-          <SaveAltIcon sx={{ color: '#666666' }} />
-        </Button>
+          <Button variant="text" className="iconbar-button" onClick={saveSvg}>
+            <SaveAltIcon sx={{ color: '#666666' }} />
+          </Button>
+        </Tooltip>
+
+        <div style={{ width: '10px' }}></div>
+
+        {/* 新規要素追加ボタン */}
+        <Tooltip title={tooltipTexts.ADD}>
+          <Button variant="text" className="iconbar-button" onClick={handleAction('ADD_NODE')}>
+            <ControlPointIcon sx={{ color: '#666666' }} />
+          </Button>
+        </Tooltip>
+
+        {/* 要素削除ボタン */}
+        <Tooltip title={tooltipTexts.DELETE}>
+          <Button variant="text" className="iconbar-button" onClick={handleAction('DELETE_NODE')}>
+            <RemoveCircleOutlineIcon sx={{ color: '#666666' }} />
+          </Button>
+        </Tooltip>
+
+        {/* 折りたたみボタン */}
+        <Tooltip title={tooltipTexts.COLLAPSE}>
+          <Button variant="text" className="iconbar-button" onClick={handleAction('COLLAPSE_NODE')}>
+            <UnfoldLessIcon sx={{ color: '#666666' }} />
+          </Button>
+        </Tooltip>
+
+        {/* 展開ボタン */}
+        <Tooltip title={tooltipTexts.EXPAND}>
+          <Button variant="text" className="iconbar-button" onClick={handleAction('EXPAND_NODE')}>
+            <UnfoldMoreIcon sx={{ color: '#666666' }} />
+          </Button>
         </Tooltip>
 
         <div style={{ width: '10px' }}></div>
 
         <Tooltip title={tooltipTexts.UNDO}>
-        <Button variant="text" className="iconbar-button" onClick={handleAction('UNDO')}>
-          <UndoIcon sx={{ color: '#666666' }} />
-        </Button>
+          <Button variant="text" className="iconbar-button" onClick={handleAction('UNDO')}>
+            <UndoIcon sx={{ color: '#666666' }} />
+          </Button>
         </Tooltip>
 
         <Tooltip title={tooltipTexts.REDO}>
-        <Button variant="text" className="iconbar-button" onClick={handleAction('REDO')}>
-          <RedoIcon sx={{ color: '#666666' }} />
-        </Button>
+          <Button variant="text" className="iconbar-button" onClick={handleAction('REDO')}>
+            <RedoIcon sx={{ color: '#666666' }} />
+          </Button>
         </Tooltip>
 
         <div style={{ width: '10px' }}></div>
 
         <Tooltip title={tooltipTexts.ZOOM_IN}>
-        <Button variant="text" className="iconbar-button" onClick={handleAction('ZOOM_IN')}>
-          <ZoomInIcon sx={{ color: '#666666' }} />
-        </Button>
+          <Button variant="text" className="iconbar-button" onClick={handleAction('ZOOM_IN')}>
+            <ZoomInIcon sx={{ color: '#666666' }} />
+          </Button>
         </Tooltip>
 
         <Tooltip title={tooltipTexts.ZOOM_OUT}>
-        <Button variant="text" className="iconbar-button" onClick={handleAction('ZOOM_OUT')}>
-          <ZoomOutIcon sx={{ color: '#666666' }} />
-        </Button>
+          <Button variant="text" className="iconbar-button" onClick={handleAction('ZOOM_OUT')}>
+            <ZoomOutIcon sx={{ color: '#666666' }} />
+          </Button>
         </Tooltip>
 
         <div style={{ width: '10px' }}></div>
 
         <Tooltip title={tooltipTexts.HELP}>
-        <Button variant="text" className="iconbar-button" onClick={toggleHelp}>
-          <HelpOutlineOutlinedIcon sx={{ color: '#666666' }} />
-        </Button>
+          <Button variant="text" className="iconbar-button" onClick={toggleHelp}>
+            <HelpOutlineOutlinedIcon sx={{ color: '#666666' }} />
+          </Button>
         </Tooltip>
       </div>
     </div >
