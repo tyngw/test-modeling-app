@@ -310,7 +310,7 @@ const adjustElementPositions = (elements: ElementsMap): ElementsMap => {
         root.x = DEFAULT_X;
         const result = layoutSubtree(
             root,
-            -X_OFFSET,
+            0,
             currentY,
             newElements,
             X_OFFSET,
