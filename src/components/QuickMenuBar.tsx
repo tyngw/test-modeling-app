@@ -32,10 +32,10 @@ type CanvasActionType =
   | 'REDO'
   | 'ZOOM_IN'
   | 'ZOOM_OUT'
-  | 'ADD_NODE'
-  | 'DELETE_NODE'
-  | 'EXPAND_NODE'
-  | 'COLLAPSE_NODE';
+  | 'ADD_ELEMENT'
+  | 'DELETE_ELEMENT'
+  | 'EXPAND_ELEMENT'
+  | 'COLLAPSE_ELEMENT';
 
 const QuickMenuBar = ({
   saveSvg,
@@ -87,29 +87,29 @@ const QuickMenuBar = ({
 
         {/* 新規要素追加ボタン */}
         <Tooltip title={tooltipTexts.ADD}>
-          <Button variant="text" className="iconbar-button" onClick={handleAction('ADD_NODE')}>
+          <Button variant="text" className="iconbar-button" onClick={handleAction('ADD_ELEMENT')}>
             <ControlPointIcon sx={{ color: '#666666' }} />
           </Button>
         </Tooltip>
 
         {/* 要素削除ボタン */}
         <Tooltip title={tooltipTexts.DELETE}>
-          <Button variant="text" className="iconbar-button" onClick={handleAction('DELETE_NODE')}>
+          <Button variant="text" className="iconbar-button" onClick={handleAction('DELETE_ELEMENT')}>
             <RemoveCircleOutlineIcon sx={{ color: '#666666' }} />
-          </Button>
-        </Tooltip>
-
-        {/* 折りたたみボタン */}
-        <Tooltip title={tooltipTexts.COLLAPSE}>
-          <Button variant="text" className="iconbar-button" onClick={handleAction('COLLAPSE_NODE')}>
-            <UnfoldLessIcon sx={{ color: '#666666' }} />
           </Button>
         </Tooltip>
 
         {/* 展開ボタン */}
         <Tooltip title={tooltipTexts.EXPAND}>
-          <Button variant="text" className="iconbar-button" onClick={handleAction('EXPAND_NODE')}>
+          <Button variant="text" className="iconbar-button" onClick={handleAction('EXPAND_ELEMENT')}>
             <UnfoldMoreIcon sx={{ color: '#666666' }} />
+          </Button>
+        </Tooltip>
+
+        {/* 折りたたみボタン */}
+        <Tooltip title={tooltipTexts.COLLAPSE}>
+          <Button variant="text" className="iconbar-button" onClick={handleAction('COLLAPSE_ELEMENT')}>
+            <UnfoldLessIcon sx={{ color: '#666666' }} />
           </Button>
         </Tooltip>
 
