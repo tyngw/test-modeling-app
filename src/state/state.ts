@@ -426,6 +426,7 @@ const createSiblingElementAdder = (elements: ElementsMap, selectedElement: Eleme
 
     // 新しい要素を作成
     const newElement = createNewElement(parentId, newOrder, selectedElement.depth);
+    updatedElements[selectedElement.id] = { ...selectedElement, selected: false };
     updatedElements[newElement.id] = newElement;
 
     // 親要素のchildrenを更新（親が存在する場合）
