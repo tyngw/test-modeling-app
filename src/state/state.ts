@@ -31,7 +31,7 @@ interface AdjustmentResult {
     maxHeight: number;
 }
 
-const createNewElement = (parentId: string | null, order: number, depth: number): Element => ({
+export const createNewElement = (parentId: string | null, order: number, depth: number): Element => ({
     id: uuidv4(),
     text: '',
     text2: '',

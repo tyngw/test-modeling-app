@@ -55,7 +55,7 @@ export const useElementDragEffect = ({ showToast }: UseElementDragEffectProps) =
 
       const resetElementPosition = () => {
         dispatch({
-          type: 'MOVE_NODE',
+          type: 'MOVE_ELEMENT',
           payload: { id: draggingElement.id, ...originalPosition }
         });
       };
@@ -63,7 +63,7 @@ export const useElementDragEffect = ({ showToast }: UseElementDragEffectProps) =
       const processChildDrop = (target: Element) => {
         dispatch({ type: 'SNAPSHOT' });
         dispatch({
-          type: 'DROP_NODE',
+          type: 'DROP_ELEMENT',
           payload: {
             id: draggingElement.id,
             oldParentId: draggingElement.parentId,
@@ -80,7 +80,7 @@ export const useElementDragEffect = ({ showToast }: UseElementDragEffectProps) =
 
         dispatch({ type: 'SNAPSHOT' });
         dispatch({
-          type: 'DROP_NODE',
+          type: 'DROP_ELEMENT',
           payload: {
             id: draggingElement.id,
             oldParentId: draggingElement.parentId,
@@ -183,7 +183,7 @@ export const useElementDragEffect = ({ showToast }: UseElementDragEffectProps) =
       };
 
       dispatch({
-        type: 'MOVE_NODE',
+        type: 'MOVE_ELEMENT',
         payload: { id: draggingElement.id, ...newPosition }
       });
     };
