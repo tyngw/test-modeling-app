@@ -9,8 +9,6 @@ import { Marker } from './Marker';
 import { keyActionMap } from '../constants/KeyActionMap';
 import { useClickOutside } from '../hooks/useClickOutside';
 import { useElementDragEffect } from '../hooks/useElementDragEffect';
-import { loadFromLocalStorage } from '../state/undoredo';
-// import { saveSvg, loadElements, saveElements } from '../utils/FileHelpers';
 import { helpContent } from '../constants/HelpContent';
 import { ICONBAR_HEIGHT } from '../constants/ElementSettings';
 import { Element } from '../types';
@@ -37,11 +35,6 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
     );
     const [toasts, setToasts] = useState<Toast[]>([]);
     const editingNode = Object.values(state.elements).find((element) => (element as Element).editing) as Element | undefined;
-
-    useEffect(() => {
-        const elementList = loadFromLocalStorage();
-        if (elementList) dispatch({ type: 'LOAD_ELEMENTS', payload: elementList });
-    }, [dispatch]);
 
     useEffect(() => {
         if (!editingNode) {
