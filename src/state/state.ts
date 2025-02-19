@@ -1,5 +1,5 @@
 // src/state/state.ts
-import { Undo, Redo, saveSnapshot, clearSnapshots } from './undoredo';
+import { Undo, Redo, saveSnapshot } from './undoredo';
 import { handleArrowUp, handleArrowDown, handleArrowRight, handleArrowLeft } from '../utils/ElementSelector';
 import { Element } from '../types';
 import {
@@ -452,11 +452,6 @@ const handleZoomOut = (state: State): State => ({
 });
 
 const actionHandlers: { [key: string]: (state: State, action?: any) => State } = {
-    NEW: () => {
-        clearSnapshots();
-        return initialState;
-    },
-
     ZOOM_IN: handleZoomIn,
     ZOOM_OUT: handleZoomOut,
 

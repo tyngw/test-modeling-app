@@ -1,5 +1,5 @@
 // src/context/TabsContext.tsx
-import React, { createContext, useContext, ReactNode, useState, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, ReactNode, useState, useCallback, useMemo, useEffect } from 'react';
 import { State, initialState } from '../state/state';
 import { v4 as uuidv4 } from 'uuid';
 import { DEFAULT_POSITION } from '../constants/ElementSettings';
@@ -40,9 +40,27 @@ const createInitialTabState = (): TabState => {
   };
 };
 
+// ローカルストレージから状態を読み込む
+const loadTabsFromLocalStorage = (): { tabs: TabState[], currentTabId: string } => {
+  const savedData = localStorage.getItem('tabsState');
+  if (savedData) {
+    return JSON.parse(savedData);
+  }
+  return { tabs: [createInitialTabState()], currentTabId: '' };
+};
+
+// ローカルストレージに状態を保存
+const saveTabsToLocalStorage = (tabs: TabState[], currentTabId: string) => {
+  localStorage.setItem('tabsState', JSON.stringify({ tabs, currentTabId }));
+};
+
 export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [tabs, setTabs] = useState<TabState[]>(() => [createInitialTabState()]);
   const [currentTabId, setCurrentTabId] = useState(tabs[0].id);
+
+  useEffect(() => {
+    saveTabsToLocalStorage(tabs, currentTabId);
+  }, [tabs, currentTabId]);
 
   const addTab = useCallback(() => {
     const newTab = createInitialTabState();
@@ -50,7 +68,7 @@ export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setTabs(prev => [...prev, newTab]);
     setCurrentTabId(newTab.id);
   }, []);
-  
+
   const closeTab = useCallback((tabId: string) => {
     setTabs(prev => {
       console.log('[closeTab]');
@@ -98,3 +116,4 @@ export const useTabs = () => {
   if (!context) throw new Error('useTabs must be used within a TabsProvider');
   return context;
 };
+
