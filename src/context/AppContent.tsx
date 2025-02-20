@@ -10,9 +10,10 @@ import { saveSvg } from '../utils/FileHelpers';
 import { loadElements, saveElements } from '../utils/FileHelpers';
 import { ICONBAR_HEIGHT } from '../constants/ElementSettings';
 import { TabState } from './TabsContext';
+import { getLastSavedFileName } from '../utils/FileHelpers';
 
 const AppContent: React.FC = () => {
-  const { tabs, currentTabId, addTab, closeTab, switchTab, updateTabState } = useTabs();
+  const { tabs, currentTabId, addTab, closeTab, switchTab, updateTabState, updateTabName } = useTabs();
   const currentTab = useMemo(() => tabs.find(tab => tab.id === currentTabId), [tabs, currentTabId]);
   const [isHelpOpen, setHelpOpen] = useState(false);
   const toggleHelp = useCallback(() => setHelpOpen(prev => !prev), []);
@@ -28,7 +29,14 @@ const AppContent: React.FC = () => {
         <QuickMenuBar
           saveSvg={() => saveSvg(document.querySelector('.svg-element') as SVGSVGElement, 'download.svg')}
           loadElements={(event) => loadElements(event.nativeEvent)
-            .then(elements => dispatch({ type: 'LOAD_ELEMENTS', payload: elements }))
+            .then(elements => {
+              dispatch({ type: 'LOAD_ELEMENTS', payload: elements });
+              // ファイル名からタブ名を更新する
+              const storedName = getLastSavedFileName();
+              if (storedName) {
+                updateTabName(currentTabId, storedName);
+              }
+            })
             .catch(alert)}
           saveElements={() => saveElements(Object.values(currentTab.state.elements))}
           toggleHelp={toggleHelp}
@@ -65,6 +73,7 @@ const TabHeaders: React.FC<{
     backgroundColor: '#f0f0f0',
     width: '100%',
     height: ICONBAR_HEIGHT,
+    marginTop: ICONBAR_HEIGHT,
     position: 'fixed',
     zIndex: 10001,
   }}>
@@ -78,7 +87,7 @@ const TabHeaders: React.FC<{
       />
     ))}
     <button onClick={addTab} style={{ marginLeft: '8px' }}>
-      NEW
+      +
     </button>
   </div>
 ));
@@ -94,13 +103,18 @@ const TabHeader: React.FC<{
       padding: '8px',
       marginRight: '4px',
       backgroundColor: isCurrent ? '#fff' : '#ddd',
+      borderBottom: isCurrent ? 'solid 3px #87CEFA' : '',
+      paddingBottom: '3px',
+      // marginBottom: '10px',
+      borderRadius: '5px 5px 0 0',
+      fontSize: '12px',
       cursor: 'pointer',
       display: 'flex',
       alignItems: 'center',
     }}
     onClick={() => switchTab(tab.id)}
   >
-    <span>Tab {tab.id.slice(0, 4)}</span>
+    <span>{tab.name}</span>
     <button
       onClick={(e) => {
         e.stopPropagation();

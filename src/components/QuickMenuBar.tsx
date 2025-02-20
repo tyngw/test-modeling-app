@@ -56,7 +56,7 @@ const QuickMenuBar = ({
   };
 
   return (
-    <div style={{ position: 'fixed', width: '100%', height: ICONBAR_HEIGHT, zIndex: 10000, marginTop: ICONBAR_HEIGHT }}>
+    <div style={{ position: 'fixed', width: '100%', height: ICONBAR_HEIGHT, zIndex: 10000, }}>
       <div style={{ 
         display: 'flex',
         justifyContent: 'left',
