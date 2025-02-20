@@ -2,7 +2,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { CanvasProvider } from './CanvasContext';
 import CanvasArea from '../components/CanvasArea';
-import { Action } from '../state/state'; 
+import { Action } from '../state/state';
 import { useTabs } from './TabsContext';
 import { reducer } from '../state/state';
 import QuickMenuBar from '../components/QuickMenuBar';
@@ -29,16 +29,14 @@ const AppContent: React.FC = () => {
         <QuickMenuBar
           saveSvg={() => saveSvg(document.querySelector('.svg-element') as SVGSVGElement, 'download.svg')}
           loadElements={(event) => loadElements(event.nativeEvent)
-            .then(elements => {
+            .then(({ elements, fileName }) => {
               dispatch({ type: 'LOAD_ELEMENTS', payload: elements });
-              // ファイル名からタブ名を更新する
-              const storedName = getLastSavedFileName();
-              if (storedName) {
-                updateTabName(currentTabId, storedName);
-              }
+              // ファイル名から拡張子を除いた名前でタブ名を更新する
+              const newTabName = fileName.replace('.json', '');
+              updateTabName(currentTabId, newTabName);
             })
             .catch(alert)}
-          saveElements={() => saveElements(Object.values(currentTab.state.elements))}
+            saveElements={() => saveElements(Object.values(currentTab.state.elements), currentTab.name)}
           toggleHelp={toggleHelp}
         />
         <CanvasArea isHelpOpen={isHelpOpen} toggleHelp={toggleHelp} />
@@ -48,7 +46,7 @@ const AppContent: React.FC = () => {
 
   return (
     <div>
-      <TabHeaders 
+      <TabHeaders
         tabs={tabs}
         currentTabId={currentTabId}
         addTab={addTab}
