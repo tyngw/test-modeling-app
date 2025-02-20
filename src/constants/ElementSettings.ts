@@ -2,7 +2,7 @@
 export const DEFAULT_ZOOM_RATIO = 1;
 export const DEFAULT_POSITION = {
     X: 50,
-    Y: 50,
+    Y: 100,
 }
 export const SIZE = {
     NODE_HEIGHT: 72,
