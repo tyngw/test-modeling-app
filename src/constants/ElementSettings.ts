@@ -2,7 +2,7 @@
 export const DEFAULT_ZOOM_RATIO = 1;
 export const DEFAULT_POSITION = {
     X: 50,
-    Y: 100,
+    Y: 50,
 }
 export const SIZE = {
     NODE_HEIGHT: 72,
@@ -43,3 +43,5 @@ export const MULTIBYTE_CHAR_WIDTH = 14;
 export const SINGLEBYTE_CHAR_WIDTH = 7;
 export const LINE_HEIGHT_RATIO = 1.4;
 export const ICONBAR_HEIGHT = 40;
+export const TABBAR_HEIGHT = 40;
+export const HEADER_HEIGHT = ICONBAR_HEIGHT + TABBAR_HEIGHT;

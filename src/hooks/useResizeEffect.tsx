@@ -1,6 +1,7 @@
 // src/hooks/useResizeEffect.tsx
 import { useEffect } from 'react';
 import { calculateCanvasSize } from '../utils/LayoutUtilities';
+import { ICONBAR_HEIGHT } from '../constants/ElementSettings';
 
 interface ElementWithDimensions {
   x: number;
@@ -28,14 +29,15 @@ const useResizeEffect = ({
 }: ResizeEffectProps) => {
     useEffect(() => {
         const newCanvasSize = calculateCanvasSize(state.elements);
+        const maxHeight = window.innerHeight - ICONBAR_HEIGHT * 2;
         newCanvasSize.width = Math.max(newCanvasSize.width, window.innerWidth);
-        newCanvasSize.height = Math.max(newCanvasSize.height, window.innerHeight);
+        newCanvasSize.height = Math.max(newCanvasSize.height, maxHeight);
         const newViewSize = {
             width: newCanvasSize.width,
             height: newCanvasSize.height,
         }
-        newCanvasSize.width = newCanvasSize.width * state.zoomRatio;
-        newCanvasSize.height = newCanvasSize.height * state.zoomRatio;
+        newCanvasSize.width *= state.zoomRatio;
+        newCanvasSize.height *= state.zoomRatio;
         
         setCanvasSize(newCanvasSize);
         setDisplayArea(`0 0 ${newViewSize.width} ${newViewSize.height}`);
