@@ -10,8 +10,8 @@ import SaveAsOutlinedIcon from '@mui/icons-material/SaveAsOutlined';
 import SaveAltIcon from '@mui/icons-material/SaveAlt';
 import HelpOutlineOutlinedIcon from '@mui/icons-material/HelpOutlineOutlined';
 import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined';
-import ControlPointIcon from '@mui/icons-material/ControlPoint';
-import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
+import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
+import PlaylistRemoveIcon from '@mui/icons-material/PlaylistRemove';
 import UnfoldLessIcon from '@mui/icons-material/UnfoldLess';
 import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
 import Tooltip from '@mui/material/Tooltip';
@@ -96,14 +96,14 @@ const QuickMenuBar = ({
         {/* 新規要素追加ボタン */}
         <Tooltip title={tooltipTexts.ADD}>
           <Button variant="text" className="iconbar-button" onClick={handleAction('ADD_ELEMENT')}>
-            <ControlPointIcon sx={{ color: '#666666' }} />
+            <PlaylistAddIcon sx={{ color: '#666666' }} />
           </Button>
         </Tooltip>
 
         {/* 要素削除ボタン */}
         <Tooltip title={tooltipTexts.DELETE}>
           <Button variant="text" className="iconbar-button" onClick={handleAction('DELETE_ELEMENT')}>
-            <RemoveCircleOutlineIcon sx={{ color: '#666666' }} />
+            <PlaylistRemoveIcon sx={{ color: '#666666' }} />
           </Button>
         </Tooltip>
 
