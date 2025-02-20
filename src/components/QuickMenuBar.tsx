@@ -18,6 +18,7 @@ import Tooltip from '@mui/material/Tooltip';
 import { ICONBAR_HEIGHT } from '../constants/ElementSettings';
 import { useCanvas } from '../context/CanvasContext';
 import { tooltipTexts } from '../constants/TooltipTexts';
+import { useTabs } from '../context/TabsContext';
 
 interface QuickMenuBarProps {
   saveSvg: () => void;
@@ -27,7 +28,6 @@ interface QuickMenuBarProps {
 }
 
 type CanvasActionType =
-  | 'NEW'
   | 'UNDO'
   | 'REDO'
   | 'ZOOM_IN'
@@ -44,6 +44,7 @@ const QuickMenuBar = ({
   toggleHelp
 }: QuickMenuBarProps) => {
   const { dispatch } = useCanvas();
+  const { addTab } = useTabs();
   const fileInput = useRef<HTMLInputElement>(null);
 
   const handleFileOpen = () => {
@@ -55,12 +56,19 @@ const QuickMenuBar = ({
   };
 
   return (
-    <div style={{ position: 'fixed', width: '100%', height: ICONBAR_HEIGHT, zIndex: 10000 }}>
-      <div style={{ display: 'flex', justifyContent: 'left', alignItems: 'center', height: '100%', backgroundColor: '#f1f1f1', borderRadius: '30px', padding: '0 20px' }}>
+    <div style={{ position: 'fixed', width: '100%', height: ICONBAR_HEIGHT, zIndex: 10000, }}>
+      <div style={{ 
+        display: 'flex',
+        justifyContent: 'left',
+        alignItems: 'center',
+        height: '100%',
+        backgroundColor: '#f1f1f1',
+        padding: '0 20px'
+        }}>
         <input type="file" ref={fileInput} onChange={loadElements} style={{ display: 'none' }} />
 
         <Tooltip title={tooltipTexts.NEW}>
-          <Button variant="text" className="iconbar-button" onClick={handleAction('NEW')}>
+          <Button variant="text" className="iconbar-button" onClick={addTab}>
             <InsertDriveFileOutlinedIcon sx={{ color: '#666666' }} />
           </Button>
         </Tooltip>

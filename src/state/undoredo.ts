@@ -27,31 +27,7 @@ export const saveSnapshot = (elements: any) => {
     const newSnapshots: any[] = snapshots.slice(0, snapshotIndex + 1);
 
     newSnapshots.push(elements);
-    saveToLocalStorage(elements);
+    // saveToLocalStorage(elements);
     snapshots = newSnapshots;
     snapshotIndex++;
-};
-
-// スナップショットをクリアする
-export const clearSnapshots = () => {
-    snapshots = [];
-    snapshotIndex = 0;
-    clearLocalStorage();
-};
-
-export const clearLocalStorage = () => {
-    localStorage.clear();
-};
-
-export const saveToLocalStorage = (elements: any) => {
-    localStorage.setItem('elements', JSON.stringify(elements));
-};
-
-export const loadFromLocalStorage = () => {
-    // localStorageに値がない場合は空の配列を返す
-    if (!localStorage.getItem('elements')) {
-        return [];
-    }
-    const elements = JSON.parse(localStorage.getItem('elements') || '[]');
-    return elements;
 };

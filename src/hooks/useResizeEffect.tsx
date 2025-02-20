@@ -23,7 +23,7 @@ interface ResizeEffectProps {
 
 const useResizeEffect = ({ 
   setCanvasSize, 
-  setDisplayArea, 
+  setDisplayArea,
   state 
 }: ResizeEffectProps) => {
     useEffect(() => {

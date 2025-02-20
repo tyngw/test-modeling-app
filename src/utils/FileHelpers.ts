@@ -10,7 +10,7 @@ export const setLastSavedFileName = (name: string) => {
     localStorage.setItem(STORAGE_KEY, name);
 }
 
-export const loadElements = (event: Event): Promise<any> => {
+export const loadElements = (event: Event): Promise<{ elements: any; fileName: string }> => {
     return new Promise((resolve, reject) => {
         const input = event.target as HTMLInputElement;
         const file = input.files ? input.files[0] : null;
@@ -26,8 +26,8 @@ export const loadElements = (event: Event): Promise<any> => {
                 if (typeof contents === 'string') {
                     try {
                         const elements = JSON.parse(contents);
-                        setLastSavedFileName(fileName);
-                        resolve(elements);
+                        // setLastSavedFileName(fileName);
+                        resolve({ elements, fileName });
                     } catch (error) {
                         throw new Error('Error: ファイルの読み込みに失敗しました');
                     }
@@ -78,11 +78,8 @@ export const saveSvg = (svgElement: SVGSVGElement, name: string) => {
     document.body.removeChild(downloadLink);
 }
 
-export const saveElements = (elements: any[]) => {
-    const defaultName = elements.find(element => element.parentId === null)?.text || 'Untitled';
-    const storedName = getLastSavedFileName();
-    const fileName = storedName || defaultName;
-    setLastSavedFileName(fileName);
+export const saveElements = (elements: any[], fileName: string) => {
+    const name = fileName || 'Untitled';
 
     const elementsToSave = elements.map(element => {
         const { x, y, ...elementWithoutXY } = element;
@@ -95,7 +92,7 @@ export const saveElements = (elements: any[]) => {
 
     const downloadLink = document.createElement('a');
     downloadLink.href = url;
-    downloadLink.download = `${fileName}.json`;
+    downloadLink.download = `${name}.json`;
     document.body.appendChild(downloadLink);
     downloadLink.click();
     document.body.removeChild(downloadLink);
