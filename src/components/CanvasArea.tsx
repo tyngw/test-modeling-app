@@ -10,7 +10,7 @@ import { keyActionMap } from '../constants/KeyActionMap';
 import { useClickOutside } from '../hooks/useClickOutside';
 import { useElementDragEffect } from '../hooks/useElementDragEffect';
 import { helpContent } from '../constants/HelpContent';
-import { ICONBAR_HEIGHT } from '../constants/ElementSettings';
+import { ICONBAR_HEIGHT, HEADER_HEIGHT } from '../constants/ElementSettings';
 import { Element } from '../types';
 
 interface Toast {
@@ -101,7 +101,12 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                 </div>
             ))}
 
-            <div style={{ position: 'absolute', top: 0, left: 0, overflow: 'auto' }}>
+            <div style={{
+                position: 'absolute',
+                top: HEADER_HEIGHT,
+                left: 0,
+                overflow: 'auto'
+            }}>
                 <ModalWindow isOpen={isHelpOpen} onClose={toggleHelp}>
                     <div dangerouslySetInnerHTML={{ __html: helpContent }} />
                 </ModalWindow>

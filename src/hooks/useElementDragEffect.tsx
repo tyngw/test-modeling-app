@@ -1,7 +1,7 @@
 // src/hooks/useElementDragEffect.tsx
 import { useState, useEffect, useCallback } from 'react';
 import { useCanvas } from '../context/CanvasContext';
-import { ICONBAR_HEIGHT } from '../constants/ElementSettings';
+import { HEADER_HEIGHT } from '../constants/ElementSettings';
 import { Element } from '../types';
 import { isDescendant } from '../state/state';
 import { ToastMessages } from '../constants/ToastMessages';
@@ -28,7 +28,7 @@ export const useElementDragEffect = ({ showToast }: UseElementDragEffectProps) =
 
   const convertToZoomCoordinates = useCallback((e: { pageX: number; pageY: number }): Position => ({
     x: e.pageX / state.zoomRatio,
-    y: (e.pageY - ICONBAR_HEIGHT) / state.zoomRatio,
+    y: (e.pageY - HEADER_HEIGHT) / state.zoomRatio,
   }), [state.zoomRatio]);
 
   const handleMouseDown = useCallback(
