@@ -1,7 +1,6 @@
 // src/components/CanvasArea.tsx
 import React, { useRef, useState, useEffect } from 'react';
 import IdeaElement from './IdeaElement';
-import QuickMenuBar from './QuickMenuBar';
 import InputFields from './InputFields';
 import ModalWindow from './ModalWindow';
 import useResizeEffect from '../hooks/useResizeEffect';
@@ -10,8 +9,6 @@ import { Marker } from './Marker';
 import { keyActionMap } from '../constants/KeyActionMap';
 import { useClickOutside } from '../hooks/useClickOutside';
 import { useElementDragEffect } from '../hooks/useElementDragEffect';
-import { loadFromLocalStorage } from '../state/undoredo';
-import { saveSvg, loadElements, saveElements } from '../utils/FileHelpers';
 import { helpContent } from '../constants/HelpContent';
 import { ICONBAR_HEIGHT } from '../constants/ElementSettings';
 import { Element } from '../types';
@@ -21,7 +18,12 @@ interface Toast {
     message: string;
 }
 
-const CanvasArea: React.FC = () => {
+interface CanvasAreaProps {
+    isHelpOpen: boolean;
+    toggleHelp: () => void;
+}
+
+const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
     const svgRef = useRef<SVGSVGElement>(null);
     const { state, dispatch } = useCanvas();
     const [displayScopeSize, setCanvasSize] = useState({
@@ -31,16 +33,8 @@ const CanvasArea: React.FC = () => {
     const [displayArea, setDisplayArea] = useState(
         `0 0 ${displayScopeSize.width} ${displayScopeSize.height - ICONBAR_HEIGHT}`
     );
-    const [isHelpOpen, setHelpOpen] = useState(false);
     const [toasts, setToasts] = useState<Toast[]>([]);
-
-    const toggleHelp = () => setHelpOpen(!isHelpOpen);
     const editingNode = Object.values(state.elements).find((element) => (element as Element).editing) as Element | undefined;
-
-    useEffect(() => {
-        const elementList = loadFromLocalStorage();
-        if (elementList) dispatch({ type: 'LOAD_ELEMENTS', payload: elementList });
-    }, [dispatch]);
 
     useEffect(() => {
         if (!editingNode) {
@@ -85,15 +79,6 @@ const CanvasArea: React.FC = () => {
 
     return (
         <>
-            <QuickMenuBar
-                saveSvg={() => saveSvg(svgRef.current!, 'download.svg')}
-                loadElements={(event) => loadElements(event.nativeEvent)
-                    .then(elements => dispatch({ type: 'LOAD_ELEMENTS', payload: elements }))
-                    .catch(alert)}
-                saveElements={() => saveElements(Object.values(state.elements))}
-                toggleHelp={toggleHelp}
-            />
-
             {toasts.map((toast, index) => (
                 <div
                     key={toast.id}
@@ -116,7 +101,7 @@ const CanvasArea: React.FC = () => {
                 </div>
             ))}
 
-            <div style={{ position: 'absolute', top: ICONBAR_HEIGHT, left: 0, overflow: 'auto' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, overflow: 'auto' }}>
                 <ModalWindow isOpen={isHelpOpen} onClose={toggleHelp}>
                     <div dangerouslySetInnerHTML={{ __html: helpContent }} />
                 </ModalWindow>
@@ -136,8 +121,8 @@ const CanvasArea: React.FC = () => {
                     {Object.values(state.elements)
                         .filter((element): element is Element => element.visible)
                         .map(element => {
-                            const hiddenChildren = Object.values(state.elements)
-                                .filter((n): n is Element => n.parentId === element.id && !n.visible);
+                            // const hiddenChildren = Object.values(state.elements)
+                            //     .filter((n): n is Element => n.parentId === element.id && !n.visible);
                             return (
                                 <React.Fragment key={element.id}>
                                     <IdeaElement
