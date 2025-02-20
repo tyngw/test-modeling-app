@@ -7,16 +7,23 @@ import { createNewElement } from '../state/state';
 
 export interface TabState {
   id: string;
+  name: string;
   state: State;
 }
 
-interface TabsContextValue {
+type TabsStorage = {
+  tabs: TabState[];
+  currentTabId: string;
+};
+
+export interface TabsContextValue {
   tabs: TabState[];
   currentTabId: string;
   addTab: () => void;
   closeTab: (tabId: string) => void;
   switchTab: (tabId: string) => void;
   updateTabState: (tabId: string, updater: (prevState: State) => State) => void;
+  updateTabName: (tabId: string, newName: string) => void;
 }
 
 const TabsContext = createContext<TabsContextValue | undefined>(undefined);
@@ -25,6 +32,7 @@ const createInitialTabState = (): TabState => {
   const newRootId = uuidv4();
   return {
     id: uuidv4(),
+    name: "無題",
     state: {
       ...initialState,
       elements: {
@@ -41,12 +49,32 @@ const createInitialTabState = (): TabState => {
 };
 
 // ローカルストレージから状態を読み込む
-const loadTabsFromLocalStorage = (): { tabs: TabState[], currentTabId: string } => {
-  const savedData = localStorage.getItem('tabsState');
-  if (savedData) {
-    return JSON.parse(savedData);
+const loadTabsState = (): TabsStorage => {
+  try {
+    const saved = localStorage.getItem('tabsState');
+    if (saved) {
+      const parsed: TabsStorage = JSON.parse(saved);
+      // データ整合性チェック
+      if (Array.isArray(parsed?.tabs) && typeof parsed?.currentTabId === 'string') {
+        // 現在のタブIDが存在しない場合は最初のタブを選択
+        const validCurrentTabId = parsed.tabs.some((t: TabState) => t.id === parsed.currentTabId)
+          ? parsed.currentTabId
+          : parsed.tabs[0]?.id || '';
+        return { 
+          tabs: parsed.tabs as TabState[], 
+          currentTabId: validCurrentTabId 
+        };
+      }
+    }
+  } catch (e) {
+    console.error('Failed to load tabs state:', e);
   }
-  return { tabs: [createInitialTabState()], currentTabId: '' };
+  // 新規作成
+  const initialTab = createInitialTabState();
+  return { 
+    tabs: [initialTab], 
+    currentTabId: initialTab.id 
+  };
 };
 
 // ローカルストレージに状態を保存
@@ -55,8 +83,8 @@ const saveTabsToLocalStorage = (tabs: TabState[], currentTabId: string) => {
 };
 
 export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [tabs, setTabs] = useState<TabState[]>(() => [createInitialTabState()]);
-  const [currentTabId, setCurrentTabId] = useState(tabs[0].id);
+  const [tabsState, setTabsState] = useState(() => loadTabsState());
+  const { tabs, currentTabId } = tabsState;
 
   useEffect(() => {
     saveTabsToLocalStorage(tabs, currentTabId);
@@ -64,35 +92,43 @@ export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const addTab = useCallback(() => {
     const newTab = createInitialTabState();
-    console.log('[addTab]');
-    setTabs(prev => [...prev, newTab]);
-    setCurrentTabId(newTab.id);
+    setTabsState(prev => ({
+      tabs: [...prev.tabs, newTab],
+      currentTabId: newTab.id
+    }));
   }, []);
 
   const closeTab = useCallback((tabId: string) => {
-    setTabs(prev => {
-      console.log('[closeTab]');
-      if (prev.length === 1) return prev;
-      const newTabs = prev.filter(tab => tab.id !== tabId);
-      
-      // 現在のタブが閉じられた場合、新しいcurrentTabIdを設定
-      if (tabId === currentTabId) {
-        // 最新のタブリストから最初のタブを選択
-        setCurrentTabId(newTabs[0]?.id || '');
-      }
-      
-      return newTabs;
+    setTabsState(prev => {
+      if (prev.tabs.length === 1) return prev;
+      const newTabs = prev.tabs.filter(tab => tab.id !== tabId);
+      const newCurrentTabId = tabId === prev.currentTabId
+        ? newTabs[0]?.id || ''
+        : prev.currentTabId;
+      return { tabs: newTabs, currentTabId: newCurrentTabId };
     });
-  }, [currentTabId]);
+  }, []);
 
   const switchTab = useCallback((tabId: string) => {
-    setCurrentTabId(tabId);
+    setTabsState(prev => ({ ...prev, currentTabId: tabId }));
   }, []);
 
   const updateTabState = useCallback((tabId: string, updater: (prevState: State) => State) => {
-    setTabs(prev => prev.map(tab => 
-      tab.id === tabId ? { ...tab, state: updater(tab.state) } : tab
-    ));
+    setTabsState(prev => ({
+      ...prev,
+      tabs: prev.tabs.map(tab =>
+        tab.id === tabId ? { ...tab, state: updater(tab.state) } : tab
+      )
+    }));
+  }, []);
+
+  const updateTabName = useCallback((tabId: string, newName: string) => {
+    setTabsState(prev => ({
+      ...prev,
+      tabs: prev.tabs.map(tab => 
+        tab.id === tabId ? { ...tab, name: newName } : tab
+      )
+    }));
   }, []);
 
   const contextValue = useMemo(() => ({
@@ -101,8 +137,9 @@ export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     addTab,
     closeTab,
     switchTab,
-    updateTabState
-  }), [tabs, currentTabId, addTab, closeTab, switchTab, updateTabState]);
+    updateTabState,
+    updateTabName,
+  }), [tabs, currentTabId, addTab, closeTab, switchTab, updateTabState, updateTabName]);
 
   return (
     <TabsContext.Provider value={contextValue}>
@@ -116,4 +153,3 @@ export const useTabs = () => {
   if (!context) throw new Error('useTabs must be used within a TabsProvider');
   return context;
 };
-
