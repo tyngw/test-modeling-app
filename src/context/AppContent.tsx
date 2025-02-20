@@ -8,7 +8,7 @@ import { reducer } from '../state/state';
 import QuickMenuBar from '../components/QuickMenuBar';
 import { saveSvg } from '../utils/FileHelpers';
 import { loadElements, saveElements } from '../utils/FileHelpers';
-import { ICONBAR_HEIGHT } from '../constants/ElementSettings';
+import { ICONBAR_HEIGHT, TABBAR_HEIGHT } from '../constants/ElementSettings';
 import { TabState } from './TabsContext';
 import { getLastSavedFileName } from '../utils/FileHelpers';
 
@@ -70,7 +70,7 @@ const TabHeaders: React.FC<{
     alignItems: 'center',
     backgroundColor: '#f0f0f0',
     width: '100%',
-    height: ICONBAR_HEIGHT,
+    height: TABBAR_HEIGHT,
     marginTop: ICONBAR_HEIGHT,
     position: 'fixed',
     zIndex: 10001,
