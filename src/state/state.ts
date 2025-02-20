@@ -219,7 +219,9 @@ const layoutSubtree = (
     currentY: number,
     elements: ElementsMap,
 ): { newY: number; minY: number; maxY: number } => {
-    node.x = parentX + OFFSET.X;
+    if (node.parentId !== null) {
+        node.x = parentX + OFFSET.X;
+    }
 
     const children = getChildren(node.id, elements);
     let childY = currentY;
