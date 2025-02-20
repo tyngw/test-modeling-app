@@ -218,10 +218,8 @@ const layoutSubtree = (
     parentX: number,
     currentY: number,
     elements: ElementsMap,
-    xOffset: number,
-    yOffset: number
 ): { newY: number; minY: number; maxY: number } => {
-    node.x = parentX + xOffset;
+    node.x = parentX + OFFSET.X;
 
     const children = getChildren(node.id, elements);
     let childY = currentY;
@@ -235,8 +233,6 @@ const layoutSubtree = (
             node.x + node.width,
             childY,
             elements,
-            OFFSET.X,
-            OFFSET.Y
         );
         childY = result.newY;
         minY = Math.min(minY, result.minY);
@@ -294,7 +290,7 @@ const checkCollision = (element: Element, y: number, other: Element): boolean =>
 const adjustElementPositions = (elements: ElementsMap): ElementsMap => {
     const newElements = { ...elements };
     const rootElements = getChildren(null, newElements);
-    let currentY = OFFSET.Y;
+    let currentY = DEFAULT_POSITION.Y;
 
     // 全要素の座標をリセット
     Object.values(newElements).forEach(elem => {
@@ -309,8 +305,6 @@ const adjustElementPositions = (elements: ElementsMap): ElementsMap => {
             0,
             currentY,
             newElements,
-            OFFSET.X,
-            OFFSET.Y
         );
         currentY = result.newY;
     }
