@@ -49,23 +49,26 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
     ? draggingElement.id === element.id || isDescendant(state.elements, draggingElement.id, element.id)
     : false;
 
-  const sectionHeights = [
-    element.section1Height,
-    element.section2Height,
-    element.section3Height
-  ];
-
+  const sectionHeights = useMemo(
+    () => [
+      element.section1Height,
+      element.section2Height,
+      element.section3Height
+    ],
+    [element.section1Height, element.section2Height, element.section3Height]
+  );
+  
   const handleHeightChange = useCallback((sectionIndex: number, newHeight: number) => {
     const sectionKey = `section${sectionIndex + 1}Height`;
     const currentHeight = element[sectionKey as keyof CanvasElement] as number;
-
+  
     if (currentHeight !== null && Math.abs(newHeight - currentHeight) > 1) {
       const newSectionHeights = [...sectionHeights];
       newSectionHeights[sectionIndex] = newHeight;
-
+  
       const texts = [element.text, element.text2, element.text3];
       const newWidth = calculateElementWidth(texts);
-
+  
       dispatch({
         type: 'UPDATE_ELEMENT_SIZE',
         payload: {
@@ -76,7 +79,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
         }
       });
     }
-  }, [dispatch, element, sectionHeights]);
+  }, [dispatch, element, sectionHeights]); 
 
   const handleSelect = (e: React.MouseEvent) => {
     e.stopPropagation();
