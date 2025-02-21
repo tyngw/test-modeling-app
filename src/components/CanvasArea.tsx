@@ -126,8 +126,6 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                     {Object.values(state.elements)
                         .filter((element): element is Element => element.visible)
                         .map(element => {
-                            // const hiddenChildren = Object.values(state.elements)
-                            //     .filter((n): n is Element => n.parentId === element.id && !n.visible);
                             return (
                                 <React.Fragment key={element.id}>
                                     <IdeaElement
