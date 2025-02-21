@@ -1,4 +1,4 @@
-// helpContent.ts
+// src/constants/helpContent.ts
 export const helpContent = `
 <h4>Keyboard shortcuts</h4>
 <p>Tab: Add a child element to the selected element</p>

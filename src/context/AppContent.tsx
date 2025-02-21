@@ -1,16 +1,15 @@
 // src/context/AppContent.tsx
 import React, { useState, useCallback, useMemo } from 'react';
-import { CanvasProvider } from './CanvasContext';
 import CanvasArea from '../components/CanvasArea';
+import QuickMenuBar from '../components/QuickMenuBar';
+import TabHeaders from '../components/TabHeaders';
+import { CanvasProvider } from './CanvasContext';
 import { Action } from '../state/state';
 import { useTabs } from './TabsContext';
 import { reducer } from '../state/state';
-import QuickMenuBar from '../components/QuickMenuBar';
 import { saveSvg } from '../utils/FileHelpers';
 import { loadElements, saveElements } from '../utils/FileHelpers';
-import { ICONBAR_HEIGHT, TABBAR_HEIGHT } from '../constants/ElementSettings';
-import { TabState } from './TabsContext';
-import TabHeaders from '../components/TabHeaders';
+
 
 const AppContent: React.FC = () => {
   const { tabs, currentTabId, addTab, closeTab, switchTab, updateTabState, updateTabName } = useTabs();
