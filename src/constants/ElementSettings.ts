@@ -1,4 +1,4 @@
-// src/constants/Node.ts
+// src/constants/ElementSettings.ts
 export const DEFAULT_ZOOM_RATIO = 1;
 export const DEFAULT_POSITION = {
     X: 50,
