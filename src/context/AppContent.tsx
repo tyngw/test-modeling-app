@@ -40,7 +40,7 @@ const AppContent: React.FC = () => {
         <CanvasArea isHelpOpen={isHelpOpen} toggleHelp={toggleHelp} />
       </CanvasProvider>
     );
-  }, [currentTab, dispatch, toggleHelp, isHelpOpen]);
+  }, [currentTab, dispatch, toggleHelp, isHelpOpen, currentTabId, updateTabName]);
 
   return (
     <div>
