@@ -10,8 +10,8 @@ import {
   OFFSET,
   SHADOW_OFFSET,
   ELEM_STYLE,
+  ARROW,
 } from '../constants/ElementSettings';
-import { ARROW_OFFSET } from '../constants/MarkerSetting';
 import { Element as CanvasElement } from '../types';
 import { isDescendant } from '../state/state';
 
@@ -87,7 +87,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
     if (!parentElement) return null;
     const totalHeight = element.height;
     const pathCommands = [
-      `M ${parentElement.x + parentElement.width + ARROW_OFFSET},${parentElement.y + parentElement.height / 2}`,
+      `M ${parentElement.x + parentElement.width + ARROW.OFFSET},${parentElement.y + parentElement.height / 2}`,
       `C ${parentElement.x + parentElement.width + CURVE_CONTROL_OFFSET},${parentElement.y + parentElement.height / 2}`,
       `${element.x - CURVE_CONTROL_OFFSET},${element.y + totalHeight / 2}`,
       `${element.x},${element.y + totalHeight / 2}`
