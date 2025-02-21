@@ -103,7 +103,6 @@ const TabHeader: React.FC<{
       backgroundColor: isCurrent ? '#fff' : '#ddd',
       borderBottom: isCurrent ? 'solid 3px #87CEFA' : '',
       paddingBottom: '3px',
-      // marginBottom: '10px',
       borderRadius: '5px 5px 0 0',
       fontSize: '12px',
       cursor: 'pointer',
@@ -118,7 +117,15 @@ const TabHeader: React.FC<{
         e.stopPropagation();
         closeTab(tab.id);
       }}
-      style={{ marginLeft: '8px' }}
+      style={{ 
+        marginLeft: '8px',
+        border: '0px',
+        backgroundColor: 'transparent',
+        fontSize: '16px',
+        color: '#666666',
+        fontWeight: 'bold',
+        cursor: 'pointer',
+       }}
     >
       ×
     </button>
