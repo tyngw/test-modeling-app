@@ -1,3 +1,4 @@
+// src/components/TabHeaders/TabHeader.tsx
 import React from 'react';
 import { TabState } from '../../context/TabsContext';
 
