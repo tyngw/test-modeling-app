@@ -1,7 +1,7 @@
 // src/components/TabHeaders/index.tsx
 import React from 'react';
 import { TabState } from '../../context/TabsContext';
-import TabHeader from './TabHeader';
+import Tab from './Tab';
 import { ICONBAR_HEIGHT, TABBAR_HEIGHT } from '../../constants/ElementSettings';
 
 interface TabHeadersProps {
@@ -30,7 +30,7 @@ const TabHeaders: React.FC<TabHeadersProps> = React.memo(({
     zIndex: 10001,
   }}>
     {tabs.map(tab => (
-      <TabHeader
+      <Tab
         key={tab.id}
         tab={tab}
         isCurrent={currentTabId === tab.id}

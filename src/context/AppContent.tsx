@@ -2,7 +2,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import CanvasArea from '../components/CanvasArea';
 import QuickMenuBar from '../components/QuickMenuBar';
-import TabHeaders from '../components/TabHeaders';
+import TabHeaders from '../components/TabHeaders/TabHeaders';
 import { CanvasProvider } from './CanvasContext';
 import { Action } from '../state/state';
 import { useTabs } from './TabsContext';
