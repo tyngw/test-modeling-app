@@ -1,4 +1,4 @@
-// src/constants/Node.ts
+// src/constants/ElementSettings.ts
 export const DEFAULT_ZOOM_RATIO = 1;
 export const DEFAULT_POSITION = {
     X: 50,
@@ -45,3 +45,9 @@ export const LINE_HEIGHT_RATIO = 1.4;
 export const ICONBAR_HEIGHT = 40;
 export const TABBAR_HEIGHT = 40;
 export const HEADER_HEIGHT = ICONBAR_HEIGHT + TABBAR_HEIGHT;
+
+export const ARROW = {
+    HEIGHT: 6,
+    WIDTH: 6,
+    OFFSET: 13,
+}

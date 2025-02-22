@@ -93,28 +93,24 @@ const QuickMenuBar = ({
 
         <div style={{ width: '10px' }}></div>
 
-        {/* 新規要素追加ボタン */}
         <Tooltip title={tooltipTexts.ADD}>
           <Button variant="text" className="iconbar-button" onClick={handleAction('ADD_ELEMENT')}>
             <PlaylistAddIcon sx={{ color: '#666666' }} />
           </Button>
         </Tooltip>
 
-        {/* 要素削除ボタン */}
         <Tooltip title={tooltipTexts.DELETE}>
           <Button variant="text" className="iconbar-button" onClick={handleAction('DELETE_ELEMENT')}>
             <PlaylistRemoveIcon sx={{ color: '#666666' }} />
           </Button>
         </Tooltip>
 
-        {/* 展開ボタン */}
         <Tooltip title={tooltipTexts.EXPAND}>
           <Button variant="text" className="iconbar-button" onClick={handleAction('EXPAND_ELEMENT')}>
             <UnfoldMoreIcon sx={{ color: '#666666' }} />
           </Button>
         </Tooltip>
 
-        {/* 折りたたみボタン */}
         <Tooltip title={tooltipTexts.COLLAPSE}>
           <Button variant="text" className="iconbar-button" onClick={handleAction('COLLAPSE_ELEMENT')}>
             <UnfoldLessIcon sx={{ color: '#666666' }} />
