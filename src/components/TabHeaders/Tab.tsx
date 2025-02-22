@@ -9,7 +9,7 @@ interface TabHeaderProps {
   switchTab: (id: string) => void;
 }
 
-const TabHeader: React.FC<TabHeaderProps> = React.memo(({ 
+const Tab: React.FC<TabHeaderProps> = React.memo(({ 
   tab, 
   isCurrent, 
   closeTab, 
@@ -51,4 +51,4 @@ const TabHeader: React.FC<TabHeaderProps> = React.memo(({
   </div>
 ));
 
-export default TabHeader;
+export default Tab;
