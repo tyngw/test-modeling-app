@@ -1,11 +1,11 @@
 // src/constants/ElementSettings.ts
 export const DEFAULT_ZOOM_RATIO = 1;
+export const NUMBER_OF_SECTIONS = 2;
 export const DEFAULT_POSITION = {
     X: 50,
     Y: 50,
 }
 export const SIZE = {
-    NODE_HEIGHT: 72,
     SECTION_HEIGHT: 24,
     WIDTH: {
         MAX: 200,
