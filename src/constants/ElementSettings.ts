@@ -36,6 +36,11 @@ export const ELEM_STYLE = {
 }
 export const CURVE_CONTROL_OFFSET = 80;
 export const DEFAULT_FONT_SIZE = 12;
+export const DEFAULT_FONT_FAMILY = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+export const TEXTAREA_PADDING = {
+    HORIZONTAL: 3,
+    VERTICAL: 2,
+}
 export const SHADOW_OFFSET = 3;
 export const MULTIBYTE_CHAR_COEFFICIENT = 1;
 export const SINGLEBYTE_CHAR_COEFFICIENT = 0.5;

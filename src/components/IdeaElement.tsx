@@ -8,6 +8,7 @@ import {
   CURVE_CONTROL_OFFSET,
   DEFAULT_FONT_SIZE,
   OFFSET,
+  TEXTAREA_PADDING,
   SHADOW_OFFSET,
   ELEM_STYLE,
   ARROW,
@@ -67,7 +68,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
       newSectionHeights[sectionIndex] = newHeight;
   
       const texts = [element.text, element.text2, element.text3];
-      const newWidth = calculateElementWidth(texts);
+      const newWidth = calculateElementWidth(texts, TEXTAREA_PADDING.HORIZONTAL);
   
       dispatch({
         type: 'UPDATE_ELEMENT_SIZE',
@@ -227,7 +228,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
             x={element.x + element.width + 10}
             y={element.y - 10}
             width="340"
-            height="130"
+            height="150"
             style={{ backgroundColor: 'white', border: '1px solid black', padding: '5px', zIndex: 1000, borderRadius: '5px' }}
           >
             <div style={{ fontSize: '12px', color: 'black' }}>
@@ -239,6 +240,8 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
               <div>editing: {element.editing ? 'true' : 'false'}</div>
               <div>selected: {element.selected ? 'true' : 'false'}</div>
               <div>visible: {element.visible ? 'true' : 'false'}</div>
+              <div>width: {element.width}</div>
+              <div>height: {element.width}</div>
             </div>
           </foreignObject>
         )}
