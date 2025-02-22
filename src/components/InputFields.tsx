@@ -14,50 +14,27 @@ interface InputFieldsProps {
     onEndEditing?: () => void;
 }
 
-type TextField = 'text' | 'text2' | 'text3';
-
 const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
     const { dispatch, state } = useCanvas();
-    const fieldRefs = useRef<{
-        text: HTMLTextAreaElement | null;
-        text2: HTMLTextAreaElement | null;
-        text3: HTMLTextAreaElement | null;
-    }>({ text: null, text2: null, text3: null });
+    const fieldRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
 
     if (!element) return null;
 
-    const getSectionHeight = (index: number): number => {
-        const sectionKey = `section${index + 1}Height` as keyof Element;
-        return (element[sectionKey] as number);
-    };
-
-    const sectionHeights = [
-        getSectionHeight(0),
-        getSectionHeight(1),
-        getSectionHeight(2)
-    ];
-
-    const maxWidth = calculateElementWidth(
-        [element.text, element.text2, element.text3],
-        TEXTAREA_PADDING.HORIZONTAL,
-    );
+    const maxWidth = calculateElementWidth(element.texts, TEXTAREA_PADDING.HORIZONTAL);
     element.width = maxWidth;
 
     const handleKeyDown = (
         e: React.KeyboardEvent<HTMLTextAreaElement>,
-        field: TextField,
         index: number
     ) => {
         if (e.key === 'Tab') {
             e.preventDefault();
-            if (index === 2) {
+            if (index === element.texts.length - 1) {
                 dispatch({ type: 'END_EDITING' });
                 onEndEditing?.();
             } else {
                 const nextIndex = index + 1;
-                const fields: TextField[] = ['text', 'text2', 'text3'];
-                const nextField = fields[nextIndex];
-                (fieldRefs.current[nextField] as HTMLTextAreaElement)?.focus();
+                (fieldRefs.current[nextIndex] as HTMLTextAreaElement)?.focus();
             }
         }
         if (e.key === 'Enter' && e.shiftKey) {
@@ -68,7 +45,7 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
                 e.currentTarget.value.substring(cursorPosition);
             dispatch({
                 type: 'UPDATE_TEXT',
-                payload: { id: element.id, field, value: newValue }
+                payload: { id: element.id, index, value: newValue }
             });
         }
         if (e.key === 'Escape') {
@@ -79,34 +56,33 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
 
     return (
         <>
-            {(['text', 'text2', 'text3'] as TextField[]).map((field, index) => {
+            {element.texts.map((text, index) => {
                 let yPosition = 0;
                 for (let i = 0; i < index; i++) {
-                    yPosition += getSectionHeight(i);
+                    yPosition += element.sectionHeights[i];
                 }
 
                 return (
                     <textarea
-                        key={field}
-                        ref={(el) => fieldRefs.current[field] = el}
-                        value={element[field]}
+                        key={index}
+                        ref={(el) => fieldRefs.current[index] = el}
+                        value={text}
                         onChange={(e) => dispatch({
                             type: 'UPDATE_TEXT',
                             payload: {
                                 id: element.id,
-                                field,
+                                index,
                                 value: e.target.value
                             }
                         })}
-                        onKeyDown={(e) => handleKeyDown(e, field, index)}
-                        className={`editable editable-${field}`}
+                        onKeyDown={(e) => handleKeyDown(e, index)}
+                        className={`editable editable-${index}`}
                         style={{
                             position: 'absolute',
                             left: `${element.x * state.zoomRatio}px`,
                             top: `${(element.y + yPosition) * state.zoomRatio}px`,
                             width: `${(element.width * state.zoomRatio) - 2}px`,
-                            height: `${(sectionHeights[index] * state.zoomRatio) - 2}px`,
-                            // padding: '2px 3px',
+                            height: `${(element.sectionHeights[index] * state.zoomRatio) - 2}px`,
                             margin: '1px 1px',
                             fontSize: `${DEFAULT_FONT_SIZE * state.zoomRatio}px`,
                             lineHeight: `${LINE_HEIGHT_RATIO}em`,
@@ -116,12 +92,12 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
                             boxSizing: 'border-box',
                             WebkitFontSmoothing: 'antialiased',
                             MozOsxFontSmoothing: 'grayscale',
-                            overflow: 'hidden', // スクロールバーを非表示にする
+                            overflow: 'hidden',
                             whiteSpace: 'pre-wrap',
                             wordWrap: 'break-word',
                             resize: 'none',
                         }}
-                        autoFocus={field === 'text'}
+                        autoFocus={index === 0}
                     />
                 );
             })}

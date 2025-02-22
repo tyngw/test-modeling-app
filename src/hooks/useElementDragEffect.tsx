@@ -49,7 +49,6 @@ export const useElementDragEffect = ({ showToast }: UseElementDragEffectProps) =
   );
 
   const handleMouseUp = useCallback(() => {
-    console.log('handleMouseUp')
     try {
       if (!draggingElement) return;
 
@@ -93,7 +92,6 @@ export const useElementDragEffect = ({ showToast }: UseElementDragEffectProps) =
 
       if (currentDropTarget) {
         const { element: target, position } = currentDropTarget;
-        console.log('[Drop] target.text', target.text)
 
         if (isDescendant(state.elements, draggingElement.id, target.id)) {
           resetElementPosition();
@@ -108,13 +106,11 @@ export const useElementDragEffect = ({ showToast }: UseElementDragEffectProps) =
           processSiblingDrop(target, position);
         }
       } else {
-        console.log('[Drop] reset')
         resetElementPosition();
       }
     } catch (error) {
       console.error('Drag error:', error);
     } finally {
-      console.log('[Drop] finally')
       setDraggingElement(null);
       setCurrentDropTarget(null);
     }

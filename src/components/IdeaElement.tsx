@@ -16,8 +16,6 @@ import {
 import { Element as CanvasElement } from '../types';
 import { isDescendant } from '../state/state';
 
-const SECTION_KEYS = ['text', 'text2', 'text3'] as const;
-
 interface IdeaElementProps {
   element: CanvasElement;
   currentDropTarget: CanvasElement | null;
@@ -49,26 +47,15 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
   const isDraggedOrDescendant = draggingElement
     ? draggingElement.id === element.id || isDescendant(state.elements, draggingElement.id, element.id)
     : false;
-
-  const sectionHeights = useMemo(
-    () => [
-      element.section1Height,
-      element.section2Height,
-      element.section3Height
-    ],
-    [element.section1Height, element.section2Height, element.section3Height]
-  );
   
   const handleHeightChange = useCallback((sectionIndex: number, newHeight: number) => {
-    const sectionKey = `section${sectionIndex + 1}Height`;
-    const currentHeight = element[sectionKey as keyof CanvasElement] as number;
+    const currentHeight = element.sectionHeights[sectionIndex];
   
     if (currentHeight !== null && Math.abs(newHeight - currentHeight) > 1) {
-      const newSectionHeights = [...sectionHeights];
+      const newSectionHeights = [...element.sectionHeights];
       newSectionHeights[sectionIndex] = newHeight;
   
-      const texts = [element.text, element.text2, element.text3];
-      const newWidth = calculateElementWidth(texts, TEXTAREA_PADDING.HORIZONTAL);
+      const newWidth = calculateElementWidth(element.texts, TEXTAREA_PADDING.HORIZONTAL);
   
       dispatch({
         type: 'UPDATE_ELEMENT_SIZE',
@@ -80,7 +67,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
         }
       });
     }
-  }, [dispatch, element, sectionHeights]); 
+  }, [dispatch, element]);
 
   const handleSelect = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -112,7 +99,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
   return (
     <React.Fragment key={element.id}>
       <g opacity={isDraggedOrDescendant ? 0.3 : 1}>
-        {renderConnectionPath()}
+      {renderConnectionPath()}
         {hiddenChildren.length > 0 && (
           <>
             <rect
@@ -198,25 +185,25 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
             strokeWidth={ELEM_STYLE.STROKE}
           />
         )}
-        {SECTION_KEYS.map((key, index) => (
+        {element.texts.map((text, index) => (
           <React.Fragment key={`${element.id}-section-${index}`}>
             <TextSection
               x={element.x}
-              y={element.y + sectionHeights.slice(0, index).reduce((sum, h) => sum + h, 0)}
+              y={element.y + element.sectionHeights.slice(0, index).reduce((sum, h) => sum + h, 0)}
               width={element.width}
-              height={sectionHeights[index]}
-              text={element[key]}
+              height={element.sectionHeights[index]}
+              text={text}
               fontSize={DEFAULT_FONT_SIZE}
               zoomRatio={state.zoomRatio}
               onHeightChange={(newHeight) => handleHeightChange(index, newHeight)}
             />
 
-            {index < SECTION_KEYS.length - 1 && (
+            {index < element.texts.length - 1 && (
               <line
                 x1={element.x}
-                y1={element.y + sectionHeights.slice(0, index + 1).reduce((sum, h) => sum + h, 0)}
+                y1={element.y + element.sectionHeights.slice(0, index + 1).reduce((sum, h) => sum + h, 0)}
                 x2={element.x + element.width}
-                y2={element.y + sectionHeights.slice(0, index + 1).reduce((sum, h) => sum + h, 0)}
+                y2={element.y + element.sectionHeights.slice(0, index + 1).reduce((sum, h) => sum + h, 0)}
                 stroke={ELEM_STYLE.NORMAL.STROKE_COLOR}
                 strokeWidth="1"
               />

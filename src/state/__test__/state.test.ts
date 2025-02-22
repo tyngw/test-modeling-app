@@ -3,6 +3,7 @@ import { renderHook, act } from '@testing-library/react';
 import { useReducer } from 'react';
 import { initialState, reducer } from '../state';
 import { Element } from '../../types';
+import { SIZE } from '../../constants/ElementSettings';
 
 
 const useStore = () => {
@@ -31,6 +32,8 @@ describe('state reducer', () => {
         expect(rootElement.selected).toBe(true);
         expect(rootElement.children).toBe(0);
         expect(rootElement.editing).toBe(false);
+        expect(rootElement.texts).toEqual(['', '', '']); // texts配列の確認
+        expect(rootElement.sectionHeights).toEqual([SIZE.SECTION_HEIGHT, SIZE.SECTION_HEIGHT, SIZE.SECTION_HEIGHT]); // sectionHeights配列の確認
     });
 
     it('新しいノードを追加する', () => {
@@ -135,18 +138,18 @@ describe('state reducer', () => {
         const { dispatch } = result.current;
 
         const newText = 'Updated text';
-        const field = 'text';
+        const index = 0;
 
         act(() => {
             dispatch({
                 type: 'UPDATE_TEXT',
-                payload: { id: '1', field, value: newText }
+                payload: { id: '1', index, value: newText }
             });
         });
 
         const newState = result.current.state;
         const element = Object.values(newState.elements)[0] as Element;
-        expect(element[field]).toBe(newText);
+        expect(element.texts[index]).toBe(newText);
         expect(element.editing).toBe(false);
     });
 
@@ -162,7 +165,7 @@ describe('state reducer', () => {
         const elements = Object.values(newState.elements) as Element[];
         expect(elements[0].selected).toBe(true);
         expect(elements[0].editing).toBe(false);
-        elements.filter(elm =>elm.id !== '1').forEach(element => {
+        elements.filter(elm => elm.id !== '1').forEach(element => {
             expect(element.selected).toBe(false);
         });
     });
@@ -302,7 +305,7 @@ describe('state reducer', () => {
 
         state = result.current.state;
         const newParentElement = Object.values(state.elements).find(
-            (elm: Element) => elm.parentId === '1' &&elm.id !== childElement.id
+            (elm: Element) => elm.parentId === '1' && elm.id !== childElement.id
         ) as Element;
 
         act(() => {
@@ -366,7 +369,7 @@ describe('state reducer', () => {
 
         state = result.current.state;
         const newParentElement = Object.values(state.elements).find(
-            (elm: Element) => elm.parentId === '1' &&elm.id !== childElement.id
+            (elm: Element) => elm.parentId === '1' && elm.id !== childElement.id
         ) as Element;
 
         act(() => {
@@ -418,7 +421,7 @@ describe('state reducer', () => {
 
         state = result.current.state;
         let elementC = Object.values(state.elements).find(
-            (elm: Element) => elm.parentId === '1' &&elm.id !== elementB.id
+            (elm: Element) => elm.parentId === '1' && elm.id !== elementB.id
         ) as Element;
 
         await act(async () => {
@@ -465,19 +468,19 @@ describe('state reducer', () => {
     it('親ノードを子ノードにドロップできないことを確認する', async () => {
         const { result } = renderHook(() => useStore());
         const { dispatch } = result.current;
-    
+
         // 親ノードと子ノードを作成
         act(() => {
             dispatch({ type: 'SELECT_ELEMENT', payload: '1' });
             dispatch({ type: 'ADD_ELEMENT' });
         });
-    
+
         const initialState = result.current.state;
         const parentElement = initialState.elements['1'];
         const childElement = Object.values(initialState.elements).find(
             (elm: Element) => elm.parentId === '1'
         ) as Element;
-    
+
         // 親ノードを子ノードにドロップしようとする
         await act(async () => {
             dispatch({
@@ -491,9 +494,9 @@ describe('state reducer', () => {
                 }
             });
         });
-    
+
         const afterState = result.current.state;
-        
+
         // 状態が変化していないことを確認
         expect(afterState.elements).toEqual(initialState.elements);
         expect(afterState.elements[parentElement.id].parentId).toBeNull();
@@ -503,28 +506,28 @@ describe('state reducer', () => {
     it('親ノードを孫ノードにドロップできないことを確認する', async () => {
         const { result } = renderHook(() => useStore());
         const { dispatch } = result.current;
-    
+
         // 3階層のノードを作成 (1 -> 2 -> 3)
         act(() => {
             dispatch({ type: 'SELECT_ELEMENT', payload: '1' });
             dispatch({ type: 'ADD_ELEMENT' }); // Element 2
         });
-    
+
         let state = result.current.state;
         const elementB = Object.values(state.elements).find(
             (elm: Element) => elm.parentId === '1'
         ) as Element;
-    
+
         act(() => {
             dispatch({ type: 'SELECT_ELEMENT', payload: elementB.id });
             dispatch({ type: 'ADD_ELEMENT' }); // Element 3
         });
-    
+
         state = result.current.state;
         const elementC = Object.values(state.elements).find(
             (elm: Element) => elm.parentId === elementB.id
         ) as Element;
-    
+
         // ルートノード(1)を孫ノード(3)にドロップしようとする
         await act(async () => {
             dispatch({
@@ -538,9 +541,9 @@ describe('state reducer', () => {
                 }
             });
         });
-    
+
         const afterState = result.current.state;
-        
+
         // 状態が変化していないことを確認
         expect(afterState.elements['1'].parentId).toBeNull();
         expect(afterState.elements[elementC.id].children).toBe(0);
@@ -549,9 +552,9 @@ describe('state reducer', () => {
     it('ノードを自身にドロップできないことを確認する', async () => {
         const { result } = renderHook(() => useStore());
         const { dispatch } = result.current;
-    
+
         const initialElement = result.current.state.elements['1'];
-    
+
         // 自分自身にドロップしようとする
         await act(async () => {
             dispatch({
@@ -565,9 +568,9 @@ describe('state reducer', () => {
                 }
             });
         });
-    
+
         const afterState = result.current.state;
-        
+
         // 状態が変化していないことを確認
         expect(afterState.elements['1'].parentId).toBeNull();
         expect(afterState.elements['1'].children).toBe(0);

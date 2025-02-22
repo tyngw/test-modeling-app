@@ -31,18 +31,14 @@ interface AdjustmentResult {
     maxHeight: number;
 }
 
-export const createNewElement = (parentId: string | null, order: number, depth: number): Element => ({
+export const createNewElement = (parentId: string | null, order: number, depth: number, numSections: number = 2): Element => ({
     id: uuidv4(),
-    text: '',
-    text2: '',
-    text3: '',
+    texts: Array(numSections).fill(''),
     x: 0,
     y: 0,
     width: SIZE.WIDTH.MIN,
     height: SIZE.NODE_HEIGHT,
-    section1Height: SIZE.SECTION_HEIGHT,
-    section2Height: SIZE.SECTION_HEIGHT,
-    section3Height: SIZE.SECTION_HEIGHT,
+    sectionHeights: Array(numSections).fill(SIZE.SECTION_HEIGHT),
     parentId,
     order,
     depth,
@@ -475,8 +471,8 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
         const selectedElement = state.elements[action.payload];
         if (!selectedElement) return state;
 
-        const { text, text2, text3, selected, editing, visible, ...rest } = selectedElement;
-        console.log('[SELECT_NODE] selectElement:', rest);
+        // const { text, text2, text3, selected, editing, visible, ...rest } = selectedElement;
+        // console.log('[SELECT_NODE] selectElement:', rest);
 
         const updatedElements = Object.values(state.elements).reduce<{ [key: string]: Element }>((acc, element) => {
             acc[element.id] = {
@@ -503,13 +499,15 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
     UPDATE_TEXT: (state, action) => ({
         ...state,
         elements: {
-            ...state.elements,
-            [action.payload.id]: {
-                ...state.elements[action.payload.id],
-                [action.payload.field]: action.payload.value
-            }
+          ...state.elements,
+          [action.payload.id]: {
+            ...state.elements[action.payload.id],
+            texts: state.elements[action.payload.id].texts.map((text, idx) =>
+              idx === action.payload.index ? action.payload.value : text
+            )
+          }
         }
-    }),
+      }),
 
     ADD_ELEMENT: state => handleElementMutation(state, (elements, selectedElement) => {
         const newElements = createElementAdder(elements, selectedElement);
