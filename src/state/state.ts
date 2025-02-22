@@ -4,9 +4,9 @@ import { handleArrowUp, handleArrowDown, handleArrowRight, handleArrowLeft } fro
 import { Element } from '../types';
 import {
     OFFSET,
-    // OFFSET.Y,
     DEFAULT_POSITION,
     SIZE,
+    NUMBER_OF_SECTIONS,
 } from '../constants/ElementSettings';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -31,13 +31,13 @@ interface AdjustmentResult {
     maxHeight: number;
 }
 
-export const createNewElement = (parentId: string | null, order: number, depth: number, numSections: number = 2): Element => ({
+export const createNewElement = (parentId: string | null, order: number, depth: number, numSections: number = NUMBER_OF_SECTIONS): Element => ({
     id: uuidv4(),
     texts: Array(numSections).fill(''),
     x: 0,
     y: 0,
     width: SIZE.WIDTH.MIN,
-    height: SIZE.NODE_HEIGHT,
+    height: SIZE.SECTION_HEIGHT * numSections,
     sectionHeights: Array(numSections).fill(SIZE.SECTION_HEIGHT),
     parentId,
     order,

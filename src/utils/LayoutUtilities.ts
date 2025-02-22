@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import {
   SIZE,
   OFFSET,
+  NUMBER_OF_SECTIONS,
 } from '../constants/ElementSettings';
 
 export const useWindowSize = () => {
@@ -37,6 +38,6 @@ export const calculateCanvasSize = (elements: { [key: string]: Element }) => {
 
   return {
     width: maxElementX + OFFSET.X,
-    height: maxElementY + SIZE.NODE_HEIGHT,
+    height: maxElementY + (SIZE.SECTION_HEIGHT * NUMBER_OF_SECTIONS),
   };
 };
