@@ -1,24 +1,20 @@
 // src/types.ts
 export interface Element {
-    id: string;
-    text: string;
-    text2: string;
-    text3: string;
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    section1Height: number;
-    section2Height: number;
-    section3Height: number;
-    parentId: string | null;
-    order: number;
-    depth: number;
-    children: number;
-    editing: boolean;
-    selected: boolean;
-    visible: boolean;
-  }
+  id: string;
+  texts: string[];
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  sectionHeights: number[];
+  parentId: string | null;
+  order: number;
+  depth: number;
+  children: number;
+  editing: boolean;
+  selected: boolean;
+  visible: boolean;
+}
   
   export interface CanvasState {
     elements: Record<string, Element>;

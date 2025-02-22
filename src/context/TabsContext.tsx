@@ -4,6 +4,7 @@ import { State, initialState } from '../state/state';
 import { v4 as uuidv4 } from 'uuid';
 import { DEFAULT_POSITION } from '../constants/ElementSettings';
 import { createNewElement } from '../state/state';
+import { convertLegacyElement } from '../utils/FileHelpers';
 
 export interface TabState {
   id: string;
@@ -56,24 +57,41 @@ const loadTabsState = (): TabsStorage => {
       const parsed: TabsStorage = JSON.parse(saved);
       // データ整合性チェック
       if (Array.isArray(parsed?.tabs) && typeof parsed?.currentTabId === 'string') {
+        // タブデータを変換
+        const convertedTabs = parsed.tabs.map(tab => ({
+          ...tab,
+          state: {
+            ...tab.state,
+            elements: Object.fromEntries(
+              Object.entries(tab.state.elements).map(([id, element]) => [
+                id,
+                convertLegacyElement(element)
+              ])
+            )
+          }
+        }));
+
         // 現在のタブIDが存在しない場合は最初のタブを選択
-        const validCurrentTabId = parsed.tabs.some((t: TabState) => t.id === parsed.currentTabId)
+        const validCurrentTabId = convertedTabs.some((t: TabState) => t.id === parsed.currentTabId)
           ? parsed.currentTabId
-          : parsed.tabs[0]?.id || '';
-        return { 
-          tabs: parsed.tabs as TabState[], 
-          currentTabId: validCurrentTabId 
+          : convertedTabs[0]?.id || '';
+
+        return {
+          tabs: convertedTabs,
+          currentTabId: validCurrentTabId
         };
+
       }
     }
   } catch (e) {
     console.error('Failed to load tabs state:', e);
   }
+
   // 新規作成
   const initialTab = createInitialTabState();
-  return { 
-    tabs: [initialTab], 
-    currentTabId: initialTab.id 
+  return {
+    tabs: [initialTab],
+    currentTabId: initialTab.id
   };
 };
 
@@ -125,7 +143,7 @@ export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const updateTabName = useCallback((tabId: string, newName: string) => {
     setTabsState(prev => ({
       ...prev,
-      tabs: prev.tabs.map(tab => 
+      tabs: prev.tabs.map(tab =>
         tab.id === tabId ? { ...tab, name: newName } : tab
       )
     }));
