@@ -1,6 +1,6 @@
 // src/components/TextDisplayArea.tsx
 import React, { memo, useEffect, useRef, useState } from 'react';
-import { SIZE, DEFAULT_FONT_SIZE, LINE_HEIGHT_RATIO } from '../constants/ElementSettings';
+import { SIZE, DEFAULT_FONT_SIZE, LINE_HEIGHT_RATIO, TEXTAREA_PADDING } from '../constants/ElementSettings';
 import { wrapText } from '../utils/TextareaHelpers';
 
 interface TextDisplayAreaProps {
@@ -32,24 +32,28 @@ const TextDisplayArea: React.FC<TextDisplayAreaProps> = memo(({
     let animationFrame: number;
     const updateHeight = () => {
       if (!textRef.current) return;
-
-      // ズーム率を渡すように修正
+      
+      // 改行計算
       const wrappedLines = wrapText(text || '', width, zoomRatio);
-      const lineHeightValue = DEFAULT_FONT_SIZE * zoomRatio * LINE_HEIGHT_RATIO;
-
-      // 最小高さにズーム率を反映
-      const newHeight = Math.max(
-        wrappedLines.length * lineHeightValue,
-        SIZE.SECTION_HEIGHT * zoomRatio
+      console.log('wrappedLines: ', wrappedLines)
+      
+      // ライン高計算
+      const lineHeightValue = DEFAULT_FONT_SIZE * LINE_HEIGHT_RATIO * zoomRatio;
+      
+      const minHeight = Math.max(
+        SIZE.SECTION_HEIGHT * zoomRatio,
+        (lineHeightValue + TEXTAREA_PADDING.VERTICAL) * zoomRatio
       );
 
-      if (Math.abs(newHeight - currentHeight) > 1) {
-        setCurrentHeight(newHeight);
-        onHeightChange(newHeight / zoomRatio);
+      const contentHeight = wrappedLines.length * lineHeightValue;
+      const totalHeight = Math.max(contentHeight, minHeight) + TEXTAREA_PADDING.VERTICAL * zoomRatio;
+
+      if (Math.abs(totalHeight - currentHeight) > 1) {
+        setCurrentHeight(totalHeight);
+        onHeightChange(totalHeight / zoomRatio);
       }
     };
 
-    // リサイズ時の処理を最適化
     if (text !== prevText.current || width !== prevWidth.current) {
       animationFrame = requestAnimationFrame(updateHeight);
       prevText.current = text;
@@ -60,27 +64,26 @@ const TextDisplayArea: React.FC<TextDisplayAreaProps> = memo(({
   }, [text, width, zoomRatio, currentHeight, onHeightChange]);
 
   return (
-    <foreignObject x={x} y={y} width={width} height={currentHeight} pointerEvents="none">
+    <foreignObject 
+      x={x} 
+      y={y} 
+      width={width} 
+      height={currentHeight} 
+      pointerEvents="none"
+    >
       <div
         ref={textRef}
         style={{
           fontSize: `${DEFAULT_FONT_SIZE}px`,
           lineHeight: `${LINE_HEIGHT_RATIO}em`,
-          fontFamily: `
-            -apple-system,
-            BlinkMacSystemFont,
-            "Segoe UI",
-            Roboto,
-            "Helvetica Neue",
-            Arial,
-            sans-serif
-          `,
-          width: `${width}px`,
+          fontFamily: `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`,
+          width: `${width - TEXTAREA_PADDING.HORIZONTAL}px`,
           minHeight: `${SIZE.SECTION_HEIGHT}px`,
-          padding: '2px 3px',
+          padding: `${TEXTAREA_PADDING.VERTICAL / 2}px ${TEXTAREA_PADDING.HORIZONTAL / 2}px`,
           overflow: 'hidden',
           whiteSpace: 'pre-wrap',
           wordWrap: 'break-word',
+          boxSizing: 'content-box',
         }}
       >
         {text}
