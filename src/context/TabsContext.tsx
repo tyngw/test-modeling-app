@@ -2,7 +2,7 @@
 import React, { createContext, useContext, ReactNode, useState, useCallback, useMemo, useEffect } from 'react';
 import { State, initialState } from '../state/state';
 import { v4 as uuidv4 } from 'uuid';
-import { DEFAULT_POSITION, OFFSET } from '../constants/ElementSettings';
+import { DEFAULT_POSITION } from '../constants/ElementSettings';
 import { createNewElement } from '../state/state';
 
 export interface TabState {

@@ -79,7 +79,6 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
     return (
         <>
             {(['text', 'text2', 'text3'] as TextField[]).map((field, index) => {
-                // const height = getSectionHeight(index);
                 let yPosition = 0;
                 for (let i = 0; i < index; i++) {
                     yPosition += getSectionHeight(i);
