@@ -2,8 +2,9 @@
 import React, { useRef } from 'react';
 import { useCanvas } from '../context/CanvasContext';
 import { calculateElementWidth } from '../utils/TextareaHelpers';
-import { 
-    DEFAULT_FONT_SIZE, 
+import {
+    DEFAULT_FONT_SIZE,
+    TEXTAREA_PADDING,
     LINE_HEIGHT_RATIO,
 } from '../constants/ElementSettings';
 import { Element } from '../types';
@@ -27,7 +28,7 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
 
     const getSectionHeight = (index: number): number => {
         const sectionKey = `section${index + 1}Height` as keyof Element;
-        return element[sectionKey] as number;
+        return (element[sectionKey] as number);
     };
 
     const sectionHeights = [
@@ -38,7 +39,7 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
 
     const maxWidth = calculateElementWidth(
         [element.text, element.text2, element.text3],
-        state.zoomRatio
+        TEXTAREA_PADDING.HORIZONTAL,
     );
     element.width = maxWidth;
 
@@ -62,12 +63,12 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
         if (e.key === 'Enter' && e.shiftKey) {
             e.preventDefault();
             const cursorPosition = e.currentTarget.selectionStart;
-            const newValue = e.currentTarget.value.substring(0, cursorPosition) + 
-                            '\n' + 
-                            e.currentTarget.value.substring(cursorPosition);
-            dispatch({ 
-                type: 'UPDATE_TEXT', 
-                payload: { id: element.id, field, value: newValue } 
+            const newValue = e.currentTarget.value.substring(0, cursorPosition) +
+                '\n' +
+                e.currentTarget.value.substring(cursorPosition);
+            dispatch({
+                type: 'UPDATE_TEXT',
+                payload: { id: element.id, field, value: newValue }
             });
         }
         if (e.key === 'Escape') {
@@ -109,6 +110,7 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
                             margin: '1px 1px',
                             fontSize: `${DEFAULT_FONT_SIZE * state.zoomRatio}px`,
                             lineHeight: `${LINE_HEIGHT_RATIO}em`,
+                            padding: `0`,
                             fontFamily: `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`,
                             border: 'none',
                             boxSizing: 'border-box',
