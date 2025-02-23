@@ -48,26 +48,29 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
     ? draggingElement.id === element.id || isDescendant(state.elements, draggingElement.id, element.id)
     : false;
 
-  const handleHeightChange = useCallback((sectionIndex: number, newHeight: number) => {
-    const currentHeight = element.sectionHeights[sectionIndex];
-
-    if (currentHeight !== null && Math.abs(newHeight - currentHeight) > 1) {
-      const newSectionHeights = [...element.sectionHeights];
-      newSectionHeights[sectionIndex] = newHeight;
-
-      const newWidth = calculateElementWidth(element.texts, TEXTAREA_PADDING.HORIZONTAL);
-
-      dispatch({
-        type: 'UPDATE_ELEMENT_SIZE',
-        payload: {
-          id: element.id,
-          width: newWidth,
-          height: element.height + (newHeight - currentHeight),
-          sectionHeights: newSectionHeights
-        }
-      });
-    }
-  }, [dispatch, element]);
+    const handleHeightChange = useCallback((sectionIndex: number, newHeight: number) => {
+      const currentHeight = element.sectionHeights[sectionIndex];
+  
+      if (currentHeight !== null && Math.abs(newHeight - currentHeight) > 1) {
+        const newSectionHeights = [...element.sectionHeights];
+        newSectionHeights[sectionIndex] = newHeight;
+  
+        const newWidth = calculateElementWidth(element.texts, TEXTAREA_PADDING.HORIZONTAL);
+  
+        // セクションの高さの合計を再計算
+        const totalHeight = newSectionHeights.reduce((sum, h) => sum + h, 0);
+  
+        dispatch({
+          type: 'UPDATE_ELEMENT_SIZE',
+          payload: {
+            id: element.id,
+            width: newWidth,
+            height: totalHeight, // 合計高さを設定
+            sectionHeights: newSectionHeights
+          }
+        });
+      }
+    }, [dispatch, element]);
 
   const handleSelect = (e: React.MouseEvent) => {
     e.stopPropagation();
