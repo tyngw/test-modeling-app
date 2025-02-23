@@ -12,8 +12,8 @@ import { saveSvg } from './utils/fileHelpers';
 import { loadElements, saveElements } from './utils/fileHelpers';
 import { generateWithGemini } from './utils/api';
 import { getApiKey } from './utils/localStorageHelpers';
-import { SYSTEM_PROMPT } from './constants/systemPrompt';
 import { formatElementsForPrompt } from './utils/elementHelpers';
+import { createSystemPrompt } from './constants/promptHelpers';
 
 const AppContent: React.FC = () => {
   const { tabs, currentTabId, addTab, closeTab, switchTab, updateTabState, updateTabName } = useTabs();
@@ -49,26 +49,29 @@ const AppContent: React.FC = () => {
       selectedElement.id
       );
 
+      const inputText = localStorage.getItem('prompt') || 'なし:';
+
       // プロンプト構築
-      const fullPrompt = [
-      localStorage.getItem('systemPrompt'),
-      structureText,
-      "選択中の要素: " + selectedElement.texts[0],
-      "# 4. インプットされた情報",
-      localStorage.getItem('prompt') || 'なし:',
-      "```"
-      ].join('\n\n');
+      const fullPrompt = createSystemPrompt({ structureText, inputText });
 
-      const response = await generateWithGemini(fullPrompt, decryptedApiKey);
+      // Gemini API 呼び出し（Function Calling 対応）
+      const result = await generateWithGemini(fullPrompt, decryptedApiKey);
 
-      const codeBlocks = response.match(/```[\s\S]*?```/g) || [];
-      const childNodes = codeBlocks.flatMap((block: string) => {
-        return block
-          .replace(/```/g, '')
-          .split('\n')
-          .map((line: string) => line.trim())
-          .filter((line: string) => line.length > 0);
-      });
+      // extractNextElements の戻り値が配列の場合はそのまま採用、
+      // 文字列の場合は従来のコードブロック抽出ロジックを適用
+      let childNodes: string[] = [];
+      if (Array.isArray(result)) {
+        childNodes = result;
+      } else if (typeof result === "string") {
+        const codeBlocks = result.match(/```[\s\S]*?```/g) || [];
+        childNodes = codeBlocks.flatMap((block: string) => {
+          return block
+            .replace(/```/g, '')
+            .split('\n')
+            .map((line: string) => line.trim())
+            .filter((line: string) => line.length > 0);
+        });
+      }
 
       childNodes.forEach((text: string) => {
         dispatch({
