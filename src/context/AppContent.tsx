@@ -60,7 +60,6 @@ const AppContent: React.FC = () => {
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={toggleSettings}
-        // onSave={handleSettingsSave}
       />
     </div>
   );
