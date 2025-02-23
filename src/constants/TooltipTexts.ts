@@ -6,6 +6,7 @@ export const tooltipTexts = {
     SAVE_SVG: 'SVG画像で保存',
     ADD: '新しい要素の追加',
     DELETE: '要素の削除',
+    AI: 'AI機能',
     EXPAND: '展開',
     COLLAPSE: '折りたたみ',
     UNDO: '元に戻す',

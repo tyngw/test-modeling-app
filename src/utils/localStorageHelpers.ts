@@ -59,6 +59,13 @@ export const setApiKey = (value: string): void => {
   }
 };
 
+export const getApiEndpoint = (): string => localStorage.getItem('apiEndpoint') || 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+export const setApiEndpoint = (endpoint: string) => localStorage.setItem('apiEndpoint', endpoint);
+
+// プロンプト用の関数
+export const getPrompt = (): string => localStorage.getItem('prompt') || '';
+export const setPrompt = (prompt: string) => localStorage.setItem('prompt', prompt);
+
 // タブ状態関連
 export const getTabsState = (): string | null => {
   return safeLocalStorage.getItem(TABS_STORAGE_KEY);

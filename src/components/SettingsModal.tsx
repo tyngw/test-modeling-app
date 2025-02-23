@@ -1,4 +1,8 @@
 // src/components/SettingsModal.tsx
+
+// TODO: APIのエンドポイントを指定できるようにする
+// 新たにPromptタブを設け、複数行入力可能なプロンプト入力ボックスを設置する。
+// 入力したプロンプトはlocalStorageにpromptとして保存する
 import React, { useState, useEffect } from 'react';
 import ModalWindow from './ModalWindow';
 import { Tabs, Tab, Box, TextField, Button, Typography } from '@mui/material';
@@ -6,7 +10,11 @@ import {
   getNumberOfSections,
   setNumberOfSections,
   getApiKey,
-  setApiKey
+  setApiKey,
+  getApiEndpoint,
+  setApiEndpoint,
+  getPrompt,
+  setPrompt,
 } from '../utils/localStorageHelpers';
 
 interface SettingsModalProps {
@@ -18,19 +26,25 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState(0);
   const [numberOfSections, setNumberOfSectionsState] = useState(3);
   const [apiKey, setApiKeyState] = useState('');
+  const [apiEndpoint, setApiEndpointState] = useState('');
+  const [prompt, setPromptState] = useState('');
 
   useEffect(() => {
     if (isOpen) {
       setNumberOfSectionsState(getNumberOfSections());
       setApiKeyState(getApiKey());
+      setApiEndpointState(getApiEndpoint());
+      setPromptState(getPrompt());
     }
   }, [isOpen]);
+
 
   const handleSave = () => {
     const validSections = Math.max(1, Math.min(10, numberOfSections));
     setNumberOfSections(validSections);
     setApiKey(apiKey);
-
+    setApiEndpoint(apiEndpoint);
+    setPrompt(prompt);
     onClose();
   };
 
@@ -39,10 +53,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
       <Typography variant="h6" gutterBottom>
         設定
       </Typography>
-      
+
       <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)}>
         <Tab label="Elements Setting" />
-        <Tab label="API Key" />
+        <Tab label="API Setting" />
+        <Tab label="Prompt" />
       </Tabs>
 
       <Box sx={{ mt: 2 }}>
@@ -63,13 +78,34 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
         {activeTab === 1 && (
           <Box>
             <TextField
-              label="APIキー"
+              label="API Endpoint"
+              value={apiEndpoint}
+              onChange={(e) => setApiEndpointState(e.target.value)}
+              fullWidth
+              margin="normal"
+            />
+            <TextField
+              label="Gemini APIキー"
               type="password"
               value={apiKey}
               onChange={(e) => setApiKeyState(e.target.value)}
               fullWidth
               margin="normal"
               helperText="入力されたキーは暗号化して保存されます"
+            />
+          </Box>
+        )}
+        {activeTab === 2 && (
+          <Box>
+            <TextField
+              label="Prompt"
+              value={prompt}
+              onChange={(e) => setPromptState(e.target.value)}
+              fullWidth
+              margin="normal"
+              multiline
+              rows={6}
+              variant="outlined"
             />
           </Box>
         )}
