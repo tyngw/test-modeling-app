@@ -27,7 +27,7 @@ const isLegacyElement = (obj: unknown): obj is LegacyElement => {
 // 変換関数を強化
 export const convertLegacyElement = (element: unknown): Element => {
   if (!isLegacyElement(element)) {
-    return createNewElement(null, 0, 1)
+    return createNewElement()
   }
 
   // 新しい形式の要素をチェック

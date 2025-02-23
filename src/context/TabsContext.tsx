@@ -39,7 +39,7 @@ const createInitialTabState = (): TabState => {
       ...initialState,
       elements: {
         [newRootId]: {
-          ...createNewElement(null, 0, 1),
+          ...createNewElement(),
           id: newRootId,
           x: DEFAULT_POSITION.X,
           y: DEFAULT_POSITION.Y,
