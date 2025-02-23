@@ -12,10 +12,9 @@ import {
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (settings: { numberOfSections: number; apiKey: string }) => void;
 }
 
-const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave }) => {
+const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState(0);
   const [numberOfSections, setNumberOfSectionsState] = useState(3);
   const [apiKey, setApiKeyState] = useState('');
@@ -31,11 +30,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave }
     const validSections = Math.max(1, Math.min(10, numberOfSections));
     setNumberOfSections(validSections);
     setApiKey(apiKey);
-
-    onSave({
-      numberOfSections: validSections,
-      apiKey: apiKey
-    });
 
     onClose();
   };

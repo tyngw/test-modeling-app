@@ -46,11 +46,6 @@ const AppContent: React.FC = () => {
     );
   }, [currentTab, dispatch, toggleHelp, isHelpOpen, currentTabId, updateTabName, toggleSettings]);
 
-  const handleSettingsSave = useCallback((settings: { numberOfSections: number; apiKey: string }) => {
-    // ここで設定変更に伴う処理を追加可能
-    console.log('設定が保存されました:', settings);
-  }, []);
-
   return (
     <div>
       <TabHeaders
@@ -65,7 +60,7 @@ const AppContent: React.FC = () => {
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={toggleSettings}
-        onSave={handleSettingsSave}
+        // onSave={handleSettingsSave}
       />
     </div>
   );
