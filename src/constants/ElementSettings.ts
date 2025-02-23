@@ -1,6 +1,6 @@
 // src/constants/ElementSettings.ts
 export const DEFAULT_ZOOM_RATIO = 1;
-export const NUMBER_OF_SECTIONS = 2;
+export const NUMBER_OF_SECTIONS = 3;
 export const DEFAULT_POSITION = {
     X: 50,
     Y: 50,
