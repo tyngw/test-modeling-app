@@ -5,6 +5,10 @@ import { initialState, reducer } from '../state';
 import { Element } from '../../types';
 import { SIZE } from '../../constants/ElementSettings';
 
+jest.mock('../../constants/ElementSettings', () => ({
+    ...jest.requireActual('../../constants/ElementSettings'),
+    NUMBER_OF_SECTIONS: 3
+  }));
 
 const useStore = () => {
     const [state, dispatch] = useReducer(reducer, initialState);
