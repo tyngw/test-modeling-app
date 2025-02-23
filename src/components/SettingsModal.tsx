@@ -15,6 +15,8 @@ import {
   setApiEndpoint,
   getPrompt,
   setPrompt,
+  getSystemPrompt,
+  setSystemPrompt,
 } from '../utils/localStorageHelpers';
 
 interface SettingsModalProps {
@@ -28,6 +30,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const [apiKey, setApiKeyState] = useState('');
   const [apiEndpoint, setApiEndpointState] = useState('');
   const [prompt, setPromptState] = useState('');
+  const [systemPrompt, setSystemPromptState] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -35,6 +38,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
       setApiKeyState(getApiKey());
       setApiEndpointState(getApiEndpoint());
       setPromptState(getPrompt());
+      setSystemPromptState(getSystemPrompt());
     }
   }, [isOpen]);
 
@@ -45,6 +49,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     setApiKey(apiKey);
     setApiEndpoint(apiEndpoint);
     setPrompt(prompt);
+    setSystemPrompt(systemPrompt)
     onClose();
   };
 
@@ -101,6 +106,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
               label="Prompt"
               value={prompt}
               onChange={(e) => setPromptState(e.target.value)}
+              fullWidth
+              margin="normal"
+              multiline
+              rows={6}
+              variant="outlined"
+            />
+            <TextField
+              label="SystemPrompt"
+              value={systemPrompt}
+              onChange={(e) => setSystemPromptState(e.target.value)}
               fullWidth
               margin="normal"
               multiline
