@@ -1,4 +1,4 @@
-// src/constants/KeyActionMap.ts
+// src/constants/keyActionMap.ts
 export const keyActionMap: { [key: string]: string } = {
     'Ctrl+z': 'UNDO',
     'Ctrl+Shift+z': 'REDO',

@@ -1,9 +1,9 @@
-// src/components/IdeaElement.tsx
+// src/components/ideaElement.tsx
 import React, { useCallback, useMemo, useState } from 'react';
-import { useCanvas } from '../context/CanvasContext';
-import TextSection from './TextDisplayArea';
+import { useCanvas } from '../context/canvasContext';
+import TextSection from './textDisplayArea';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
-import { calculateElementWidth } from '../utils/TextareaHelpers';
+import { calculateElementWidth } from '../utils/textareaHelpers';
 import {
   CURVE_CONTROL_OFFSET,
   DEFAULT_FONT_SIZE,
@@ -12,7 +12,7 @@ import {
   SHADOW_OFFSET,
   ELEM_STYLE,
   ARROW,
-} from '../constants/ElementSettings';
+} from '../constants/elementSettings';
 import { Element as CanvasElement } from '../types';
 import { isDescendant } from '../state/state';
 

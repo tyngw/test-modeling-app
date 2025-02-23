@@ -1,10 +1,10 @@
 // src/hooks/useElementDragEffect.tsx
 import { useState, useEffect, useCallback } from 'react';
 import { Element } from '../types';
-import { useCanvas } from '../context/CanvasContext';
+import { useCanvas } from '../context/canvasContext';
 import { isDescendant } from '../state/state';
-import { ToastMessages } from '../constants/ToastMessages';
-import { HEADER_HEIGHT } from '../constants/ElementSettings';
+import { ToastMessages } from '../constants/toastMessages';
+import { HEADER_HEIGHT } from '../constants/elementSettings';
 
 interface State {
   zoomRatio: number;

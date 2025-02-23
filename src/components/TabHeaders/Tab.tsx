@@ -1,6 +1,6 @@
 // src/components/TabHeaders/TabHeader.tsx
 import React from 'react';
-import { TabState } from '../../context/TabsContext';
+import { TabState } from '../../context/tabsContext';
 
 interface TabHeaderProps {
   tab: TabState;

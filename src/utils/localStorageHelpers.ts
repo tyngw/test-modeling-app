@@ -1,6 +1,6 @@
 // src/utils/localStorageHelpers.ts
 import CryptoJS from 'crypto-js';
-import { NUMBER_OF_SECTIONS } from '../constants/ElementSettings';
+import { NUMBER_OF_SECTIONS } from '../constants/elementSettings';
 import { SYSTEM_PROMPT } from '../constants/systemPrompt';
 
 const ENCRYPTION_KEY = 'encryptionKey';

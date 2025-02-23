@@ -1,10 +1,10 @@
-// src/context/TabsContext.tsx
+// src/context/tabsContext.tsx
 import React, { createContext, useContext, ReactNode, useState, useCallback, useMemo, useEffect } from 'react';
 import { State, initialState } from '../state/state';
 import { v4 as uuidv4 } from 'uuid';
-import { DEFAULT_POSITION } from '../constants/ElementSettings';
+import { DEFAULT_POSITION } from '../constants/elementSettings';
 import { createNewElement } from '../state/state';
-import { convertLegacyElement } from '../utils/FileHelpers';
+import { convertLegacyElement } from '../utils/fileHelpers';
 import { getTabsState, setTabsState } from '../utils/localStorageHelpers';
 
 export interface TabState {

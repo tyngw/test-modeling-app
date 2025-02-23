@@ -1,6 +1,6 @@
-// src/components/Marker.tsx
+// src/components/marker.tsx
 import React from 'react';
-import { ARROW } from '../constants/ElementSettings';
+import { ARROW } from '../constants/elementSettings';
 
 export function Marker() {
     return (

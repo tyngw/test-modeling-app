@@ -1,12 +1,12 @@
-// src/components/InputFields.tsx
+// src/components/inputFields.tsx
 import React, { useRef } from 'react';
-import { useCanvas } from '../context/CanvasContext';
-import { calculateElementWidth } from '../utils/TextareaHelpers';
+import { useCanvas } from '../context/canvasContext';
+import { calculateElementWidth } from '../utils/textareaHelpers';
 import {
     DEFAULT_FONT_SIZE,
     TEXTAREA_PADDING,
     LINE_HEIGHT_RATIO,
-} from '../constants/ElementSettings';
+} from '../constants/elementSettings';
 import { Element } from '../types';
 
 interface InputFieldsProps {

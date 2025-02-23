@@ -1,7 +1,7 @@
 // src/hooks/useResizeEffect.tsx
 import { useEffect } from 'react';
-import { calculateCanvasSize } from '../utils/LayoutUtilities';
-import { ICONBAR_HEIGHT } from '../constants/ElementSettings';
+import { calculateCanvasSize } from '../utils/layoutUtilities';
+import { ICONBAR_HEIGHT } from '../constants/elementSettings';
 
 interface ElementWithDimensions {
   x: number;

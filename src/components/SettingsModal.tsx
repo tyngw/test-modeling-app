@@ -1,10 +1,6 @@
-// src/components/SettingsModal.tsx
-
-// TODO: APIのエンドポイントを指定できるようにする
-// 新たにPromptタブを設け、複数行入力可能なプロンプト入力ボックスを設置する。
-// 入力したプロンプトはlocalStorageにpromptとして保存する
+// src/components/settingsModal.tsx
 import React, { useState, useEffect } from 'react';
-import ModalWindow from './ModalWindow';
+import ModalWindow from './modalWindow';
 import { Tabs, Tab, Box, TextField, Button, Typography } from '@mui/material';
 import {
   getNumberOfSections,
