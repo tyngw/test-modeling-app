@@ -27,7 +27,6 @@ const TabHeaders: React.FC<TabHeadersProps> = React.memo(({
     height: TABBAR_HEIGHT,
     marginTop: ICONBAR_HEIGHT,
     position: 'fixed',
-    zIndex: 10001,
   }}>
     {tabs.map(tab => (
       <Tab
