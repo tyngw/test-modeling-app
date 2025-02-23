@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { DEFAULT_POSITION } from '../constants/ElementSettings';
 import { createNewElement } from '../state/state';
 import { convertLegacyElement } from '../utils/FileHelpers';
+import { getTabsState, setTabsState } from '../utils/localStorageHelpers';
 
 export interface TabState {
   id: string;
@@ -52,7 +53,7 @@ const createInitialTabState = (): TabState => {
 // ローカルストレージから状態を読み込む
 const loadTabsState = (): TabsStorage => {
   try {
-    const saved = localStorage.getItem('tabsState');
+    const saved = getTabsState();
     if (saved) {
       const parsed: TabsStorage = JSON.parse(saved);
       // データ整合性チェック
@@ -97,7 +98,7 @@ const loadTabsState = (): TabsStorage => {
 
 // ローカルストレージに状態を保存
 const saveTabsToLocalStorage = (tabs: TabState[], currentTabId: string) => {
-  localStorage.setItem('tabsState', JSON.stringify({ tabs, currentTabId }));
+  setTabsState(JSON.stringify({ tabs, currentTabId }));
 };
 
 export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {

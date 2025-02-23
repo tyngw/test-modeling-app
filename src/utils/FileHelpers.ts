@@ -2,16 +2,6 @@
 import { SIZE } from "../constants/ElementSettings";
 import { createNewElement } from "../state/state";
 import { Element } from "../types";
-const STORAGE_KEY = 'lastSavedFileName';
-
-export const getLastSavedFileName = (): string | null => {
-    return localStorage.getItem(STORAGE_KEY);
-}
-
-export const setLastSavedFileName = (name: string) => {
-    name = name.replace('.json', '');
-    localStorage.setItem(STORAGE_KEY, name);
-}
 
 // 既存のLegacyElement型を拡張
 type LegacyElement = {
