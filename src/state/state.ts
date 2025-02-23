@@ -25,32 +25,41 @@ export type Action = {
 
 type ElementsMap = { [key: string]: Element };
 
-export const createNewElement = (
-    parentId: string | null,
-    order: number,
-    depth: number,
-    numSections: number = getNumberOfSections()
-): Element => ({
-    id: uuidv4(),
-    texts: Array(numSections).fill(''),
-    x: 0,
-    y: 0,
-    width: SIZE.WIDTH.MIN,
-    height: SIZE.SECTION_HEIGHT * numSections,
-    sectionHeights: Array(numSections).fill(SIZE.SECTION_HEIGHT),
-    parentId,
-    order,
-    depth,
-    children: 0,
-    editing: true,
-    selected: true,
-    visible: true,
-});
+export interface NewElementParams {
+    parentId?: string | null;
+    order?: number;
+    depth?: number;
+    numSections?: number;
+}
+
+export const createNewElement = ({
+    parentId = null,
+    order = 0,
+    depth = 1,
+    numSections = getNumberOfSections(),
+}: NewElementParams = {}): Element => {
+    return {
+        id: uuidv4(),
+        texts: Array(numSections).fill(''),
+        x: 0,
+        y: 0,
+        width: SIZE.WIDTH.MIN,
+        height: SIZE.SECTION_HEIGHT * numSections,
+        sectionHeights: Array(numSections).fill(SIZE.SECTION_HEIGHT),
+        parentId,
+        order,
+        depth,
+        children: 0,
+        editing: true,
+        selected: true,
+        visible: true,
+    };
+};
 
 export const initialState: State = {
     elements: {
         '1': {
-            ...createNewElement(null, 0, 1),
+            ...createNewElement(),
             id: '1',
             x: DEFAULT_POSITION.X,
             y: DEFAULT_POSITION.Y,
@@ -390,7 +399,7 @@ const createElementAdder = (elements: { [key: string]: Element }, parentElement:
         ...elements,
         [parentElement.id]: { ...parentElement, children: parentElement.children + 1, selected: false },
         [newId]: {
-            ...createNewElement(parentElement.id, newOrder, parentElement.depth + 1),
+            ...createNewElement({parentId: parentElement.id, order: newOrder, depth: parentElement.depth + 1}),
             id: newId,
         }
     };
@@ -416,7 +425,7 @@ const createSiblingElementAdder = (elements: ElementsMap, selectedElement: Eleme
     });
 
     // 新しい要素を作成
-    const newElement = createNewElement(parentId, newOrder, selectedElement.depth);
+    const newElement = createNewElement({parentId: parentId, order: newOrder, depth: selectedElement.depth});
     updatedElements[selectedElement.id] = { ...selectedElement, selected: false };
     updatedElements[newElement.id] = newElement;
 
