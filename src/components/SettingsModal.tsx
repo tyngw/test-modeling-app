@@ -2,7 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import ModalWindow from './ModalWindow';
 import { Tabs, Tab, Box, TextField, Button, Typography } from '@mui/material';
-import CryptoJS from 'crypto-js';
+import {
+  getNumberOfSections,
+  setNumberOfSections,
+  getApiKey,
+  setApiKey
+} from '../utils/localStorageHelpers';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -12,30 +17,21 @@ interface SettingsModalProps {
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave }) => {
   const [activeTab, setActiveTab] = useState(0);
-  const [numberOfSections, setNumberOfSections] = useState(3);
-  const [apiKey, setApiKey] = useState('');
+  const [numberOfSections, setNumberOfSectionsState] = useState(3);
+  const [apiKey, setApiKeyState] = useState('');
 
   useEffect(() => {
     if (isOpen) {
-      // LocalStorageから設定値を読み込む
-      const savedSections = localStorage.getItem('numberOfSections');
-      const savedEncryptedKey = localStorage.getItem('apiKey');
-
-      setNumberOfSections(savedSections ? parseInt(savedSections, 10) : 3);
-      setApiKey(savedEncryptedKey ? CryptoJS.AES.decrypt(savedEncryptedKey, 'encryptionKey').toString(CryptoJS.enc.Utf8) : '');
+      setNumberOfSectionsState(getNumberOfSections());
+      setApiKeyState(getApiKey());
     }
   }, [isOpen]);
 
   const handleSave = () => {
-    // 入力値を検証
     const validSections = Math.max(1, Math.min(10, numberOfSections));
-    const encryptedKey = CryptoJS.AES.encrypt(apiKey, 'encryptionKey').toString();
+    setNumberOfSections(validSections);
+    setApiKey(apiKey);
 
-    // LocalStorageに保存
-    localStorage.setItem('numberOfSections', validSections.toString());
-    localStorage.setItem('apiKey', encryptedKey);
-
-    // 親コンポーネントに通知
     onSave({
       numberOfSections: validSections,
       apiKey: apiKey
@@ -62,7 +58,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave }
               label="セクション数"
               type="number"
               value={numberOfSections}
-              onChange={(e) => setNumberOfSections(parseInt(e.target.value) || 3)}
+              onChange={(e) => setNumberOfSectionsState(parseInt(e.target.value) || 3)}
               fullWidth
               margin="normal"
               inputProps={{ min: 1, max: 10 }}
@@ -76,7 +72,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave }
               label="APIキー"
               type="password"
               value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
+              onChange={(e) => setApiKeyState(e.target.value)}
               fullWidth
               margin="normal"
               helperText="入力されたキーは暗号化して保存されます"
