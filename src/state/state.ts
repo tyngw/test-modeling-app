@@ -7,7 +7,6 @@ import {
     OFFSET,
     DEFAULT_POSITION,
     SIZE,
-    NUMBER_OF_SECTIONS,
 } from '../constants/ElementSettings';
 import { v4 as uuidv4 } from 'uuid';
 
