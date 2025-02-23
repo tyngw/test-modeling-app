@@ -14,6 +14,7 @@ import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
 import PlaylistRemoveIcon from '@mui/icons-material/PlaylistRemove';
 import UnfoldLessIcon from '@mui/icons-material/UnfoldLess';
 import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
+import SettingsIcon from '@mui/icons-material/Settings';
 import Tooltip from '@mui/material/Tooltip';
 import { ICONBAR_HEIGHT } from '../constants/ElementSettings';
 import { useCanvas } from '../context/CanvasContext';
@@ -25,6 +26,7 @@ interface QuickMenuBarProps {
   loadElements: (event: React.ChangeEvent<HTMLInputElement>) => void;
   saveElements: () => void;
   toggleHelp: () => void;
+  toggleSettings: () => void;
 }
 
 type CanvasActionType =
@@ -41,7 +43,8 @@ const QuickMenuBar = ({
   saveSvg,
   loadElements,
   saveElements,
-  toggleHelp
+  toggleHelp,
+  toggleSettings,
 }: QuickMenuBarProps) => {
   const { dispatch } = useCanvas();
   const { addTab } = useTabs();
@@ -57,14 +60,14 @@ const QuickMenuBar = ({
 
   return (
     <div style={{ position: 'fixed', width: '100%', height: ICONBAR_HEIGHT, zIndex: 10000, }}>
-      <div style={{ 
+      <div style={{
         display: 'flex',
         justifyContent: 'left',
         alignItems: 'center',
         height: '100%',
         backgroundColor: '#f1f1f1',
         padding: '0 20px'
-        }}>
+      }}>
         <input type="file" ref={fileInput} onChange={loadElements} style={{ display: 'none' }} />
 
         <Tooltip title={tooltipTexts.NEW}>
@@ -150,6 +153,12 @@ const QuickMenuBar = ({
         <Tooltip title={tooltipTexts.HELP}>
           <Button variant="text" className="iconbar-button" onClick={toggleHelp}>
             <HelpOutlineOutlinedIcon sx={{ color: '#666666' }} />
+          </Button>
+        </Tooltip>
+
+        <Tooltip title={tooltipTexts.SETTINGS}>
+          <Button variant="text" className="iconbar-button" onClick={toggleSettings}>
+            <SettingsIcon sx={{ color: '#666666' }} />
           </Button>
         </Tooltip>
       </div>

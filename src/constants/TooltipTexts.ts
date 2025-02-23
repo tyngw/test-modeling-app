@@ -12,5 +12,6 @@ export const tooltipTexts = {
     REDO: 'やり直す',
     ZOOM_IN: 'ズームイン',
     ZOOM_OUT: 'ズームアウト',
-    HELP: 'ヘルプを表示'
+    HELP: 'ヘルプを表示',
+    SETTINGS: '設定',
   };
