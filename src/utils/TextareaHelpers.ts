@@ -1,5 +1,5 @@
-// src/utils/TextareaHelpers.ts
-import { DEFAULT_ZOOM_RATIO, DEFAULT_FONT_SIZE, SIZE, DEFAULT_FONT_FAMILY } from '../constants/ElementSettings';
+// src/utils/textareaHelpers.ts
+import { DEFAULT_ZOOM_RATIO, DEFAULT_FONT_SIZE, SIZE, DEFAULT_FONT_FAMILY } from '../constants/elementSettings';
 
 // 文字幅計算用キャンバスを生成する関数
 const createTextMeasurementContext = (): CanvasRenderingContext2D => {

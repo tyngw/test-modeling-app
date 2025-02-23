@@ -1,4 +1,4 @@
-// src/constants/TooltipTexts.ts
+// src/constants/tooltipTexts.ts
 export const tooltipTexts = {
     NEW: '新規作成',
     OPEN: 'ファイルを開く',

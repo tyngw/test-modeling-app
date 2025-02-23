@@ -1,4 +1,4 @@
-// src/components/ModalWindow.tsx
+// src/components/modalWindow.tsx
 import React, { ReactNode } from 'react';
 
 interface ModalWindowProps {

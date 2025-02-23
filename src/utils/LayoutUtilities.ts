@@ -1,10 +1,10 @@
-// src/utils/LayoutUtilities.ts
+// src/utils/layoutUtilities.ts
 import { useState, useEffect } from 'react';
 import {
   SIZE,
   OFFSET,
   NUMBER_OF_SECTIONS,
-} from '../constants/ElementSettings';
+} from '../constants/elementSettings';
 
 export const useWindowSize = () => {
   const [windowSize, setWindowSize] = useState({

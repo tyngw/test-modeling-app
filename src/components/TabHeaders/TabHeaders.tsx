@@ -1,8 +1,8 @@
 // src/components/TabHeaders/index.tsx
 import React from 'react';
-import { TabState } from '../../context/TabsContext';
+import { TabState } from '../../context/tabsContext';
 import Tab from './Tab';
-import { ICONBAR_HEIGHT, TABBAR_HEIGHT } from '../../constants/ElementSettings';
+import { ICONBAR_HEIGHT, TABBAR_HEIGHT } from '../../constants/elementSettings';
 
 interface TabHeadersProps {
   tabs: TabState[];

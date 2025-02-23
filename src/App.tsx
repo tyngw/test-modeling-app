@@ -1,9 +1,9 @@
 // src/App.tsx
 import React from 'react';
 import './App.css';
-import { isMobileDevice } from './utils/DeviceChecker';
-import { TabsProvider } from './context/TabsContext';
-import AppContent from './context/AppContent';
+import { isMobileDevice } from './utils/deviceChecker';
+import { TabsProvider } from './context/tabsContext';
+import AppContent from './appContent';
 
 function App() {
   return (

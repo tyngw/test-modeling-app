@@ -1,8 +1,8 @@
 // src/state/state.ts
 import { Undo, Redo, saveSnapshot } from './undoredo';
-import { handleArrowUp, handleArrowDown, handleArrowRight, handleArrowLeft } from '../utils/ElementSelector';
+import { handleArrowUp, handleArrowDown, handleArrowRight, handleArrowLeft } from '../utils/elementSelector';
 import { getNumberOfSections } from '../utils/localStorageHelpers';
-import { calculateElementWidth, wrapText } from '../utils/TextareaHelpers';
+import { calculateElementWidth, wrapText } from '../utils/textareaHelpers';
 import { Element } from '../types';
 import {
     OFFSET,
@@ -12,7 +12,7 @@ import {
     LINE_HEIGHT_RATIO,
     DEFAULT_FONT_SIZE,
 
-} from '../constants/ElementSettings';
+} from '../constants/elementSettings';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface State {

@@ -1,19 +1,19 @@
-// src/context/AppContent.tsx
+// src/context/appContent.tsx
 import React, { useState, useCallback, useMemo } from 'react';
-import CanvasArea from '../components/CanvasArea';
-import QuickMenuBar from '../components/QuickMenuBar';
-import TabHeaders from '../components/TabHeaders/TabHeaders';
-import SettingsModal from '../components/SettingsModal';
-import { CanvasProvider } from './CanvasContext';
-import { Action } from '../state/state';
-import { useTabs } from './TabsContext';
-import { reducer } from '../state/state';
-import { saveSvg } from '../utils/FileHelpers';
-import { loadElements, saveElements } from '../utils/FileHelpers';
-import { generateWithGemini } from '../utils/api';
-import { getApiKey } from '../utils/localStorageHelpers';
-import { SYSTEM_PROMPT } from '../constants/systemPrompt';
-import { formatElementsForPrompt } from '../utils/elementHelpers';
+import CanvasArea from './components/canvasArea';
+import QuickMenuBar from './components/quickMenuBar';
+import TabHeaders from './components/TabHeaders/TabHeaders';
+import SettingsModal from './components/settingsModal';
+import { CanvasProvider } from './context/canvasContext';
+import { Action } from './state/state';
+import { useTabs } from './context/tabsContext';
+import { reducer } from './state/state';
+import { saveSvg } from './utils/fileHelpers';
+import { loadElements, saveElements } from './utils/fileHelpers';
+import { generateWithGemini } from './utils/api';
+import { getApiKey } from './utils/localStorageHelpers';
+import { SYSTEM_PROMPT } from './constants/systemPrompt';
+import { formatElementsForPrompt } from './utils/elementHelpers';
 
 const AppContent: React.FC = () => {
   const { tabs, currentTabId, addTab, closeTab, switchTab, updateTabState, updateTabName } = useTabs();

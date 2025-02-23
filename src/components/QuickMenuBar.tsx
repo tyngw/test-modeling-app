@@ -1,4 +1,4 @@
-// src/components/QuickMenuBar.tsx
+// src/components/quickMenuBar.tsx
 import React, { useRef } from 'react';
 import Button from '@mui/material/Button';
 import UndoIcon from '@mui/icons-material/Undo';
@@ -17,10 +17,10 @@ import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
 import SettingsIcon from '@mui/icons-material/Settings';
 import AutoFixOffIcon from '@mui/icons-material/AutoFixOff';
 import Tooltip from '@mui/material/Tooltip';
-import { ICONBAR_HEIGHT } from '../constants/ElementSettings';
-import { useCanvas } from '../context/CanvasContext';
-import { tooltipTexts } from '../constants/TooltipTexts';
-import { useTabs } from '../context/TabsContext';
+import { ICONBAR_HEIGHT } from '../constants/elementSettings';
+import { useCanvas } from '../context/canvasContext';
+import { tooltipTexts } from '../constants/tooltipTexts';
+import { useTabs } from '../context/tabsContext';
 
 interface QuickMenuBarProps {
   saveSvg: () => void;

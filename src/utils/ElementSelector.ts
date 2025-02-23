@@ -1,4 +1,4 @@
-// src/utils/ElementSelector.ts
+// src/utils/elementSelector.ts
 import { Element } from '../types';
 
 export const getElementById = (elements: Record<string, Element>, id: string): Element | undefined => elements[id];

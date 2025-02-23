@@ -1,16 +1,16 @@
-// src/components/CanvasArea.tsx
+// src/components/canvasArea.tsx
 import React, { useRef, useState, useEffect } from 'react';
-import IdeaElement from './IdeaElement';
-import InputFields from './InputFields';
-import ModalWindow from './ModalWindow';
+import IdeaElement from './ideaElement';
+import InputFields from './inputFields';
+import ModalWindow from './modalWindow';
 import useResizeEffect from '../hooks/useResizeEffect';
-import { useCanvas } from '../context/CanvasContext';
-import { Marker } from './Marker';
-import { keyActionMap } from '../constants/KeyActionMap';
+import { useCanvas } from '../context/canvasContext';
+import { Marker } from './marker';
+import { keyActionMap } from '../constants/keyActionMap';
 import { useClickOutside } from '../hooks/useClickOutside';
 import { useElementDragEffect } from '../hooks/useElementDragEffect';
-import { helpContent } from '../constants/HelpContent';
-import { ICONBAR_HEIGHT, HEADER_HEIGHT } from '../constants/ElementSettings';
+import { helpContent } from '../constants/helpContent';
+import { ICONBAR_HEIGHT, HEADER_HEIGHT } from '../constants/elementSettings';
 import { Element } from '../types';
 
 interface Toast {
