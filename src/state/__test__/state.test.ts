@@ -3,7 +3,7 @@ import { renderHook, act } from '@testing-library/react';
 import { useReducer } from 'react';
 import { initialState, reducer } from '../state';
 import { Element } from '../../types';
-import { SIZE } from '../../constants/ElementSettings';
+import { SIZE } from '../../constants/elementSettings';
 
 jest.mock('../../constants/ElementSettings', () => ({
     ...jest.requireActual('../../constants/ElementSettings'),
