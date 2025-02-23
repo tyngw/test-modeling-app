@@ -25,12 +25,6 @@ export type Action = {
 
 type ElementsMap = { [key: string]: Element };
 
-interface AdjustmentResult {
-    elements: ElementsMap;
-    currentY: number;
-    maxHeight: number;
-}
-
 export const createNewElement = (
     parentId: string | null,
     order: number,
