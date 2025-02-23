@@ -1,13 +1,13 @@
 {
   "files": {
     "main.css": "/test-modeling-app/static/css/main.1eeece2d.css",
-    "main.js": "/test-modeling-app/static/js/main.b025adea.js",
+    "main.js": "/test-modeling-app/static/js/main.5f430574.js",
     "index.html": "/test-modeling-app/index.html",
     "main.1eeece2d.css.map": "/test-modeling-app/static/css/main.1eeece2d.css.map",
-    "main.b025adea.js.map": "/test-modeling-app/static/js/main.b025adea.js.map"
+    "main.5f430574.js.map": "/test-modeling-app/static/js/main.5f430574.js.map"
   },
   "entrypoints": [
     "static/css/main.1eeece2d.css",
-    "static/js/main.b025adea.js"
+    "static/js/main.5f430574.js"
   ]
 }
