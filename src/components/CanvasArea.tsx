@@ -122,7 +122,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                     style={{ outline: 'none' }}
                     className="svg-element"
                 >
-                    <Marker />
+                    {/* <Marker /> */}
                     {Object.values(state.elements)
                         .filter((element): element is Element => element.visible)
                         .map(element => {

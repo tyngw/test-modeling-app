@@ -51,8 +51,14 @@ export const ICONBAR_HEIGHT = 40;
 export const TABBAR_HEIGHT = 40;
 export const HEADER_HEIGHT = ICONBAR_HEIGHT + TABBAR_HEIGHT;
 
+// Markerを有効にする場合
+// export const ARROW = {
+//     HEIGHT: 6,
+//     WIDTH: 6,
+//     OFFSET: 13,
+// }
 export const ARROW = {
     HEIGHT: 6,
     WIDTH: 6,
-    OFFSET: 13,
+    OFFSET: 0,
 }
