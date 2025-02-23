@@ -51,7 +51,7 @@ const AppContent: React.FC = () => {
 
       // プロンプト構築
       const fullPrompt = [
-      SYSTEM_PROMPT,
+      localStorage.getItem('systemPrompt'),
       structureText,
       "選択中の要素: " + selectedElement.texts[0],
       "# 4. インプットされた情報",

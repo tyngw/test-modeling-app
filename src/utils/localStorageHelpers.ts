@@ -1,6 +1,7 @@
 // src/utils/localStorageHelpers.ts
 import CryptoJS from 'crypto-js';
 import { NUMBER_OF_SECTIONS } from '../constants/ElementSettings';
+import { SYSTEM_PROMPT } from '../constants/systemPrompt';
 
 const ENCRYPTION_KEY = 'encryptionKey';
 const TABS_STORAGE_KEY = 'tabsState';
@@ -65,6 +66,9 @@ export const setApiEndpoint = (endpoint: string) => localStorage.setItem('apiEnd
 // プロンプト用の関数
 export const getPrompt = (): string => localStorage.getItem('prompt') || '';
 export const setPrompt = (prompt: string) => localStorage.setItem('prompt', prompt);
+
+export const getSystemPrompt = (): string => localStorage.getItem('systemPrompt') || SYSTEM_PROMPT;
+export const setSystemPrompt = (systemPrompt: string) => localStorage.setItem('systemPrompt', systemPrompt);
 
 // タブ状態関連
 export const getTabsState = (): string | null => {
