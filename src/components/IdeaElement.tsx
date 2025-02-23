@@ -47,16 +47,16 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
   const isDraggedOrDescendant = draggingElement
     ? draggingElement.id === element.id || isDescendant(state.elements, draggingElement.id, element.id)
     : false;
-  
+
   const handleHeightChange = useCallback((sectionIndex: number, newHeight: number) => {
     const currentHeight = element.sectionHeights[sectionIndex];
-  
+
     if (currentHeight !== null && Math.abs(newHeight - currentHeight) > 1) {
       const newSectionHeights = [...element.sectionHeights];
       newSectionHeights[sectionIndex] = newHeight;
-  
+
       const newWidth = calculateElementWidth(element.texts, TEXTAREA_PADDING.HORIZONTAL);
-  
+
       dispatch({
         type: 'UPDATE_ELEMENT_SIZE',
         payload: {
@@ -99,7 +99,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
   return (
     <React.Fragment key={element.id}>
       <g opacity={isDraggedOrDescendant ? 0.3 : 1}>
-      {renderConnectionPath()}
+        {renderConnectionPath()}
         {hiddenChildren.length > 0 && (
           <>
             <rect
@@ -147,6 +147,11 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
             </g>
           </>
         )}
+        <defs>
+          <filter id="boxShadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="2" dy="2" stdDeviation="3" floodColor="gray" />
+          </filter>
+        </defs>
         <rect
           x={element.x}
           y={element.y}
@@ -165,7 +170,8 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
               ? ELEM_STYLE.DRAGGING.COLOR
               : ELEM_STYLE.NORMAL.COLOR,
             pointerEvents: 'all',
-            cursor: isHovered ? 'pointer' : 'default'
+            cursor: isHovered ? 'pointer' : 'default',
+            filter: element.selected ? 'url(#boxShadow)' : 'none',
           }}
         />
         {currentDropTarget?.id === element.id && draggingElement && dropPosition !== 'child' && (
