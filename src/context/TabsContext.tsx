@@ -31,7 +31,7 @@ export interface TabsContextValue {
 const TabsContext = createContext<TabsContextValue | undefined>(undefined);
 
 const createInitialTabState = (): TabState => {
-  const newRootId = uuidv4();
+  const newRootId = "1";
   return {
     id: uuidv4(),
     name: "無題",
