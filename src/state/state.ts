@@ -1,6 +1,7 @@
 // src/state/state.ts
 import { Undo, Redo, saveSnapshot } from './undoredo';
 import { handleArrowUp, handleArrowDown, handleArrowRight, handleArrowLeft } from '../utils/ElementSelector';
+import { getNumberOfSections } from '../utils/localStorageHelpers';
 import { Element } from '../types';
 import {
     OFFSET,
@@ -31,7 +32,12 @@ interface AdjustmentResult {
     maxHeight: number;
 }
 
-export const createNewElement = (parentId: string | null, order: number, depth: number, numSections: number = NUMBER_OF_SECTIONS): Element => ({
+export const createNewElement = (
+    parentId: string | null,
+    order: number,
+    depth: number,
+    numSections: number = getNumberOfSections()
+): Element => ({
     id: uuidv4(),
     texts: Array(numSections).fill(''),
     x: 0,
