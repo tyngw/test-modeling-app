@@ -15,6 +15,7 @@ import PlaylistRemoveIcon from '@mui/icons-material/PlaylistRemove';
 import UnfoldLessIcon from '@mui/icons-material/UnfoldLess';
 import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
 import SettingsIcon from '@mui/icons-material/Settings';
+import AutoFixOffIcon from '@mui/icons-material/AutoFixOff';
 import Tooltip from '@mui/material/Tooltip';
 import { ICONBAR_HEIGHT } from '../constants/ElementSettings';
 import { useCanvas } from '../context/CanvasContext';
@@ -27,6 +28,7 @@ interface QuickMenuBarProps {
   saveElements: () => void;
   toggleHelp: () => void;
   toggleSettings: () => void;
+  onAIClick: () => void;
 }
 
 type CanvasActionType =
@@ -45,6 +47,7 @@ const QuickMenuBar = ({
   saveElements,
   toggleHelp,
   toggleSettings,
+  onAIClick,
 }: QuickMenuBarProps) => {
   const { dispatch } = useCanvas();
   const { addTab } = useTabs();
@@ -105,6 +108,12 @@ const QuickMenuBar = ({
         <Tooltip title={tooltipTexts.DELETE}>
           <Button variant="text" className="iconbar-button" onClick={handleAction('DELETE_ELEMENT')}>
             <PlaylistRemoveIcon sx={{ color: '#666666' }} />
+          </Button>
+        </Tooltip>
+
+        <Tooltip title={tooltipTexts.AI}>
+          <Button variant="text" className="iconbar-button" onClick={onAIClick}>
+            <AutoFixOffIcon sx={{ color: '#666666' }} />
           </Button>
         </Tooltip>
 

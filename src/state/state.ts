@@ -2,11 +2,16 @@
 import { Undo, Redo, saveSnapshot } from './undoredo';
 import { handleArrowUp, handleArrowDown, handleArrowRight, handleArrowLeft } from '../utils/ElementSelector';
 import { getNumberOfSections } from '../utils/localStorageHelpers';
+import { calculateElementWidth, wrapText } from '../utils/TextareaHelpers';
 import { Element } from '../types';
 import {
     OFFSET,
     DEFAULT_POSITION,
     SIZE,
+    TEXTAREA_PADDING,
+    LINE_HEIGHT_RATIO,
+    DEFAULT_FONT_SIZE,
+
 } from '../constants/ElementSettings';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -258,13 +263,13 @@ const layoutSubtree = (
     // 衝突判定の改良（子孫要素を除外）
     let adjustedY = node.y;
     let collisionFound = true;
-    
+
     while (collisionFound) {
         collisionFound = false;
         for (const elem of Object.values(elements)) {
             if (elem.id === node.id) continue;
             if (isDescendant(elements, elem.id, node.id)) continue; // 子孫要素を除外
-            
+
             if (checkCollision(node, adjustedY, elem)) {
                 adjustedY = elem.y + elem.height + OFFSET.Y;
                 collisionFound = true;
@@ -272,7 +277,7 @@ const layoutSubtree = (
             }
         }
     }
-    
+
     node.y = adjustedY;
 
     const nodeBottom = node.y + node.height;
@@ -373,7 +378,7 @@ const old_adjustElementPositions = (elements: { [key: string]: Element }): { [ke
             const childrenMinY = Math.min(...children.map(n => n.y));
             const childrenMaxY = Math.max(...children.map(n => n.y + n.height));
             const childrenHeight = childrenMaxY - childrenMinY;
-            if (parentElement.id === '10'){
+            if (parentElement.id === '10') {
                 console.log('[Debug] childrenMinY:' + childrenMinY + ' childrenMaxY:' + childrenMaxY + ' childrenHeight:' + childrenHeight);
             }
             if (parentElement.height > childrenHeight) {
@@ -391,20 +396,53 @@ const old_adjustElementPositions = (elements: { [key: string]: Element }): { [ke
     return updatedElements;
 };
 
-const createElementAdder = (elements: { [key: string]: Element }, parentElement: Element): { [key: string]: Element } => {
+const createElementAdder = (
+    elements: { [key: string]: Element },
+    parentElement: Element,
+    text?: string,
+    options?: { select?: boolean }
+): { [key: string]: Element } => {
     const newId = uuidv4();
     const newOrder = parentElement.children;
 
-    const updatedElements = {
-        ...elements,
-        [parentElement.id]: { ...parentElement, children: parentElement.children + 1, selected: false },
-        [newId]: {
-            ...createNewElement({parentId: parentElement.id, order: newOrder, depth: parentElement.depth + 1}),
-            id: newId,
-        }
+    // テキストに基づいて初期サイズを計算
+    const initialText = text || '';
+    const initialTexts = [initialText, ...Array(getNumberOfSections() - 1).fill('')];
+
+    // 要素の幅を計算
+    const width = calculateElementWidth(initialTexts, TEXTAREA_PADDING.HORIZONTAL);
+
+    // セクションの高さを計算
+    const sectionHeights = initialTexts.map(() => {
+        const lines = wrapText(initialText, width, 1).length;
+        return Math.max(
+            SIZE.SECTION_HEIGHT,
+            lines * DEFAULT_FONT_SIZE * LINE_HEIGHT_RATIO + TEXTAREA_PADDING.VERTICAL
+        );
+    });
+
+    // 全体の高さを計算
+    const height = sectionHeights.reduce((sum, h) => sum + h, 0);
+
+    const newElement = {
+        ...createNewElement({
+            parentId: parentElement.id,
+            order: newOrder,
+            depth: parentElement.depth + 1
+        }),
+        id: newId,
+        texts: initialTexts,
+        width,
+        height,
+        sectionHeights,
+        selected: options?.select ?? true
     };
 
-    return adjustElementPositions(updatedElements);
+    return {
+        ...elements,
+        [parentElement.id]: { ...parentElement, children: parentElement.children + 1 },
+        [newElement.id]: newElement
+    };
 };
 
 const createSiblingElementAdder = (elements: ElementsMap, selectedElement: Element): ElementsMap => {
@@ -425,7 +463,7 @@ const createSiblingElementAdder = (elements: ElementsMap, selectedElement: Eleme
     });
 
     // 新しい要素を作成
-    const newElement = createNewElement({parentId: parentId, order: newOrder, depth: selectedElement.depth});
+    const newElement = createNewElement({ parentId: parentId, order: newOrder, depth: selectedElement.depth });
     updatedElements[selectedElement.id] = { ...selectedElement, selected: false };
     updatedElements[newElement.id] = newElement;
 
@@ -507,18 +545,24 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
     UPDATE_TEXT: (state, action) => ({
         ...state,
         elements: {
-          ...state.elements,
-          [action.payload.id]: {
-            ...state.elements[action.payload.id],
-            texts: state.elements[action.payload.id].texts.map((text, idx) =>
-              idx === action.payload.index ? action.payload.value : text
-            )
-          }
+            ...state.elements,
+            [action.payload.id]: {
+                ...state.elements[action.payload.id],
+                texts: state.elements[action.payload.id].texts.map((text, idx) =>
+                    idx === action.payload.index ? action.payload.value : text
+                )
+            }
         }
-      }),
+    }),
 
-    ADD_ELEMENT: state => handleElementMutation(state, (elements, selectedElement) => {
-        const newElements = createElementAdder(elements, selectedElement);
+    ADD_ELEMENT: (state, action) => handleElementMutation(state, (elements, selectedElement) => {
+        const text = action.payload?.text;
+        const newElements = createElementAdder(elements, selectedElement, text);
+        return { elements: adjustElementPositions(newElements) };
+    }),
+
+    ADD_ELEMENT_SILENT: (state, action) => handleElementMutation(state, (elements, selectedElement) => {
+        const newElements = createElementAdder(elements, selectedElement, action.payload?.text, { select: false });
         return { elements: adjustElementPositions(newElements) };
     }),
 
