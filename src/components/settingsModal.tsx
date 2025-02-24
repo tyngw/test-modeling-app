@@ -92,7 +92,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
               onChange={(e) => setApiKeyState(e.target.value)}
               fullWidth
               margin="normal"
-              helperText="入力されたキーは暗号化してlocalStorageに保存されます"
+              helperText="入力されたキーは暗号化してlocalStorageに保存されます。サーバに送信されることはありません。"
             />
           </Box>
         )}
