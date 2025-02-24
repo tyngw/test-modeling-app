@@ -8,6 +8,9 @@ const ENCRYPTION_KEY = 'encryptionKey';
 const TABS_STORAGE_KEY = 'tabsState';
 const LAST_SAVED_FILE_KEY = 'lastSavedFileName';
 export const VERSION_KEY = 'appVersion';
+const PROMPT_KEY = 'prompt';
+const SYSTEM_PROMPT_KEY = 'systemPromptTemplate';
+const APIKEY_KEY = 'apiKey';
 
 const safeLocalStorage = {
   getItem: (key: string): string | null => {
@@ -35,7 +38,7 @@ const checkAndUpdateVersion = () => {
   if (storedVersion !== VERSION) {
     // console.warn(`LocalStorage version mismatch: found ${storedVersion}, expected ${VERSION}. Resetting storage.`);
     Object.keys(localStorage).forEach((key) => {
-      if (key !== TABS_STORAGE_KEY) {
+      if (key !== TABS_STORAGE_KEY && key !== APIKEY_KEY && key !== PROMPT_KEY) {
         localStorage.removeItem(key);
       }
     });
@@ -58,7 +61,7 @@ export const setNumberOfSections = (value: number): void => {
 // APIキー関連
 export const getApiKey = (): string => {
   try {
-    const stored = safeLocalStorage.getItem('apiKey');
+    const stored = safeLocalStorage.getItem(APIKEY_KEY);
     if (!stored) return '';
     const bytes = CryptoJS.AES.decrypt(stored, ENCRYPTION_KEY);
     return bytes.toString(CryptoJS.enc.Utf8);
@@ -70,7 +73,7 @@ export const getApiKey = (): string => {
 export const setApiKey = (value: string): void => {
   try {
     const encrypted = CryptoJS.AES.encrypt(value, ENCRYPTION_KEY).toString();
-    safeLocalStorage.setItem('apiKey', encrypted);
+    safeLocalStorage.setItem(APIKEY_KEY, encrypted);
   } catch (e) {
     console.error('API key encryption failed:', e);
   }
@@ -81,11 +84,11 @@ export const getApiEndpoint = (): string => safeLocalStorage.getItem('apiEndpoin
 export const setApiEndpoint = (endpoint: string) => safeLocalStorage.setItem('apiEndpoint', endpoint);
 
 // プロンプト関連
-export const getPrompt = (): string => safeLocalStorage.getItem('prompt') || '';
-export const setPrompt = (prompt: string) => safeLocalStorage.setItem('prompt', prompt);
+export const getPrompt = (): string => safeLocalStorage.getItem(PROMPT_KEY) || '';
+export const setPrompt = (prompt: string) => safeLocalStorage.setItem(PROMPT_KEY, prompt);
 
-export const getSystemPromptTemplate = (): string => safeLocalStorage.getItem('systemPromptTemplate') || SYSTEM_PROMPT_TEMPLATE;
-export const setSystemPromptTemplate = (systemPromptTemplate: string) => safeLocalStorage.setItem('systemPromptTemplate', systemPromptTemplate);
+export const getSystemPromptTemplate = (): string => safeLocalStorage.getItem(SYSTEM_PROMPT_KEY) || SYSTEM_PROMPT_TEMPLATE;
+export const setSystemPromptTemplate = (systemPromptTemplate: string) => safeLocalStorage.setItem(SYSTEM_PROMPT_KEY, systemPromptTemplate);
 
 // タブ状態関連
 export const getTabsState = (): string | null => safeLocalStorage.getItem(TABS_STORAGE_KEY);

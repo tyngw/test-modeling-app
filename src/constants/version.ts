@@ -1,2 +1,2 @@
 // src/constants/version.ts
-export const VERSION = '1.00'
+export const VERSION = '1.01'
