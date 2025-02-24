@@ -2,16 +2,11 @@
 import { Undo, Redo, saveSnapshot } from './undoredo';
 import { handleArrowUp, handleArrowDown, handleArrowRight, handleArrowLeft } from '../utils/elementSelector';
 import { getNumberOfSections } from '../utils/localStorageHelpers';
-import { calculateElementWidth, wrapText } from '../utils/textareaHelpers';
 import { Element } from '../types';
 import {
     OFFSET,
     DEFAULT_POSITION,
     SIZE,
-    TEXTAREA_PADDING,
-    LINE_HEIGHT_RATIO,
-    DEFAULT_FONT_SIZE,
-
 } from '../constants/elementSettings';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -409,20 +404,20 @@ const createElementAdder = (
     const initialText = text || '';
     const initialTexts = [initialText, ...Array(getNumberOfSections() - 1).fill('')];
 
-    // 要素の幅を計算
-    const width = calculateElementWidth(initialTexts, TEXTAREA_PADDING.HORIZONTAL);
+    // // 要素の幅を計算
+    // const width = calculateElementWidth(initialTexts, TEXTAREA_PADDING.HORIZONTAL);
 
-    // セクションの高さを計算
-    const sectionHeights = initialTexts.map(() => {
-        const lines = wrapText(initialText, width, 1).length;
-        return Math.max(
-            SIZE.SECTION_HEIGHT,
-            lines * DEFAULT_FONT_SIZE * LINE_HEIGHT_RATIO + TEXTAREA_PADDING.VERTICAL
-        );
-    });
+    // // セクションの高さを計算
+    // const sectionHeights = initialTexts.map(() => {
+    //     const lines = wrapText(initialText, width, 1).length;
+    //     return Math.max(
+    //         SIZE.SECTION_HEIGHT,
+    //         lines * DEFAULT_FONT_SIZE * LINE_HEIGHT_RATIO + TEXTAREA_PADDING.VERTICAL
+    //     );
+    // });
 
-    // 全体の高さを計算
-    const height = sectionHeights.reduce((sum, h) => sum + h, 0);
+    // // 全体の高さを計算
+    // const height = sectionHeights.reduce((sum, h) => sum + h, 0);
 
     const newElement = {
         ...createNewElement({
@@ -432,9 +427,12 @@ const createElementAdder = (
         }),
         id: newId,
         texts: initialTexts,
-        width,
-        height,
-        sectionHeights,
+        // width,
+        // height,
+        // sectionHeights,
+        width: SIZE.WIDTH.MIN,
+        height: SIZE.SECTION_HEIGHT * getNumberOfSections(),
+        sectionHeights: Array(getNumberOfSections()).fill(SIZE.SECTION_HEIGHT),
         selected: options?.newElementSelect ?? false,
         editing: options?.newElementSelect ?? false,
         tentative: options?.tentative ?? false,

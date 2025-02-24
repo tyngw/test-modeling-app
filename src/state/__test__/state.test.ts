@@ -4,36 +4,15 @@ import { useReducer } from 'react';
 import { initialState, reducer } from '../state';
 import { Element } from '../../types';
 import { SIZE } from '../../constants/elementSettings';
-import { VERSION } from '../../constants/version';
-import { VERSION_KEY } from '../../utils/localStorageHelpers';
-
-jest.mock('../../constants/ElementSettings', () => ({
-    ...jest.requireActual('../../constants/ElementSettings'),
-    NUMBER_OF_SECTIONS: 3
-}));
-
-jest.mock('../../utils/textareaHelpers', () => ({
-    calculateTextWidth: jest.fn(() => 100),
-    calculateElementWidth: jest.fn(() => 200),
-    wrapText: jest.fn(() => ['mockText']),
-}));
 
 const useStore = () => {
     const [state, dispatch] = useReducer(reducer, initialState);
     return { state, dispatch };
 };
 
-// windowサイズをモック
-const originalInnerWidth = window.innerWidth;
-const originalInnerHeight = window.innerHeight;
-
 describe('state reducer', () => {
     beforeEach(() => {
-        // 各テスト前にwindowサイズをリセット
-        window.innerWidth = originalInnerWidth;
-        window.innerHeight = originalInnerHeight;
-        localStorage.setItem(VERSION_KEY, VERSION);
-        jest.clearAllMocks();
+        // 前処理
     });
 
     it('初期状態', () => {
