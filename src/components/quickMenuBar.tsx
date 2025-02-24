@@ -62,36 +62,36 @@ const QuickMenuBar = ({
   };
 
   return (
-    <div style={{ position: 'fixed', width: '100%', height: ICONBAR_HEIGHT }}>
+    <div style={{ position: 'fixed', width: '100%', height: ICONBAR_HEIGHT, zIndex: '100000', }}>
       <div style={{
         display: 'flex',
         justifyContent: 'left',
         alignItems: 'center',
         height: '100%',
         backgroundColor: '#f1f1f1',
-        padding: '0 20px'
+        padding: '0 20px',
       }}>
         <input type="file" ref={fileInput} onChange={loadElements} style={{ display: 'none' }} />
 
-        <Tooltip title={tooltipTexts.NEW}>
+        <Tooltip title={tooltipTexts.NEW} componentsProps={{ popper: {sx: {zIndex: 100050,},},}}>
           <Button variant="text" className="iconbar-button" onClick={addTab}>
             <InsertDriveFileOutlinedIcon sx={{ color: '#666666' }} />
           </Button>
         </Tooltip>
 
-        <Tooltip title={tooltipTexts.OPEN}>
+        <Tooltip title={tooltipTexts.OPEN} componentsProps={{ popper: {sx: {zIndex: 100050,},},}}>
           <Button variant="text" className="iconbar-button" onClick={handleFileOpen}>
             <FolderOpenOutlinedIcon sx={{ color: '#666666' }} />
           </Button>
         </Tooltip>
 
-        <Tooltip title={tooltipTexts.SAVE}>
+        <Tooltip title={tooltipTexts.SAVE} componentsProps={{ popper: {sx: {zIndex: 100050,},},}}>
           <Button variant="text" className="iconbar-button" onClick={saveElements}>
             <SaveAsOutlinedIcon sx={{ color: '#666666' }} />
           </Button>
         </Tooltip>
 
-        <Tooltip title={tooltipTexts.SAVE_SVG}>
+        <Tooltip title={tooltipTexts.SAVE_SVG} componentsProps={{ popper: {sx: {zIndex: 100050,},},}}>
           <Button variant="text" className="iconbar-button" onClick={saveSvg}>
             <SaveAltIcon sx={{ color: '#666666' }} />
           </Button>
@@ -99,31 +99,31 @@ const QuickMenuBar = ({
 
         <div style={{ width: '10px' }}></div>
 
-        <Tooltip title={tooltipTexts.ADD}>
+        <Tooltip title={tooltipTexts.ADD} componentsProps={{ popper: {sx: {zIndex: 100050,},},}}>
           <Button variant="text" className="iconbar-button" onClick={handleAction('ADD_ELEMENT')}>
             <PlaylistAddIcon sx={{ color: '#666666' }} />
           </Button>
         </Tooltip>
 
-        <Tooltip title={tooltipTexts.DELETE}>
+        <Tooltip title={tooltipTexts.DELETE} componentsProps={{ popper: {sx: {zIndex: 100050,},},}}>
           <Button variant="text" className="iconbar-button" onClick={handleAction('DELETE_ELEMENT')}>
             <PlaylistRemoveIcon sx={{ color: '#666666' }} />
           </Button>
         </Tooltip>
 
-        <Tooltip title={tooltipTexts.AI}>
+        <Tooltip title={tooltipTexts.AI} componentsProps={{ popper: {sx: {zIndex: 100050,},},}}>
           <Button variant="text" className="iconbar-button" onClick={onAIClick}>
             <AutoFixOffIcon sx={{ color: '#666666' }} />
           </Button>
         </Tooltip>
 
-        <Tooltip title={tooltipTexts.EXPAND}>
+        <Tooltip title={tooltipTexts.EXPAND} componentsProps={{ popper: {sx: {zIndex: 100050,},},}}>
           <Button variant="text" className="iconbar-button" onClick={handleAction('EXPAND_ELEMENT')}>
             <UnfoldMoreIcon sx={{ color: '#666666' }} />
           </Button>
         </Tooltip>
 
-        <Tooltip title={tooltipTexts.COLLAPSE}>
+        <Tooltip title={tooltipTexts.COLLAPSE} componentsProps={{ popper: {sx: {zIndex: 100050,},},}}>
           <Button variant="text" className="iconbar-button" onClick={handleAction('COLLAPSE_ELEMENT')}>
             <UnfoldLessIcon sx={{ color: '#666666' }} />
           </Button>
@@ -131,13 +131,13 @@ const QuickMenuBar = ({
 
         <div style={{ width: '10px' }}></div>
 
-        <Tooltip title={tooltipTexts.UNDO}>
+        <Tooltip title={tooltipTexts.UNDO} componentsProps={{ popper: {sx: {zIndex: 100050,},},}}>
           <Button variant="text" className="iconbar-button" onClick={handleAction('UNDO')}>
             <UndoIcon sx={{ color: '#666666' }} />
           </Button>
         </Tooltip>
 
-        <Tooltip title={tooltipTexts.REDO}>
+        <Tooltip title={tooltipTexts.REDO} componentsProps={{ popper: {sx: {zIndex: 100050,},},}}>
           <Button variant="text" className="iconbar-button" onClick={handleAction('REDO')}>
             <RedoIcon sx={{ color: '#666666' }} />
           </Button>
@@ -145,13 +145,13 @@ const QuickMenuBar = ({
 
         <div style={{ width: '10px' }}></div>
 
-        <Tooltip title={tooltipTexts.ZOOM_IN}>
+        <Tooltip title={tooltipTexts.ZOOM_IN} componentsProps={{ popper: {sx: {zIndex: 100050,},},}}>
           <Button variant="text" className="iconbar-button" onClick={handleAction('ZOOM_IN')}>
             <ZoomInIcon sx={{ color: '#666666' }} />
           </Button>
         </Tooltip>
 
-        <Tooltip title={tooltipTexts.ZOOM_OUT}>
+        <Tooltip title={tooltipTexts.ZOOM_OUT} componentsProps={{ popper: {sx: {zIndex: 100050,},},}}>
           <Button variant="text" className="iconbar-button" onClick={handleAction('ZOOM_OUT')}>
             <ZoomOutIcon sx={{ color: '#666666' }} />
           </Button>
@@ -159,13 +159,13 @@ const QuickMenuBar = ({
 
         <div style={{ width: '10px' }}></div>
 
-        <Tooltip title={tooltipTexts.HELP}>
+        <Tooltip title={tooltipTexts.HELP} componentsProps={{ popper: {sx: {zIndex: 100050,},},}}>
           <Button variant="text" className="iconbar-button" onClick={toggleHelp}>
             <HelpOutlineOutlinedIcon sx={{ color: '#666666' }} />
           </Button>
         </Tooltip>
 
-        <Tooltip title={tooltipTexts.SETTINGS}>
+        <Tooltip title={tooltipTexts.SETTINGS} componentsProps={{ popper: {sx: {zIndex: 100050,},},}}>
           <Button variant="text" className="iconbar-button" onClick={toggleSettings}>
             <SettingsIcon sx={{ color: '#666666' }} />
           </Button>
