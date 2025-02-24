@@ -52,7 +52,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   return (
     <ModalWindow isOpen={isOpen} onClose={onClose}>
       <Typography variant="h6" gutterBottom>
-        設定
+        Preference
       </Typography>
 
       <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)}>
@@ -65,7 +65,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
         {activeTab === 0 && (
           <Box>
             <TextField
-              label="セクション数"
+              label="Number of sections"
               type="number"
               value={numberOfSections}
               onChange={(e) => setNumberOfSectionsState(parseInt(e.target.value) || 3)}
@@ -86,20 +86,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
               margin="normal"
             />
             <TextField
-              label="Gemini APIキー"
+              label="Gemini API Key"
               type="password"
               value={apiKey}
               onChange={(e) => setApiKeyState(e.target.value)}
               fullWidth
               margin="normal"
-              helperText="入力されたキーは暗号化して保存されます"
+              helperText="入力されたキーは暗号化してlocalStorageに保存されます"
             />
           </Box>
         )}
         {activeTab === 2 && (
           <Box>
             <TextField
-              label="Prompt"
+              label="inputText"
               value={prompt}
               onChange={(e) => setPromptState(e.target.value)}
               fullWidth
@@ -124,7 +124,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
 
       <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
         <Button variant="outlined" onClick={onClose}>
-          キャンセル
+          Cancel
         </Button>
         <Button variant="contained" onClick={handleSave} color="primary">
           OK
