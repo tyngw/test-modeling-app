@@ -14,6 +14,7 @@ export interface Element {
   editing: boolean;
   selected: boolean;
   visible: boolean;
+  tentative: boolean;
 }
   
   export interface CanvasState {
