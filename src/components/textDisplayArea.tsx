@@ -35,7 +35,6 @@ const TextDisplayArea: React.FC<TextDisplayAreaProps> = memo(({
       
       // 改行計算
       const wrappedLines = wrapText(text || '', width, zoomRatio);
-      console.log('wrappedLines: ', wrappedLines)
       
       // ライン高計算
       const lineHeightValue = DEFAULT_FONT_SIZE * LINE_HEIGHT_RATIO * zoomRatio;
