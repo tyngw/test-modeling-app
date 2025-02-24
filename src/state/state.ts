@@ -405,7 +405,6 @@ const createElementAdder = (
     const newId = uuidv4();
     const newOrder = parentElement.children;
 
-    // テキストに基づいて初期サイズを計算
     const initialText = text || '';
     const initialTexts = [initialText, ...Array(getNumberOfSections() - 1).fill('')];
 
@@ -435,12 +434,18 @@ const createElementAdder = (
         width,
         height,
         sectionHeights,
-        selected: options?.select ?? true
+        selected: options?.select ?? false
+    };
+
+    const updatedParentElement = {
+        ...parentElement,
+        children: parentElement.children + 1,
+        selected: options?.select === undefined ? false : parentElement.selected
     };
 
     return {
         ...elements,
-        [parentElement.id]: { ...parentElement, children: parentElement.children + 1 },
+        [parentElement.id]: updatedParentElement,
         [newElement.id]: newElement
     };
 };
@@ -712,9 +717,7 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
             ...state.elements[action.payload.id],
             width: action.payload.width,
             height: action.payload.height,
-            section1Height: action.payload.sectionHeights[0],
-            section2Height: action.payload.sectionHeights[1],
-            section3Height: action.payload.sectionHeights[2]
+            sectionHeights: action.payload.sectionHeights
         };
 
         return {

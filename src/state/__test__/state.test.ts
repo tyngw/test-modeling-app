@@ -10,7 +10,13 @@ import { VERSION_KEY } from '../../utils/localStorageHelpers';
 jest.mock('../../constants/ElementSettings', () => ({
     ...jest.requireActual('../../constants/ElementSettings'),
     NUMBER_OF_SECTIONS: 3
-  }));
+}));
+
+jest.mock('../../utils/textareaHelpers', () => ({
+    calculateTextWidth: jest.fn(() => 100),
+    calculateElementWidth: jest.fn(() => 200),
+    wrapText: jest.fn(() => ['mockText']),
+}));
 
 const useStore = () => {
     const [state, dispatch] = useReducer(reducer, initialState);

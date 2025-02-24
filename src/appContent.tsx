@@ -1,4 +1,4 @@
-// src/context/appContent.tsx
+// src/appContent.tsx
 import React, { useState, useCallback, useMemo } from 'react';
 import CanvasArea from './components/canvasArea';
 import QuickMenuBar from './components/quickMenuBar';
