@@ -7,7 +7,7 @@ import { VERSION } from '../constants/version';
 const ENCRYPTION_KEY = 'encryptionKey';
 const TABS_STORAGE_KEY = 'tabsState';
 const LAST_SAVED_FILE_KEY = 'lastSavedFileName';
-const VERSION_KEY = 'appVersion';
+export const VERSION_KEY = 'appVersion';
 
 const safeLocalStorage = {
   getItem: (key: string): string | null => {
@@ -33,7 +33,7 @@ const safeLocalStorage = {
 const checkAndUpdateVersion = () => {
   const storedVersion = safeLocalStorage.getItem(VERSION_KEY);
   if (storedVersion !== VERSION) {
-    console.warn(`LocalStorage version mismatch: found ${storedVersion}, expected ${VERSION}. Resetting storage.`);
+    // console.warn(`LocalStorage version mismatch: found ${storedVersion}, expected ${VERSION}. Resetting storage.`);
     Object.keys(localStorage).forEach((key) => {
       if (key !== TABS_STORAGE_KEY) {
         localStorage.removeItem(key);
