@@ -23,7 +23,7 @@ export const Redo = (elements: any) => {
 };
 
 export const saveSnapshot = (elements: any) => {
-    console.log(`saveSnapshot snapshotIndex: ${snapshotIndex}`);
+    // console.log(`saveSnapshot snapshotIndex: ${snapshotIndex}`);
     const newSnapshots: any[] = snapshots.slice(0, snapshotIndex + 1);
 
     newSnapshots.push(elements);
