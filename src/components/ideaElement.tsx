@@ -1,11 +1,11 @@
 // src/components/ideaElement.tsx
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { useCanvas } from '../context/canvasContext';
 import TextSection from './textDisplayArea';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import DoneIcon from '@mui/icons-material/Done';
 import ClearIcon from '@mui/icons-material/Clear';
-import { calculateElementWidth } from '../utils/textareaHelpers';
+import { calculateElementWidth, wrapText } from '../utils/textareaHelpers';
 import {
   CURVE_CONTROL_OFFSET,
   DEFAULT_FONT_SIZE,
@@ -13,7 +13,9 @@ import {
   TEXTAREA_PADDING,
   SHADOW_OFFSET,
   ELEM_STYLE,
+  SIZE,
   ARROW,
+  LINE_HEIGHT_RATIO
 } from '../constants/elementSettings';
 import { Element as CanvasElement } from '../types';
 import { isDescendant } from '../state/state';
@@ -29,8 +31,8 @@ interface IdeaElementProps {
 
 const shouldShowButtons = (element: CanvasElement, elements: { [key: string]: CanvasElement }) => {
   if (!element.tentative || element.order !== 0) return false;
-  const siblings = Object.values(elements).filter(e => 
-      e.parentId === element.parentId && e.tentative
+  const siblings = Object.values(elements).filter(e =>
+    e.parentId === element.parentId && e.tentative
   );
   return siblings.length > 0;
 };
@@ -47,6 +49,36 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
   // const showButtons = shouldShowButtons(element, state.elements);
   const currentDropTargetId = currentDropTarget?.id || -1;
   const [isHovered, setIsHovered] = useState(false);
+
+  useEffect(() => {
+    if (element.editing) return;
+
+    const calculateDimensions = () => {
+      const newWidth = calculateElementWidth(element.texts, TEXTAREA_PADDING.HORIZONTAL);
+      const sectionHeights = element.texts.map(text => {
+        const lines = wrapText(text || '', newWidth, state.zoomRatio).length;
+        return Math.max(
+          SIZE.SECTION_HEIGHT * state.zoomRatio,
+          lines * DEFAULT_FONT_SIZE * LINE_HEIGHT_RATIO + TEXTAREA_PADDING.VERTICAL * state.zoomRatio
+        );
+      });
+      return { newWidth, newHeight: sectionHeights.reduce((sum, h) => sum + h, 0), sectionHeights };
+    };
+
+    const { newWidth, newHeight, sectionHeights } = calculateDimensions();
+
+    if (newWidth !== element.width || newHeight !== element.height) {
+      dispatch({
+        type: 'UPDATE_ELEMENT_SIZE',
+        payload: {
+          id: element.id,
+          width: newWidth,
+          height: newHeight,
+          sectionHeights
+        }
+      });
+    }
+  }, [element.editing, element.texts, element.width, element.height, dispatch, element.id]);
 
   const hiddenChildren = useMemo(
     () => Object.values(state.elements).filter(
@@ -114,7 +146,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
 
   const renderActionButtons = () => {
     if (!shouldShowButtons(element)) return null;
-  
+
     return (
       <g
         transform={`translate(${element.x + element.width * 1.1},${element.y})`}
