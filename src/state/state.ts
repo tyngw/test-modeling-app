@@ -400,7 +400,7 @@ const createElementAdder = (
     elements: { [key: string]: Element },
     parentElement: Element,
     text?: string,
-    options?: { select?: boolean }
+    options?: { newElementSelect?: boolean }
 ): { [key: string]: Element } => {
     const newId = uuidv4();
     const newOrder = parentElement.children;
@@ -434,14 +434,14 @@ const createElementAdder = (
         width,
         height,
         sectionHeights,
-        selected: options?.select ?? false,
-        editing: options?.select ?? false,
+        selected: options?.newElementSelect ?? false,
+        editing: options?.newElementSelect ?? false,
     };
 
     const updatedParentElement = {
         ...parentElement,
         children: parentElement.children + 1,
-        selected: options?.select === undefined ? false : parentElement.selected
+        selected: options?.newElementSelect ? false : parentElement.selected
     };
 
     return {
@@ -563,7 +563,7 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
 
     ADD_ELEMENT: (state, action) => handleElementMutation(state, (elements, selectedElement) => {
         const text = action.payload?.text;
-        const newElements = createElementAdder(elements, selectedElement, text);
+        const newElements = createElementAdder(elements, selectedElement, text, { newElementSelect: true });
         return { elements: adjustElementPositions(newElements) };
     }),
 
@@ -572,7 +572,7 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
         let newElements = { ...elements };
 
         texts.forEach(text => {
-            newElements = createElementAdder(newElements, selectedElement, text, { select: false });
+            newElements = createElementAdder(newElements, selectedElement, text, { newElementSelect: false });
         });
 
         return { elements: adjustElementPositions(newElements) };
