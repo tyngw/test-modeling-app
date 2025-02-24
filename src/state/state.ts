@@ -434,7 +434,8 @@ const createElementAdder = (
         width,
         height,
         sectionHeights,
-        selected: options?.select ?? false
+        selected: options?.select ?? false,
+        editing: options?.select ?? false,
     };
 
     const updatedParentElement = {
@@ -566,8 +567,14 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
         return { elements: adjustElementPositions(newElements) };
     }),
 
-    ADD_ELEMENT_SILENT: (state, action) => handleElementMutation(state, (elements, selectedElement) => {
-        const newElements = createElementAdder(elements, selectedElement, action.payload?.text, { select: false });
+    ADD_ELEMENTS_SILENT: (state, action) => handleElementMutation(state, (elements, selectedElement) => {
+        const texts: string[] = action.payload?.texts || [];
+        let newElements = { ...elements };
+
+        texts.forEach(text => {
+            newElements = createElementAdder(newElements, selectedElement, text, { select: false });
+        });
+
         return { elements: adjustElementPositions(newElements) };
     }),
 
