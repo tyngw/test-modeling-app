@@ -1,5 +1,5 @@
 // src/utils/promptHelpers.ts
-import { SYSTEM_PROMPT_TEMPLATE } from '../constants/systemPrompt';
+import { getSystemPromptTemplate } from '../utils/localStorageHelpers';
 
 interface PromptVariables {
   structureText: string;
@@ -7,7 +7,8 @@ interface PromptVariables {
 }
 
 export const createSystemPrompt = ({ structureText, inputText }: PromptVariables): string => {
-  return SYSTEM_PROMPT_TEMPLATE
+    const systemPromptTemplate = getSystemPromptTemplate();
+    return systemPromptTemplate
     .replace('{{structureText}}', structureText)
     .replace('{{inputText}}', inputText);
 };
