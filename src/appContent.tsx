@@ -73,14 +73,12 @@ const AppContent: React.FC = () => {
         });
       }
 
-      childNodes.forEach((text: string) => {
-        dispatch({
-          type: 'ADD_ELEMENT_SILENT',
-          payload: {
-            parentId: selectedElement.id,
-            text: text
-          }
-        });
+      dispatch({
+        type: 'ADD_ELEMENTS_SILENT',
+        payload: {
+          parentId: selectedElement.id,
+          texts: childNodes
+        }
       });
 
     } catch (error: unknown) {
