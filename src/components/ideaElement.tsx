@@ -3,6 +3,8 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { useCanvas } from '../context/canvasContext';
 import TextSection from './textDisplayArea';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
+import DoneIcon from '@mui/icons-material/Done';
+import ClearIcon from '@mui/icons-material/Clear';
 import { calculateElementWidth } from '../utils/textareaHelpers';
 import {
   CURVE_CONTROL_OFFSET,
@@ -25,6 +27,14 @@ interface IdeaElementProps {
   handleMouseUp: () => void;
 }
 
+const shouldShowButtons = (element: CanvasElement, elements: { [key: string]: CanvasElement }) => {
+  if (!element.tentative || element.order !== 0) return false;
+  const siblings = Object.values(elements).filter(e => 
+      e.parentId === element.parentId && e.tentative
+  );
+  return siblings.length > 0;
+};
+
 const IdeaElement: React.FC<IdeaElementProps> = ({
   element,
   currentDropTarget,
@@ -34,6 +44,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
 }) => {
   const { state, dispatch } = useCanvas();
   const parentElement = state.elements[element.parentId!];
+  // const showButtons = shouldShowButtons(element, state.elements);
   const currentDropTargetId = currentDropTarget?.id || -1;
   const [isHovered, setIsHovered] = useState(false);
 
@@ -97,12 +108,54 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
     );
   }, [parentElement, element]);
 
+  const shouldShowButtons = (element: CanvasElement) => {
+    return element.tentative && element.order === 0;
+  };
+
+  const renderActionButtons = () => {
+    if (!shouldShowButtons(element)) return null;
+  
+    return (
+      <g
+        transform={`translate(${element.x + element.width * 1.1},${element.y})`}
+        onClick={(e) => e.stopPropagation()}
+        style={{ cursor: 'pointer' }}
+      >
+        <rect
+          x="0"
+          y="0"
+          width="24"
+          height="48"
+          rx="4"
+          fill="white"
+          stroke="#e0e0e0"
+          strokeWidth="1"
+        />
+        <foreignObject x="4" y="4" width="16" height="16">
+          <DoneIcon
+            sx={{ color: '#4CAF50', '&:hover': { color: '#388E3C' } }}
+            style={{ width: '100%', height: '100%' }}
+            onClick={() => dispatch({ type: 'CONFIRM_TENTATIVE_ELEMENTS' })}
+          />
+        </foreignObject>
+        <foreignObject x="4" y="28" width="16" height="16">
+          <ClearIcon
+            sx={{ color: '#F44336', '&:hover': { color: '#D32F2F' } }}
+            style={{ width: '100%', height: '100%' }}
+            onClick={() => dispatch({ type: 'CANCEL_TENTATIVE_ELEMENTS' })}
+          />
+        </foreignObject>
+      </g>
+    );
+  };
+
   const isDebugMode = localStorage.getItem('__debugMode__') === 'true';
 
   return (
     <React.Fragment key={element.id}>
       <g opacity={isDraggedOrDescendant ? 0.3 : 1}>
         {renderConnectionPath()}
+        {renderActionButtons()}
         {hiddenChildren.length > 0 && (
           <>
             <rect
@@ -162,7 +215,9 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
           height={element.height}
           rx={ELEM_STYLE.RX}
           strokeWidth={ELEM_STYLE.STROKE}
-          stroke={`${element.selected ? ELEM_STYLE.SELECTED.STROKE_COLOR : ELEM_STYLE.NORMAL.STROKE_COLOR}`}
+          stroke={element.tentative ? '#9E9E9E' : // グレー色
+            `${element.selected ? ELEM_STYLE.SELECTED.STROKE_COLOR : ELEM_STYLE.NORMAL.STROKE_COLOR}`}
+          strokeDasharray={element.tentative ? "4 2" : "none"}
           onClick={handleSelect}
           onDoubleClick={() => dispatch({ type: 'EDIT_ELEMENT' })}
           onMouseDown={(e) => handleMouseDown(e, element)}
@@ -172,6 +227,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
             fill: (element.id === currentDropTargetId && dropPosition === 'child')
               ? ELEM_STYLE.DRAGGING.COLOR
               : ELEM_STYLE.NORMAL.COLOR,
+            strokeOpacity: element.tentative ? 0.6 : 1,
             pointerEvents: 'all',
             cursor: isHovered ? 'pointer' : 'default',
             filter: element.selected ? 'url(#boxShadow)' : 'none',
