@@ -4,6 +4,8 @@ import { useReducer } from 'react';
 import { initialState, reducer } from '../state';
 import { Element } from '../../types';
 import { SIZE } from '../../constants/elementSettings';
+import { VERSION } from '../../constants/version';
+import { VERSION_KEY } from '../../utils/localStorageHelpers';
 
 jest.mock('../../constants/ElementSettings', () => ({
     ...jest.requireActual('../../constants/ElementSettings'),
@@ -24,6 +26,8 @@ describe('state reducer', () => {
         // 各テスト前にwindowサイズをリセット
         window.innerWidth = originalInnerWidth;
         window.innerHeight = originalInnerHeight;
+        localStorage.setItem(VERSION_KEY, VERSION);
+        jest.clearAllMocks();
     });
 
     it('初期状態', () => {
