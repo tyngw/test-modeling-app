@@ -27,14 +27,6 @@ interface IdeaElementProps {
   handleMouseUp: () => void;
 }
 
-const shouldShowButtons = (element: CanvasElement, elements: { [key: string]: CanvasElement }) => {
-  if (!element.tentative || element.order !== 0) return false;
-  const siblings = Object.values(elements).filter(e => 
-      e.parentId === element.parentId && e.tentative
-  );
-  return siblings.length > 0;
-};
-
 const IdeaElement: React.FC<IdeaElementProps> = ({
   element,
   currentDropTarget,
@@ -109,7 +101,15 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
   }, [parentElement, element]);
 
   const shouldShowButtons = (element: CanvasElement) => {
-    return element.tentative && element.order === 0;
+    if (!element.tentative) return false;
+    const tentativeSiblings = Object.values(state.elements).filter(
+      (e) => e.parentId === element.parentId && e.tentative
+    );
+    // tentativeな要素が存在する前提で、最小のorder値を持つ要素を抽出
+    const firstTentative = tentativeSiblings.reduce((prev, current) =>
+      prev.order <= current.order ? prev : current
+    );
+    return firstTentative.id === element.id;
   };
 
   const renderActionButtons = () => {
