@@ -65,7 +65,7 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
                 return (
                     <textarea
                         key={index}
-                        ref={(el) => fieldRefs.current[index] = el}
+                        ref={(el) => {fieldRefs.current[index] = el}}
                         value={text}
                         onChange={(e) => dispatch({
                             type: 'UPDATE_TEXT',

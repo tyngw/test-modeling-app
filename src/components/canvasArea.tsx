@@ -1,5 +1,5 @@
 // src/components/canvasArea.tsx
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import IdeaElement from './ideaElement';
 import InputFields from './inputFields';
 import ModalWindow from './modalWindow';
@@ -23,9 +23,31 @@ interface CanvasAreaProps {
     toggleHelp: () => void;
 }
 
+const ToastMessage: React.FC<{ toast: Toast }> = ({ toast }) => (
+    <div
+        style={{
+            position: 'fixed',
+            bottom: `${20}px`,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            backgroundColor: 'rgba(255, 100, 100, 0.9)',
+            color: 'white',
+            padding: '10px 20px',
+            borderRadius: '10px',
+            transition: 'opacity 0.5s',
+            opacity: 1,
+            pointerEvents: 'none',
+            zIndex: 1000,
+        }}
+    >
+        {toast.message}
+    </div>
+);
+
 const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
     const svgRef = useRef<SVGSVGElement>(null);
     const { state, dispatch } = useCanvas();
+    const { elements, zoomRatio } = state;
     const [displayScopeSize, setCanvasSize] = useState({
         width: window.innerWidth,
         height: window.innerHeight
@@ -34,7 +56,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
         `0 0 ${displayScopeSize.width} ${displayScopeSize.height - ICONBAR_HEIGHT}`
     );
     const [toasts, setToasts] = useState<Toast[]>([]);
-    const editingNode = Object.values(state.elements).find((element) => (element as Element).editing) as Element | undefined;
+    const editingNode = Object.values(elements).find((element) => (element as Element).editing) as Element | undefined;
 
     useEffect(() => {
         if (!editingNode) {
@@ -45,22 +67,22 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
     useResizeEffect({ setCanvasSize, setDisplayArea, state });
     useClickOutside(svgRef, !!editingNode);
 
-    const addToast = (message: string) => {
+    const addToast = useCallback((message: string) => {
         const id = new Date().getTime().toString() + Math.random().toString();
         const newToast: Toast = { id, message };
+
         setToasts(prevToasts => {
-            // 既に表示されているトーストが5つ以上なら最古のものを削除
             const updatedToasts = [...prevToasts, newToast];
             if (updatedToasts.length > 5) {
                 updatedToasts.shift();
             }
             return updatedToasts;
         });
-        // 3秒後に自動でトーストを非表示にする
+
         setTimeout(() => {
             setToasts(prevToasts => prevToasts.filter(toast => toast.id !== id));
         }, 3000);
-    };
+    }, []);
 
     const {
         handleMouseDown,
@@ -80,27 +102,8 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
     return (
         <>
             {toasts.map((toast, index) => (
-                <div
-                    key={toast.id}
-                    style={{
-                        position: 'fixed',
-                        bottom: `${20 + index * 60}px`, // 各トーストごとに60pxずつ下方向へずらす
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        backgroundColor: 'rgba(255, 100, 100, 0.9)',
-                        color: 'white',
-                        padding: '10px 20px',
-                        borderRadius: '10px',
-                        transition: 'opacity 0.5s',
-                        opacity: 1,
-                        pointerEvents: 'none',
-                        zIndex: 1000,
-                    }}
-                >
-                    {toast.message}
-                </div>
+                <ToastMessage key={toast.id} toast={toast} />
             ))}
-
             <div style={{
                 position: 'absolute',
                 top: HEADER_HEIGHT,
@@ -110,7 +113,6 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                 <ModalWindow isOpen={isHelpOpen} onClose={toggleHelp}>
                     <div dangerouslySetInnerHTML={{ __html: helpContent }} />
                 </ModalWindow>
-
                 <svg
                     data-testid="view-area"
                     ref={svgRef}
@@ -122,8 +124,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                     style={{ outline: 'none' }}
                     className="svg-element"
                 >
-                    {/* <Marker /> */}
-                    {Object.values(state.elements)
+                    {Object.values(elements)
                         .filter((element): element is Element => element.visible)
                         .map(element => {
                             return (
@@ -140,12 +141,10 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                             );
                         })}
                 </svg>
-
                 <InputFields
                     element={editingNode as Element | undefined}
                     onEndEditing={() => svgRef.current?.focus()}
                 />
-
             </div>
         </>
     );
