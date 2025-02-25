@@ -50,17 +50,20 @@ const renderConnectionPath = (parentElement: CanvasElement | undefined, element:
 };
 
 const renderActionButtons = (element: CanvasElement, dispatch: React.Dispatch<any>, elements: CanvasElement[]) => {
-  const shouldShowButtons = (element: CanvasElement) => {
+  const shouldShowButtons = (element: CanvasElement, elements: CanvasElement[]) => {
     if (!element.tentative) return false;
     
-    const siblings = elements.filter(el => el.parentId === element.parentId);
-    if (siblings.length === 0) return element.order === 0;
+    // 同じparentIdを持つtentative要素をすべて取得
+    const tentativeSiblings = elements.filter(el => 
+      el.parentId === element.parentId && el.tentative
+    );
     
-    const minOrder = Math.min(...siblings.map(el => el.order));
+    // 自身も含めて最小orderを計算
+    const minOrder = Math.min(...tentativeSiblings.map(el => el.order));
     return element.order === minOrder;
   };
 
-  if (!shouldShowButtons(element)) return null;
+  if (!shouldShowButtons(element, elements)) return null;
   return (
     <g
       transform={`translate(${element.x + element.width * 1.1},${element.y})`}
