@@ -29,14 +29,6 @@ interface IdeaElementProps {
   handleMouseUp: () => void;
 }
 
-const shouldShowButtons = (element: CanvasElement, elements: { [key: string]: CanvasElement }) => {
-  if (!element.tentative || element.order !== 0) return false;
-  const siblings = Object.values(elements).filter(e =>
-    e.parentId === element.parentId && e.tentative
-  );
-  return siblings.length > 0;
-};
-
 const renderConnectionPath = (parentElement: CanvasElement | undefined, element: CanvasElement) => {
   if (!parentElement) return null;
   const totalHeight = element.height;
@@ -57,9 +49,15 @@ const renderConnectionPath = (parentElement: CanvasElement | undefined, element:
   );
 };
 
-const renderActionButtons = (element: CanvasElement, dispatch: React.Dispatch<any>) => {
+const renderActionButtons = (element: CanvasElement, dispatch: React.Dispatch<any>, elements: CanvasElement[]) => {
   const shouldShowButtons = (element: CanvasElement) => {
-    return element.tentative && element.order === 0;
+    if (!element.tentative) return false;
+    
+    const siblings = elements.filter(el => el.parentId === element.parentId);
+    if (siblings.length === 0) return element.order === 0;
+    
+    const minOrder = Math.min(...siblings.map(el => el.order));
+    return element.order === minOrder;
   };
 
   if (!shouldShowButtons(element)) return null;
@@ -207,7 +205,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
     <React.Fragment key={element.id}>
       <g opacity={isDraggedOrDescendant ? 0.3 : 1}>
         {renderConnectionPath(parentElement, element)}
-        {renderActionButtons(element, dispatch)}
+        {renderActionButtons(element, dispatch, Object.values(state.elements))}
         {hiddenChildren.length > 0 && (
           <>
             <rect
