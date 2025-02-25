@@ -17,79 +17,71 @@ interface TextDisplayAreaProps {
 const TextDisplayArea: React.FC<TextDisplayAreaProps> = memo(({
   x,
   y,
-  width,
-  height,
+  width: initialWidth,
+  height: initialHeight,
   text,
   zoomRatio,
   onHeightChange
 }) => {
   const [dimensions, setDimensions] = useState({
-    width: width,
-    height: height
+    width: initialWidth,
+    height: initialHeight
   });
   const textRef = useRef<HTMLDivElement>(null);
-  const prevDimensions = useRef({ width, height });
+  const prevDimensions = useRef({ width: initialWidth, height: initialHeight });
   const prevText = useRef(text);
 
   useEffect(() => {
     let animationFrame: number;
-    
+
     const updateDimensions = () => {
       if (!textRef.current) return;
 
-      // 最新の親要素サイズを即時反映
-      const currentParentWidth = width;
-      const currentParentHeight = height;
+      const currentWidth = initialWidth;
+      const currentHeight = initialHeight;
 
-      // テキスト折り返し計算（最新の幅を使用）
-      const wrappedLines = wrapText(text || '', currentParentWidth, zoomRatio);
-      
-      // 高さ計算
+      const wrappedLines = wrapText(text || '', currentWidth, zoomRatio);
+
       const lineHeightValue = DEFAULT_FONT_SIZE * LINE_HEIGHT_RATIO * zoomRatio;
       const minHeight = Math.max(
         SIZE.SECTION_HEIGHT * zoomRatio,
         (lineHeightValue + TEXTAREA_PADDING.VERTICAL) * zoomRatio
       );
-
       const contentHeight = wrappedLines.length * lineHeightValue;
       const totalHeight = Math.max(contentHeight, minHeight) + TEXTAREA_PADDING.VERTICAL * zoomRatio;
 
-      // 幅と高さの変更を検出
-      const widthChanged = Math.abs(currentParentWidth - prevDimensions.current.width) > 1;
+      const widthChanged = Math.abs(currentWidth - prevDimensions.current.width) > 1;
       const heightChanged = Math.abs(totalHeight - prevDimensions.current.height) > 1;
 
       if (widthChanged || heightChanged) {
         setDimensions({
-          width: currentParentWidth,
+          width: currentWidth,
           height: totalHeight
         });
-        
-        // 親要素に高さ変更を通知
+
         onHeightChange(totalHeight / zoomRatio);
-        
-        // 前回値を更新
+
         prevDimensions.current = {
-          width: currentParentWidth,
+          width: currentWidth,
           height: totalHeight
         };
       }
     };
 
-    // 依存関係を追加（width, height, text）
-    if (text !== prevText.current || width !== prevDimensions.current.width || height !== prevDimensions.current.height) {
+    if (text !== prevText.current || initialWidth !== prevDimensions.current.width || initialHeight !== prevDimensions.current.height) {
       animationFrame = requestAnimationFrame(updateDimensions);
       prevText.current = text;
     }
 
     return () => cancelAnimationFrame(animationFrame);
-  }, [text, width, height, zoomRatio, onHeightChange]);
+  }, [text, initialWidth, initialHeight, zoomRatio, onHeightChange]);
 
   return (
-    <foreignObject 
-      x={x} 
-      y={y} 
-      width={dimensions.width}  // 動的幅を適用
-      height={dimensions.height} // 動的高さを適用
+    <foreignObject
+      x={x}
+      y={y}
+      width={dimensions.width}
+      height={dimensions.height}
       pointerEvents="none"
     >
       <div
@@ -98,7 +90,7 @@ const TextDisplayArea: React.FC<TextDisplayAreaProps> = memo(({
           fontSize: `${DEFAULT_FONT_SIZE}px`,
           lineHeight: `${LINE_HEIGHT_RATIO}em`,
           fontFamily: `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`,
-          width: `${dimensions.width - TEXTAREA_PADDING.HORIZONTAL}px`, // 動的幅からパディングを差し引く
+          width: `${dimensions.width - TEXTAREA_PADDING.HORIZONTAL}px`,
           minHeight: `${SIZE.SECTION_HEIGHT}px`,
           padding: `${TEXTAREA_PADDING.VERTICAL / 2}px ${TEXTAREA_PADDING.HORIZONTAL / 2}px`,
           overflow: 'hidden',
