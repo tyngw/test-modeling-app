@@ -29,12 +29,102 @@ interface IdeaElementProps {
   handleMouseUp: () => void;
 }
 
-const shouldShowButtons = (element: CanvasElement, elements: { [key: string]: CanvasElement }) => {
-  if (!element.tentative || element.order !== 0) return false;
-  const siblings = Object.values(elements).filter(e =>
-    e.parentId === element.parentId && e.tentative
+const renderConnectionPath = (parentElement: CanvasElement | undefined, element: CanvasElement) => {
+  if (!parentElement) return null;
+  const totalHeight = element.height;
+  const pathCommands = [
+    `M ${parentElement.x + parentElement.width + ARROW.OFFSET},${parentElement.y + parentElement.height / 2}`,
+    `C ${parentElement.x + parentElement.width + CURVE_CONTROL_OFFSET},${parentElement.y + parentElement.height / 2}`,
+    `${element.x - CURVE_CONTROL_OFFSET},${element.y + totalHeight / 2}`,
+    `${element.x},${element.y + totalHeight / 2}`
+  ].join(' ');
+  return (
+    <path
+      d={pathCommands}
+      stroke="black"
+      strokeWidth={ELEM_STYLE.STROKE}
+      fill="none"
+      markerStart="url(#arrowhead)"
+    />
   );
-  return siblings.length > 0;
+};
+
+const renderActionButtons = (element: CanvasElement, dispatch: React.Dispatch<any>, elements: CanvasElement[]) => {
+  const shouldShowButtons = (element: CanvasElement, elements: CanvasElement[]) => {
+    if (!element.tentative) return false;
+    
+    // 同じparentIdを持つtentative要素をすべて取得
+    const tentativeSiblings = elements.filter(el => 
+      el.parentId === element.parentId && el.tentative
+    );
+    
+    // 自身も含めて最小orderを計算
+    const minOrder = Math.min(...tentativeSiblings.map(el => el.order));
+    return element.order === minOrder;
+  };
+
+  if (!shouldShowButtons(element, elements)) return null;
+  return (
+    <g
+      transform={`translate(${element.x + element.width * 1.1},${element.y})`}
+      onClick={(e) => e.stopPropagation()}
+      style={{ cursor: 'pointer' }}
+    >
+      <rect
+        x="0"
+        y="0"
+        width="24"
+        height="48"
+        rx="4"
+        fill="white"
+        stroke="#e0e0e0"
+        strokeWidth="1"
+      />
+      <foreignObject x="4" y="4" width="16" height="16">
+        <DoneIcon
+          sx={{ color: '#4CAF50', '&:hover': { color: '#388E3C' } }}
+          style={{ width: '100%', height: '100%' }}
+          onClick={() => dispatch({ type: 'CONFIRM_TENTATIVE_ELEMENTS' })}
+        />
+      </foreignObject>
+      <foreignObject x="4" y="28" width="16" height="16">
+        <ClearIcon
+          sx={{ color: '#F44336', '&:hover': { color: '#D32F2F' } }}
+          style={{ width: '100%', height: '100%' }}
+          onClick={() => dispatch({ type: 'CANCEL_TENTATIVE_ELEMENTS' })}
+        />
+      </foreignObject>
+    </g>
+  );
+};
+
+const DebugInfo: React.FC<{ element: CanvasElement; isHovered: boolean }> = ({ element, isHovered }) => {
+  if (localStorage.getItem('__debugMode__') !== 'true' || !isHovered) {
+    return null;
+  }
+
+  return (
+    <foreignObject
+      x={element.x + element.width + 10}
+      y={element.y - 10}
+      width="340"
+      height="150"
+      style={{ backgroundColor: 'white', border: '1px solid black', padding: '5px', zIndex: 1000, borderRadius: '5px' }}
+    >
+      <div style={{ fontSize: '12px', color: 'black' }}>
+        <div>id: {element.id}</div>
+        <div>parentID: {element.parentId}</div>
+        <div>order: {element.order}</div>
+        <div>depth: {element.depth}</div>
+        <div>children: {element.children}</div>
+        <div>editing: {element.editing ? 'true' : 'false'}</div>
+        <div>selected: {element.selected ? 'true' : 'false'}</div>
+        <div>visible: {element.visible ? 'true' : 'false'}</div>
+        <div>width: {element.width}</div>
+        <div>height: {element.width}</div>
+      </div>
+    </foreignObject>
+  );
 };
 
 const IdeaElement: React.FC<IdeaElementProps> = ({
@@ -46,13 +136,11 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
 }) => {
   const { state, dispatch } = useCanvas();
   const parentElement = state.elements[element.parentId!];
-  // const showButtons = shouldShowButtons(element, state.elements);
   const currentDropTargetId = currentDropTarget?.id || -1;
   const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
     if (element.editing) return;
-
     const calculateDimensions = () => {
       const newWidth = calculateElementWidth(element.texts, TEXTAREA_PADDING.HORIZONTAL);
       const sectionHeights = element.texts.map(text => {
@@ -78,7 +166,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
         }
       });
     }
-  }, [element.editing, element.texts, element.width, element.height, dispatch, element.id]);
+  }, [element.editing, element.texts, element.width, element.height, dispatch, element.id, state.zoomRatio]);
 
   const hiddenChildren = useMemo(
     () => Object.values(state.elements).filter(
@@ -93,14 +181,10 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
 
   const handleHeightChange = useCallback((sectionIndex: number, newHeight: number) => {
     const currentHeight = element.sectionHeights[sectionIndex];
-
     if (currentHeight !== null && Math.abs(newHeight - currentHeight) > 1) {
       const newSectionHeights = [...element.sectionHeights];
       newSectionHeights[sectionIndex] = newHeight;
-
       const newWidth = calculateElementWidth(element.texts, TEXTAREA_PADDING.HORIZONTAL);
-
-      // セクションの高さの合計を再計算
       const totalHeight = newSectionHeights.reduce((sum, h) => sum + h, 0);
 
       dispatch({
@@ -108,7 +192,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
         payload: {
           id: element.id,
           width: newWidth,
-          height: totalHeight, // 合計高さを設定
+          height: totalHeight,
           sectionHeights: newSectionHeights
         }
       });
@@ -120,74 +204,11 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
     dispatch({ type: 'SELECT_ELEMENT', payload: element.id });
   };
 
-  const renderConnectionPath = useCallback(() => {
-    if (!parentElement) return null;
-    const totalHeight = element.height;
-    const pathCommands = [
-      `M ${parentElement.x + parentElement.width + ARROW.OFFSET},${parentElement.y + parentElement.height / 2}`,
-      `C ${parentElement.x + parentElement.width + CURVE_CONTROL_OFFSET},${parentElement.y + parentElement.height / 2}`,
-      `${element.x - CURVE_CONTROL_OFFSET},${element.y + totalHeight / 2}`,
-      `${element.x},${element.y + totalHeight / 2}`
-    ].join(' ');
-    return (
-      <path
-        d={pathCommands}
-        stroke="black"
-        strokeWidth={ELEM_STYLE.STROKE}
-        fill="none"
-        markerStart="url(#arrowhead)"
-      />
-    );
-  }, [parentElement, element]);
-
-  const shouldShowButtons = (element: CanvasElement) => {
-    return element.tentative && element.order === 0;
-  };
-
-  const renderActionButtons = () => {
-    if (!shouldShowButtons(element)) return null;
-
-    return (
-      <g
-        transform={`translate(${element.x + element.width * 1.1},${element.y})`}
-        onClick={(e) => e.stopPropagation()}
-        style={{ cursor: 'pointer' }}
-      >
-        <rect
-          x="0"
-          y="0"
-          width="24"
-          height="48"
-          rx="4"
-          fill="white"
-          stroke="#e0e0e0"
-          strokeWidth="1"
-        />
-        <foreignObject x="4" y="4" width="16" height="16">
-          <DoneIcon
-            sx={{ color: '#4CAF50', '&:hover': { color: '#388E3C' } }}
-            style={{ width: '100%', height: '100%' }}
-            onClick={() => dispatch({ type: 'CONFIRM_TENTATIVE_ELEMENTS' })}
-          />
-        </foreignObject>
-        <foreignObject x="4" y="28" width="16" height="16">
-          <ClearIcon
-            sx={{ color: '#F44336', '&:hover': { color: '#D32F2F' } }}
-            style={{ width: '100%', height: '100%' }}
-            onClick={() => dispatch({ type: 'CANCEL_TENTATIVE_ELEMENTS' })}
-          />
-        </foreignObject>
-      </g>
-    );
-  };
-
-  const isDebugMode = localStorage.getItem('__debugMode__') === 'true';
-
   return (
     <React.Fragment key={element.id}>
       <g opacity={isDraggedOrDescendant ? 0.3 : 1}>
-        {renderConnectionPath()}
-        {renderActionButtons()}
+        {renderConnectionPath(parentElement, element)}
+        {renderActionButtons(element, dispatch, Object.values(state.elements))}
         {hiddenChildren.length > 0 && (
           <>
             <rect
@@ -247,7 +268,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
           height={element.height}
           rx={ELEM_STYLE.RX}
           strokeWidth={ELEM_STYLE.STROKE}
-          stroke={element.tentative ? '#9E9E9E' : // グレー色
+          stroke={element.tentative ? '#9E9E9E' :
             `${element.selected ? ELEM_STYLE.SELECTED.STROKE_COLOR : ELEM_STYLE.NORMAL.STROKE_COLOR}`}
           strokeDasharray={element.tentative ? "4 2" : "none"}
           onClick={handleSelect}
@@ -294,7 +315,6 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
               zoomRatio={state.zoomRatio}
               onHeightChange={(newHeight) => handleHeightChange(index, newHeight)}
             />
-
             {index < element.texts.length - 1 && (
               <line
                 x1={element.x}
@@ -307,28 +327,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
             )}
           </React.Fragment>
         ))}
-        {isDebugMode && isHovered && (
-          <foreignObject
-            x={element.x + element.width + 10}
-            y={element.y - 10}
-            width="340"
-            height="150"
-            style={{ backgroundColor: 'white', border: '1px solid black', padding: '5px', zIndex: 1000, borderRadius: '5px' }}
-          >
-            <div style={{ fontSize: '12px', color: 'black' }}>
-              <div>id: {element.id}</div>
-              <div>parentID: {element.parentId}</div>
-              <div>order: {element.order}</div>
-              <div>depth: {element.depth}</div>
-              <div>children: {element.children}</div>
-              <div>editing: {element.editing ? 'true' : 'false'}</div>
-              <div>selected: {element.selected ? 'true' : 'false'}</div>
-              <div>visible: {element.visible ? 'true' : 'false'}</div>
-              <div>width: {element.width}</div>
-              <div>height: {element.width}</div>
-            </div>
-          </foreignObject>
-        )}
+        <DebugInfo element={element} isHovered={isHovered} />
       </g>
     </React.Fragment>
   );
