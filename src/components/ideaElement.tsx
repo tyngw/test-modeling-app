@@ -90,7 +90,7 @@ const renderActionButtons = (element: CanvasElement, dispatch: React.Dispatch<an
               transition: 'color 0.2s ease-in-out'
             }}
             style={{ width: '100%', height: '100%' }}
-            onClick={() => dispatch({ type: 'CONFIRM_TENTATIVE_ELEMENTS' })}
+            onClick={() => dispatch({ type: 'CONFIRM_TENTATIVE_ELEMENTS', payload: element.parentId })}
           />
         </foreignObject>
       </g>
@@ -115,7 +115,7 @@ const renderActionButtons = (element: CanvasElement, dispatch: React.Dispatch<an
               transition: 'color 0.2s ease-in-out'
             }}
             style={{ width: '100%', height: '100%' }}
-            onClick={() => dispatch({ type: 'CANCEL_TENTATIVE_ELEMENTS' })}
+            onClick={() => dispatch({ type: 'CANCEL_TENTATIVE_ELEMENTS', payload: element.parentId })}
           />
         </foreignObject>
       </g>
