@@ -75,3 +75,14 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #555;
 }
+
+.editable {
+  border: none !important;
+  transition: box-shadow 0.15s ease-in-out;
+  border-radius: 4px;
+}
+
+.editable:focus {
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+}
