@@ -268,8 +268,15 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
           height={element.height}
           rx={ELEM_STYLE.RX}
           strokeWidth={ELEM_STYLE.STROKE}
-          stroke={element.tentative ? '#9E9E9E' :
-            `${element.selected ? ELEM_STYLE.SELECTED.STROKE_COLOR : ELEM_STYLE.NORMAL.STROKE_COLOR}`}
+          stroke={
+            element.texts.length > 1 // セクション数2以上の場合のみstrokeを表示
+              ? element.tentative 
+                ? '#9E9E9E' 
+                : element.selected 
+                  ? ELEM_STYLE.SELECTED.STROKE_COLOR 
+                  : ELEM_STYLE.NORMAL.STROKE_COLOR
+              : 'transparent' // セクション数1の場合は透明
+          }
           strokeDasharray={element.tentative ? "4 2" : "none"}
           onClick={handleSelect}
           onDoubleClick={() => dispatch({ type: 'EDIT_ELEMENT' })}
@@ -286,6 +293,22 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
             filter: element.selected ? 'url(#boxShadow)' : 'none',
           }}
         />
+        {element.texts.length === 1 && (
+  <line
+    x1={element.x}
+    y1={element.y + element.height}
+    x2={element.x + element.width}
+    y2={element.y + element.height}
+    stroke={
+      element.tentative ? '#9E9E9E' :
+      element.selected ? ELEM_STYLE.SELECTED.STROKE_COLOR :
+      ELEM_STYLE.NORMAL.STROKE_COLOR
+    }
+    strokeWidth={ELEM_STYLE.STROKE}
+    strokeDasharray={element.tentative ? "4 2" : "none"}
+    pointerEvents="none"
+  />
+)}
         {currentDropTarget?.id === element.id && draggingElement && dropPosition !== 'child' && (
           <rect
             className='drop-preview'
