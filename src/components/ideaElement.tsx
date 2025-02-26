@@ -52,12 +52,12 @@ const renderConnectionPath = (parentElement: CanvasElement | undefined, element:
 const renderActionButtons = (element: CanvasElement, dispatch: React.Dispatch<any>, elements: CanvasElement[]) => {
   const shouldShowButtons = (element: CanvasElement, elements: CanvasElement[]) => {
     if (!element.tentative) return false;
-    
+
     // 同じparentIdを持つtentative要素をすべて取得
-    const tentativeSiblings = elements.filter(el => 
+    const tentativeSiblings = elements.filter(el =>
       el.parentId === element.parentId && el.tentative
     );
-    
+
     // 自身も含めて最小orderを計算
     const minOrder = Math.min(...tentativeSiblings.map(el => el.order));
     return element.order === minOrder;
@@ -68,32 +68,57 @@ const renderActionButtons = (element: CanvasElement, dispatch: React.Dispatch<an
     <g
       transform={`translate(${element.x + element.width * 1.1},${element.y})`}
       onClick={(e) => e.stopPropagation()}
-      style={{ cursor: 'pointer' }}
+      style={{ cursor: 'pointer', pointerEvents: 'all' }}
     >
-      <rect
-        x="0"
-        y="0"
-        width="24"
-        height="48"
-        rx="4"
-        fill="white"
-        stroke="#e0e0e0"
-        strokeWidth="1"
-      />
-      <foreignObject x="4" y="4" width="16" height="16">
-        <DoneIcon
-          sx={{ color: '#4CAF50', '&:hover': { color: '#388E3C' } }}
-          style={{ width: '100%', height: '100%' }}
-          onClick={() => dispatch({ type: 'CONFIRM_TENTATIVE_ELEMENTS' })}
+      {/* Doneボタン */}
+      <g>
+        <rect
+          x="0"
+          y="0"
+          width="24"
+          height="24"
+          rx="4"
+          fill="white"
+          stroke="#e0e0e0"
+          strokeWidth="1"
         />
-      </foreignObject>
-      <foreignObject x="4" y="28" width="16" height="16">
-        <ClearIcon
-          sx={{ color: '#F44336', '&:hover': { color: '#D32F2F' } }}
-          style={{ width: '100%', height: '100%' }}
-          onClick={() => dispatch({ type: 'CANCEL_TENTATIVE_ELEMENTS' })}
+        <foreignObject x="4" y="4" width="16" height="16">
+          <DoneIcon
+            sx={{
+              color: '#4CAF50',
+              '&:hover': { color: '#388E3C' },
+              transition: 'color 0.2s ease-in-out'
+            }}
+            style={{ width: '100%', height: '100%' }}
+            onClick={() => dispatch({ type: 'CONFIRM_TENTATIVE_ELEMENTS' })}
+          />
+        </foreignObject>
+      </g>
+
+      {/* Clearボタン */}
+      <g transform="translate(30, 0)">
+        <rect
+          x="0"
+          y="0"
+          width="24"
+          height="24"
+          rx="4"
+          fill="white"
+          stroke="#e0e0e0"
+          strokeWidth="1"
         />
-      </foreignObject>
+        <foreignObject x="4" y="4" width="16" height="16">
+          <ClearIcon
+            sx={{
+              color: '#F44336',
+              '&:hover': { color: '#D32F2F' },
+              transition: 'color 0.2s ease-in-out'
+            }}
+            style={{ width: '100%', height: '100%' }}
+            onClick={() => dispatch({ type: 'CANCEL_TENTATIVE_ELEMENTS' })}
+          />
+        </foreignObject>
+      </g>
     </g>
   );
 };
@@ -270,10 +295,10 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
           strokeWidth={ELEM_STYLE.STROKE}
           stroke={
             element.texts.length > 1 // セクション数2以上の場合のみstrokeを表示
-              ? element.tentative 
-                ? '#9E9E9E' 
-                : element.selected 
-                  ? ELEM_STYLE.SELECTED.STROKE_COLOR 
+              ? element.tentative
+                ? '#9E9E9E'
+                : element.selected
+                  ? ELEM_STYLE.SELECTED.STROKE_COLOR
                   : ELEM_STYLE.NORMAL.STROKE_COLOR
               : 'transparent' // セクション数1の場合は透明
           }
@@ -294,21 +319,21 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
           }}
         />
         {element.texts.length === 1 && (
-  <line
-    x1={element.x}
-    y1={element.y + element.height}
-    x2={element.x + element.width}
-    y2={element.y + element.height}
-    stroke={
-      element.tentative ? '#9E9E9E' :
-      element.selected ? ELEM_STYLE.SELECTED.STROKE_COLOR :
-      ELEM_STYLE.NORMAL.STROKE_COLOR
-    }
-    strokeWidth={ELEM_STYLE.STROKE}
-    strokeDasharray={element.tentative ? "4 2" : "none"}
-    pointerEvents="none"
-  />
-)}
+          <line
+            x1={element.x}
+            y1={element.y + element.height}
+            x2={element.x + element.width}
+            y2={element.y + element.height}
+            stroke={
+              element.tentative ? '#9E9E9E' :
+                element.selected ? ELEM_STYLE.SELECTED.STROKE_COLOR :
+                  ELEM_STYLE.NORMAL.STROKE_COLOR
+            }
+            strokeWidth={ELEM_STYLE.STROKE}
+            strokeDasharray={element.tentative ? "4 2" : "none"}
+            pointerEvents="none"
+          />
+        )}
         {currentDropTarget?.id === element.id && draggingElement && dropPosition !== 'child' && (
           <rect
             className='drop-preview'
