@@ -10,7 +10,7 @@
   user-select: none;
 }
 
-.rectangle {
+/* .rectangle {
   width: 100px;
   height: 100px;
   border: 1px solid black;
@@ -23,7 +23,7 @@
 
 .selected {
   border-color: red;
-}
+} */
 
 /* ノードの基本スタイル */
 /* .element {
@@ -36,28 +36,14 @@
 } */
 
 /* ノードが選択されていないときのスタイル */
-.element-unselected {
+/* .element-unselected {
   stroke: black;
-}
+} */
 
-/* ノード内のテキストのスタイル(参照していないclass) */
-.element-text {
-  fill: black;
-  pointer-events: none;
-  /* テキストをクリック可能なエリアとして扱わない */
-}
-
-/* 編集中のテキスト入力フィールドのスタイル */
-.editable {
-  position: absolute;
-  z-index: 100;
-  /* ベースのスタイリングをここに追加 */
-}
-
-.iconbar-button {
+/* .iconbar-button {
   background-color: transparent;
   border: none;
-}
+} */
 
 ::-webkit-scrollbar {
   width: 10px;
@@ -74,4 +60,18 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: #555;
+}
+
+/* 編集中のテキスト入力フィールドのスタイル */
+.editable {
+  position: absolute;
+  z-index: 100;
+  border: none !important;
+  transition: box-shadow 0.15s ease-in-out;
+  border-radius: 4px;
+}
+
+.editable:focus {
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
 }

@@ -616,52 +616,56 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
         )
     }),
 
-    CONFIRM_TENTATIVE_ELEMENTS: (state) => ({
+    CONFIRM_TENTATIVE_ELEMENTS: (state, action) => ({
         ...state,
         elements: Object.values(state.elements).reduce<{ [key: string]: Element }>((acc, element) => {
-            acc[element.id] = element.tentative ? { ...element, tentative: false } : element;
-            return acc;
+          if (element.parentId === action.payload && element.tentative) {
+            acc[element.id] = { ...element, tentative: false };
+          } else {
+            acc[element.id] = element;
+          }
+          return acc;
         }, {})
-    }),
+      }),
 
-    CANCEL_TENTATIVE_ELEMENTS: (state) => {
-        const tentativeElements = Object.values(state.elements).filter(e => e.tentative);
-
-        // ユニークな親IDを取得（nullを除外し、明示的にstring型を保証）
-        const parentIds = Array.from(
-            new Set(
-                tentativeElements
-                    .map(e => e.parentId)
-                    .filter((id): id is string => id !== null) // 型ガードを追加
-            )
+      CANCEL_TENTATIVE_ELEMENTS: (state, action) => {
+        const tentativeElements = Object.values(state.elements).filter(e => 
+          e.tentative && e.parentId === action.payload
         );
-
-
-        // tentative要素を削除
+      
+        const parentIds = Array.from(
+          new Set(
+            tentativeElements
+              .map(e => e.parentId)
+              .filter((id): id is string => id !== null)
+          )
+        );
+      
         const filteredElements = Object.values(state.elements).reduce((acc, element) => {
-            if (!element.tentative) acc[element.id] = element;
-            return acc;
+          if (!(element.tentative && element.parentId === action.payload)) {
+            acc[element.id] = element;
+          }
+          return acc;
         }, {} as { [key: string]: Element });
-
-        // 親要素のchildrenを再計算
+      
         const updatedElements = parentIds.reduce((acc, parentId) => {
-            if (acc[parentId]) {
-                const childrenCount = Object.values(acc).filter(e =>
-                    e.parentId === parentId && !e.tentative
-                ).length;
-                acc[parentId] = {
-                    ...acc[parentId],
-                    children: childrenCount
-                };
-            }
-            return acc;
+          if (acc[parentId]) {
+            const childrenCount = Object.values(acc).filter(e =>
+              e.parentId === parentId && !e.tentative
+            ).length;
+            acc[parentId] = {
+              ...acc[parentId],
+              children: childrenCount
+            };
+          }
+          return acc;
         }, filteredElements);
-
+      
         return {
-            ...state,
-            elements: adjustElementPositions(updatedElements)
+          ...state,
+          elements: adjustElementPositions(updatedElements)
         };
-    },
+      },
 
     UNDO: state => ({ ...state, elements: Undo(state.elements) }),
     REDO: state => ({ ...state, elements: Redo(state.elements) }),
