@@ -88,7 +88,7 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
                             lineHeight: `${LINE_HEIGHT_RATIO}em`,
                             padding: `0`,
                             fontFamily: `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`,
-                            border: 'none',
+                            // border: 'none',
                             boxSizing: 'border-box',
                             WebkitFontSmoothing: 'antialiased',
                             MozOsxFontSmoothing: 'grayscale',
