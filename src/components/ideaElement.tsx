@@ -15,7 +15,8 @@ import {
   ELEM_STYLE,
   SIZE,
   ARROW,
-  LINE_HEIGHT_RATIO
+  LINE_HEIGHT_RATIO,
+  CONNECTION_PATH_STYLE,
 } from '../constants/elementSettings';
 import { Element as CanvasElement } from '../types';
 import { isDescendant } from '../state/state';
@@ -41,8 +42,8 @@ const renderConnectionPath = (parentElement: CanvasElement | undefined, element:
   return (
     <path
       d={pathCommands}
-      stroke="black"
-      strokeWidth={ELEM_STYLE.STROKE}
+      stroke={CONNECTION_PATH_STYLE.COLOR}
+      strokeWidth={CONNECTION_PATH_STYLE.STROKE}
       fill="none"
       markerStart="url(#arrowhead)"
     />

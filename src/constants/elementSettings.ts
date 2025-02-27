@@ -34,6 +34,10 @@ export const ELEM_STYLE = {
     RX: 2,
     STROKE: "2px",
 }
+export const CONNECTION_PATH_STYLE = {
+    COLOR: "black",
+    STROKE: "0.5px",
+}
 export const CURVE_CONTROL_OFFSET = 80;
 export const DEFAULT_FONT_SIZE = 12;
 export const DEFAULT_FONT_FAMILY = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
