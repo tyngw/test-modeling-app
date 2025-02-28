@@ -12,12 +12,12 @@ interface TabHeadersProps {
   switchTab: (id: string) => void;
 }
 
-const TabHeaders: React.FC<TabHeadersProps> = React.memo(({ 
-  tabs, 
-  currentTabId, 
-  addTab, 
-  closeTab, 
-  switchTab 
+const TabHeaders: React.FC<TabHeadersProps> = React.memo(({
+  tabs,
+  currentTabId,
+  addTab,
+  closeTab,
+  switchTab
 }) => (
   <div style={{
     display: 'flex',

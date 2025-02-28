@@ -4,6 +4,7 @@ import CanvasArea from './components/canvasArea';
 import QuickMenuBar from './components/quickMenuBar';
 import TabHeaders from './components/TabHeaders/TabHeaders';
 import SettingsModal from './components/settingsModal';
+import ModalWindow from './components/modalWindow';
 import { CanvasProvider } from './context/canvasContext';
 import { Action } from './state/state';
 import { useTabs } from './context/tabsContext';
@@ -14,12 +15,15 @@ import { generateWithGemini } from './utils/api';
 import { getApiKey } from './utils/localStorageHelpers';
 import { formatElementsForPrompt } from './utils/elementHelpers';
 import { createSystemPrompt } from './constants/promptHelpers';
+import {Button } from '@mui/material';
 
 const AppContent: React.FC = () => {
   const { tabs, currentTabId, addTab, closeTab, switchTab, updateTabState, updateTabName } = useTabs();
   const currentTab = useMemo(() => tabs.find(tab => tab.id === currentTabId), [tabs, currentTabId]);
   const [isHelpOpen, setHelpOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [tabToClose, setTabToClose] = useState<string | null>(null);
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
 
   const toggleHelp = useCallback(() => setHelpOpen(prev => !prev), []);
   const toggleSettings = useCallback(() => setIsSettingsOpen(prev => !prev), []);
@@ -27,6 +31,19 @@ const AppContent: React.FC = () => {
   const dispatch = useCallback((action: Action) => {
     updateTabState(currentTabId, prevState => reducer(prevState, action));
   }, [currentTabId, updateTabState]);
+
+  const handleCloseTabRequest = (tabId: string) => {
+    const targetTab = tabs.find(t => t.id === tabId);
+    // 仮の未保存チェック（実際はタブの状態に基づく必要あり）
+    const hasUnsavedChanges = true;
+    
+    if (hasUnsavedChanges) {
+      setTabToClose(tabId);
+      setShowCloseConfirm(true);
+    } else {
+      closeTab(tabId);
+    }
+  };
 
   const handleAIClick = useCallback(async () => {
     if (!currentTab) return;
@@ -90,6 +107,41 @@ const AppContent: React.FC = () => {
     }
   }, [currentTab, dispatch]);
 
+  const renderConfirmModal = () => (
+    <ModalWindow
+      isOpen={showCloseConfirm}
+      onClose={() => setShowCloseConfirm(false)}
+    >
+      <div style={{ padding: '20px' }}>
+        <p style={{ marginBottom: '20px' }}>
+          タブを閉じてよろしいですか？
+        </p>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'flex-end',
+          gap: '10px'
+        }}>
+          <Button
+            variant="outlined"
+            onClick={() => setShowCloseConfirm(false)}
+          >
+            いいえ
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => {
+              if (tabToClose) closeTab(tabToClose);
+              setShowCloseConfirm(false);
+            }}
+          >
+            はい
+          </Button>
+        </div>
+      </div>
+    </ModalWindow>
+  );
+
   const memoizedCanvasProvider = useMemo(() => {
     if (!currentTab) return null;
     return (
@@ -119,10 +171,12 @@ const AppContent: React.FC = () => {
         tabs={tabs}
         currentTabId={currentTabId}
         addTab={addTab}
-        closeTab={closeTab}
+        closeTab={handleCloseTabRequest}
         switchTab={switchTab}
       />
       {memoizedCanvasProvider}
+
+      {renderConfirmModal()}
 
       <SettingsModal
         isOpen={isSettingsOpen}
