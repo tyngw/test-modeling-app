@@ -48,7 +48,7 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
                 payload: { id: element.id, index, value: newValue }
             });
         }
-        if (e.key === 'Escape') {
+        if (e.key === 'Escape' || (e.key === 'Enter' && (e.ctrlKey || e.metaKey))) {
             e.preventDefault();
             dispatch({ type: 'END_EDITING' });
         }
