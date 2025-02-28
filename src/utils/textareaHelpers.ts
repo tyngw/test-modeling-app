@@ -40,6 +40,11 @@ export const wrapText = (
   const wrappedLines: string[] = [];
 
   paragraphs.forEach(paragraph => {
+    if (paragraph.trim() === '') {
+      wrappedLines.push('');
+      return;
+    }
+    
     let currentLine = '';
     let currentWidth = 0;
 
