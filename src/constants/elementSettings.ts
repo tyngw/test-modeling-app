@@ -19,7 +19,7 @@ export const OFFSET = {
 export const ELEM_STYLE = {
     NORMAL: {
         COLOR: "white",
-        STROKE_COLOR: "black",
+        STROKE_COLOR: "dimgray",
     },
     SELECTED: {
         STROKE_COLOR:  "blue",
