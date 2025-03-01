@@ -6,10 +6,10 @@ export const DEFAULT_POSITION = {
     Y: 50,
 }
 export const SIZE = {
-    SECTION_HEIGHT: 24,
+    SECTION_HEIGHT: 20,
     WIDTH: {
-        MAX: 200,
-        MIN: 80,
+        MAX: 300,
+        MIN: 50,
     },
 }
 export const OFFSET = {
@@ -19,7 +19,7 @@ export const OFFSET = {
 export const ELEM_STYLE = {
     NORMAL: {
         COLOR: "white",
-        STROKE_COLOR: "black",
+        STROKE_COLOR: "dimgray",
     },
     SELECTED: {
         STROKE_COLOR:  "blue",

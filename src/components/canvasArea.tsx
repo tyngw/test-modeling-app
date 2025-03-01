@@ -13,36 +13,10 @@ import { helpContent } from '../constants/helpContent';
 import { ICONBAR_HEIGHT, HEADER_HEIGHT } from '../constants/elementSettings';
 import { Element } from '../types';
 
-interface Toast {
-    id: string;
-    message: string;
-}
-
 interface CanvasAreaProps {
     isHelpOpen: boolean;
     toggleHelp: () => void;
 }
-
-const ToastMessage: React.FC<{ toast: Toast }> = ({ toast }) => (
-    <div
-        style={{
-            position: 'fixed',
-            bottom: `${20}px`,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            backgroundColor: 'rgba(255, 100, 100, 0.9)',
-            color: 'white',
-            padding: '10px 20px',
-            borderRadius: '10px',
-            transition: 'opacity 0.5s',
-            opacity: 1,
-            pointerEvents: 'none',
-            zIndex: 1000,
-        }}
-    >
-        {toast.message}
-    </div>
-);
 
 const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
     const svgRef = useRef<SVGSVGElement>(null);
@@ -55,34 +29,17 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
     const [displayArea, setDisplayArea] = useState(
         `0 0 ${displayScopeSize.width} ${displayScopeSize.height - ICONBAR_HEIGHT}`
     );
-    const [toasts, setToasts] = useState<Toast[]>([]);
+    const [isPinching, setIsPinching] = useState(false);
+    const [initialPinchDistance, setInitialPinchDistance] = useState(0);
+    const [initialScroll, setInitialScroll] = useState({ x: 0, y: 0 });
     const editingNode = Object.values(elements).find((element) => (element as Element).editing) as Element | undefined;
 
     useEffect(() => {
-        if (!editingNode) {
-            svgRef.current?.focus();
-        }
+        if (!editingNode) svgRef.current?.focus();
     }, [editingNode]);
 
     useResizeEffect({ setCanvasSize, setDisplayArea, state });
     useClickOutside(svgRef, !!editingNode);
-
-    const addToast = useCallback((message: string) => {
-        const id = new Date().getTime().toString() + Math.random().toString();
-        const newToast: Toast = { id, message };
-
-        setToasts(prevToasts => {
-            const updatedToasts = [...prevToasts, newToast];
-            if (updatedToasts.length > 5) {
-                updatedToasts.shift();
-            }
-            return updatedToasts;
-        });
-
-        setTimeout(() => {
-            setToasts(prevToasts => prevToasts.filter(toast => toast.id !== id));
-        }, 3000);
-    }, []);
 
     const {
         handleMouseDown,
@@ -90,7 +47,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
         currentDropTarget,
         dropPosition,
         draggingElement
-    } = useElementDragEffect({ showToast: addToast });
+    } = useElementDragEffect();
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         e.preventDefault();
@@ -99,16 +56,78 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
         if (actionType) dispatch({ type: actionType });
     };
 
+    const handleTouchStart = useCallback((e: React.TouchEvent<SVGSVGElement>) => {
+        if (e.touches.length === 2) {
+            setIsPinching(true);
+            const touch1 = e.touches[0];
+            const touch2 = e.touches[1];
+            const distance = Math.hypot(
+                touch2.clientX - touch1.clientX,
+                touch2.clientY - touch1.clientY
+            );
+            setInitialPinchDistance(distance);
+            setInitialScroll({
+                x: window.scrollX,
+                y: window.scrollY
+            });
+        } else if (e.touches.length === 1) {
+            const touch = e.touches[0];
+            const target = document.elementFromPoint(touch.clientX, touch.clientY);
+
+            if (target instanceof SVGRectElement) {
+                const syntheticEvent = new MouseEvent('mousedown', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY,
+                    bubbles: true
+                });
+                target.dispatchEvent(syntheticEvent);
+            }
+        }
+    }, []);
+
+    const handleTouchMove = useCallback((e: React.TouchEvent<SVGSVGElement>) => {
+        if (isPinching && e.touches.length === 2) {
+            e.preventDefault();
+
+            const touch1 = e.touches[0];
+            const touch2 = e.touches[1];
+            const currentDistance = Math.hypot(
+                touch2.clientX - touch1.clientX,
+                touch2.clientY - touch1.clientY
+            );
+
+            const deltaX = touch1.clientX - touch2.clientX;
+            const deltaY = touch1.clientY - touch2.clientY;
+            const angle = Math.atan2(deltaY, deltaX);
+
+            const scale = currentDistance / initialPinchDistance;
+            const offsetX = (touch1.clientX + touch2.clientX) / 2;
+            const offsetY = (touch1.clientY + touch2.clientY) / 2;
+
+            window.scrollTo({
+                left: initialScroll.x + (offsetX * (scale - 1)) * Math.cos(angle),
+                top: initialScroll.y + (offsetY * (scale - 1)) * Math.sin(angle),
+                behavior: 'auto' as ScrollBehavior 
+            });
+        } else if (e.touches.length === 1) {
+            e.preventDefault();
+        }
+    }, [isPinching, initialPinchDistance, initialScroll]);
+
+    const handleTouchEnd = useCallback(() => {
+        setIsPinching(false);
+        setInitialPinchDistance(0);
+        setInitialScroll({ x: 0, y: 0 });
+    }, []);
+
     return (
         <>
-            {toasts.map((toast, index) => (
-                <ToastMessage key={toast.id} toast={toast} />
-            ))}
             <div style={{
                 position: 'absolute',
                 top: HEADER_HEIGHT,
                 left: 0,
-                overflow: 'auto'
+                overflow: 'auto',
+                touchAction: isPinching ? 'none' : 'pan-y'
             }}>
                 <ModalWindow isOpen={isHelpOpen} onClose={toggleHelp}>
                     <div dangerouslySetInnerHTML={{ __html: helpContent }} />
@@ -121,25 +140,31 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                     viewBox={displayArea}
                     tabIndex={0}
                     onKeyDown={handleKeyDown}
-                    style={{ outline: 'none' }}
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                    style={{
+                        outline: 'none',
+                        touchAction: isPinching ? 'none' : 'pan-y',
+                        userSelect: 'none',
+                        WebkitUserSelect: 'none'
+                    }}
                     className="svg-element"
                 >
                     {Object.values(elements)
                         .filter((element): element is Element => element.visible)
-                        .map(element => {
-                            return (
-                                <React.Fragment key={element.id}>
-                                    <IdeaElement
-                                        element={element}
-                                        currentDropTarget={currentDropTarget as Element | null}
-                                        dropPosition={dropPosition}
-                                        draggingElement={draggingElement}
-                                        handleMouseDown={handleMouseDown as unknown as (e: React.MouseEvent<SVGElement>, element: Element) => void}
-                                        handleMouseUp={handleMouseUp}
-                                    />
-                                </React.Fragment>
-                            );
-                        })}
+                        .map(element => (
+                            <React.Fragment key={element.id}>
+                                <IdeaElement
+                                    element={element}
+                                    currentDropTarget={currentDropTarget as Element | null}
+                                    dropPosition={dropPosition}
+                                    draggingElement={draggingElement}
+                                    handleMouseDown={handleMouseDown as unknown as (e: React.MouseEvent<SVGElement>, element: Element) => void}
+                                    handleMouseUp={handleMouseUp}
+                                />
+                            </React.Fragment>
+                        ))}
                 </svg>
                 <InputFields
                     element={editingNode as Element | undefined}

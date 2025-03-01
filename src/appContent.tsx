@@ -1,9 +1,11 @@
 // src/appContent.tsx
+import { ToastMessages } from './constants/toastMessages';
 import React, { useState, useCallback, useMemo } from 'react';
 import CanvasArea from './components/canvasArea';
 import QuickMenuBar from './components/quickMenuBar';
 import TabHeaders from './components/TabHeaders/TabHeaders';
 import SettingsModal from './components/settingsModal';
+import UnsaveConfirmModal from './components/unsaveConfiromModal';
 import { CanvasProvider } from './context/canvasContext';
 import { Action } from './state/state';
 import { useTabs } from './context/tabsContext';
@@ -14,12 +16,16 @@ import { generateWithGemini } from './utils/api';
 import { getApiKey } from './utils/localStorageHelpers';
 import { formatElementsForPrompt } from './utils/elementHelpers';
 import { createSystemPrompt } from './constants/promptHelpers';
+import { useToast } from './context/toastContext';
 
 const AppContent: React.FC = () => {
   const { tabs, currentTabId, addTab, closeTab, switchTab, updateTabState, updateTabName } = useTabs();
   const currentTab = useMemo(() => tabs.find(tab => tab.id === currentTabId), [tabs, currentTabId]);
   const [isHelpOpen, setHelpOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [tabToClose, setTabToClose] = useState<string | null>(null);
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+  const { addToast } = useToast();
 
   const toggleHelp = useCallback(() => setHelpOpen(prev => !prev), []);
   const toggleSettings = useCallback(() => setIsSettingsOpen(prev => !prev), []);
@@ -28,37 +34,41 @@ const AppContent: React.FC = () => {
     updateTabState(currentTabId, prevState => reducer(prevState, action));
   }, [currentTabId, updateTabState]);
 
+  const handleCloseTabRequest = (tabId: string) => {
+    const targetTab = tabs.find(t => t.id === tabId);
+    const hasUnsavedChanges = true;
+    
+    if (hasUnsavedChanges) {
+      setTabToClose(tabId);
+      setShowCloseConfirm(true);
+    } else {
+      closeTab(tabId);
+    }
+  };
+
   const handleAIClick = useCallback(async () => {
     if (!currentTab) return;
 
-    // 選択中の要素取得
     const selectedElement = Object.values(currentTab.state.elements)
       .find(el => el.selected);
 
     if (!selectedElement) {
-      alert('子要素を追加する要素を選択してください');
+      addToast(ToastMessages.selectParentElement);
       return;
     }
 
     const decryptedApiKey = getApiKey();
 
     try {
-      // 要素データの加工
       const structureText = formatElementsForPrompt(
-      currentTab.state.elements,
-      selectedElement.id
+        currentTab.state.elements,
+        selectedElement.id
       );
 
       const inputText = localStorage.getItem('prompt') || 'なし:';
-
-      // プロンプト構築
       const fullPrompt = createSystemPrompt({ structureText, inputText });
-
-      // Gemini API 呼び出し（Function Calling 対応）
       const result = await generateWithGemini(fullPrompt, decryptedApiKey);
 
-      // extractNextElements の戻り値が配列の場合はそのまま採用、
-      // 文字列の場合は従来のコードブロック抽出ロジックを適用
       let childNodes: string[] = [];
       if (Array.isArray(result)) {
         childNodes = result;
@@ -82,13 +92,12 @@ const AppContent: React.FC = () => {
       });
 
     } catch (error: unknown) {
-      if (error instanceof Error) {
-        alert('AI処理に失敗しました: ' + error.message);
-      } else {
-        alert('AI処理に失敗しました');
-      }
+      const message = error instanceof Error ? 
+        `${ToastMessages.aiError}: ${error.message}` : 
+        ToastMessages.aiError;
+      addToast(message);
     }
-  }, [currentTab, dispatch]);
+  }, [currentTab, dispatch, addToast]);
 
   const memoizedCanvasProvider = useMemo(() => {
     if (!currentTab) return null;
@@ -102,7 +111,7 @@ const AppContent: React.FC = () => {
               const newTabName = fileName.replace('.json', '');
               updateTabName(currentTabId, newTabName);
             })
-            .catch(alert)}
+            .catch(error => addToast(error.message))}
           saveElements={() => saveElements(Object.values(currentTab.state.elements), currentTab.name)}
           toggleHelp={toggleHelp}
           toggleSettings={toggleSettings}
@@ -111,7 +120,7 @@ const AppContent: React.FC = () => {
         <CanvasArea isHelpOpen={isHelpOpen} toggleHelp={toggleHelp} />
       </CanvasProvider>
     );
-  }, [currentTab, dispatch, toggleHelp, isHelpOpen, currentTabId, updateTabName, toggleSettings]);
+  }, [currentTab, dispatch, toggleHelp, isHelpOpen, currentTabId, updateTabName, toggleSettings, addToast, handleAIClick]);
 
   return (
     <div>
@@ -119,10 +128,17 @@ const AppContent: React.FC = () => {
         tabs={tabs}
         currentTabId={currentTabId}
         addTab={addTab}
-        closeTab={closeTab}
+        closeTab={handleCloseTabRequest}
         switchTab={switchTab}
       />
       {memoizedCanvasProvider}
+
+      <UnsaveConfirmModal
+        showCloseConfirm={showCloseConfirm}
+        setShowCloseConfirm={setShowCloseConfirm}
+        tabToClose={tabToClose}
+        closeTab={closeTab}
+      />
 
       <SettingsModal
         isOpen={isSettingsOpen}
