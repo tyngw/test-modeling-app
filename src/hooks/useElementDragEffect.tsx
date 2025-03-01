@@ -5,22 +5,20 @@ import { useCanvas } from '../context/canvasContext';
 import { isDescendant } from '../state/state';
 import { ToastMessages } from '../constants/toastMessages';
 import { HEADER_HEIGHT } from '../constants/elementSettings';
+import { useToast } from '../context/toastContext';
 
 interface State {
   zoomRatio: number;
   elements: { [key: string]: Element };
 }
 
-interface UseElementDragEffectProps {
-  showToast: (message: string) => void;
-}
-
 type Position = { x: number; y: number };
 type DropPosition = 'before' | 'after' | 'child';
 type DropTargetInfo = { element: Element; position: DropPosition } | null;
 
-export const useElementDragEffect = ({ showToast }: UseElementDragEffectProps) => {
+export const useElementDragEffect = () => {
   const { state, dispatch } = useCanvas() as { state: State; dispatch: React.Dispatch<any> };
+  const { addToast } = useToast();
   const [draggingElement, setDraggingElement] = useState<Element | null>(null);
   const [dragStartOffset, setDragStartOffset] = useState<Position>({ x: 0, y: 0 });
   const [originalPosition, setOriginalPosition] = useState<Position>({ x: 0, y: 0 });
@@ -33,7 +31,6 @@ export const useElementDragEffect = ({ showToast }: UseElementDragEffectProps) =
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent<HTMLElement>, element: Element) => {
-      // ルート要素はドラッグできないようにする
       if (!element.parentId) return;
       e.stopPropagation();
 
@@ -48,10 +45,10 @@ export const useElementDragEffect = ({ showToast }: UseElementDragEffectProps) =
     [convertToZoomCoordinates]
   );
 
-  const handleMouseUp = useCallback(() => {
-    try {
-      if (!draggingElement) return;
+  const handleMouseUp = useCallback(async () => {
+    if (!draggingElement) return;
 
+    try {
       const resetElementPosition = () => {
         dispatch({
           type: 'MOVE_ELEMENT',
@@ -96,7 +93,7 @@ export const useElementDragEffect = ({ showToast }: UseElementDragEffectProps) =
         if (isDescendant(state.elements, draggingElement.id, target.id)) {
           resetElementPosition();
           setDraggingElement(null);
-          showToast(ToastMessages.invalidDrop);
+          addToast(ToastMessages.dropChildElement, 'warn');
           return;
         }
 
@@ -110,11 +107,12 @@ export const useElementDragEffect = ({ showToast }: UseElementDragEffectProps) =
       }
     } catch (error) {
       console.error('Drag error:', error);
+      addToast(ToastMessages.dragError, 'warn');
     } finally {
       setDraggingElement(null);
       setCurrentDropTarget(null);
     }
-  }, [draggingElement, currentDropTarget, originalPosition, state.elements, dispatch, showToast]);
+  }, [draggingElement, currentDropTarget, originalPosition, state.elements, dispatch, addToast]);
 
   useEffect(() => {
     if (!draggingElement) return;

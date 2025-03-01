@@ -3,6 +3,7 @@ import React from 'react';
 import './App.css';
 import { isMobileDevice } from './utils/deviceChecker';
 import { TabsProvider } from './context/tabsContext';
+import { ToastProvider } from './context/toastContext';
 import AppContent from './appContent';
 
 function App() {
@@ -13,9 +14,12 @@ function App() {
           このアプリはモバイルデバイスに対応していません。
         </div>
       )}
-      <TabsProvider>
-        <AppContent />
-      </TabsProvider>
+      <ToastProvider>
+        <TabsProvider>
+          <AppContent />
+        </TabsProvider>
+      </ToastProvider>
+
     </div>
   );
 }
