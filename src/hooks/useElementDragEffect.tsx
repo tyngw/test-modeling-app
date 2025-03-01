@@ -7,6 +7,10 @@ import { ToastMessages } from '../constants/toastMessages';
 import { HEADER_HEIGHT } from '../constants/elementSettings';
 import { useToast } from '../context/toastContext';
 
+const isTouchEvent = (event: MouseEvent | TouchEvent): event is TouchEvent => {
+  return 'touches' in event;
+};
+
 interface State {
   zoomRatio: number;
   elements: { [key: string]: Element };
@@ -24,17 +28,36 @@ export const useElementDragEffect = () => {
   const [originalPosition, setOriginalPosition] = useState<Position>({ x: 0, y: 0 });
   const [currentDropTarget, setCurrentDropTarget] = useState<DropTargetInfo>(null);
 
-  const convertToZoomCoordinates = useCallback((e: { pageX: number; pageY: number }): Position => ({
-    x: e.pageX / state.zoomRatio,
-    y: (e.pageY - HEADER_HEIGHT) / state.zoomRatio,
-  }), [state.zoomRatio]);
+  const convertToZoomCoordinates = useCallback((e: MouseEvent | TouchEvent): Position => {
+    let clientX: number, clientY: number;
+    
+    if (isTouchEvent(e)) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+    
+    return {
+      x: clientX / state.zoomRatio,
+      y: (clientY - HEADER_HEIGHT) / state.zoomRatio,
+    };
+  }, [state.zoomRatio]);
 
   const handleMouseDown = useCallback(
-    (e: React.MouseEvent<HTMLElement>, element: Element) => {
+    (e: React.MouseEvent<HTMLElement> | React.TouchEvent<HTMLElement>, element: Element) => {
       if (!element.parentId) return;
       e.stopPropagation();
 
-      const zoomAdjustedPos = convertToZoomCoordinates(e);
+      let nativeEvent: MouseEvent | TouchEvent;
+      if (e.nativeEvent instanceof TouchEvent) {
+        nativeEvent = e.nativeEvent;
+      } else {
+        nativeEvent = e.nativeEvent;
+      }
+
+      const zoomAdjustedPos = convertToZoomCoordinates(nativeEvent);
       setDraggingElement(element);
       setDragStartOffset({
         x: zoomAdjustedPos.x - element.x,
@@ -117,7 +140,7 @@ export const useElementDragEffect = () => {
   useEffect(() => {
     if (!draggingElement) return;
 
-    const findDropTarget = (e: MouseEvent): DropTargetInfo => {
+    const findDropTarget = (e: MouseEvent | TouchEvent): DropTargetInfo => {
       const zoomAdjustedPos = convertToZoomCoordinates(e);
       let bestTarget: DropTargetInfo = null;
       let closestDistance = Infinity;
@@ -168,7 +191,7 @@ export const useElementDragEffect = () => {
       return bestTarget;
     };
 
-    const handleMouseMove = (e: MouseEvent) => {
+    const handleMove = (e: MouseEvent | TouchEvent) => {
       const dropTarget = findDropTarget(e);
       setCurrentDropTarget(dropTarget);
 
@@ -184,15 +207,24 @@ export const useElementDragEffect = () => {
       });
     };
 
-    const handleMouseUpGlobal = () => {
-      handleMouseUp();
+    const handleMouseMove = (e: MouseEvent) => handleMove(e);
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 1) handleMove(e);
     };
 
+    const handleMouseUpGlobal = () => handleMouseUp();
+    const handleTouchEnd = () => handleMouseUp();
+
     document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
     document.addEventListener('mouseup', handleMouseUpGlobal);
+    document.addEventListener('touchend', handleTouchEnd);
+
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('touchmove', handleTouchMove);
       document.removeEventListener('mouseup', handleMouseUpGlobal);
+      document.removeEventListener('touchend', handleTouchEnd);
     };
   }, [draggingElement, dragStartOffset, state.elements, convertToZoomCoordinates, dispatch, handleMouseUp]);
 
