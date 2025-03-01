@@ -52,6 +52,7 @@ export const useElementDragEffect = () => {
 
       let nativeEvent: MouseEvent | TouchEvent;
       if (e.nativeEvent instanceof TouchEvent) {
+        e.preventDefault();
         nativeEvent = e.nativeEvent;
       } else {
         nativeEvent = e.nativeEvent;
@@ -192,6 +193,10 @@ export const useElementDragEffect = () => {
     };
 
     const handleMove = (e: MouseEvent | TouchEvent) => {
+      if (e instanceof TouchEvent && e.touches.length === 1) {
+        e.preventDefault();
+      }
+
       const dropTarget = findDropTarget(e);
       setCurrentDropTarget(dropTarget);
 
