@@ -1,10 +1,10 @@
-// src/appContent.tsx
+// src/appContent.tsximport { ToastMessages } from './constants/toastMessages';
 import React, { useState, useCallback, useMemo } from 'react';
 import CanvasArea from './components/canvasArea';
 import QuickMenuBar from './components/quickMenuBar';
 import TabHeaders from './components/TabHeaders/TabHeaders';
 import SettingsModal from './components/settingsModal';
-import ModalWindow from './components/modalWindow';
+import UnsaveConfirmModal from './components/unsaveConfiromModal';
 import { CanvasProvider } from './context/canvasContext';
 import { Action } from './state/state';
 import { useTabs } from './context/tabsContext';
@@ -15,10 +15,9 @@ import { generateWithGemini } from './utils/api';
 import { getApiKey } from './utils/localStorageHelpers';
 import { formatElementsForPrompt } from './utils/elementHelpers';
 import { createSystemPrompt } from './constants/promptHelpers';
-import {Button } from '@mui/material';
 
 const AppContent: React.FC = () => {
-  const { tabs, currentTabId, addTab, closeTab, switchTab, updateTabState, updateTabName } = useTabs();
+  const { tabs, currentTabId, addTab, closeTab, switchTab, updateTabState, updateTabName, } = useTabs();
   const currentTab = useMemo(() => tabs.find(tab => tab.id === currentTabId), [tabs, currentTabId]);
   const [isHelpOpen, setHelpOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -107,41 +106,6 @@ const AppContent: React.FC = () => {
     }
   }, [currentTab, dispatch]);
 
-  const renderConfirmModal = () => (
-    <ModalWindow
-      isOpen={showCloseConfirm}
-      onClose={() => setShowCloseConfirm(false)}
-    >
-      <div style={{ padding: '20px' }}>
-        <p style={{ marginBottom: '20px' }}>
-          タブを閉じてよろしいですか？
-        </p>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'flex-end',
-          gap: '10px'
-        }}>
-          <Button
-            variant="outlined"
-            onClick={() => setShowCloseConfirm(false)}
-          >
-            いいえ
-          </Button>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={() => {
-              if (tabToClose) closeTab(tabToClose);
-              setShowCloseConfirm(false);
-            }}
-          >
-            はい
-          </Button>
-        </div>
-      </div>
-    </ModalWindow>
-  );
-
   const memoizedCanvasProvider = useMemo(() => {
     if (!currentTab) return null;
     return (
@@ -176,7 +140,13 @@ const AppContent: React.FC = () => {
       />
       {memoizedCanvasProvider}
 
-      {renderConfirmModal()}
+      <UnsaveConfirmModal
+        showCloseConfirm={showCloseConfirm}
+        setShowCloseConfirm={setShowCloseConfirm}
+        tabToClose={tabToClose}
+        closeTab={closeTab}
+      />
+
 
       <SettingsModal
         isOpen={isSettingsOpen}
