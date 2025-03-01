@@ -32,11 +32,11 @@ export const useElementDragEffect = () => {
     let clientX: number, clientY: number;
     
     if (isTouchEvent(e)) {
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
+      clientX = e.touches[0].clientX + window.scrollX; // スクロールオフセットを追加
+      clientY = e.touches[0].clientY + window.scrollY; // スクロールオフセットを追加
     } else {
-      clientX = e.clientX;
-      clientY = e.clientY;
+      clientX = e.clientX + window.scrollX; // スクロールオフセットを追加
+      clientY = e.clientY + window.scrollY; // スクロールオフセットを追加
     }
     
     return {
