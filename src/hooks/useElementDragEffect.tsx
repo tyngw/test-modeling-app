@@ -93,7 +93,7 @@ export const useElementDragEffect = () => {
         if (isDescendant(state.elements, draggingElement.id, target.id)) {
           resetElementPosition();
           setDraggingElement(null);
-          addToast(ToastMessages.invalidDrop);
+          addToast(ToastMessages.dropChildElement, 'warn');
           return;
         }
 
@@ -107,7 +107,7 @@ export const useElementDragEffect = () => {
       }
     } catch (error) {
       console.error('Drag error:', error);
-      addToast(ToastMessages.dragError);
+      addToast(ToastMessages.dragError, 'warn');
     } finally {
       setDraggingElement(null);
       setCurrentDropTarget(null);
