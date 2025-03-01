@@ -139,8 +139,10 @@ export const useElementDragEffect = () => {
         if (!isInXRange) return;
 
         // 挿入位置判定（上下5%を境界と判定）
-        const topThreshold = elemTop + element.height * 0.05;
-        const bottomThreshold = elemBottom - element.height * 0.05;
+        // const topThreshold = elemTop + element.height * 0.05;
+        // const bottomThreshold = elemBottom - element.height * 0.05;
+        const topThreshold = elemTop;
+        const bottomThreshold = elemBottom;
         let position: DropPosition = 'child';
 
         if (mouseY < topThreshold) {
