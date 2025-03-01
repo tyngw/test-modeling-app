@@ -1,13 +1,16 @@
 // src/context/toastContext.tsx
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 
+type ToastType = 'info' | 'warn' | 'error';
+
 interface Toast {
   id: string;
   message: string;
+  type: ToastType;
 }
 
 interface ToastContextType {
-  addToast: (message: string) => void;
+  addToast: (message: string, type?: ToastType) => void;
 }
 
 const ToastContext = createContext<ToastContextType | null>(null);
@@ -15,17 +18,47 @@ const ToastContext = createContext<ToastContextType | null>(null);
 export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  const addToast = useCallback((message: string) => {
+  const addToast = useCallback((message: string, type: ToastType = 'info') => {
     const id = new Date().getTime().toString() + Math.random().toString();
-    setToasts(prev => {
-      const updated = [...prev, { id, message }];
-      return updated.slice(-5);
+    const newToast: Toast = { id, message, type };
+
+    setToasts(prevToasts => {
+      const updatedToasts = [...prevToasts, newToast];
+      if (updatedToasts.length > 5) {
+        updatedToasts.shift();
+      }
+      return updatedToasts;
     });
 
     setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id));
+      setToasts(prevToasts => prevToasts.filter(toast => toast.id !== id));
     }, 3000);
   }, []);
+
+  const getToastStyle = (type: ToastType) => {
+    switch (type) {
+      case 'info':
+        return {
+          backgroundColor: 'rgba(76, 175, 80, 0.9)',
+          color: 'white',
+        };
+      case 'warn':
+        return {
+          backgroundColor: 'rgba(255, 193, 7, 0.9)',
+          color: 'black',
+        };
+      case 'error':
+        return {
+          backgroundColor: 'rgba(244, 67, 54, 0.9)',
+          color: 'white',
+        };
+      default:
+        return {
+          backgroundColor: 'rgba(76, 175, 80, 0.9)',
+          color: 'white',
+        };
+    }
+  };
 
   return (
     <ToastContext.Provider value={{ addToast }}>
@@ -36,19 +69,18 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         left: '50%',
         transform: 'translateX(-50%)',
         zIndex: 1000,
-        pointerEvents: 'none'
+        pointerEvents: 'none',
       }}>
         {toasts.map(toast => (
           <div
             key={toast.id}
             style={{
-              backgroundColor: 'rgba(255, 100, 100, 0.9)',
-              color: 'white',
+              ...getToastStyle(toast.type),
               padding: '10px 20px',
               borderRadius: '10px',
               marginBottom: '10px',
               transition: 'opacity 0.5s',
-              opacity: 1
+              opacity: 1,
             }}
           >
             {toast.message}
