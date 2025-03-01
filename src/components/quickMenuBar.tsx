@@ -41,37 +41,49 @@ type CanvasActionType =
   | 'EXPAND_ELEMENT'
   | 'COLLAPSE_ELEMENT';
 
-const QuickMenuBar = ({
-  saveSvg,
-  loadElements,
-  saveElements,
-  toggleHelp,
-  toggleSettings,
-  onAIClick,
-}: QuickMenuBarProps) => {
-  const { dispatch } = useCanvas();
-  const { addTab } = useTabs();
-  const fileInput = useRef<HTMLInputElement>(null);
-
-  const handleFileOpen = () => {
-    fileInput.current?.click();
-  };
-
-  const handleAction = (action: CanvasActionType) => () => {
-    dispatch({ type: action });
-  };
-
-  return (
-    <div style={{ position: 'fixed', width: '100%', height: ICONBAR_HEIGHT, zIndex: '100000', }}>
-      <div style={{
-        display: 'flex',
-        justifyContent: 'left',
-        alignItems: 'center',
-        height: '100%',
-        backgroundColor: '#f1f1f1',
-        padding: '0 20px',
-      }}>
-        <input type="file" ref={fileInput} onChange={loadElements} style={{ display: 'none' }} />
+  const QuickMenuBar = ({
+    saveSvg,
+    loadElements,
+    saveElements,
+    toggleHelp,
+    toggleSettings,
+    onAIClick,
+  }: QuickMenuBarProps) => {
+    const { dispatch } = useCanvas();
+    const { addTab } = useTabs();
+    const fileInput = useRef<HTMLInputElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+  
+    const handleFileOpen = () => {
+      fileInput.current?.click();
+    };
+  
+    const handleAction = (action: CanvasActionType) => () => {
+      dispatch({ type: action });
+    };
+  
+    return (
+      <div 
+        style={{ 
+          position: 'fixed',
+          width: '100%',
+          height: ICONBAR_HEIGHT,
+          zIndex: '100000',
+          overflowX: 'auto', // 水平スクロールを有効化
+          WebkitOverflowScrolling: 'touch' // iOSの慣性スクロール
+        }}
+        ref={containerRef}
+      >
+        <div style={{
+          display: 'flex',
+          justifyContent: 'left',
+          alignItems: 'center',
+          height: '100%',
+          backgroundColor: '#f1f1f1',
+          padding: '0 20px',
+          minWidth: 'max-content', // コンテンツ幅を維持
+        }}>
+          <input type="file" ref={fileInput} onChange={loadElements} style={{ display: 'none' }} />
 
         <Tooltip title={tooltipTexts.NEW} componentsProps={{ popper: {sx: {zIndex: 100050,},},}}>
           <Button variant="text" className="iconbar-button" onClick={addTab}>

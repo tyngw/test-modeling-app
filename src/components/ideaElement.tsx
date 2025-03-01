@@ -295,13 +295,13 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
           rx={ELEM_STYLE.RX}
           strokeWidth={ELEM_STYLE.STROKE}
           stroke={
-            element.texts.length > 1 // セクション数2以上の場合のみstrokeを表示
-              ? element.tentative
-                ? '#9E9E9E'
-                : element.selected
-                  ? ELEM_STYLE.SELECTED.STROKE_COLOR
-                  : ELEM_STYLE.NORMAL.STROKE_COLOR
-              : 'transparent' // セクション数1の場合は透明
+            element.texts.length > 1
+              ? element.selected
+                ? ELEM_STYLE.SELECTED.STROKE_COLOR
+                : element.tentative
+                  ? '#9E9E9E' // tentativeかつ非選択
+                  : ELEM_STYLE.NORMAL.STROKE_COLOR // 通常状態
+              : 'transparent'
           }
           strokeDasharray={element.tentative ? "4 2" : "none"}
           onClick={handleSelect}
@@ -316,24 +316,42 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
             strokeOpacity: element.tentative ? 0.6 : 1,
             pointerEvents: 'all',
             cursor: isHovered ? 'pointer' : 'default',
-            filter: element.selected ? 'url(#boxShadow)' : 'none',
+            filter: element.selected && element.texts.length > 1 ? 'url(#boxShadow)' : 'none',
           }}
         />
         {element.texts.length === 1 && (
-          <line
-            x1={element.x}
-            y1={element.y + element.height}
-            x2={element.x + element.width}
-            y2={element.y + element.height}
-            stroke={
-              element.tentative ? '#9E9E9E' :
-                element.selected ? ELEM_STYLE.SELECTED.STROKE_COLOR :
-                  ELEM_STYLE.NORMAL.STROKE_COLOR
-            }
-            strokeWidth={ELEM_STYLE.STROKE}
-            strokeDasharray={element.tentative ? "4 2" : "none"}
-            pointerEvents="none"
-          />
+          <>
+            {/* 影用のライン（選択時のみ表示） */}
+            {element.selected && (
+              <line
+                x1={element.x + 2}
+                y1={element.y + element.height + 2}
+                x2={element.x + element.width + 1}
+                y2={element.y + element.height + 2}
+                stroke="rgba(0,0,255,0.2)"
+                strokeWidth={ELEM_STYLE.STROKE}
+                strokeLinecap="round"
+                pointerEvents="none"
+              />
+            )}
+            {/* メインのライン */}
+            <line
+              x1={element.x}
+              y1={element.y + element.height}
+              x2={element.x + element.width}
+              y2={element.y + element.height}
+              stroke={
+                element.selected
+                  ? ELEM_STYLE.SELECTED.STROKE_COLOR
+                  : element.tentative
+                    ? '#9E9E9E' // tentativeかつ非選択
+                    : ELEM_STYLE.NORMAL.STROKE_COLOR // 通常状態
+              }
+              strokeWidth={ELEM_STYLE.STROKE}
+              strokeDasharray={element.tentative ? "4 2" : "none"}
+              pointerEvents="none"
+            />
+          </>
         )}
         {currentDropTarget?.id === element.id && draggingElement && dropPosition !== 'child' && (
           <rect
