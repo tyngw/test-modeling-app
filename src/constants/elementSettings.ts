@@ -36,7 +36,8 @@ export const ELEM_STYLE = {
 }
 export const CONNECTION_PATH_STYLE = {
     COLOR: "black",
-    STROKE: "0.5px",
+    DRAGGING_COLOR: "rgba(0, 0, 255, 0.3)",
+    STROKE: 0.5,
 }
 export const CURVE_CONTROL_OFFSET = 80;
 export const DEFAULT_FONT_SIZE = 16;
