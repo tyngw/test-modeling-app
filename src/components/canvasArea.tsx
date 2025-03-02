@@ -10,8 +10,9 @@ import { keyActionMap } from '../constants/keyActionMap';
 import { useClickOutside } from '../hooks/useClickOutside';
 import { useElementDragEffect } from '../hooks/useElementDragEffect';
 import { helpContent } from '../constants/helpContent';
-import { ICONBAR_HEIGHT, HEADER_HEIGHT } from '../constants/elementSettings';
-import { Element } from '../types';
+import { ICONBAR_HEIGHT, HEADER_HEIGHT, CONNECTION_PATH_STYLE, CURVE_CONTROL_OFFSET, ARROW } from '../constants/elementSettings';
+import { Element as CanvasElement } from '../types';
+import { isDescendant } from '../state/state';
 
 interface CanvasAreaProps {
     isHelpOpen: boolean;
@@ -32,7 +33,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
     const [isPinching, setIsPinching] = useState(false);
     const [initialPinchDistance, setInitialPinchDistance] = useState(0);
     const [initialScroll, setInitialScroll] = useState({ x: 0, y: 0 });
-    const editingNode = Object.values(elements).find((element) => (element as Element).editing) as Element | undefined;
+    const editingNode = Object.values(elements).find((element) => (element as CanvasElement).editing) as CanvasElement | undefined;
 
     useEffect(() => {
         if (!editingNode) svgRef.current?.focus();
@@ -108,7 +109,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
             window.scrollTo({
                 left: initialScroll.x + (offsetX * (scale - 1)) * Math.cos(angle),
                 top: initialScroll.y + (offsetY * (scale - 1)) * Math.sin(angle),
-                behavior: 'auto' as ScrollBehavior 
+                behavior: 'auto' as ScrollBehavior
             });
         } else if (e.touches.length === 1) {
             e.preventDefault();
@@ -120,6 +121,31 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
         setInitialPinchDistance(0);
         setInitialScroll({ x: 0, y: 0 });
     }, []);
+
+    const renderConnectionPath = (
+        parentElement: CanvasElement | undefined,
+        element: CanvasElement,
+        strokeColor: string = CONNECTION_PATH_STYLE.COLOR,
+        strokeWidth: number = CONNECTION_PATH_STYLE.STROKE,
+    ) => {
+        if (!parentElement) return null;
+        const totalHeight = element.height;
+        const pathCommands = [
+            `M ${parentElement.x + parentElement.width + ARROW.OFFSET},${parentElement.y + parentElement.height / 2}`,
+            `C ${parentElement.x + parentElement.width + CURVE_CONTROL_OFFSET},${parentElement.y + parentElement.height / 2}`,
+            `${element.x - CURVE_CONTROL_OFFSET},${element.y + totalHeight / 2}`,
+            `${element.x},${element.y + totalHeight / 2}`
+        ].join(' ');
+        return (
+            <path
+                d={pathCommands}
+                stroke={strokeColor}
+                strokeWidth={strokeWidth}
+                fill="none"
+                markerStart="url(#arrowhead)"
+            />
+        );
+    };
 
     return (
         <>
@@ -153,22 +179,54 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                     className="svg-element"
                 >
                     {Object.values(elements)
-                        .filter((element): element is Element => element.visible)
+                        .filter((element): element is CanvasElement => element.visible)
                         .map(element => (
                             <React.Fragment key={element.id}>
                                 <IdeaElement
                                     element={element}
-                                    currentDropTarget={currentDropTarget as Element | null}
+                                    currentDropTarget={currentDropTarget as CanvasElement | null}
                                     dropPosition={dropPosition}
                                     draggingElement={draggingElement}
-                                    handleMouseDown={handleMouseDown as unknown as (e: React.MouseEvent<SVGElement>, element: Element) => void}
+                                    handleMouseDown={handleMouseDown as unknown as (e: React.MouseEvent<SVGElement>, element: CanvasElement) => void}
                                     handleMouseUp={handleMouseUp}
                                 />
                             </React.Fragment>
                         ))}
+
+                    {/* 通常の接続線 */}
+                    {Object.values(elements)
+                        .filter((element): element is CanvasElement => element.visible && !!element.parentId)
+                        .map(element => {
+                            const parent = state.elements[element.parentId!];
+                            // ドラッグ中の要素またはその子孫要素の接続パスは非表示にする
+                            if (draggingElement && (element.id === draggingElement.id || isDescendant(state.elements, draggingElement.id, element.id))) {
+                                return null;
+                            }
+                            return renderConnectionPath(parent, element);
+                        })}
+
+                    {/* ドラッグプレビュー用の接続パス */}
+                    {currentDropTarget && draggingElement && (
+                        (() => {
+                            const newParent = dropPosition === 'child'
+                                ? currentDropTarget
+                                : currentDropTarget.parentId
+                                    ? state.elements[currentDropTarget.parentId]
+                                    : null;
+
+                            const draggingPos = state.elements[draggingElement.id];
+
+                            return newParent && draggingPos && renderConnectionPath(
+                                newParent,
+                                draggingPos,
+                                CONNECTION_PATH_STYLE.DRAGGING_COLOR,
+                                CONNECTION_PATH_STYLE.STROKE
+                            );
+                        })()
+                    )}
                 </svg>
                 <InputFields
-                    element={editingNode as Element | undefined}
+                    element={editingNode as CanvasElement | undefined}
                     onEndEditing={() => svgRef.current?.focus()}
                 />
             </div>
