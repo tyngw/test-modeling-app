@@ -53,19 +53,31 @@ const AppContent: React.FC = () => {
       .find(el => el.selected);
 
     if (!selectedElement) {
-      addToast(ToastMessages.selectParentElement);
+      addToast(ToastMessages.noSelect);
       return;
     }
 
     const decryptedApiKey = getApiKey();
+
+    if (!decryptedApiKey) {
+      addToast(ToastMessages.noApiKey, "warn");
+      return;
+    }
+
+    const inputText = localStorage.getItem('prompt') || '';
+
+    if (!inputText) {
+      addToast(ToastMessages.noPrompt);
+      return;
+    }
+
+
 
     try {
       const structureText = formatElementsForPrompt(
         currentTab.state.elements,
         selectedElement.id
       );
-
-      const inputText = localStorage.getItem('prompt') || 'なし:';
       const fullPrompt = createSystemPrompt({ structureText, inputText });
       const result = await generateWithGemini(fullPrompt, decryptedApiKey);
 
