@@ -9,8 +9,13 @@ const root = ReactDOM.createRoot(document.getElementById('root')!);
 
 function MyApp() {
   useEffect(() => {
-    ReactGA.initialize(process.env.REACT_APP_GA_TRACKING_ID!);
-    ReactGA._gaCommandSendPageview(window.location.pathname, {});
+    const trackingId = process.env.REACT_APP_GA_TRACKING_ID || '';
+    if (trackingId) {
+      ReactGA.initialize(trackingId);
+      ReactGA._gaCommandSendPageview(window.location.pathname, {});
+    } else {
+      console.warn('Google Analytics tracking ID is not set.');
+    }
   }, []);
 
   return (
