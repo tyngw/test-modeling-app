@@ -2,14 +2,12 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import IdeaElement from './ideaElement';
 import InputFields from './inputFields';
-import ModalWindow from './modalWindow';
 import useResizeEffect from '../hooks/useResizeEffect';
 import { useCanvas } from '../context/canvasContext';
 import { Marker } from './marker';
 import { keyActionMap } from '../constants/keyActionMap';
 import { useClickOutside } from '../hooks/useClickOutside';
 import { useElementDragEffect } from '../hooks/useElementDragEffect';
-import { helpContent } from '../constants/helpContent';
 import { ICONBAR_HEIGHT, HEADER_HEIGHT, CONNECTION_PATH_STYLE, CURVE_CONTROL_OFFSET, ARROW } from '../constants/elementSettings';
 import { Element as CanvasElement } from '../types';
 import { isDescendant } from '../state/state';
@@ -156,9 +154,6 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                 overflow: 'auto',
                 touchAction: isPinching ? 'none' : 'manipulation'
             }}>
-                <ModalWindow isOpen={isHelpOpen} onClose={toggleHelp}>
-                    <div dangerouslySetInnerHTML={{ __html: helpContent }} />
-                </ModalWindow>
                 <svg
                     data-testid="view-area"
                     ref={svgRef}
