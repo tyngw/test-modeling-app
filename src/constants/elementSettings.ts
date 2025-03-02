@@ -6,7 +6,7 @@ export const DEFAULT_POSITION = {
     Y: 50,
 }
 export const SIZE = {
-    SECTION_HEIGHT: 20,
+    SECTION_HEIGHT: 24,
     WIDTH: {
         MAX: 300,
         MIN: 50,
