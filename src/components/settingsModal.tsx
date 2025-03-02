@@ -20,7 +20,7 @@ interface SettingsModalProps {
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState(0);
-  const [numberOfSections, setNumberOfSectionsState] = useState(3);
+  const [numberOfSectionsInput, setNumberOfSectionsInput] = useState('3');
   const [apiKey, setApiKeyState] = useState('');
   const [prompt, setPromptState] = useState('');
   const [systemPromptTemplate, setSystemPromptTemplateState] = useState('');
@@ -28,7 +28,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
 
   useEffect(() => {
     if (isOpen) {
-      setNumberOfSectionsState(getNumberOfSections());
+      setNumberOfSectionsInput(getNumberOfSections().toString());
       setApiKeyState(getApiKey());
       setPromptState(getPrompt());
       setSystemPromptTemplateState(getSystemPromptTemplate());
@@ -36,7 +36,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   }, [isOpen]);
 
   const handleSave = () => {
-    const validSections = Math.max(1, Math.min(10, numberOfSections));
+    let numValue = parseInt(numberOfSectionsInput, 10);
+    const validSections = Math.max(1, Math.min(10, numValue));
     setNumberOfSections(validSections);
     setApiKey(apiKey);
     setPrompt(prompt);
@@ -45,17 +46,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   };
 
   const handleSectionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value);
-    if (value > 10) {
-      setSectionsError(true);
-      setNumberOfSectionsState(10);
-    } else if (value < 1) {
-      setSectionsError(true);
-      setNumberOfSectionsState(1);
-    } else {
-      setSectionsError(false);
-      setNumberOfSectionsState(isNaN(value) ? 3 : value);
-    }
+    const value = e.target.value;
+    setNumberOfSectionsInput(value);
+
+    const numValue = parseInt(value, 10);
+    const isEmpty = value === '';
+    const isInvalid = isEmpty || isNaN(numValue) || numValue < 1 || numValue > 10;
+    
+    setSectionsError(isInvalid);
   };
 
   return (
@@ -76,7 +74,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
             <TextField
               label="Number of sections"
               type="number"
-              value={numberOfSections}
+              value={numberOfSectionsInput}
               onChange={handleSectionChange}
               fullWidth
               margin="normal"
@@ -142,7 +140,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
         <Button variant="outlined" onClick={onClose}>
           Cancel
         </Button>
-        <Button variant="contained" onClick={handleSave} color="primary">
+        <Button 
+          variant="contained" 
+          onClick={handleSave} 
+          color="primary"
+          disabled={sectionsError || numberOfSectionsInput === ''} // 空文字列も無効化条件に追加
+        >
           OK
         </Button>
       </Box>
