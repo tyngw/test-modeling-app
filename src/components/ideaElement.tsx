@@ -30,26 +30,6 @@ interface IdeaElementProps {
   handleMouseUp: () => void;
 }
 
-const renderConnectionPath = (parentElement: CanvasElement | undefined, element: CanvasElement) => {
-  if (!parentElement) return null;
-  const totalHeight = element.height;
-  const pathCommands = [
-    `M ${parentElement.x + parentElement.width + ARROW.OFFSET},${parentElement.y + parentElement.height / 2}`,
-    `C ${parentElement.x + parentElement.width + CURVE_CONTROL_OFFSET},${parentElement.y + parentElement.height / 2}`,
-    `${element.x - CURVE_CONTROL_OFFSET},${element.y + totalHeight / 2}`,
-    `${element.x},${element.y + totalHeight / 2}`
-  ].join(' ');
-  return (
-    <path
-      d={pathCommands}
-      stroke={CONNECTION_PATH_STYLE.COLOR}
-      strokeWidth={CONNECTION_PATH_STYLE.STROKE}
-      fill="none"
-      markerStart="url(#arrowhead)"
-    />
-  );
-};
-
 const renderActionButtons = (element: CanvasElement, dispatch: React.Dispatch<any>, elements: CanvasElement[]) => {
   const shouldShowButtons = (element: CanvasElement, elements: CanvasElement[]) => {
     if (!element.tentative) return false;
@@ -233,7 +213,6 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
   return (
     <React.Fragment key={element.id}>
       <g opacity={isDraggedOrDescendant ? 0.3 : 1}>
-        {renderConnectionPath(parentElement, element)}
         {renderActionButtons(element, dispatch, Object.values(state.elements))}
         {hiddenChildren.length > 0 && (
           <>
