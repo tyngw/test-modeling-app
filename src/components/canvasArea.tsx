@@ -71,6 +71,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                 y: window.scrollY
             });
         } else if (e.touches.length === 1) {
+            e.preventDefault();
             const touch = e.touches[0];
             const target = document.elementFromPoint(touch.clientX, touch.clientY);
 
@@ -127,7 +128,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                 top: HEADER_HEIGHT,
                 left: 0,
                 overflow: 'auto',
-                touchAction: isPinching ? 'none' : 'pan-y'
+                touchAction: isPinching ? 'none' : 'manipulation'
             }}>
                 <ModalWindow isOpen={isHelpOpen} onClose={toggleHelp}>
                     <div dangerouslySetInnerHTML={{ __html: helpContent }} />
@@ -145,7 +146,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                     onTouchEnd={handleTouchEnd}
                     style={{
                         outline: 'none',
-                        touchAction: isPinching ? 'none' : 'pan-y',
+                        touchAction: isPinching ? 'none' : 'manipulation',
                         userSelect: 'none',
                         WebkitUserSelect: 'none'
                     }}
