@@ -9,7 +9,7 @@ const root = ReactDOM.createRoot(document.getElementById('root')!);
 
 function MyApp() {
   useEffect(() => {
-    ReactGA.initialize('G-CVYKPR22E4');
+    ReactGA.initialize(process.env.REACT_APP_GA_TRACKING_ID!);
     ReactGA._gaCommandSendPageview(window.location.pathname, {});
   }, []);
 
