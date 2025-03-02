@@ -32,11 +32,11 @@ export const useElementDragEffect = () => {
     let clientX: number, clientY: number;
     
     if (isTouchEvent(e)) {
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
+      clientX = e.touches[0].clientX + window.scrollX; // スクロールオフセットを追加
+      clientY = e.touches[0].clientY + window.scrollY; // スクロールオフセットを追加
     } else {
-      clientX = e.clientX;
-      clientY = e.clientY;
+      clientX = e.clientX + window.scrollX; // スクロールオフセットを追加
+      clientY = e.clientY + window.scrollY; // スクロールオフセットを追加
     }
     
     return {
@@ -52,6 +52,7 @@ export const useElementDragEffect = () => {
 
       let nativeEvent: MouseEvent | TouchEvent;
       if (e.nativeEvent instanceof TouchEvent) {
+        e.preventDefault();
         nativeEvent = e.nativeEvent;
       } else {
         nativeEvent = e.nativeEvent;
@@ -192,6 +193,10 @@ export const useElementDragEffect = () => {
     };
 
     const handleMove = (e: MouseEvent | TouchEvent) => {
+      if (e instanceof TouchEvent && e.touches.length === 1) {
+        e.preventDefault();
+      }
+
       const dropTarget = findDropTarget(e);
       setCurrentDropTarget(dropTarget);
 

@@ -81,11 +81,12 @@ const TextDisplayArea: React.FC<TextDisplayAreaProps> = memo(({
       x={x}
       y={y}
       width={dimensions.width}
-      height={dimensions.height}
+      height={dimensions.height / zoomRatio}
       pointerEvents="none"
     >
       <div
         ref={textRef}
+        className='text-display-area'
         style={{
           fontSize: `${DEFAULT_FONT_SIZE}px`,
           lineHeight: `${LINE_HEIGHT_RATIO}em`,
