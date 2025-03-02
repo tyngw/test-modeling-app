@@ -6,6 +6,8 @@ import QuickMenuBar from './components/quickMenuBar';
 import TabHeaders from './components/TabHeaders/TabHeaders';
 import SettingsModal from './components/settingsModal';
 import UnsaveConfirmModal from './components/unsaveConfiromModal';
+import ModalWindow from './components/modalWindow';
+import { helpContent } from './constants/helpContent';
 import { CanvasProvider } from './context/canvasContext';
 import { Action } from './state/state';
 import { useTabs } from './context/tabsContext';
@@ -37,7 +39,7 @@ const AppContent: React.FC = () => {
   const handleCloseTabRequest = (tabId: string) => {
     const targetTab = tabs.find(t => t.id === tabId);
     const hasUnsavedChanges = true;
-    
+
     if (hasUnsavedChanges) {
       setTabToClose(tabId);
       setShowCloseConfirm(true);
@@ -104,8 +106,8 @@ const AppContent: React.FC = () => {
       });
 
     } catch (error: unknown) {
-      const message = error instanceof Error ? 
-        `${ToastMessages.aiError}: ${error.message}` : 
+      const message = error instanceof Error ?
+        `${ToastMessages.aiError}: ${error.message}` :
         ToastMessages.aiError;
       addToast(message);
     }
@@ -115,6 +117,14 @@ const AppContent: React.FC = () => {
     if (!currentTab) return null;
     return (
       <CanvasProvider state={currentTab.state} dispatch={dispatch}>
+        <CanvasArea isHelpOpen={isHelpOpen} toggleHelp={toggleHelp} />
+        <TabHeaders
+        tabs={tabs}
+        currentTabId={currentTabId}
+        addTab={addTab}
+        closeTab={handleCloseTabRequest}
+        switchTab={switchTab}
+      />
         <QuickMenuBar
           saveSvg={() => saveSvg(document.querySelector('.svg-element') as SVGSVGElement, 'download.svg')}
           loadElements={(event) => loadElements(event.nativeEvent)
@@ -129,21 +139,15 @@ const AppContent: React.FC = () => {
           toggleSettings={toggleSettings}
           onAIClick={handleAIClick}
         />
-        <CanvasArea isHelpOpen={isHelpOpen} toggleHelp={toggleHelp} />
+        
       </CanvasProvider>
     );
   }, [currentTab, dispatch, toggleHelp, isHelpOpen, currentTabId, updateTabName, toggleSettings, addToast, handleAIClick]);
 
   return (
     <div>
-      <TabHeaders
-        tabs={tabs}
-        currentTabId={currentTabId}
-        addTab={addTab}
-        closeTab={handleCloseTabRequest}
-        switchTab={switchTab}
-      />
       {memoizedCanvasProvider}
+      
 
       <UnsaveConfirmModal
         showCloseConfirm={showCloseConfirm}
@@ -156,6 +160,9 @@ const AppContent: React.FC = () => {
         isOpen={isSettingsOpen}
         onClose={toggleSettings}
       />
+      <ModalWindow isOpen={isHelpOpen} onClose={toggleHelp}>
+        <div dangerouslySetInnerHTML={{ __html: helpContent }} />
+      </ModalWindow>
     </div>
   );
 };
