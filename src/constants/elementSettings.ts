@@ -1,5 +1,5 @@
 // src/constants/elementSettings.ts
-export const DEFAULT_ZOOM_RATIO = 1;
+export const DEFAULT_ZOOM_RATIO = 0.8;
 export const NUMBER_OF_SECTIONS = 3;
 export const DEFAULT_POSITION = {
     X: 50,
@@ -39,17 +39,13 @@ export const CONNECTION_PATH_STYLE = {
     STROKE: "0.5px",
 }
 export const CURVE_CONTROL_OFFSET = 80;
-export const DEFAULT_FONT_SIZE = 12;
+export const DEFAULT_FONT_SIZE = 16;
 export const DEFAULT_FONT_FAMILY = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 export const TEXTAREA_PADDING = {
     HORIZONTAL: 3,
     VERTICAL: 2,
 }
 export const SHADOW_OFFSET = 3;
-export const MULTIBYTE_CHAR_COEFFICIENT = 1;
-export const SINGLEBYTE_CHAR_COEFFICIENT = 0.5;
-export const MULTIBYTE_CHAR_WIDTH = 14;
-export const SINGLEBYTE_CHAR_WIDTH = 7;
 export const LINE_HEIGHT_RATIO = 1.4;
 export const ICONBAR_HEIGHT = 40;
 export const TABBAR_HEIGHT = 40;
