@@ -11,6 +11,8 @@ import { useElementDragEffect } from '../hooks/useElementDragEffect';
 import { ICONBAR_HEIGHT, HEADER_HEIGHT, CONNECTION_PATH_STYLE, CURVE_CONTROL_OFFSET, ARROW } from '../constants/elementSettings';
 import { Element as CanvasElement } from '../types';
 import { isDescendant } from '../state/state';
+import { useToast } from '../context/toastContext';
+import { ToastMessages } from '../constants/toastMessages';
 
 interface CanvasAreaProps {
     isHelpOpen: boolean;
@@ -21,6 +23,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
     const svgRef = useRef<SVGSVGElement>(null);
     const { state, dispatch } = useCanvas();
     const { elements, zoomRatio } = state;
+    const { addToast } = useToast();
     const [displayScopeSize, setCanvasSize] = useState({
         width: window.innerWidth,
         height: window.innerHeight
@@ -48,12 +51,52 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
         draggingElement
     } = useElementDragEffect();
 
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        e.preventDefault();
-        const keyCombo = `${e.ctrlKey || e.metaKey ? 'Ctrl+' : ''}${e.shiftKey ? 'Shift+' : ''}${e.key}`;
-        const actionType = keyActionMap[keyCombo];
-        if (actionType) dispatch({ type: actionType });
-    };
+  const handleKeyDown = useCallback(async (e: React.KeyboardEvent) => { // asyncに変更
+    e.preventDefault();
+    const keyCombo = `${e.ctrlKey || e.metaKey ? 'Ctrl+' : ''}${e.shiftKey ? 'Shift+' : ''}${e.key}`;
+    const actionType = keyActionMap[keyCombo];
+
+    if (actionType === 'PASTE_ELEMENT') {
+      // cutElementsがある場合は通常の貼り付け
+      if (state.cutElements && Object.keys(state.cutElements).length > 0) {
+        dispatch({ type: actionType });
+      } else {
+        try {
+          // クリップボードからテキストを取得
+          const text = await navigator.clipboard.readText();
+          const selectedElement = Object.values(state.elements).find(el => el.selected);
+
+          if (!selectedElement) {
+            addToast(ToastMessages.noSelect);
+            return;
+          }
+
+          if (text) {
+            const texts = text.split('\n').filter(t => t.trim() !== '');
+            if (texts.length === 0) {
+              addToast(ToastMessages.clipboardEmpty);
+              return;
+            }
+
+            dispatch({
+              type: 'ADD_ELEMENTS_SILENT',
+              payload: {
+                parentId: selectedElement.id,
+                texts: texts
+              }
+            });
+          } else {
+            addToast(ToastMessages.clipboardEmpty);
+          }
+        } catch (error) {
+          console.error('クリップボード読み取りエラー:', error);
+          addToast(ToastMessages.clipboardReadError);
+        }
+      }
+    } else if (actionType) {
+      dispatch({ type: actionType });
+    }
+  }, [dispatch, state.cutElements, state.elements, addToast]);
 
     const handleTouchStart = useCallback((e: React.TouchEvent<SVGSVGElement>) => {
         if (e.touches.length === 2) {

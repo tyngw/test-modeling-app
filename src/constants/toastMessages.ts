@@ -10,4 +10,6 @@ export const ToastMessages = {
     noPrompt: '入力情報(プロンプト)が設定されていません',
     loadError: 'ファイルの読み込みに失敗しました',
     saveError: 'ファイルの保存に失敗しました',
+    clipboardEmpty: 'クリップボードにテキストがありません',
+    clipboardReadError: 'クリップボードの読み取りに失敗しました',
 };
