@@ -94,6 +94,10 @@ const getSelectedAndChildren = (elements: { [key: string]: Element }, targetElem
 };
 
 const pasteElements = (elements: { [key: string]: Element }, cutElements: { [key: string]: Element }, parentElement: Element): { [key: string]: Element } => {
+    if (!cutElements) {
+        return elements;
+    }
+    
     const rootElement = Object.values(cutElements).find(element => element.parentId === null);
     if (!rootElement) {
         return { ...elements, ...cutElements };

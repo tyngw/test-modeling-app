@@ -4,44 +4,27 @@ import { Element } from '../types';
 export const getElementById = (elements: Record<string, Element>, id: string): Element | undefined => elements[id];
 export const getSelectedElement = (elements: Record<string, Element>): Element | undefined => Object.values(elements).find(element => element.selected);
 
-const getSiblings = (elements: Record<string, Element>, elementId: string): Element[] => {
-  const element = getElementById(elements, elementId);
-  return element ? Object.values(elements).filter(n => n.parentId === element.parentId) : [];
+const getElementsByDepth = (elements: Record<string, Element>, depth: number): Element[] => {
+  return Object.values(elements)
+    .filter(e => e.depth === depth)
+    .sort((a, b) => a.y - b.y || a.x - b.x); // Y位置→X位置でソート
 };
 
-const getParentSiblings = (elements: Record<string, Element>, elementId: string): Element[] => {
-  const element = getElementById(elements, elementId);
-  const parent = element?.parentId ? getElementById(elements, element.parentId) : null;
-  return parent ? Object.values(elements).filter(n => n.parentId === parent.parentId) : [];
-};
-
-const handleVerticalMove = (elements: Record<string, Element>, selected: Element, offset: number): string | undefined => {
-  const siblings = getSiblings(elements, selected.id);
-  const index = siblings.findIndex(n => n.id === selected.id);
-  const newIndex = index + offset;
-
-  if (newIndex >= 0 && newIndex < siblings.length) {
-    return siblings[newIndex].id;
-  }
-
-  return handleParentLevelMove(elements, selected, offset);
-};
-
-const handleParentLevelMove = (elements: Record<string, Element>, selected: Element, offset: number): string | undefined => {
-  const parentSiblings = getParentSiblings(elements, selected.id);
-
-  if (!selected.parentId) {
-    return undefined;
-  }
-
-  const parent = getElementById(elements, selected.parentId);
-  const parentIndex = parentSiblings.findIndex(n => n.id === parent?.id);
+const handleVerticalMove = (elements: Record<string, Element>, selected: Element, offset: number): string => {
+  // 同じ深さの全要素を取得
+  const sameDepthElements = getElementsByDepth(elements, selected.depth);
+  const currentIndex = sameDepthElements.findIndex(e => e.id === selected.id);
   
-  const targetParent = parentSiblings[parentIndex + offset];
-  const children = getElementChildren(elements, targetParent?.id);
-  return offset === -1 
-    ? children[children.length - 1]?.id 
-    : children[0]?.id ?? selected.id;
+  // 新しいインデックスを計算
+  const newIndex = currentIndex + offset;
+  
+  // 有効な範囲内であれば移動
+  if (newIndex >= 0 && newIndex < sameDepthElements.length) {
+    return sameDepthElements[newIndex].id;
+  }
+  
+  // 範囲外の場合は現在の要素を維持
+  return selected.id;
 };
 
 const getElementChildren = (elements: Record<string, Element>, parentId?: string): Element[] => 
@@ -57,10 +40,14 @@ export const handleArrowNavigation = (elements: Record<string, Element>, directi
   if (!selected) return undefined;
 
   switch(direction) {
-    case 'up': return handleVerticalMove(elements, selected, -1);
-    case 'down': return handleVerticalMove(elements, selected, 1);
-    case 'left': return selected.parentId ?? selected.id;
-    case 'right': return getElementChildren(elements, selected.id)[0]?.id ?? selected.id;
-    default: return selected.id;
+    case 'up':
+    case 'down':
+      return handleVerticalMove(elements, selected, direction === 'up' ? -1 : 1);
+    case 'left':
+      return selected.parentId ?? selected.id;
+    case 'right':
+      return getElementChildren(elements, selected.id)[0]?.id ?? selected.id;
+    default:
+      return selected.id;
   }
 };

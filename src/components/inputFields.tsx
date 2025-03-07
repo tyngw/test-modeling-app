@@ -96,6 +96,7 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
                             whiteSpace: 'pre-wrap',
                             wordWrap: 'break-word',
                             resize: 'none',
+                            zIndex: '0',
                         }}
                         autoFocus={index === 0}
                     />

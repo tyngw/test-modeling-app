@@ -68,7 +68,7 @@ type CanvasActionType =
           position: 'fixed',
           width: '100%',
           height: ICONBAR_HEIGHT,
-          zIndex: '100000',
+          // zIndex: '100000',
           overflowX: 'auto', // 水平スクロールを有効化
           WebkitOverflowScrolling: 'touch' // iOSの慣性スクロール
         }}
@@ -85,25 +85,25 @@ type CanvasActionType =
         }}>
           <input type="file" ref={fileInput} onChange={loadElements} style={{ display: 'none' }} />
 
-        <Tooltip title={tooltipTexts.NEW} componentsProps={{ popper: {sx: {zIndex: 100050,},},}}>
+        <Tooltip title={tooltipTexts.NEW}>
           <Button variant="text" className="iconbar-button" onClick={addTab}>
             <InsertDriveFileOutlinedIcon sx={{ color: '#666666' }} />
           </Button>
         </Tooltip>
 
-        <Tooltip title={tooltipTexts.OPEN} componentsProps={{ popper: {sx: {zIndex: 100050,},},}}>
+        <Tooltip title={tooltipTexts.OPEN}>
           <Button variant="text" className="iconbar-button" onClick={handleFileOpen}>
             <FolderOpenOutlinedIcon sx={{ color: '#666666' }} />
           </Button>
         </Tooltip>
 
-        <Tooltip title={tooltipTexts.SAVE} componentsProps={{ popper: {sx: {zIndex: 100050,},},}}>
+        <Tooltip title={tooltipTexts.SAVE}>
           <Button variant="text" className="iconbar-button" onClick={saveElements}>
             <SaveAsOutlinedIcon sx={{ color: '#666666' }} />
           </Button>
         </Tooltip>
 
-        <Tooltip title={tooltipTexts.SAVE_SVG} componentsProps={{ popper: {sx: {zIndex: 100050,},},}}>
+        <Tooltip title={tooltipTexts.SAVE_SVG}>
           <Button variant="text" className="iconbar-button" onClick={saveSvg}>
             <SaveAltIcon sx={{ color: '#666666' }} />
           </Button>
@@ -111,31 +111,31 @@ type CanvasActionType =
 
         <div style={{ width: '10px' }}></div>
 
-        <Tooltip title={tooltipTexts.ADD} componentsProps={{ popper: {sx: {zIndex: 100050,},},}}>
+        <Tooltip title={tooltipTexts.ADD}>
           <Button variant="text" className="iconbar-button" onClick={handleAction('ADD_ELEMENT')}>
             <PlaylistAddIcon sx={{ color: '#666666' }} />
           </Button>
         </Tooltip>
 
-        <Tooltip title={tooltipTexts.DELETE} componentsProps={{ popper: {sx: {zIndex: 100050,},},}}>
+        <Tooltip title={tooltipTexts.DELETE}>
           <Button variant="text" className="iconbar-button" onClick={handleAction('DELETE_ELEMENT')}>
             <PlaylistRemoveIcon sx={{ color: '#666666' }} />
           </Button>
         </Tooltip>
 
-        <Tooltip title={tooltipTexts.AI} componentsProps={{ popper: {sx: {zIndex: 100050,},},}}>
+        <Tooltip title={tooltipTexts.AI}>
           <Button variant="text" className="iconbar-button" onClick={onAIClick}>
             <AutoFixOffIcon sx={{ color: '#666666' }} />
           </Button>
         </Tooltip>
 
-        <Tooltip title={tooltipTexts.EXPAND} componentsProps={{ popper: {sx: {zIndex: 100050,},},}}>
+        <Tooltip title={tooltipTexts.EXPAND}>
           <Button variant="text" className="iconbar-button" onClick={handleAction('EXPAND_ELEMENT')}>
             <UnfoldMoreIcon sx={{ color: '#666666' }} />
           </Button>
         </Tooltip>
 
-        <Tooltip title={tooltipTexts.COLLAPSE} componentsProps={{ popper: {sx: {zIndex: 100050,},},}}>
+        <Tooltip title={tooltipTexts.COLLAPSE}>
           <Button variant="text" className="iconbar-button" onClick={handleAction('COLLAPSE_ELEMENT')}>
             <UnfoldLessIcon sx={{ color: '#666666' }} />
           </Button>
@@ -143,13 +143,13 @@ type CanvasActionType =
 
         <div style={{ width: '10px' }}></div>
 
-        <Tooltip title={tooltipTexts.UNDO} componentsProps={{ popper: {sx: {zIndex: 100050,},},}}>
+        <Tooltip title={tooltipTexts.UNDO}>
           <Button variant="text" className="iconbar-button" onClick={handleAction('UNDO')}>
             <UndoIcon sx={{ color: '#666666' }} />
           </Button>
         </Tooltip>
 
-        <Tooltip title={tooltipTexts.REDO} componentsProps={{ popper: {sx: {zIndex: 100050,},},}}>
+        <Tooltip title={tooltipTexts.REDO}>
           <Button variant="text" className="iconbar-button" onClick={handleAction('REDO')}>
             <RedoIcon sx={{ color: '#666666' }} />
           </Button>
@@ -157,13 +157,13 @@ type CanvasActionType =
 
         <div style={{ width: '10px' }}></div>
 
-        <Tooltip title={tooltipTexts.ZOOM_IN} componentsProps={{ popper: {sx: {zIndex: 100050,},},}}>
+        <Tooltip title={tooltipTexts.ZOOM_IN}>
           <Button variant="text" className="iconbar-button" onClick={handleAction('ZOOM_IN')}>
             <ZoomInIcon sx={{ color: '#666666' }} />
           </Button>
         </Tooltip>
 
-        <Tooltip title={tooltipTexts.ZOOM_OUT} componentsProps={{ popper: {sx: {zIndex: 100050,},},}}>
+        <Tooltip title={tooltipTexts.ZOOM_OUT}>
           <Button variant="text" className="iconbar-button" onClick={handleAction('ZOOM_OUT')}>
             <ZoomOutIcon sx={{ color: '#666666' }} />
           </Button>
@@ -171,13 +171,13 @@ type CanvasActionType =
 
         <div style={{ width: '10px' }}></div>
 
-        <Tooltip title={tooltipTexts.HELP} componentsProps={{ popper: {sx: {zIndex: 100050,},},}}>
+        <Tooltip title={tooltipTexts.HELP}>
           <Button variant="text" className="iconbar-button" onClick={toggleHelp}>
             <HelpOutlineOutlinedIcon sx={{ color: '#666666' }} />
           </Button>
         </Tooltip>
 
-        <Tooltip title={tooltipTexts.SETTINGS} componentsProps={{ popper: {sx: {zIndex: 100050,},},}}>
+        <Tooltip title={tooltipTexts.SETTINGS}>
           <Button variant="text" className="iconbar-button" onClick={toggleSettings}>
             <SettingsIcon sx={{ color: '#666666' }} />
           </Button>

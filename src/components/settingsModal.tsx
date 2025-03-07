@@ -90,7 +90,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
         {activeTab === 1 && (
           <Box>
             <FormControl component="fieldset" fullWidth>
-              <FormLabel component="legend">Model Version</FormLabel>
+              <FormLabel component="legend">Select Model</FormLabel>
               <FormGroup>
                 <FormControlLabel
                   value="Gemini-1.5-flash"
