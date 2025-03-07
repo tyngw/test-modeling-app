@@ -216,17 +216,29 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
         {renderActionButtons(element, dispatch, Object.values(state.elements))}
         {hiddenChildren.length > 0 && (
           <>
-            <rect
-              key={`shadow-${element.id}`}
-              x={element.x + SHADOW_OFFSET}
-              y={element.y + SHADOW_OFFSET}
-              width={element.width}
-              height={element.height}
-              rx={ELEM_STYLE.RX}
-              fill="none"
-              stroke={ELEM_STYLE.SHADDOW.COLOR}
-              strokeWidth={ELEM_STYLE.STROKE}
-            />
+            {element.texts.length > 1 ? (
+              <rect
+                key={`shadow-${element.id}`}
+                x={element.x + SHADOW_OFFSET}
+                y={element.y + SHADOW_OFFSET}
+                width={element.width}
+                height={element.height}
+                rx={ELEM_STYLE.RX}
+                fill="none"
+                stroke={ELEM_STYLE.SHADDOW.COLOR}
+                strokeWidth={ELEM_STYLE.STROKE}
+              />
+            ) : (
+              <line
+                key={`shadow-line-${element.id}`}
+                x1={element.x + SHADOW_OFFSET}
+                y1={element.y + element.height + SHADOW_OFFSET}
+                x2={element.x + element.width + SHADOW_OFFSET}
+                y2={element.y + element.height + SHADOW_OFFSET}
+                stroke={ELEM_STYLE.SHADDOW.COLOR}
+                strokeWidth={ELEM_STYLE.STROKE}
+              />
+            )}
             <g
               transform={`translate(${element.x + element.width * 1.1},${element.y})`}
               onClick={(e) => {
