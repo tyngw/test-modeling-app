@@ -1,4 +1,6 @@
 // src/components/ideaElement.tsx
+'use client';
+
 import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { useCanvas } from '../context/canvasContext';
 import TextSection from './textDisplayArea';
@@ -20,6 +22,7 @@ import {
 } from '../constants/elementSettings';
 import { Element as CanvasElement } from '../types';
 import { isDescendant } from '../state/state';
+import { safeLocalStorage } from '../utils/localStorageHelpers';
 
 interface IdeaElementProps {
   element: CanvasElement;
@@ -105,7 +108,7 @@ const renderActionButtons = (element: CanvasElement, dispatch: React.Dispatch<an
 };
 
 const DebugInfo: React.FC<{ element: CanvasElement; isHovered: boolean }> = ({ element, isHovered }) => {
-  if (localStorage.getItem('__debugMode__') !== 'true' || !isHovered) {
+  if (safeLocalStorage.getItem('__debugMode__') !== 'true' || !isHovered) {
     return null;
   }
 

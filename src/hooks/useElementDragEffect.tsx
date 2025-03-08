@@ -1,4 +1,6 @@
 // src/hooks/useElementDragEffect.tsx
+'use client';
+
 import { useState, useEffect, useCallback } from 'react';
 import { Element } from '../types';
 import { useCanvas } from '../context/canvasContext';

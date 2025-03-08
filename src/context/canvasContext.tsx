@@ -1,4 +1,6 @@
 // src/context/canvasContext.tsx
+'use client';
+
 import React, { createContext, useContext, ReactNode, useMemo } from 'react';
 import { State, Action } from '../state/state';
 

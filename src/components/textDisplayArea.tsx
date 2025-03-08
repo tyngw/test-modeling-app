@@ -1,4 +1,6 @@
 // src/components/textDisplayArea.tsx
+'use client';
+
 import React, { memo, useEffect, useRef, useState } from 'react';
 import { SIZE, DEFAULT_FONT_SIZE, LINE_HEIGHT_RATIO, TEXTAREA_PADDING } from '../constants/elementSettings';
 import { wrapText } from '../utils/textareaHelpers';
