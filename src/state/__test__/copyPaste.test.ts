@@ -23,7 +23,9 @@ describe('切り取り、コピー、貼り付け操作', () => {
             .find((elm: Element) => elm.parentId === parentElement.id) as Element;
 
         expect(pastedElement).toBeDefined();
-        expect(parentElement.children).toBe(1);
+        expect(parentElement).toMatchObject({
+            children: 1,
+        });
         expect(pastedElement.depth).toBe(parentElement.depth + 1);
     });
 
@@ -113,7 +115,9 @@ describe('切り取り、コピー、貼り付け操作', () => {
         const updatedParentElement = Object.values(afterPasteState.elements).find(
             (elm: Element) => elm.id === newParentElement.id
         ) as Element;
-        expect(updatedParentElement.children).toBe(1);
+        expect(updatedParentElement).toMatchObject({
+            children: 1,
+        })
     });
 
     it('切り取ったノードが貼り付けられることを確認する(切り取るノードに子が存在するケース)', () => {
@@ -182,7 +186,10 @@ describe('切り取り、コピー、貼り付け操作', () => {
         const updatedParentElement = Object.values(afterPasteState.elements).find(
             (elm: Element) => elm.id === newParentElement.id
         ) as Element;
-        expect(updatedParentElement.children).toBe(1);
+        expect(updatedParentElement).toMatchObject({
+            children: 1,
+        });
+
 
         const ids = Object.values(afterPasteState.elements).map((elm: Element) => elm.id);
         expect(new Set(ids).size).toBe(ids.length);
