@@ -144,9 +144,14 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
   handleMouseDown,
 }) => {
   const { state, dispatch } = useCanvas();
+  const [isMounted, setIsMounted] = useState(false);
   const parentElement = state.elements[element.parentId!];
   const currentDropTargetId = currentDropTarget?.id || -1;
   const [isHovered, setIsHovered] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     if (element.editing) return;
@@ -313,7 +318,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
             filter: element.selected && element.texts.length > 1 ? 'url(#boxShadow)' : 'none',
           }}
         />
-        {element.texts.length === 1 && (
+        {element.texts.length === 1 && isMounted && (
           <>
             {/* 影用のライン（選択時のみ表示） */}
             {element.selected && (
