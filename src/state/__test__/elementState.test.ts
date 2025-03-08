@@ -2,7 +2,7 @@
 import { useStore } from './textUtils';
 import { renderHook, act } from '@testing-library/react';
 import { Element } from '../../types';
-import { initialState, reducer } from '../state';
+import { initialState } from '../state';
 
 
 describe('要素状態管理', () => {
@@ -94,8 +94,11 @@ describe('要素状態管理', () => {
 
         const confirmedElements = Object.values(result.current.state.elements)
             .filter((e: Element) => e.parentId === parentId && !e.tentative);
-        expect(confirmedElements.length).toBe(2);
-        expect(result.current.state.elements[parentId].children).toBe(2);
+        // expect(confirmedElements.length).toBe(2);
+        expect(confirmedElements).toHaveLength(2);
+        expect(result.current.state.elements[parentId]).toMatchObject({
+            children: 2,
+        });
     });
 
     it('CANCEL_TENTATIVE_ELEMENTSが動作することを確認する', () => {
@@ -117,8 +120,11 @@ describe('要素状態管理', () => {
 
         const remainingElements = Object.values(result.current.state.elements)
             .filter((e: Element) => e.parentId === parentId);
-        expect(remainingElements.length).toBe(0);
-        expect(result.current.state.elements[parentId].children).toBe(0);
+        expect(remainingElements).toHaveLength(0);
+        expect(result.current.state.elements[parentId]).toMatchObject({
+            children: 0,
+        });
+
     });
 
     it('LOAD_ELEMENTSで正常なデータをロードできることを確認する', () => {
@@ -147,8 +153,15 @@ describe('要素状態管理', () => {
 
         const loadedState = result.current.state;
         expect(Object.keys(loadedState.elements)).toHaveLength(2);
-        expect(loadedState.elements['test1'].children).toBe(1);
-        expect(loadedState.elements['test2'].depth).toBe(2);
+        // expect(loadedState.elements['test1'].children).toBe(1);
+        expect(loadedState.elements['test1']).toMatchObject({
+            children: 1,
+        });
+        // expect(loadedState.elements['test2'].depth).toBe(2);
+        expect(loadedState.elements['test2']).toMatchObject({
+            depth: 2,
+        });
+        
     });
 
     it('UPDATE_ELEMENT_SIZE アクション', () => {
