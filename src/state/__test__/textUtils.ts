@@ -1,7 +1,6 @@
 // src/state/__test__/testUtils.ts
 import { useReducer } from 'react';
 import { initialState, reducer } from '../state';
-import { Element } from '../../types';
 
 export const useStore = () => {
     const [state, dispatch] = useReducer(reducer, initialState);
