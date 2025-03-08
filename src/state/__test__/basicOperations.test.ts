@@ -9,38 +9,39 @@ describe('基本操作', () => {
         const { result } = renderHook(() => useStore());
         const state = result.current.state;
 
-        expect(Object.keys(state.elements).length).toBe(1);
-        const rootElement = Object.values(state.elements)[0] as Element;
-        expect(rootElement.parentId).toBeNull();
-        expect(rootElement.selected).toBe(true);
-        expect(rootElement.children).toBe(0);
-        expect(rootElement.editing).toBe(false);
-        expect(rootElement.texts).toEqual(['', '', '']); // texts配列の確認
-        expect(rootElement.sectionHeights).toEqual([SIZE.SECTION_HEIGHT, SIZE.SECTION_HEIGHT, SIZE.SECTION_HEIGHT]); // sectionHeights配列の確認
+        expect(Object.keys(state.elements)).toHaveLength(1);
+        const [rootElement] = Object.values(state.elements) as Element[];
+        expect(rootElement).toMatchObject({
+            parentId: null,
+            selected: true,
+            children: 0,
+            editing: false,
+            texts: ['', '', ''],
+            sectionHeights: [SIZE.SECTION_HEIGHT, SIZE.SECTION_HEIGHT, SIZE.SECTION_HEIGHT],
+        });
     });
 
     it('新しいノードを追加する', () => {
         const { result } = renderHook(() => useStore());
-        const { state, dispatch } = result.current;
+        const { dispatch } = result.current;
 
-        const initialElement = Object.values(state.elements)[0] as Element;
-        const initialElementLength = Object.keys(state.elements).length;
+        const initialElement = Object.values(result.current.state.elements)[0] as Element;
+        const initialElementLength = Object.keys(result.current.state.elements).length;
 
         act(() => {
             dispatch({ type: 'ADD_ELEMENT' });
         });
 
         const afterState = result.current.state;
-        const addedElement = Object.values(afterState.elements).find(
-            (element: Element) => element.id !== initialElement.id
-        ) as Element;
-        const parentElement = Object.values(afterState.elements).find(
-            (element: Element) => element.id === initialElement.id
-        ) as Element;
+        const elements = Object.values(afterState.elements) as Element[];
+        const addedElement = elements.find(e => e.id !== initialElement.id)!;
+        const parentElement = elements.find(e => e.id === initialElement.id)!;
 
-        expect(Object.keys(afterState.elements).length).toBe(initialElementLength + 1);
-        expect(parentElement.children).toBe(1);
-        expect(parentElement.selected).toBe(false);
+        expect(Object.keys(afterState.elements)).toHaveLength(initialElementLength + 1);
+        expect(parentElement).toMatchObject({
+            children: 1,
+            selected: false,
+        });
         expect(addedElement.parentId).toBe(initialElement.id);
         expect(addedElement.selected).toBe(true);
         expect(addedElement.editing).toBe(true);
@@ -70,8 +71,13 @@ describe('基本操作', () => {
         });
 
         const afterDeleteState = result.current.state;
-        expect(Object.keys(afterDeleteState.elements).length).toBe(initialElementLength);
-        expect((Object.values(afterDeleteState.elements)[0] as Element).children).toBe(0);
+        // expect(Object.keys(afterDeleteState.elements).length).toBe(initialElementLength);
+        expect(Object.keys(afterDeleteState.elements)).toHaveLength(initialElementLength);
+        // expect((Object.values(afterDeleteState.elements)[0] as Element).children).toBe(0);
+        // toMatchObjectに置き換える
+        expect(Object.values(afterDeleteState.elements)[0]).toMatchObject({
+            children: 0,
+        });
         expect(Object.values(afterDeleteState.elements).some((elm: Element) => elm.id === elementId)).toBe(false);
     });
 
@@ -102,7 +108,10 @@ describe('基本操作', () => {
         ) as Element;
 
         expect(Object.keys(state.elements).length).toBe(3);
-        expect(childElement.children).toBe(1);
+        // expect(childElement.children).toBe(1);
+        expect(childElement).toMatchObject({
+            children: 1,
+        });
 
         act(() => {
             dispatch({ type: 'SELECT_ELEMENT', payload: childElement.id });
