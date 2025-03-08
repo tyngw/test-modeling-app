@@ -26,14 +26,16 @@ const TextDisplayArea: React.FC<TextDisplayAreaProps> = memo(({
   onHeightChange
 }) => {
   const [dimensions, setDimensions] = useState({
-    width: initialWidth,
-    height: initialHeight
+    width: 0,
+    height: 0
   });
+  const [isMounted, setIsMounted] = useState(false);
   const textRef = useRef<HTMLDivElement>(null);
-  const prevDimensions = useRef({ width: initialWidth, height: initialHeight });
+  const prevDimensions = useRef({ width: 0, height: 0 });
   const prevText = useRef(text);
 
   useEffect(() => {
+    setIsMounted(true);
     let animationFrame: number;
 
     const updateDimensions = () => {
@@ -70,13 +72,15 @@ const TextDisplayArea: React.FC<TextDisplayAreaProps> = memo(({
       }
     };
 
-    if (text !== prevText.current || initialWidth !== prevDimensions.current.width || initialHeight !== prevDimensions.current.height) {
+    if (isMounted && (text !== prevText.current || initialWidth !== prevDimensions.current.width || initialHeight !== prevDimensions.current.height)) {
       animationFrame = requestAnimationFrame(updateDimensions);
       prevText.current = text;
     }
 
     return () => cancelAnimationFrame(animationFrame);
-  }, [text, initialWidth, initialHeight, zoomRatio, onHeightChange]);
+  }, [text, initialWidth, initialHeight, zoomRatio, onHeightChange, isMounted]);
+
+  if (!isMounted) return null;
 
   return (
     <foreignObject
@@ -91,7 +95,7 @@ const TextDisplayArea: React.FC<TextDisplayAreaProps> = memo(({
         className='text-display-area'
         style={{
           fontSize: `${DEFAULT_FONT_SIZE}px`,
-          lineHeight: `${LINE_HEIGHT_RATIO}em`,
+          lineHeight: LINE_HEIGHT_RATIO,
           fontFamily: `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`,
           width: `${dimensions.width - TEXTAREA_PADDING.HORIZONTAL}px`,
           minHeight: `${SIZE.SECTION_HEIGHT}px`,
