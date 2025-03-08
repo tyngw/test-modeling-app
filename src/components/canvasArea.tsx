@@ -183,6 +183,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
         ].join(' ');
         return (
             <path
+                key={`connection-${element.id}-${element.parentId}`}
                 d={pathCommands}
                 stroke={strokeColor}
                 strokeWidth={strokeWidth}
