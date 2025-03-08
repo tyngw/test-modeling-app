@@ -36,7 +36,7 @@ jobs:
       - name: 🔨 Build
         run: CI=false npm run build
         env:
-          REACT_APP_GA_TRACKING_ID: ${{ secrets.REACT_APP_GA_TRACKING_ID }}
+          REACT_APP_GA_TRACKING_ID: ${{ secrets.NEXT_PUBLIC_GA_TRACKING_ID }}
         # env:
         #   PUBLIC_URL: /test-modeling-app
       - name: 🚀 Deploy
@@ -44,4 +44,4 @@ jobs:
         with:
           deploy_key: ${{ secrets.ACTIONS_DEPLOY_KEY }}
           publish_branch: gh-pages
-          publish_dir: ./build
+          publish_dir: ./next
