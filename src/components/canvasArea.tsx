@@ -1,4 +1,6 @@
 // src/components/canvasArea.tsx
+'use client';
+
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import IdeaElement from './ideaElement';
 import InputFields from './inputFields';
@@ -25,8 +27,10 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
     const { elements, zoomRatio } = state;
     const { addToast } = useToast();
     const [displayScopeSize, setCanvasSize] = useState({
-        width: window.innerWidth,
-        height: window.innerHeight
+        // width: window.innerWidth,
+        // height: window.innerHeight
+        width: typeof window !== 'undefined' ? window.innerWidth : 0,
+        height: typeof window !== 'undefined' ? window.innerHeight : 0,
     });
     const [displayArea, setDisplayArea] = useState(
         `0 0 ${displayScopeSize.width} ${displayScopeSize.height - ICONBAR_HEIGHT}`
