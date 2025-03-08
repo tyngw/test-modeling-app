@@ -575,6 +575,8 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
 
     ADD_ELEMENTS_SILENT: (state, action) => handleElementMutation(state, (elements, selectedElement) => {
         const texts: string[] = action.payload?.texts || [];
+        const add_tentative = action.payload?.tentative || false;
+
         let newElements = { ...elements };
         const parent = { ...selectedElement };
         const initialChildren = parent.children;
@@ -582,7 +584,7 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
         texts.forEach((text, index) => {
             newElements = createElementAdder(newElements, parent, text, {
                 newElementSelect: false,
-                tentative: true,
+                tentative: add_tentative,
                 order: initialChildren + index
             });
         });
