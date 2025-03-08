@@ -103,7 +103,8 @@ const AppContent: React.FC = () => {
         type: 'ADD_ELEMENTS_SILENT',
         payload: {
           parentId: selectedElement.id,
-          texts: childNodes
+          texts: childNodes,
+          tentative: true,
         }
       });
 
