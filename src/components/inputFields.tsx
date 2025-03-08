@@ -1,4 +1,6 @@
 // src/components/inputFields.tsx
+'use client';
+
 import React, { useRef } from 'react';
 import { useCanvas } from '../context/canvasContext';
 import { calculateElementWidth } from '../utils/textareaHelpers';

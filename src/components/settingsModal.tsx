@@ -1,4 +1,6 @@
 // src/components/settingsModal.tsx
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import ModalWindow from './modalWindow';
 import { Tabs, Tab, Box, TextField, Button, Typography, Radio, FormControlLabel, FormGroup, FormControl, FormLabel, FormHelperText } from '@mui/material';

@@ -1,4 +1,6 @@
 // src/components/quickMenuBar.tsx
+'use client';
+
 import React, { useRef } from 'react';
 import Button from '@mui/material/Button';
 import UndoIcon from '@mui/icons-material/Undo';
