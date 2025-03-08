@@ -1,6 +1,6 @@
 // src/state/__test__/dragAndDrop.test.ts
 import { renderHook, act } from '@testing-library/react';
-import { useStore, createTestElements } from './textUtils';
+import { useStore } from './textUtils';
 import { Element } from '../../types';
 
 
@@ -66,8 +66,12 @@ describe('ドラッグ＆ドロップ', () => {
         ) as Element;
 
         expect(movedElement.parentId).toBe(newParentC.id);
-        expect(oldParentB.children).toBe(0);
-        expect(newParentC.children).toBe(1);
+        expect(oldParentB).toMatchObject({
+            children: 0,
+        });
+        expect(newParentC).toMatchObject({
+            children: 1,
+        });
     });
 
     it('親ノードを子ノードにドロップできないことを確認する', async () => {
@@ -105,7 +109,9 @@ describe('ドラッグ＆ドロップ', () => {
         // 状態が変化していないことを確認
         expect(afterState.elements).toEqual(initialState.elements);
         expect(afterState.elements[parentElement.id].parentId).toBeNull();
-        expect(afterState.elements[childElement.id].children).toBe(0);
+        expect(afterState.elements[childElement.id]).toMatchObject({
+            children: 0,
+        });
     });
 
     it('親ノードを孫ノードにドロップできないことを確認する', async () => {
@@ -151,7 +157,10 @@ describe('ドラッグ＆ドロップ', () => {
 
         // 状態が変化していないことを確認
         expect(afterState.elements['1'].parentId).toBeNull();
-        expect(afterState.elements[elementC.id].children).toBe(0);
+        expect(afterState.elements[elementC.id]).toMatchObject({
+            children: 0,
+        });
+
     });
 
     it('ノードを自身にドロップできないことを確認する', async () => {
@@ -178,6 +187,8 @@ describe('ドラッグ＆ドロップ', () => {
 
         // 状態が変化していないことを確認
         expect(afterState.elements['1'].parentId).toBeNull();
-        expect(afterState.elements['1'].children).toBe(0);
+        expect(afterState.elements['1']).toMatchObject({
+            children: 0,
+        });
     });
 });
