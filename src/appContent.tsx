@@ -61,7 +61,7 @@ const AppContent: React.FC = () => {
       return;
     }
 
-    const decryptedApiKey = getApiKey();
+    const decryptedApiKey = await getApiKey();
 
     if (!decryptedApiKey) {
       addToast(ToastMessages.noApiKey, "warn");
