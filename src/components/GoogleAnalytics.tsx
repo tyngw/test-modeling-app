@@ -2,10 +2,11 @@
 'use client'
 
 import { usePathname, useSearchParams } from 'next/navigation'
-import { useEffect } from 'react'
+import { useEffect, Suspense } from 'react' // Suspenseを追加
 import ReactGA from 'react-ga4'
 
-export function GoogleAnalytics() {
+// コンポーネントをSuspenseでラップするための修正
+function GoogleAnalyticsBase() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const trackingId = process.env.NEXT_PUBLIC_GA_TRACKING_ID
@@ -26,4 +27,12 @@ export function GoogleAnalytics() {
   }, [pathname, searchParams, trackingId])
 
   return null
+}
+
+export function GoogleAnalytics() {
+  return (
+    <Suspense fallback={null}>
+      <GoogleAnalyticsBase />
+    </Suspense>
+  )
 }
