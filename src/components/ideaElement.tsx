@@ -1,4 +1,6 @@
 // src/components/ideaElement.tsx
+'use client';
+
 import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { useCanvas } from '../context/canvasContext';
 import TextSection from './textDisplayArea';
@@ -20,6 +22,7 @@ import {
 } from '../constants/elementSettings';
 import { Element as CanvasElement } from '../types';
 import { isDescendant } from '../state/state';
+import { safeLocalStorage } from '../utils/localStorageHelpers';
 
 interface IdeaElementProps {
   element: CanvasElement;
@@ -105,7 +108,7 @@ const renderActionButtons = (element: CanvasElement, dispatch: React.Dispatch<an
 };
 
 const DebugInfo: React.FC<{ element: CanvasElement; isHovered: boolean }> = ({ element, isHovered }) => {
-  if (localStorage.getItem('__debugMode__') !== 'true' || !isHovered) {
+  if (safeLocalStorage.getItem('__debugMode__') !== 'true' || !isHovered) {
     return null;
   }
 
@@ -141,9 +144,14 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
   handleMouseDown,
 }) => {
   const { state, dispatch } = useCanvas();
+  const [isMounted, setIsMounted] = useState(false);
   const parentElement = state.elements[element.parentId!];
   const currentDropTargetId = currentDropTarget?.id || -1;
   const [isHovered, setIsHovered] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     if (element.editing) return;
@@ -210,7 +218,10 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
     dispatch({ type: 'SELECT_ELEMENT', payload: element.id });
   };
 
+  if (!isMounted) return null;
+
   return (
+
     <React.Fragment key={element.id}>
       <g opacity={isDraggedOrDescendant ? 0.3 : 1}>
         {renderActionButtons(element, dispatch, Object.values(state.elements))}
@@ -310,7 +321,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
             filter: element.selected && element.texts.length > 1 ? 'url(#boxShadow)' : 'none',
           }}
         />
-        {element.texts.length === 1 && (
+        {element.texts.length === 1 && isMounted && (
           <>
             {/* 影用のライン（選択時のみ表示） */}
             {element.selected && (

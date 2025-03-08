@@ -1,4 +1,6 @@
 // src/state/state.ts
+'use client';
+
 import { Undo, Redo, saveSnapshot } from './undoredo';
 import { handleArrowUp, handleArrowDown, handleArrowRight, handleArrowLeft } from '../utils/elementSelector';
 import { getNumberOfSections } from '../utils/localStorageHelpers';
@@ -67,8 +69,8 @@ export const initialState: State = {
             editing: false,
         }
     },
-    width: window.innerWidth,
-    height: window.innerHeight,
+    width: typeof window !== 'undefined' ? window.innerWidth : 0,
+    height: typeof window !== 'undefined' ? window.innerHeight : 0,
     zoomRatio: 1,
 };
 
@@ -97,7 +99,7 @@ const pasteElements = (elements: { [key: string]: Element }, cutElements: { [key
     if (!cutElements) {
         return elements;
     }
-    
+
     const rootElement = Object.values(cutElements).find(element => element.parentId === null);
     if (!rootElement) {
         return { ...elements, ...cutElements };
@@ -623,53 +625,53 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
     CONFIRM_TENTATIVE_ELEMENTS: (state, action) => ({
         ...state,
         elements: Object.values(state.elements).reduce<{ [key: string]: Element }>((acc, element) => {
-          if (element.parentId === action.payload && element.tentative) {
-            acc[element.id] = { ...element, tentative: false };
-          } else {
-            acc[element.id] = element;
-          }
-          return acc;
+            if (element.parentId === action.payload && element.tentative) {
+                acc[element.id] = { ...element, tentative: false };
+            } else {
+                acc[element.id] = element;
+            }
+            return acc;
         }, {})
-      }),
+    }),
 
-      CANCEL_TENTATIVE_ELEMENTS: (state, action) => {
-        const tentativeElements = Object.values(state.elements).filter(e => 
-          e.tentative && e.parentId === action.payload
+    CANCEL_TENTATIVE_ELEMENTS: (state, action) => {
+        const tentativeElements = Object.values(state.elements).filter(e =>
+            e.tentative && e.parentId === action.payload
         );
-      
+
         const parentIds = Array.from(
-          new Set(
-            tentativeElements
-              .map(e => e.parentId)
-              .filter((id): id is string => id !== null)
-          )
+            new Set(
+                tentativeElements
+                    .map(e => e.parentId)
+                    .filter((id): id is string => id !== null)
+            )
         );
-      
+
         const filteredElements = Object.values(state.elements).reduce((acc, element) => {
-          if (!(element.tentative && element.parentId === action.payload)) {
-            acc[element.id] = element;
-          }
-          return acc;
+            if (!(element.tentative && element.parentId === action.payload)) {
+                acc[element.id] = element;
+            }
+            return acc;
         }, {} as { [key: string]: Element });
-      
+
         const updatedElements = parentIds.reduce((acc, parentId) => {
-          if (acc[parentId]) {
-            const childrenCount = Object.values(acc).filter(e =>
-              e.parentId === parentId && !e.tentative
-            ).length;
-            acc[parentId] = {
-              ...acc[parentId],
-              children: childrenCount
-            };
-          }
-          return acc;
+            if (acc[parentId]) {
+                const childrenCount = Object.values(acc).filter(e =>
+                    e.parentId === parentId && !e.tentative
+                ).length;
+                acc[parentId] = {
+                    ...acc[parentId],
+                    children: childrenCount
+                };
+            }
+            return acc;
         }, filteredElements);
-      
+
         return {
-          ...state,
-          elements: adjustElementPositions(updatedElements)
+            ...state,
+            elements: adjustElementPositions(updatedElements)
         };
-      },
+    },
 
     UNDO: state => ({ ...state, elements: Undo(state.elements) }),
     REDO: state => ({ ...state, elements: Redo(state.elements) }),

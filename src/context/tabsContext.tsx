@@ -1,4 +1,6 @@
 // src/context/tabsContext.tsx
+'use client';
+
 import React, { createContext, useContext, ReactNode, useState, useCallback, useMemo, useEffect } from 'react';
 import { State, initialState } from '../state/state';
 import { v4 as uuidv4 } from 'uuid';

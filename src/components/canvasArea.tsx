@@ -1,4 +1,6 @@
 // src/components/canvasArea.tsx
+'use client';
+
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import IdeaElement from './ideaElement';
 import InputFields from './inputFields';
@@ -21,16 +23,15 @@ interface CanvasAreaProps {
 
 const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
     const svgRef = useRef<SVGSVGElement>(null);
+    const [isClient, setIsClient] = useState(false);
     const { state, dispatch } = useCanvas();
     const { elements, zoomRatio } = state;
     const { addToast } = useToast();
     const [displayScopeSize, setCanvasSize] = useState({
-        width: window.innerWidth,
-        height: window.innerHeight
+        width: 0,
+        height: 0
     });
-    const [displayArea, setDisplayArea] = useState(
-        `0 0 ${displayScopeSize.width} ${displayScopeSize.height - ICONBAR_HEIGHT}`
-    );
+    const [displayArea, setDisplayArea] = useState('0 0 0 0');
     const [isPinching, setIsPinching] = useState(false);
     const [initialPinchDistance, setInitialPinchDistance] = useState(0);
     const [initialScroll, setInitialScroll] = useState({ x: 0, y: 0 });
@@ -39,6 +40,27 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
     useEffect(() => {
         if (!editingNode) svgRef.current?.focus();
     }, [editingNode]);
+
+    useEffect(() => {
+        setIsClient(true);
+        if (typeof window !== 'undefined') {
+            setCanvasSize({
+                width: window.innerWidth,
+                height: window.innerHeight
+            });
+            setDisplayArea(`0 0 ${window.innerWidth} ${window.innerHeight - ICONBAR_HEIGHT}`);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            setCanvasSize({
+                width: window.innerWidth,
+                height: window.innerHeight
+            });
+            setDisplayArea(`0 0 ${window.innerWidth} ${window.innerHeight - ICONBAR_HEIGHT}`);
+        }
+    }, []);
 
     useResizeEffect({ setCanvasSize, setDisplayArea, state });
     useClickOutside(svgRef, !!editingNode);
@@ -51,52 +73,52 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
         draggingElement
     } = useElementDragEffect();
 
-  const handleKeyDown = useCallback(async (e: React.KeyboardEvent) => { // asyncに変更
-    e.preventDefault();
-    const keyCombo = `${e.ctrlKey || e.metaKey ? 'Ctrl+' : ''}${e.shiftKey ? 'Shift+' : ''}${e.key}`;
-    const actionType = keyActionMap[keyCombo];
+    const handleKeyDown = useCallback(async (e: React.KeyboardEvent) => { // asyncに変更
+        e.preventDefault();
+        const keyCombo = `${e.ctrlKey || e.metaKey ? 'Ctrl+' : ''}${e.shiftKey ? 'Shift+' : ''}${e.key}`;
+        const actionType = keyActionMap[keyCombo];
 
-    if (actionType === 'PASTE_ELEMENT') {
-      // cutElementsがある場合は通常の貼り付け
-      if (state.cutElements && Object.keys(state.cutElements).length > 0) {
-        dispatch({ type: actionType });
-      } else {
-        try {
-          // クリップボードからテキストを取得
-          const text = await navigator.clipboard.readText();
-          const selectedElement = Object.values(state.elements).find(el => el.selected);
+        if (actionType === 'PASTE_ELEMENT') {
+            // cutElementsがある場合は通常の貼り付け
+            if (state.cutElements && Object.keys(state.cutElements).length > 0) {
+                dispatch({ type: actionType });
+            } else {
+                try {
+                    // クリップボードからテキストを取得
+                    const text = await navigator.clipboard.readText();
+                    const selectedElement = Object.values(state.elements).find(el => el.selected);
 
-          if (!selectedElement) {
-            addToast(ToastMessages.noSelect);
-            return;
-          }
+                    if (!selectedElement) {
+                        addToast(ToastMessages.noSelect);
+                        return;
+                    }
 
-          if (text) {
-            const texts = text.split('\n').filter(t => t.trim() !== '');
-            if (texts.length === 0) {
-              addToast(ToastMessages.clipboardEmpty);
-              return;
+                    if (text) {
+                        const texts = text.split('\n').filter(t => t.trim() !== '');
+                        if (texts.length === 0) {
+                            addToast(ToastMessages.clipboardEmpty);
+                            return;
+                        }
+
+                        dispatch({
+                            type: 'ADD_ELEMENTS_SILENT',
+                            payload: {
+                                parentId: selectedElement.id,
+                                texts: texts
+                            }
+                        });
+                    } else {
+                        addToast(ToastMessages.clipboardEmpty);
+                    }
+                } catch (error) {
+                    console.error('クリップボード読み取りエラー:', error);
+                    addToast(ToastMessages.clipboardReadError);
+                }
             }
-
-            dispatch({
-              type: 'ADD_ELEMENTS_SILENT',
-              payload: {
-                parentId: selectedElement.id,
-                texts: texts
-              }
-            });
-          } else {
-            addToast(ToastMessages.clipboardEmpty);
-          }
-        } catch (error) {
-          console.error('クリップボード読み取りエラー:', error);
-          addToast(ToastMessages.clipboardReadError);
+        } else if (actionType) {
+            dispatch({ type: actionType });
         }
-      }
-    } else if (actionType) {
-      dispatch({ type: actionType });
-    }
-  }, [dispatch, state.cutElements, state.elements, addToast]);
+    }, [dispatch, state.cutElements, state.elements, addToast]);
 
     const handleTouchStart = useCallback((e: React.TouchEvent<SVGSVGElement>) => {
         if (e.touches.length === 2) {
@@ -179,6 +201,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
         ].join(' ');
         return (
             <path
+                key={`connection-${element.id}-${element.parentId}`}
                 d={pathCommands}
                 stroke={strokeColor}
                 strokeWidth={strokeWidth}
@@ -197,72 +220,74 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                 overflow: 'auto',
                 touchAction: isPinching ? 'none' : 'manipulation'
             }}>
-                <svg
-                    data-testid="view-area"
-                    ref={svgRef}
-                    width={displayScopeSize.width}
-                    height={displayScopeSize.height}
-                    viewBox={displayArea}
-                    tabIndex={0}
-                    onKeyDown={handleKeyDown}
-                    onTouchStart={handleTouchStart}
-                    onTouchMove={handleTouchMove}
-                    onTouchEnd={handleTouchEnd}
-                    style={{
-                        outline: 'none',
-                        touchAction: isPinching ? 'none' : 'manipulation',
-                        userSelect: 'none',
-                        WebkitUserSelect: 'none'
-                    }}
-                    className="svg-element"
-                >
-                    {Object.values(elements)
-                        .filter((element): element is CanvasElement => element.visible)
-                        .map(element => (
-                            <React.Fragment key={element.id}>
-                                <IdeaElement
-                                    element={element}
-                                    currentDropTarget={currentDropTarget as CanvasElement | null}
-                                    dropPosition={dropPosition}
-                                    draggingElement={draggingElement}
-                                    handleMouseDown={handleMouseDown as unknown as (e: React.MouseEvent<SVGElement>, element: CanvasElement) => void}
-                                    handleMouseUp={handleMouseUp}
-                                />
-                            </React.Fragment>
-                        ))}
+                {isClient && (
+                    <svg
+                        data-testid="view-area"
+                        ref={svgRef}
+                        width={displayScopeSize.width}
+                        height={displayScopeSize.height}
+                        viewBox={displayArea}
+                        tabIndex={0}
+                        onKeyDown={handleKeyDown}
+                        onTouchStart={handleTouchStart}
+                        onTouchMove={handleTouchMove}
+                        onTouchEnd={handleTouchEnd}
+                        style={{
+                            outline: 'none',
+                            touchAction: isPinching ? 'none' : 'manipulation',
+                            userSelect: 'none',
+                            WebkitUserSelect: 'none'
+                        }}
+                        className="svg-element"
+                    >
+                        {Object.values(elements)
+                            .filter((element): element is CanvasElement => element.visible)
+                            .map(element => (
+                                <React.Fragment key={element.id}>
+                                    <IdeaElement
+                                        element={element}
+                                        currentDropTarget={currentDropTarget as CanvasElement | null}
+                                        dropPosition={dropPosition}
+                                        draggingElement={draggingElement}
+                                        handleMouseDown={handleMouseDown as unknown as (e: React.MouseEvent<SVGElement>, element: CanvasElement) => void}
+                                        handleMouseUp={handleMouseUp}
+                                    />
+                                </React.Fragment>
+                            ))}
 
-                    {/* 通常の接続線 */}
-                    {Object.values(elements)
-                        .filter((element): element is CanvasElement => element.visible && !!element.parentId)
-                        .map(element => {
-                            const parent = state.elements[element.parentId!];
-                            // ドラッグ中の要素またはその子孫要素の接続パスは非表示にする
-                            if (draggingElement && (element.id === draggingElement.id || isDescendant(state.elements, draggingElement.id, element.id))) {
-                                return null;
-                            }
-                            return renderConnectionPath(parent, element);
-                        })}
+                        {/* 通常の接続線 */}
+                        {Object.values(elements)
+                            .filter((element): element is CanvasElement => element.visible && !!element.parentId)
+                            .map(element => {
+                                const parent = state.elements[element.parentId!];
+                                // ドラッグ中の要素またはその子孫要素の接続パスは非表示にする
+                                if (draggingElement && (element.id === draggingElement.id || isDescendant(state.elements, draggingElement.id, element.id))) {
+                                    return null;
+                                }
+                                return renderConnectionPath(parent, element);
+                            })}
 
-                    {/* ドラッグプレビュー用の接続パス */}
-                    {currentDropTarget && draggingElement && (
-                        (() => {
-                            const newParent = dropPosition === 'child'
-                                ? currentDropTarget
-                                : currentDropTarget.parentId
-                                    ? state.elements[currentDropTarget.parentId]
-                                    : null;
+                        {/* ドラッグプレビュー用の接続パス */}
+                        {currentDropTarget && draggingElement && (
+                            (() => {
+                                const newParent = dropPosition === 'child'
+                                    ? currentDropTarget
+                                    : currentDropTarget.parentId
+                                        ? state.elements[currentDropTarget.parentId]
+                                        : null;
 
-                            const draggingPos = state.elements[draggingElement.id];
+                                const draggingPos = state.elements[draggingElement.id];
 
-                            return newParent && draggingPos && renderConnectionPath(
-                                newParent,
-                                draggingPos,
-                                CONNECTION_PATH_STYLE.DRAGGING_COLOR,
-                                CONNECTION_PATH_STYLE.STROKE
-                            );
-                        })()
-                    )}
-                </svg>
+                                return newParent && draggingPos && renderConnectionPath(
+                                    newParent,
+                                    draggingPos,
+                                    CONNECTION_PATH_STYLE.DRAGGING_COLOR,
+                                    CONNECTION_PATH_STYLE.STROKE
+                                );
+                            })()
+                        )}
+                    </svg>
+                )}
                 <InputFields
                     element={editingNode as CanvasElement | undefined}
                     onEndEditing={() => svgRef.current?.focus()}

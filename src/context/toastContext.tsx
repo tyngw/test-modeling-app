@@ -1,4 +1,6 @@
 // src/context/toastContext.tsx
+'use client';
+
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 
 type ToastType = 'info' | 'warn' | 'error';

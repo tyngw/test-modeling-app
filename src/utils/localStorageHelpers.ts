@@ -1,4 +1,6 @@
 // src/utils/localStorageHelpers.ts
+'use client';
+
 import CryptoJS from 'crypto-js';
 import { NUMBER_OF_SECTIONS } from '../constants/elementSettings';
 import { SYSTEM_PROMPT_TEMPLATE } from '../constants/systemPrompt';
@@ -12,20 +14,28 @@ const PROMPT_KEY = 'prompt';
 const SYSTEM_PROMPT_KEY = 'systemPromptTemplate';
 const APIKEY_KEY = 'apiKey';
 
-const safeLocalStorage = {
+export const safeLocalStorage = {
   getItem: (key: string): string | null => {
+    if (typeof window === 'undefined') return null;
     try {
-      return typeof window !== 'undefined' ? localStorage.getItem(key) : null;
+      return localStorage.getItem(key);
     } catch (e) {
       console.error('localStorage access failed:', e);
       return null;
     }
   },
   setItem: (key: string, value: string): void => {
+    if (typeof window === 'undefined') return;
     try {
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(key, value);
-      }
+      localStorage.setItem(key, value);
+    } catch (e) {
+      console.error('localStorage access failed:', e);
+    }
+  },
+  removeItem: (key: string): void => { // 追加
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.removeItem(key);
     } catch (e) {
       console.error('localStorage access failed:', e);
     }
@@ -34,12 +44,15 @@ const safeLocalStorage = {
 
 // バージョンチェックと初期化
 const checkAndUpdateVersion = () => {
+  if (typeof window === 'undefined') return;
+
   const storedVersion = safeLocalStorage.getItem(VERSION_KEY);
   if (storedVersion !== VERSION) {
     // console.warn(`LocalStorage version mismatch: found ${storedVersion}, expected ${VERSION}. Resetting storage.`);
-    Object.keys(localStorage).forEach((key) => {
+    const keys = Object.keys(localStorage);
+    keys.forEach((key) => {
       if (key !== TABS_STORAGE_KEY && key !== APIKEY_KEY && key !== PROMPT_KEY) {
-        localStorage.removeItem(key);
+        safeLocalStorage.removeItem(key);
       }
     });
     safeLocalStorage.setItem(VERSION_KEY, VERSION);

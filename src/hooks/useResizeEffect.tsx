@@ -1,4 +1,6 @@
 // src/hooks/useResizeEffect.tsx
+'use client';
+
 import { useEffect } from 'react';
 import { calculateCanvasSize } from '../utils/layoutUtilities';
 import { ICONBAR_HEIGHT } from '../constants/elementSettings';
@@ -28,6 +30,8 @@ const useResizeEffect = ({
   state 
 }: ResizeEffectProps) => {
     useEffect(() => {
+        if (typeof window === 'undefined') return;
+
         const newCanvasSize = calculateCanvasSize(state.elements);
         const maxHeight = window.innerHeight - ICONBAR_HEIGHT * 2;
         newCanvasSize.width = Math.max(newCanvasSize.width, window.innerWidth);
