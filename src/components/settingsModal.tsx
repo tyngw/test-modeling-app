@@ -29,19 +29,22 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const [sectionsError, setSectionsError] = useState(false);
 
   useEffect(() => {
-    if (isOpen) {
-      setNumberOfSectionsInput(getNumberOfSections().toString());
-      setApiKeyState(getApiKey());
-      setPromptState(getPrompt());
-      setSystemPromptTemplateState(getSystemPromptTemplate());
-    }
+    const loadSettings = async () => {
+      if (isOpen) {
+        setNumberOfSectionsInput(getNumberOfSections().toString());
+        setApiKeyState(await getApiKey());
+        setPromptState(getPrompt());
+        setSystemPromptTemplateState(getSystemPromptTemplate());
+      }
+    };
+    loadSettings();
   }, [isOpen]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     let numValue = parseInt(numberOfSectionsInput, 10);
     const validSections = Math.max(1, Math.min(10, numValue));
     setNumberOfSections(validSections);
-    setApiKey(apiKey);
+    await setApiKey(apiKey);
     setPrompt(prompt);
     setSystemPromptTemplate(systemPromptTemplate)
     onClose();
