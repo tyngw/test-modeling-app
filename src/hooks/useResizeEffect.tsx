@@ -30,6 +30,8 @@ const useResizeEffect = ({
   state 
 }: ResizeEffectProps) => {
     useEffect(() => {
+        if (typeof window === 'undefined') return;
+
         const newCanvasSize = calculateCanvasSize(state.elements);
         const maxHeight = window.innerHeight - ICONBAR_HEIGHT * 2;
         newCanvasSize.width = Math.max(newCanvasSize.width, window.innerWidth);

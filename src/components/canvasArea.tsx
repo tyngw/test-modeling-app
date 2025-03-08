@@ -27,14 +27,10 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
     const { elements, zoomRatio } = state;
     const { addToast } = useToast();
     const [displayScopeSize, setCanvasSize] = useState({
-        // width: window.innerWidth,
-        // height: window.innerHeight
-        width: typeof window !== 'undefined' ? window.innerWidth : 0,
-        height: typeof window !== 'undefined' ? window.innerHeight : 0,
-    });
-    const [displayArea, setDisplayArea] = useState(
-        `0 0 ${displayScopeSize.width} ${displayScopeSize.height - ICONBAR_HEIGHT}`
-    );
+        width: 0,
+        height: 0
+      });
+    const [displayArea, setDisplayArea] = useState('0 0 0 0');
     const [isPinching, setIsPinching] = useState(false);
     const [initialPinchDistance, setInitialPinchDistance] = useState(0);
     const [initialScroll, setInitialScroll] = useState({ x: 0, y: 0 });
@@ -43,6 +39,16 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
     useEffect(() => {
         if (!editingNode) svgRef.current?.focus();
     }, [editingNode]);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+          setCanvasSize({
+            width: window.innerWidth,
+            height: window.innerHeight
+          });
+          setDisplayArea(`0 0 ${window.innerWidth} ${window.innerHeight - ICONBAR_HEIGHT}`);
+        }
+      }, []);
 
     useResizeEffect({ setCanvasSize, setDisplayArea, state });
     useClickOutside(svgRef, !!editingNode);
