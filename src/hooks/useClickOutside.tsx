@@ -1,4 +1,6 @@
 // src/hooks/useClickOutside.tsx
+'use client';
+
 import { useEffect } from 'react';
 import { useCanvas } from '../context/canvasContext';
 import type { MutableRefObject } from 'react';

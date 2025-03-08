@@ -1,4 +1,6 @@
 // src/appContent.tsx
+'use client';
+
 import { ToastMessages } from './constants/toastMessages';
 import React, { useState, useCallback, useMemo } from 'react';
 import CanvasArea from './components/canvasArea';
