@@ -218,7 +218,10 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
     dispatch({ type: 'SELECT_ELEMENT', payload: element.id });
   };
 
+  if (!isMounted) return null;
+
   return (
+
     <React.Fragment key={element.id}>
       <g opacity={isDraggedOrDescendant ? 0.3 : 1}>
         {renderActionButtons(element, dispatch, Object.values(state.elements))}
