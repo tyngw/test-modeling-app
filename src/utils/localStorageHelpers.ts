@@ -117,7 +117,6 @@ export const setApiKey = async (value: string): Promise<void> => {
   });
 };
 
-// その他の関数（変更なし）
 export const getApiEndpoint = (): string => safeLocalStorage.getItem('apiEndpoint') || 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
 export const setApiEndpoint = (endpoint: string) => safeLocalStorage.setItem('apiEndpoint', endpoint);
 
@@ -129,9 +128,3 @@ export const setSystemPromptTemplate = (systemPromptTemplate: string) => safeLoc
 
 export const getTabsState = (): string | null => safeLocalStorage.getItem(TABS_STORAGE_KEY);
 export const setTabsState = (value: string): void => safeLocalStorage.setItem(TABS_STORAGE_KEY, value);
-
-export const getLastSavedFileName = (): string | null => safeLocalStorage.getItem(LAST_SAVED_FILE_KEY);
-export const setLastSavedFileName = (name: string): void => {
-  const cleanedName = name.replace('.json', '');
-  safeLocalStorage.setItem(LAST_SAVED_FILE_KEY, cleanedName);
-};
