@@ -1,4 +1,4 @@
-// state/undoredo.js
+// state/undoredo.ts
 
 let snapshots: any[] = [];
 let snapshotIndex = 0;
@@ -23,7 +23,6 @@ export const Redo = (elements: any) => {
 };
 
 export const saveSnapshot = (elements: any) => {
-    // console.log(`saveSnapshot snapshotIndex: ${snapshotIndex}`);
     const newSnapshots: any[] = snapshots.slice(0, snapshotIndex + 1);
 
     newSnapshots.push(elements);
