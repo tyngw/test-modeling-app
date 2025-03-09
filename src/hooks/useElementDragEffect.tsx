@@ -8,6 +8,7 @@ import { isDescendant } from '../state/state';
 import { ToastMessages } from '../constants/toastMessages';
 import { HEADER_HEIGHT } from '../constants/elementSettings';
 import { useToast } from '../context/toastContext';
+import { OFFSET } from '../constants/elementSettings';
 
 const isTouchEvent = (event: MouseEvent | TouchEvent): event is TouchEvent => {
   return 'touches' in event;
@@ -32,7 +33,7 @@ export const useElementDragEffect = () => {
 
   const convertToZoomCoordinates = useCallback((e: MouseEvent | TouchEvent): Position => {
     let clientX: number, clientY: number;
-    
+
     if (isTouchEvent(e)) {
       clientX = e.touches[0].clientX + window.scrollX; // スクロールオフセットを追加
       clientY = e.touches[0].clientY + window.scrollY; // スクロールオフセットを追加
@@ -40,7 +41,7 @@ export const useElementDragEffect = () => {
       clientX = e.clientX + window.scrollX; // スクロールオフセットを追加
       clientY = e.clientY + window.scrollY; // スクロールオフセットを追加
     }
-    
+
     return {
       x: clientX / state.zoomRatio,
       y: (clientY - HEADER_HEIGHT) / state.zoomRatio,
@@ -145,53 +146,56 @@ export const useElementDragEffect = () => {
 
     const findDropTarget = (e: MouseEvent | TouchEvent): DropTargetInfo => {
       const zoomAdjustedPos = convertToZoomCoordinates(e);
-      let bestTarget: DropTargetInfo = null;
-      let closestDistance = Infinity;
+      const mouseX = zoomAdjustedPos.x;
+      const mouseY = zoomAdjustedPos.y;
 
-      Object.values(state.elements).forEach(element => {
-        if (element.id === draggingElement.id || !element.visible) return;
+      // 候補要素を事前フィルタリング
+      const candidates = Object.values(state.elements).filter(element =>
+        element.visible &&
+        element.id !== draggingElement?.id &&
+        isXInElementRange(element, mouseX)
+      );
 
-        // 要素の境界ボックス計算
-        const elemLeft = element.x;
-        const elemRight = element.x + element.width;
-        const elemTop = element.y;
-        const elemBottom = element.y + element.height;
-        const mouseX = zoomAdjustedPos.x;
-        const mouseY = zoomAdjustedPos.y;
+      let closestTarget: DropTargetInfo = null;
+      let minSquaredDistance = Infinity;
 
-        // X座標が要素の範囲内にあるか確認（左右10pxの許容範囲を追加）
-        // const isInXRange = mouseX > elemLeft - 10 && mouseX < elemRight + 10;
-        const isInXRange = mouseX > elemLeft && mouseX < elemRight;
-        if (!isInXRange) return;
+      for (const element of candidates) {
+        const { position, distanceSq } = calculatePositionAndDistance(element, mouseX, mouseY);
 
-        // 挿入位置判定（上下5%を境界と判定）
-        // const topThreshold = elemTop + element.height * 0.05;
-        // const bottomThreshold = elemBottom - element.height * 0.05;
-        const topThreshold = elemTop;
-        const bottomThreshold = elemBottom;
-        let position: DropPosition = 'child';
-
-        if (mouseY < topThreshold) {
-          position = 'before';
-        } else if (mouseY > bottomThreshold) {
-          position = 'after';
+        if (distanceSq < minSquaredDistance) {
+          minSquaredDistance = distanceSq;
+          closestTarget = { element, position };
         }
+      }
 
-        // 要素中心からの距離計算（X座標も考慮）
-        const centerX = elemLeft + element.width / 2;
-        const centerY = elemTop + element.height / 2;
-        const distance = Math.sqrt(
-          Math.pow(mouseX - centerX, 2) +
-          Math.pow(mouseY - centerY, 2)
-        );
+      return closestTarget;
+    };
 
-        if (distance < closestDistance) {
-          closestDistance = distance;
-          bestTarget = { element, position };
-        }
-      });
+    const isXInElementRange = (element: Element, mouseX: number): boolean => {
+      return mouseX > element.x && mouseX < element.x + element.width;
+    };
 
-      return bestTarget;
+    const calculatePositionAndDistance = (element: Element, mouseX: number, mouseY: number) => {
+      const elemTop = element.y;
+      const elemBottom = element.y + element.height;
+      const thresholdY = element.height * 0.1; // 上下10%を境界
+
+      let position: DropPosition = 'child';
+      if (mouseY < elemTop + thresholdY) {
+        position = 'before';
+      } else if (mouseY > elemBottom - thresholdY) {
+        position = 'after';
+      }
+
+      const centerX = element.x + element.width / 2;
+      const centerY = elemTop + element.height / 2;
+      const dx = mouseX - centerX;
+      const dy = mouseY - centerY;
+
+      return {
+        position,
+        distanceSq: dx * dx + dy * dy // 平方距離で比較
+      };
     };
 
     const handleMove = (e: MouseEvent | TouchEvent) => {
