@@ -358,18 +358,19 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
         {currentDropTarget?.id === element.id && draggingElement && dropPosition !== 'child' && (
           <rect
             className='drop-preview'
-            x={parentElement
-              ? parentElement.x + parentElement.width + OFFSET.X
-              : element.x + element.width}
-            y={dropPosition === 'before'
-              ? element.y - draggingElement.height - OFFSET.Y
-              : element.y + element.height + OFFSET.Y}
+            x={element.x}
+            y={
+              dropPosition === 'before'
+                ? element.y - draggingElement.height - OFFSET.Y
+                : element.y + (element.height * 0.5) + OFFSET.Y
+            }
             width={draggingElement.width}
             height={draggingElement.height}
             fill={ELEM_STYLE.DRAGGING.COLOR}
             rx={ELEM_STYLE.RX}
             stroke={ELEM_STYLE.DRAGGING.COLOR}
             strokeWidth={ELEM_STYLE.STROKE}
+            style={{ pointerEvents: 'none' }} // プレビュー要素が干渉しないように
           />
         )}
         {element.texts.map((text, index) => (
