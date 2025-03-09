@@ -79,7 +79,7 @@ describe('要素状態管理', () => {
             dispatch({ type: 'SELECT_ELEMENT', payload: '1' });
             dispatch({
                 type: 'ADD_ELEMENTS_SILENT',
-                payload: { texts: ['Test1', 'Test2'] }
+                payload: { tentative: true, texts: ['Test1', 'Test2'] }
             });
         });
 
@@ -109,7 +109,7 @@ describe('要素状態管理', () => {
             dispatch({ type: 'SELECT_ELEMENT', payload: '1' });
             dispatch({
                 type: 'ADD_ELEMENTS_SILENT',
-                payload: { texts: ['Test1', 'Test2'] }
+                payload: { tentative: true, texts: ['Test1', 'Test2'] }
             });
         });
 
