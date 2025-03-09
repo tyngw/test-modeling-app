@@ -1,11 +1,10 @@
-// state/undoredo.js
-
+// src/state/undoredo.ts
 let snapshots: any[] = [];
 let snapshotIndex = 0;
 
 export const Undo = (elements: any) => {
     if (snapshotIndex > 0) {
-        snapshots[snapshotIndex] = elements;
+        snapshots[snapshotIndex] = JSON.parse(JSON.stringify(elements));
         snapshotIndex--;
         return snapshots[snapshotIndex] as any;
     } else {
@@ -23,11 +22,9 @@ export const Redo = (elements: any) => {
 };
 
 export const saveSnapshot = (elements: any) => {
-    // console.log(`saveSnapshot snapshotIndex: ${snapshotIndex}`);
+    const clonedElements = JSON.parse(JSON.stringify(elements));
     const newSnapshots: any[] = snapshots.slice(0, snapshotIndex + 1);
-
-    newSnapshots.push(elements);
-    // saveToLocalStorage(elements);
+    newSnapshots.push(clonedElements);
     snapshots = newSnapshots;
     snapshotIndex++;
 };

@@ -675,8 +675,14 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
         };
     },
 
-    UNDO: state => ({ ...state, elements: Undo(state.elements) }),
-    REDO: state => ({ ...state, elements: Redo(state.elements) }),
+    UNDO: state => ({
+        ...state,
+        elements: adjustElementPositions(Undo(state.elements))
+    }),
+    REDO: state => ({
+        ...state,
+        elements: adjustElementPositions(Redo(state.elements))
+    }),
     SNAPSHOT: state => { saveSnapshot(state.elements); return state; },
 
     DROP_ELEMENT: (state, action) => {
