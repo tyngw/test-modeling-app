@@ -110,6 +110,7 @@ const pasteElements = (elements: { [key: string]: Element }, cutElements: { [key
     const depthDelta = baseDepth - rootElementDepth;
     const idMap = new Map<string, string>();
 
+    
     // 兄弟要素から最大orderを取得
     const siblings = Object.values(elements).filter(e => e.parentId === parentElement.id);
     const maxOrder = siblings.length > 0 ? Math.max(...siblings.map(e => e.order)) : -1;
@@ -123,7 +124,7 @@ const pasteElements = (elements: { [key: string]: Element }, cutElements: { [key
 
         if (cutElement.id === rootElement.id) {
             newElement.parentId = parentElement.id;
-            newElement.order = maxOrder + 1; // 最大order+1を設定
+            newElement.order = maxOrder + 1;
             newElement.selected = false;
         }
 
@@ -262,16 +263,17 @@ const layoutSubtree = (
         node.y = currentY;
     }
 
-    // 衝突判定の改良（子孫要素を除外）
     let adjustedY = node.y;
     let collisionFound = true;
 
+    // 衝突判定対象を同じ階層の要素に限定
+    const siblings = node.parentId === null 
+        ? getChildren(null, elements).filter(e => e.id !== node.id)
+        : getChildren(node.parentId, elements).filter(e => e.id !== node.id);
+
     while (collisionFound) {
         collisionFound = false;
-        for (const elem of Object.values(elements)) {
-            if (elem.id === node.id) continue;
-            if (isDescendant(elements, elem.id, node.id)) continue; // 子孫要素を除外
-
+        for (const elem of siblings) {
             if (checkCollision(node, adjustedY, elem)) {
                 adjustedY = elem.y + elem.height + OFFSET.Y;
                 collisionFound = true;
@@ -290,7 +292,6 @@ const layoutSubtree = (
     return { newY, minY, maxY };
 };
 
-// 衝突チェック関数を追加
 const checkCollision = (element: Element, y: number, other: Element): boolean => {
     return (
         element.x < other.x + other.width &&
@@ -304,12 +305,6 @@ const adjustElementPositions = (elements: ElementsMap): ElementsMap => {
     const newElements = { ...elements };
     const rootElements = getChildren(null, newElements);
     let currentY = DEFAULT_POSITION.Y;
-
-    // 全要素の座標をリセット
-    Object.values(newElements).forEach(elem => {
-        elem.x = 0;
-        elem.y = 0;
-    });
 
     for (const root of rootElements) {
         root.x = DEFAULT_POSITION.X;
