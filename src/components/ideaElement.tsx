@@ -361,7 +361,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
             x={element.x}
             y={
               dropPosition === 'before'
-                ? element.y - draggingElement.height - OFFSET.Y
+                ? element.y - (draggingElement.height * 0.5) - OFFSET.Y
                 : element.y + (element.height * 0.5) + OFFSET.Y
             }
             width={draggingElement.width}
