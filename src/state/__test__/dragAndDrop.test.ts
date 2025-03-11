@@ -10,7 +10,7 @@ describe('ドラッグ＆ドロップ', () => {
         const { dispatch } = result.current;
 
         await act(async () => {
-            dispatch({ type: 'SELECT_ELEMENT', payload: '1' });
+            dispatch({ type: 'SELECT_ELEMENT', payload: { id: '1', ctrlKey: false, shiftKey: false } });
             dispatch({ type: 'ADD_ELEMENT' });
         });
 
@@ -20,7 +20,7 @@ describe('ドラッグ＆ドロップ', () => {
         ) as Element;
 
         await act(async () => {
-            dispatch({ type: 'SELECT_ELEMENT', payload: '1' });
+            dispatch({ type: 'SELECT_ELEMENT', payload: { id: '1', ctrlKey: false, shiftKey: false } });
             dispatch({ type: 'ADD_ELEMENT' });
         });
 
@@ -30,7 +30,7 @@ describe('ドラッグ＆ドロップ', () => {
         ) as Element;
 
         await act(async () => {
-            dispatch({ type: 'SELECT_ELEMENT', payload: elementB.id });
+            dispatch({ type: 'SELECT_ELEMENT', payload: { id: elementB.id, ctrlKey: false, shiftKey: false } });
             dispatch({ type: 'ADD_ELEMENT' });
         });
 
