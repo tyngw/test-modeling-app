@@ -215,8 +215,15 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
 
   const handleSelect = (e: React.MouseEvent) => {
     e.stopPropagation();
-    dispatch({ type: 'SELECT_ELEMENT', payload: element.id });
-  };
+    dispatch({ 
+        type: 'SELECT_ELEMENT', 
+        payload: { 
+            id: element.id,
+            ctrlKey: e.ctrlKey || e.metaKey,
+            shiftKey: e.shiftKey
+        } 
+    });
+};
 
   if (!isMounted) return null;
 

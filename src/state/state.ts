@@ -74,20 +74,16 @@ export const initialState: State = {
     zoomRatio: 1,
 };
 
-const getSelectedAndChildren = (elements: { [key: string]: Element }, targetElement: Element, selectedElement: Element): { [key: string]: Element } => {
+const getSelectedAndChildren = (elements: { [key: string]: Element }, targetElement: Element): { [key: string]: Element } => {
     let cutElements: { [key: string]: Element } = {};
     const elementList = Object.values(elements);
 
-    if (targetElement.id === selectedElement.id) {
-        cutElements[targetElement.id] = { ...targetElement, parentId: null };
-    } else {
-        cutElements[targetElement.id] = targetElement;
-    }
+    cutElements[targetElement.id] = targetElement;
 
     const childElements = elementList.filter(element => element.parentId === targetElement.id);
     if (childElements.length > 0) {
         childElements.forEach(childElement => {
-            const childCutElements = getSelectedAndChildren(elements, childElement, selectedElement);
+            const childCutElements = getSelectedAndChildren(elements, childElement);
             cutElements = { ...cutElements, ...childCutElements };
         });
     }
@@ -110,7 +106,7 @@ const pasteElements = (elements: { [key: string]: Element }, cutElements: { [key
     const depthDelta = baseDepth - rootElementDepth;
     const idMap = new Map<string, string>();
 
-    
+
     // 兄弟要素から最大orderを取得
     const siblings = Object.values(elements).filter(e => e.parentId === parentElement.id);
     const maxOrder = siblings.length > 0 ? Math.max(...siblings.map(e => e.order)) : -1;
@@ -267,7 +263,7 @@ const layoutSubtree = (
     let collisionFound = true;
 
     // 衝突判定対象を同じ階層の要素に限定
-    const siblings = node.parentId === null 
+    const siblings = node.parentId === null
         ? getChildren(null, elements).filter(e => e.id !== node.id)
         : getChildren(node.parentId, elements).filter(e => e.id !== node.id);
 
@@ -521,19 +517,48 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
     },
 
     SELECT_ELEMENT: (state, action) => {
-        const selectedElement = state.elements[action.payload];
+        const { id, ctrlKey, shiftKey } = action.payload;
+        const selectedElement = state.elements[id];
         if (!selectedElement) return state;
 
-        // const { text, text2, text3, selected, editing, visible, ...rest } = selectedElement;
-        // console.log('[SELECT_NODE] selectElement:', rest);
+        const currentSelected = Object.values(state.elements).filter(e => e.selected);
+        const firstSelected = currentSelected[0];
+
+        // 異なるparentIdの要素が含まれる場合は何もしない
+        if ((shiftKey || ctrlKey) && currentSelected.length > 0 && currentSelected.some(e => e.parentId !== selectedElement.parentId)) {
+            return state;
+        }
+
+        let newSelectedIds: string[] = [];
+
+        if (shiftKey && currentSelected.length > 0) {
+            const parentId = firstSelected.parentId;
+            const siblings = Object.values(state.elements).filter(e => e.parentId === parentId);
+            const startIndex = siblings.findIndex(e => e.id === firstSelected.id);
+            const endIndex = siblings.findIndex(e => e.id === id);
+            const [start, end] = [Math.min(startIndex, endIndex), Math.max(startIndex, endIndex)];
+            newSelectedIds = siblings.slice(start, end + 1).map(e => e.id);
+        } else if (ctrlKey) {
+            const isAlreadySelected = currentSelected.some(e => e.id === id);
+            newSelectedIds = isAlreadySelected
+                ? currentSelected.filter(e => e.id !== id).map(e => e.id)
+                : [...currentSelected.map(e => e.id), id];
+        } else {
+            newSelectedIds = [id];
+        }
+
+        const parentId = selectedElement.parentId;
+        const validSelectedIds = newSelectedIds.filter(id => {
+            const elem = state.elements[id];
+            return elem.parentId === parentId;
+        });
 
         const updatedElements = Object.values(state.elements).reduce<{ [key: string]: Element }>((acc, element) => {
+            const selected = validSelectedIds.includes(element.id);
             acc[element.id] = {
                 ...element,
-                selected: element.id === action.payload,
-                editing: element.id === action.payload ? element.editing : false,
-                // text: element.id,
-                // text2: 'order: ' + element.order + ' children:' + element.children,
+                selected,
+                editing: selected ? element.editing : false,
             };
             return acc;
         }, {});
@@ -548,6 +573,21 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
             return acc;
         }, {})
     }),
+
+    DELETE_ELEMENT: state => {
+        const selectedElements = Object.values(state.elements).filter(e => e.selected);
+        if (selectedElements.length === 0) return state;
+
+        let updatedElements = { ...state.elements };
+        selectedElements.forEach(element => {
+            updatedElements = deleteElementRecursive(updatedElements, element);
+        });
+
+        return {
+            ...state,
+            elements: adjustElementPositions(updatedElements)
+        };
+    },
 
     UPDATE_TEXT: (state, action) => ({
         ...state,
@@ -752,36 +792,75 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
         };
     },
 
-    MOVE_ELEMENT: (state, action) => ({
-        ...state,
-        elements: {
-            ...state.elements,
-            [action.payload.id]: {
-                ...state.elements[action.payload.id],
-                x: action.payload.x,
-                y: action.payload.y
-            }
-        }
-    }),
+    MOVE_ELEMENT: (state, action) => {
+        const { id, x, y } = action.payload;
+        const selectedElements = Object.values(state.elements).filter(e => e.selected);
 
-    CUT_ELEMENT: state => handleElementMutation(state, (elements, selectedElement) => {
-        const cutElements = getSelectedAndChildren(elements, selectedElement, selectedElement);
+        // 複数要素移動の場合
+        if (selectedElements.length > 1 && selectedElements.some(e => e.id === id)) {
+            const deltaX = x - state.elements[id].x;
+            const deltaY = y - state.elements[id].y;
+
+            const updatedElements = { ...state.elements };
+            selectedElements.forEach(element => {
+                updatedElements[element.id] = {
+                    ...element,
+                    x: element.x + deltaX,
+                    y: element.y + deltaY,
+                };
+            });
+            return { ...state, elements: updatedElements };
+        }
+
+        // 単一要素移動
         return {
-            elements: adjustElementPositions(deleteElementRecursive(elements, selectedElement)),
+            ...state,
+            elements: {
+                ...state.elements,
+                [id]: {
+                    ...state.elements[id],
+                    x,
+                    y
+                }
+            }
+        };
+    },
+
+    CUT_ELEMENT: state => {
+        const selectedElements = Object.values(state.elements).filter(e => e.selected);
+        if (selectedElements.length === 0) return state;
+
+        let cutElements: { [key: string]: Element } = {};
+        let updatedElements = { ...state.elements };
+
+        selectedElements.forEach(selectedElement => {
+            const elementsToCut = getSelectedAndChildren(updatedElements, selectedElement);
+            cutElements = { ...cutElements, ...elementsToCut };
+            updatedElements = deleteElementRecursive(updatedElements, selectedElement);
+        });
+
+        return {
+            ...state,
+            elements: adjustElementPositions(updatedElements),
             cutElements
         };
-    }),
+    },
 
     COPY_ELEMENT: state => handleSelectedElementAction(state, selectedElement => ({
         cutElements: getSelectedAndChildren(state.elements, selectedElement, selectedElement)
     })),
 
-    PASTE_ELEMENT: state => handleElementMutation(state, (elements, selectedElement) => {
-        const pastedElements = pasteElements(elements, state.cutElements!, selectedElement);
-        return {
-            elements: adjustElementPositions(pastedElements)
-        };
-    }),
+    PASTE_ELEMENT: state => {
+        const selectedElements = Object.values(state.elements).filter(e => e.selected);
+        if (selectedElements.length !== 1 || !state.cutElements) return state;
+
+        return handleElementMutation(state, (elements, selectedElement) => {
+            const pastedElements = pasteElements(elements, state.cutElements!, selectedElement);
+            return {
+                elements: adjustElementPositions(pastedElements)
+            };
+        });
+    },
 
     EXPAND_ELEMENT: state => handleElementMutation(state, (elements, selectedElement) => ({
         elements: adjustElementPositions(setVisibilityRecursive(elements, selectedElement, true))
@@ -810,6 +889,20 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
 };
 function handleArrowAction(handler: (elements: Record<string, Element>) => string | undefined): (state: State) => State {
     return state => {
+        const selectedElements = Object.values(state.elements).filter(e => e.selected);
+        if (selectedElements.length > 1) {
+            const firstId = selectedElements[0].id;
+            const updatedElements = Object.values(state.elements).reduce<{ [key: string]: Element }>((acc, element) => {
+                acc[element.id] = {
+                    ...element,
+                    selected: element.id === firstId,
+                    editing: element.id === firstId ? element.editing : false,
+                };
+                return acc;
+            }, {});
+            return { ...state, elements: updatedElements };
+        }
+
         const selectedId = handler(state.elements);
         return {
             ...state,
