@@ -693,7 +693,6 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
         const oldParent = updatedElements[oldParentId];
         const newParent = updatedElements[newParentId];
 
-        // 同じ親内での移動かどうか
         const isSameParent = oldParentId === newParentId;
 
         // 古い親のchildren更新（異なる親の場合のみ）
@@ -702,6 +701,20 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
                 ...oldParent,
                 children: Math.max(0, oldParent.children - 1)
             };
+
+            // 古い親の子要素のorderを再計算
+            const oldSiblings = Object.values(updatedElements)
+                .filter(e => e.parentId === oldParentId && e.id !== id)
+                .sort((a, b) => a.order - b.order);
+
+            oldSiblings.forEach((sibling, index) => {
+                if (sibling.order !== index) {
+                    updatedElements[sibling.id] = {
+                        ...sibling,
+                        order: index
+                    };
+                }
+            });
         }
 
         updatedElements[id] = {
@@ -711,19 +724,16 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
             depth: depth,
         };
 
-        // 兄弟要素のorder再計算
         const siblings = Object.values(updatedElements)
             .filter(e => e.parentId === newParentId && e.id !== id)
             .sort((a, b) => a.order - b.order);
 
-        // 新しい順序に基づいて要素を配置
         const newSiblings = [
             ...siblings.slice(0, newOrder),
             updatedElements[id],
             ...siblings.slice(newOrder)
         ];
 
-        // orderプロパティの更新
         newSiblings.forEach((sibling, index) => {
             if (sibling.order !== index) {
                 updatedElements[sibling.id] = {
@@ -733,7 +743,6 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
             }
         });
 
-        // 新しい親のchildren更新（異なる親の場合のみ）
         if (!isSameParent && newParent) {
             updatedElements[newParentId] = {
                 ...newParent,
@@ -741,7 +750,6 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
             };
         }
 
-        // 深度の再計算（異なる親の場合）
         if (!isSameParent) {
             updatedElements = setDepthRecursive(updatedElements, updatedElements[id]);
         }
