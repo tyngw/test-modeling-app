@@ -77,17 +77,19 @@ export const initialState: State = {
 const getSelectedAndChildren = (elements: { [key: string]: Element }, targetElement: Element): { [key: string]: Element } => {
     let cutElements: { [key: string]: Element } = {};
     const elementList = Object.values(elements);
+    
+    const rootCopy = { ...targetElement, parentId: null };
+    cutElements[rootCopy.id] = rootCopy;
 
-    cutElements[targetElement.id] = targetElement;
-
-    const childElements = elementList.filter(element => element.parentId === targetElement.id);
-    if (childElements.length > 0) {
-        childElements.forEach(childElement => {
-            const childCutElements = getSelectedAndChildren(elements, childElement);
-            cutElements = { ...cutElements, ...childCutElements };
+    const collectChildren = (parentId: string) => {
+        elementList.filter(e => e.parentId === parentId).forEach(child => {
+            const childCopy = { ...child };
+            cutElements[childCopy.id] = childCopy;
+            collectChildren(child.id);
         });
-    }
+    };
 
+    collectChildren(targetElement.id);
     return cutElements;
 };
 
@@ -829,16 +831,19 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
     CUT_ELEMENT: state => {
         const selectedElements = Object.values(state.elements).filter(e => e.selected);
         if (selectedElements.length === 0) return state;
-
+    
         let cutElements: { [key: string]: Element } = {};
         let updatedElements = { ...state.elements };
-
+    
         selectedElements.forEach(selectedElement => {
             const elementsToCut = getSelectedAndChildren(updatedElements, selectedElement);
+            Object.values(elementsToCut).forEach(e => {
+                elementsToCut[e.id] = { ...e, selected: false };
+            });
             cutElements = { ...cutElements, ...elementsToCut };
             updatedElements = deleteElementRecursive(updatedElements, selectedElement);
         });
-
+    
         return {
             ...state,
             elements: adjustElementPositions(updatedElements),
