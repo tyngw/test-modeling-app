@@ -77,7 +77,7 @@ export const initialState: State = {
 const getSelectedAndChildren = (elements: { [key: string]: Element }, targetElement: Element): { [key: string]: Element } => {
     let cutElements: { [key: string]: Element } = {};
     const elementList = Object.values(elements);
-    
+
     const rootCopy = { ...targetElement, parentId: null };
     cutElements[rootCopy.id] = rootCopy;
 
@@ -576,21 +576,6 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
         }, {})
     }),
 
-    DELETE_ELEMENT: state => {
-        const selectedElements = Object.values(state.elements).filter(e => e.selected);
-        if (selectedElements.length === 0) return state;
-
-        let updatedElements = { ...state.elements };
-        selectedElements.forEach(element => {
-            updatedElements = deleteElementRecursive(updatedElements, element);
-        });
-
-        return {
-            ...state,
-            elements: adjustElementPositions(updatedElements)
-        };
-    },
-
     UPDATE_TEXT: (state, action) => ({
         ...state,
         elements: {
@@ -640,9 +625,21 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
         return { elements: adjustElementPositions(newElements) };
     }),
 
-    DELETE_ELEMENT: state => handleElementMutation(state, (elements, selectedElement) => ({
-        elements: adjustElementPositions(deleteElementRecursive(elements, selectedElement))
-    })),
+    DELETE_ELEMENT: state => {
+        const selectedElements = Object.values(state.elements).filter(e => e.selected);
+        if (selectedElements.length === 0) return state;
+
+        let updatedElements = { ...state.elements };
+        selectedElements.forEach(element => {
+            console
+            updatedElements = deleteElementRecursive(updatedElements, element);
+        });
+
+        return {
+            ...state,
+            elements: adjustElementPositions(updatedElements)
+        };
+    },
 
     EDIT_ELEMENT: state => handleSelectedElementAction(state, selectedElement => ({
         elements: {
