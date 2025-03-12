@@ -60,7 +60,7 @@ describe('切り取り、コピー、貼り付け操作', () => {
         const { dispatch } = result.current;
 
         act(() => {
-            dispatch({ type: 'SELECT_ELEMENT', payload: '1' });
+            dispatch({ type: 'SELECT_ELEMENT', payload: { id: '1', ctrlKey: false, shiftKey: false } });
         });
 
         act(() => {
@@ -73,7 +73,7 @@ describe('切り取り、コピー、貼り付け操作', () => {
         ) as Element;
 
         act(() => {
-            dispatch({ type: 'SELECT_ELEMENT', payload: childElement.id });
+            dispatch({ type: 'SELECT_ELEMENT', payload: { id: childElement.id, ctrlKey: false, shiftKey: false } });
             dispatch({ type: 'CUT_ELEMENT' });
         });
 
@@ -89,7 +89,7 @@ describe('切り取り、コピー、貼り付け操作', () => {
         )).toBe(true);
 
         act(() => {
-            dispatch({ type: 'SELECT_ELEMENT', payload: '1' });
+            dispatch({ type: 'SELECT_ELEMENT', payload: { id: '1', ctrlKey: false, shiftKey: false } });
             dispatch({ type: 'ADD_ELEMENT' });
         });
 
@@ -99,7 +99,7 @@ describe('切り取り、コピー、貼り付け操作', () => {
         ) as Element;
 
         act(() => {
-            dispatch({ type: 'SELECT_ELEMENT', payload: newParentElement.id });
+            dispatch({ type: 'SELECT_ELEMENT', payload: { id: newParentElement.id, ctrlKey: false, shiftKey: false } });
             dispatch({ type: 'PASTE_ELEMENT' });
         });
 
@@ -125,7 +125,7 @@ describe('切り取り、コピー、貼り付け操作', () => {
         const { dispatch } = result.current;
 
         act(() => {
-            dispatch({ type: 'SELECT_ELEMENT', payload: '1' });
+            dispatch({ type: 'SELECT_ELEMENT', payload: { id: '1', ctrlKey: false, shiftKey: false } });
             dispatch({ type: 'ADD_ELEMENT' });
         });
 
@@ -135,12 +135,12 @@ describe('切り取り、コピー、貼り付け操作', () => {
         ) as Element;
 
         act(() => {
-            dispatch({ type: 'SELECT_ELEMENT', payload: childElement.id });
+            dispatch({ type: 'SELECT_ELEMENT', payload: { id: childElement.id, ctrlKey: false, shiftKey: false } });
             dispatch({ type: 'ADD_ELEMENT' });
         });
 
         act(() => {
-            dispatch({ type: 'SELECT_ELEMENT', payload: childElement.id });
+            dispatch({ type: 'SELECT_ELEMENT', payload: { id: childElement.id, ctrlKey: false, shiftKey: false } });
             dispatch({ type: 'CUT_ELEMENT' });
         });
 
@@ -155,7 +155,7 @@ describe('切り取り、コピー、貼り付け操作', () => {
         )).toBe(true);
 
         act(() => {
-            dispatch({ type: 'SELECT_ELEMENT', payload: '1' });
+            dispatch({ type: 'SELECT_ELEMENT', payload: { id: '1', ctrlKey: false, shiftKey: false } });
             dispatch({ type: 'ADD_ELEMENT' });
         });
 
@@ -165,7 +165,7 @@ describe('切り取り、コピー、貼り付け操作', () => {
         ) as Element;
 
         act(() => {
-            dispatch({ type: 'SELECT_ELEMENT', payload: newParentElement.id });
+            dispatch({ type: 'SELECT_ELEMENT', payload: { id: newParentElement.id, ctrlKey: false, shiftKey: false } });
             dispatch({ type: 'PASTE_ELEMENT' });
         });
 
