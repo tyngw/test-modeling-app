@@ -203,11 +203,11 @@ describe('ドラッグ＆ドロップ', () => {
     
         // 親要素に3つの子要素を作成
         await act(async () => {
-            dispatch({ type: 'SELECT_ELEMENT', payload: '1' });
+            dispatch({ type: 'SELECT_ELEMENT', payload: { id: '1', ctrlKey: false, shiftKey: false } });
             dispatch({ type: 'ADD_ELEMENT' }); // order 0
-            dispatch({ type: 'SELECT_ELEMENT', payload: '1' });
+            dispatch({ type: 'SELECT_ELEMENT', payload: { id: '1', ctrlKey: false, shiftKey: false } });
             dispatch({ type: 'ADD_ELEMENT' }); // order 1
-            dispatch({ type: 'SELECT_ELEMENT', payload: '1' });
+            dispatch({ type: 'SELECT_ELEMENT', payload: { id: '1', ctrlKey: false, shiftKey: false } });
             dispatch({ type: 'ADD_ELEMENT' }); // order 2
         });
     
