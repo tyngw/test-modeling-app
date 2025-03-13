@@ -535,7 +535,13 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
 
         if (shiftKey && currentSelected.length > 0) {
             const parentId = firstSelected.parentId;
-            const siblings = Object.values(state.elements).filter(e => e.parentId === parentId);
+            const siblings = Object.values(state.elements)
+                .filter(e => e.parentId === parentId)
+                .sort((a, b) => a.order - b.order);
+
+            console.log('[Shift選択] 兄弟要素リスト:',
+                siblings.map(s => ({ id: s.id, order: s.order, selected: s.selected })))
+
             const startIndex = siblings.findIndex(e => e.id === firstSelected.id);
             const endIndex = siblings.findIndex(e => e.id === id);
             const [start, end] = [Math.min(startIndex, endIndex), Math.max(startIndex, endIndex)];
@@ -836,10 +842,10 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
     CUT_ELEMENT: state => {
         const selectedElements = Object.values(state.elements).filter(e => e.selected);
         if (selectedElements.length === 0) return state;
-    
+
         let cutElements: { [key: string]: Element } = {};
         let updatedElements = { ...state.elements };
-    
+
         selectedElements.forEach(selectedElement => {
             const elementsToCut = getSelectedAndChildren(updatedElements, selectedElement);
             Object.values(elementsToCut).forEach(e => {
@@ -848,7 +854,7 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
             cutElements = { ...cutElements, ...elementsToCut };
             updatedElements = deleteElementRecursive(updatedElements, selectedElement);
         });
-    
+
         return {
             ...state,
             elements: adjustElementPositions(updatedElements),
