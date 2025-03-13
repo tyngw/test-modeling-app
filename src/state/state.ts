@@ -539,9 +539,6 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
                 .filter(e => e.parentId === parentId)
                 .sort((a, b) => a.order - b.order);
 
-            console.log('[Shift選択] 兄弟要素リスト:',
-                siblings.map(s => ({ id: s.id, order: s.order, selected: s.selected })))
-
             const startIndex = siblings.findIndex(e => e.id === firstSelected.id);
             const endIndex = siblings.findIndex(e => e.id === id);
             const [start, end] = [Math.min(startIndex, endIndex), Math.max(startIndex, endIndex)];
