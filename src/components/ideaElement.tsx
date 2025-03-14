@@ -261,7 +261,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
               transform={`translate(${element.x + element.width * 1.1},${element.y})`}
               onClick={(e) => {
                 e.stopPropagation();
-                dispatch({ type: 'SELECT_ELEMENT', payload: element.id });
+                dispatch({ type: 'SELECT_ELEMENT', payload: { id: element.id, ctrlKey: false, shiftKey: false } });
                 dispatch({ type: 'EXPAND_ELEMENT' });
               }}
               style={{ cursor: 'pointer' }}
