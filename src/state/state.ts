@@ -94,56 +94,49 @@ const getSelectedAndChildren = (elements: { [key: string]: Element }, targetElem
 };
 
 const pasteElements = (elements: { [key: string]: Element }, cutElements: { [key: string]: Element }, parentElement: Element): { [key: string]: Element } => {
-    if (!cutElements) {
-        return elements;
-    }
+    if (!cutElements) return elements;
 
-    const rootElement = Object.values(cutElements).find(element => element.parentId === null);
-    if (!rootElement) {
-        return { ...elements, ...cutElements };
-    }
+    const rootElement = Object.values(cutElements).find(e => e.parentId === null);
+    if (!rootElement) return { ...elements, ...cutElements };
 
+    // ルート要素の元の深さを取得
     const rootElementDepth = rootElement.depth;
-    const baseDepth = parentElement.depth + 1;
-    const depthDelta = baseDepth - rootElementDepth;
+    // 深さの差分を貼り付け先に基づいて計算
+    const depthDelta = parentElement.depth + 1 - rootElementDepth;
+
     const idMap = new Map<string, string>();
+    const newElements: { [key: string]: Element } = {};
 
+    Object.values(cutElements).forEach(cutElement => {
+        const newId = uuidv4();
+        idMap.set(cutElement.id, newId);
 
-    // 兄弟要素から最大orderを取得
-    const siblings = Object.values(elements).filter(e => e.parentId === parentElement.id);
-    const maxOrder = siblings.length > 0 ? Math.max(...siblings.map(e => e.order)) : -1;
+        const newDepth = cutElement.depth + depthDelta;
 
-    const newElements = Object.values(cutElements).reduce<{ [key: string]: Element }>((acc, cutElement) => {
-        const newElement = { ...cutElement };
-        const newUUID = uuidv4();
-        idMap.set(cutElement.id, newUUID);
-        newElement.id = newUUID;
-        newElement.depth = cutElement.depth + depthDelta;
+        newElements[newId] = {
+            ...cutElement,
+            id: newId,
+            depth: newDepth,
+            parentId: cutElement.parentId === null
+                ? parentElement.id
+                : idMap.get(cutElement.parentId)!,
+            order: cutElement.parentId === null
+                ? parentElement.children
+                : cutElement.order
+        };
+    });
 
-        if (cutElement.id === rootElement.id) {
-            newElement.parentId = parentElement.id;
-            newElement.order = maxOrder + 1;
-            newElement.selected = false;
-        }
+    // 貼り付け先のchildren更新
+    const updatedParent = {
+        ...parentElement,
+        children: parentElement.children + 1
+    };
 
-        acc[newUUID] = newElement;
-        return acc;
-    }, {});
-
-    const updatedElements = Object.values(newElements).reduce<{ [key: string]: Element }>((acc, element) => {
-        const parentId = idMap.has(element.parentId as string)
-            ? idMap.get(element.parentId as string)!
-            : element.parentId;
-        const updatedElement = { ...element, parentId };
-        acc[updatedElement.id] = updatedElement;
-        return acc;
-    }, { ...elements });
-
-    // 親要素のchildrenを更新
-    const updatedParent = { ...parentElement, children: parentElement.children + 1 };
-    updatedElements[updatedParent.id] = updatedParent;
-
-    return updatedElements;
+    return {
+        ...elements,
+        ...newElements,
+        [parentElement.id]: updatedParent
+    };
 };
 
 const setDepthRecursive = (
