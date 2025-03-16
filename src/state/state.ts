@@ -885,7 +885,7 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
     },
 
     COPY_ELEMENT: state => handleSelectedElementAction(state, selectedElement => ({
-        cutElements: getSelectedAndChildren(state.elements, selectedElement, selectedElement)
+        cutElements: getSelectedAndChildren(state.elements, selectedElement)
     })),
 
     PASTE_ELEMENT: state => {
