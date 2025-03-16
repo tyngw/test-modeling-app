@@ -1,13 +1,15 @@
 // src/components/inputFields.tsx
 'use client';
 
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useCanvas } from '../context/canvasContext';
-import { calculateElementWidth } from '../utils/textareaHelpers';
+import { calculateElementWidth, wrapText } from '../utils/textareaHelpers';
 import {
     DEFAULT_FONT_SIZE,
+    DEFAULT_FONT_FAMILY,
     TEXTAREA_PADDING,
     LINE_HEIGHT_RATIO,
+    SIZE,
 } from '../constants/elementSettings';
 import { Element } from '../types';
 
@@ -19,56 +21,116 @@ interface InputFieldsProps {
 const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
     const { dispatch, state } = useCanvas();
     const fieldRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
+    const [localHeights, setLocalHeights] = useState<number[]>([]);
+    const measureContext = useRef<CanvasRenderingContext2D | null>(null);
+
+    useEffect(() => {
+        // キャンバスコンテキストの初期化
+        const canvas = document.createElement('canvas');
+        measureContext.current = canvas.getContext('2d');
+    }, []);
+
+    useEffect(() => {
+        if (element) {
+            setLocalHeights(element.sectionHeights);
+        }
+    }, [element]);
 
     if (!element) return null;
 
-    const maxWidth = calculateElementWidth(element.texts, TEXTAREA_PADDING.HORIZONTAL);
-    element.width = maxWidth;
+    const calculateDynamicWidth = (text: string) => {
+        const minWidth = SIZE.WIDTH.MIN * state.zoomRatio;
+        const maxWidth = SIZE.WIDTH.MAX * state.zoomRatio;
 
-    const handleKeyDown = (
-        e: React.KeyboardEvent<HTMLTextAreaElement>,
-        index: number
-    ) => {
-        if (e.key === 'Tab') {
-            e.preventDefault();
-            if (index === element.texts.length - 1) {
-                dispatch({ type: 'END_EDITING' });
-                onEndEditing?.();
-            } else {
-                const nextIndex = index + 1;
-                (fieldRefs.current[nextIndex] as HTMLTextAreaElement)?.focus();
-            }
+        if (measureContext.current) {
+            const buffer = 30;
+            measureContext.current.font = `${DEFAULT_FONT_SIZE * state.zoomRatio}px ${DEFAULT_FONT_FAMILY}`;
+            const textWidth = measureContext.current.measureText(text).width +
+                TEXTAREA_PADDING.HORIZONTAL * 2 * state.zoomRatio + buffer;
+
+            return Math.min(maxWidth, Math.max(minWidth, textWidth));
         }
-        if (e.key === 'Enter' && e.shiftKey) {
-            e.preventDefault();
-            const cursorPosition = e.currentTarget.selectionStart;
-            const newValue = e.currentTarget.value.substring(0, cursorPosition) +
-                '\n' +
-                e.currentTarget.value.substring(cursorPosition);
-            dispatch({
-                type: 'UPDATE_TEXT',
-                payload: { id: element.id, index, value: newValue }
-            });
-        }
-        if (e.key === 'Escape' || (e.key === 'Enter' && (e.ctrlKey || e.metaKey))) {
-            e.preventDefault();
-            dispatch({ type: 'END_EDITING' });
-        }
+        return minWidth;
+    };
+
+    const calculateDynamicHeight = (text: string, width: number) => {
+        if (!measureContext.current) return SIZE.SECTION_HEIGHT * state.zoomRatio;
+
+        const lines = wrapText(text, width / state.zoomRatio, state.zoomRatio).length;
+        const lineHeight = DEFAULT_FONT_SIZE * LINE_HEIGHT_RATIO * state.zoomRatio;
+        const padding = TEXTAREA_PADDING.VERTICAL * state.zoomRatio;
+
+        return Math.max(
+            SIZE.SECTION_HEIGHT * state.zoomRatio,
+            lines * lineHeight + padding
+        );
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>, index: number) => {
-        const startTime = performance.now();
+        const newValue = e.target.value;
+        const width = calculateDynamicWidth(newValue);
+        const height = calculateDynamicHeight(newValue, width);
+
+        // ローカル状態を更新
+        setLocalHeights(prev => {
+            const newHeights = [...prev];
+            newHeights[index] = height / state.zoomRatio;
+            return newHeights;
+        });
+
+        // テキスト内容のみ親に通知
         dispatch({
             type: 'UPDATE_TEXT',
             payload: {
                 id: element.id,
                 index,
-                value: e.target.value
+                value: newValue
             }
         });
-        const endTime = performance.now();
-        if (process.env.NODE_ENV === 'development') {
-            console.log(`Text update for element ${element.id} at index ${index} took ${endTime - startTime} ms`);
+
+        // テキストエリアのサイズ調整
+        const textarea = fieldRefs.current[index];
+        if (textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = `${height}px`;
+        }
+    };
+
+    const handleBlur = () => {
+        // 編集終了時に親に高さを通知
+        dispatch({
+            type: 'UPDATE_ELEMENT_SIZE',
+            payload: {
+                id: element.id,
+                width: calculateElementWidth(element.texts, TEXTAREA_PADDING.HORIZONTAL),
+                height: localHeights.reduce((sum, h) => sum + h, 0),
+                sectionHeights: localHeights
+            }
+        });
+
+        onEndEditing?.();
+    };
+
+    const handleFocusChange = (index: number) => {
+        // 中間的なサイズ更新
+        const currentWidth = calculateElementWidth(
+            element.texts,
+            TEXTAREA_PADDING.HORIZONTAL
+        );
+
+        dispatch({
+            type: 'UPDATE_ELEMENT_SIZE',
+            payload: {
+                id: element.id,
+                width: currentWidth,
+                height: localHeights.reduce((sum, h) => sum + h, 0),
+                sectionHeights: localHeights
+            }
+        });
+
+        // 次のフィールドへフォーカス
+        if (index + 1 < element.texts.length) {
+            fieldRefs.current[index + 1]?.focus();
         }
     };
 
@@ -77,23 +139,34 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
             {element.texts.map((text, index) => {
                 let yPosition = 0;
                 for (let i = 0; i < index; i++) {
-                    yPosition += element.sectionHeights[i];
+                    yPosition += localHeights[i] || element.sectionHeights[i];
                 }
+
+                const width = calculateDynamicWidth(text);
+                const height = calculateDynamicHeight(text, width);
 
                 return (
                     <textarea
                         key={index}
-                        ref={(el) => {fieldRefs.current[index] = el}}
+                        ref={(el) => { fieldRefs.current[index] = el }}
                         value={text}
                         onChange={(e) => handleChange(e, index)}
-                        onKeyDown={(e) => handleKeyDown(e, index)}
-                        className={`editable editable-${index}`}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Tab') {
+                                e.preventDefault();
+                                handleFocusChange(index);
+                            }
+                        }}
+                        onBlur={handleBlur}
                         style={{
                             position: 'absolute',
                             left: `${element.x * state.zoomRatio}px`,
                             top: `${(element.y + yPosition) * state.zoomRatio}px`,
-                            width: `${(element.width * state.zoomRatio) - 2}px`,
-                            height: `${(element.sectionHeights[index] * state.zoomRatio) - 2}px`,
+                            width: `${width}px`,
+                            height: `${height}px`,
+                            minWidth: `${SIZE.WIDTH.MIN * state.zoomRatio}px`,
+                            maxWidth: `${SIZE.WIDTH.MAX * state.zoomRatio}px`,
+                            minHeight: `${SIZE.SECTION_HEIGHT * state.zoomRatio}px`,
                             margin: '1px 1px',
                             fontSize: `${DEFAULT_FONT_SIZE * state.zoomRatio}px`,
                             lineHeight: `${LINE_HEIGHT_RATIO}em`,
@@ -107,6 +180,7 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
                             wordWrap: 'break-word',
                             resize: 'none',
                             zIndex: '0',
+                            transition: 'all 0.2s ease-in-out'
                         }}
                         autoFocus={index === 0}
                     />

@@ -201,6 +201,9 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
       const newWidth = calculateElementWidth(element.texts, TEXTAREA_PADDING.HORIZONTAL);
       const totalHeight = newSectionHeights.reduce((sum, h) => sum + h, 0);
 
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[IdeaElement][handleHeightChange] resized: ${element.texts} ${element.width} x ${element.height} -> ${newWidth} x ${totalHeight}`);
+      }
       dispatch({
         type: 'UPDATE_ELEMENT_SIZE',
         payload: {
@@ -215,15 +218,15 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
 
   const handleSelect = (e: React.MouseEvent) => {
     e.stopPropagation();
-    dispatch({ 
-        type: 'SELECT_ELEMENT', 
-        payload: { 
-            id: element.id,
-            ctrlKey: e.ctrlKey || e.metaKey,
-            shiftKey: e.shiftKey
-        } 
+    dispatch({
+      type: 'SELECT_ELEMENT',
+      payload: {
+        id: element.id,
+        ctrlKey: e.ctrlKey || e.metaKey,
+        shiftKey: e.shiftKey
+      }
     });
-};
+  };
 
   if (!isMounted) return null;
 
@@ -382,16 +385,18 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
         )}
         {element.texts.map((text, index) => (
           <React.Fragment key={`${element.id}-section-${index}`}>
-            <TextSection
-              x={element.x}
-              y={element.y + element.sectionHeights.slice(0, index).reduce((sum, h) => sum + h, 0)}
-              width={element.width}
-              height={element.sectionHeights[index]}
-              text={text}
-              fontSize={DEFAULT_FONT_SIZE}
-              zoomRatio={state.zoomRatio}
-              onHeightChange={(newHeight) => handleHeightChange(index, newHeight)}
-            />
+            {!element.editing && (
+              <TextSection
+                x={element.x}
+                y={element.y + element.sectionHeights.slice(0, index).reduce((sum, h) => sum + h, 0)}
+                width={element.width}
+                height={element.sectionHeights[index]}
+                text={text}
+                fontSize={DEFAULT_FONT_SIZE}
+                zoomRatio={state.zoomRatio}
+                onHeightChange={(newHeight) => handleHeightChange(index, newHeight)}
+              />
+            )}
             {index < element.texts.length - 1 && (
               <line
                 x1={element.x}
