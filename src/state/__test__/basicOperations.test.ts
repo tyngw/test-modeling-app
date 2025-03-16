@@ -86,6 +86,7 @@ describe('基本操作', () => {
         const { dispatch } = result.current;
 
         act(() => {
+            dispatch({ type: 'SELECT_ELEMENT', payload: { id: '1', ctrlKey: false, shiftKey: false } });
             dispatch({ type: 'ADD_ELEMENT' });
         });
 
@@ -95,7 +96,7 @@ describe('基本操作', () => {
         ) as Element;
 
         act(() => {
-            dispatch({ type: 'SELECT_ELEMENT', payload: childElement.id });
+            dispatch({ type: 'SELECT_ELEMENT', payload: { id: childElement.id, ctrlKey: false, shiftKey: false } });
             dispatch({ type: 'ADD_ELEMENT' });
         });
 
@@ -108,13 +109,16 @@ describe('基本操作', () => {
         ) as Element;
 
         expect(Object.keys(state.elements).length).toBe(3);
-        // expect(childElement.children).toBe(1);
         expect(childElement).toMatchObject({
             children: 1,
         });
 
+        childElement = Object.values(state.elements).find(
+            (elm: Element) => elm.parentId === '1'
+        ) as Element;
+
         act(() => {
-            dispatch({ type: 'SELECT_ELEMENT', payload: childElement.id });
+            dispatch({ type: 'SELECT_ELEMENT', payload: { id: childElement.id, ctrlKey: false, shiftKey: false } });
             dispatch({ type: 'DELETE_ELEMENT' });
         });
 

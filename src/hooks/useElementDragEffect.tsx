@@ -76,50 +76,73 @@ export const useElementDragEffect = () => {
     if (!draggingElement) return;
 
     try {
-      const resetElementPosition = () => {
-        dispatch({
-          type: 'MOVE_ELEMENT',
-          payload: { id: draggingElement.id, ...originalPosition }
+      const selectedElements = Object.values(state.elements).filter(el => el.selected);
+      const leaderElement = draggingElement; // ドラッグ開始要素をリーダーとする
+
+      const resetElementsPosition = () => {
+        selectedElements.forEach(element => {
+          dispatch({
+            type: 'MOVE_ELEMENT',
+            payload: { id: element.id, x: element.x, y: element.y }
+          });
         });
       };
 
       const processChildDrop = (target: Element) => {
+        if (selectedElements.some(el => isDescendant(state.elements, target.id, el.id))) {
+          addToast(ToastMessages.dropChildElement, 'warn');
+          return;
+        }
+
         dispatch({ type: 'SNAPSHOT' });
-        dispatch({
-          type: 'DROP_ELEMENT',
-          payload: {
-            id: draggingElement.id,
-            oldParentId: draggingElement.parentId,
-            newParentId: target.id,
-            newOrder: target.children,
-            depth: target.depth + 1,
-          },
+
+        // 全要素に対して移動処理
+        selectedElements.forEach(element => {
+          dispatch({
+            type: 'DROP_ELEMENT',
+            payload: {
+              id: element.id,
+              oldParentId: element.parentId,
+              newParentId: target.id,
+              newOrder: target.children + selectedElements.indexOf(element),
+              depth: target.depth + 1,
+            },
+          });
         });
       };
 
       const processSiblingDrop = (target: Element, position: DropPosition) => {
-        const newOrder = position === 'before' ? target.order : target.order + 1;
+        const baseOrder = position === 'before' ? target.order : target.order + 1;
         const newParentId = target.parentId;
 
+        if (selectedElements.some(el => el.parentId !== newParentId && !validateParentChange(el, newParentId))) {
+          addToast(ToastMessages.invalidParentChange, 'warn');
+          return;
+        }
+
         dispatch({ type: 'SNAPSHOT' });
-        dispatch({
-          type: 'DROP_ELEMENT',
-          payload: {
-            id: draggingElement.id,
-            oldParentId: draggingElement.parentId,
-            newParentId,
-            newOrder,
-            depth: target.depth,
-          },
+
+        // 順序を調整しながら一括移動
+        selectedElements.forEach((element, index) => {
+          dispatch({
+            type: 'DROP_ELEMENT',
+            payload: {
+              id: element.id,
+              oldParentId: element.parentId,
+              newParentId,
+              newOrder: baseOrder + index,
+              depth: target.depth,
+            },
+          });
         });
       };
 
       if (currentDropTarget) {
         const { element: target, position } = currentDropTarget;
 
-        if (isDescendant(state.elements, draggingElement.id, target.id)) {
-          resetElementPosition();
-          setDraggingElement(null);
+        // 全要素の子孫関係チェック
+        if (selectedElements.some(el => isDescendant(state.elements, el.id, target.id))) {
+          resetElementsPosition();
           addToast(ToastMessages.dropChildElement, 'warn');
           return;
         }
@@ -130,7 +153,7 @@ export const useElementDragEffect = () => {
           processSiblingDrop(target, position);
         }
       } else {
-        resetElementPosition();
+        resetElementsPosition();
       }
     } catch (error) {
       console.error('Drag error:', error);
@@ -139,7 +162,14 @@ export const useElementDragEffect = () => {
       setDraggingElement(null);
       setCurrentDropTarget(null);
     }
-  }, [draggingElement, currentDropTarget, originalPosition, state.elements, dispatch, addToast]);
+  }, [draggingElement, currentDropTarget, state.elements, dispatch, addToast]);
+
+  // 親変更の検証関数
+  const validateParentChange = (element: Element, newParentId: string | null): boolean => {
+    const newParent = newParentId ? state.elements[newParentId] : null;
+    // 新しい親が自分自身または子孫でないかチェック
+    return !(newParent && isDescendant(state.elements, element.id, newParent.id));
+  };
 
   useEffect(() => {
     if (!draggingElement) return;

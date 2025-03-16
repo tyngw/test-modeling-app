@@ -154,7 +154,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
   }, []);
 
   useEffect(() => {
-    if (element.editing) return;
+    if (element.editing || !isMounted) return;
     const calculateDimensions = () => {
       const newWidth = calculateElementWidth(element.texts, TEXTAREA_PADDING.HORIZONTAL);
       const sectionHeights = element.texts.map(text => {
@@ -169,7 +169,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
 
     const { newWidth, newHeight, sectionHeights } = calculateDimensions();
 
-    if (newWidth !== element.width || newHeight !== element.height) {
+    if (!element.editing && (newWidth !== element.width || newHeight !== element.height)) {
       dispatch({
         type: 'UPDATE_ELEMENT_SIZE',
         payload: {
@@ -201,6 +201,9 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
       const newWidth = calculateElementWidth(element.texts, TEXTAREA_PADDING.HORIZONTAL);
       const totalHeight = newSectionHeights.reduce((sum, h) => sum + h, 0);
 
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[IdeaElement][handleHeightChange] resized: ${element.texts} ${element.width} x ${element.height} -> ${newWidth} x ${totalHeight}`);
+      }
       dispatch({
         type: 'UPDATE_ELEMENT_SIZE',
         payload: {
@@ -215,7 +218,14 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
 
   const handleSelect = (e: React.MouseEvent) => {
     e.stopPropagation();
-    dispatch({ type: 'SELECT_ELEMENT', payload: element.id });
+    dispatch({
+      type: 'SELECT_ELEMENT',
+      payload: {
+        id: element.id,
+        ctrlKey: e.ctrlKey || e.metaKey,
+        shiftKey: e.shiftKey
+      }
+    });
   };
 
   if (!isMounted) return null;
@@ -254,7 +264,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
               transform={`translate(${element.x + element.width * 1.1},${element.y})`}
               onClick={(e) => {
                 e.stopPropagation();
-                dispatch({ type: 'SELECT_ELEMENT', payload: element.id });
+                dispatch({ type: 'SELECT_ELEMENT', payload: { id: element.id, ctrlKey: false, shiftKey: false } });
                 dispatch({ type: 'EXPAND_ELEMENT' });
               }}
               style={{ cursor: 'pointer' }}
@@ -361,7 +371,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
             x={element.x}
             y={
               dropPosition === 'before'
-                ? element.y - draggingElement.height - OFFSET.Y
+                ? element.y - (draggingElement.height * 0.5) - OFFSET.Y
                 : element.y + (element.height * 0.5) + OFFSET.Y
             }
             width={draggingElement.width}
@@ -375,16 +385,18 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
         )}
         {element.texts.map((text, index) => (
           <React.Fragment key={`${element.id}-section-${index}`}>
-            <TextSection
-              x={element.x}
-              y={element.y + element.sectionHeights.slice(0, index).reduce((sum, h) => sum + h, 0)}
-              width={element.width}
-              height={element.sectionHeights[index]}
-              text={text}
-              fontSize={DEFAULT_FONT_SIZE}
-              zoomRatio={state.zoomRatio}
-              onHeightChange={(newHeight) => handleHeightChange(index, newHeight)}
-            />
+            {!element.editing && (
+              <TextSection
+                x={element.x}
+                y={element.y + element.sectionHeights.slice(0, index).reduce((sum, h) => sum + h, 0)}
+                width={element.width}
+                height={element.sectionHeights[index]}
+                text={text}
+                fontSize={DEFAULT_FONT_SIZE}
+                zoomRatio={state.zoomRatio}
+                onHeightChange={(newHeight) => handleHeightChange(index, newHeight)}
+              />
+            )}
             {index < element.texts.length - 1 && (
               <line
                 x1={element.x}

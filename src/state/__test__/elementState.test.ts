@@ -42,7 +42,7 @@ describe('要素状態管理', () => {
         const { dispatch } = result.current;
 
         act(() => {
-            dispatch({ type: 'SELECT_ELEMENT', payload: '1' });
+            dispatch({ type: 'SELECT_ELEMENT', payload: { id: '1', ctrlKey: false, shiftKey: false } });
             dispatch({ type: 'ADD_ELEMENT' });
         });
 
@@ -51,7 +51,7 @@ describe('要素状態管理', () => {
         ) as Element;
 
         act(() => {
-            dispatch({ type: 'SELECT_ELEMENT', payload: '1' });
+            dispatch({ type: 'SELECT_ELEMENT', payload: { id: '1', ctrlKey: false, shiftKey: false } });
             dispatch({ type: 'COLLAPSE_ELEMENT' });
         });
 
@@ -61,7 +61,7 @@ describe('要素状態管理', () => {
         ) as Element).visible).toBe(false);
 
         act(() => {
-            dispatch({ type: 'SELECT_ELEMENT', payload: '1' });
+            dispatch({ type: 'SELECT_ELEMENT', payload: { id: '1', ctrlKey: false, shiftKey: false } });
             dispatch({ type: 'EXPAND_ELEMENT' });
         });
 
