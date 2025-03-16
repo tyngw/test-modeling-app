@@ -659,7 +659,6 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
 
         let updatedElements = { ...state.elements };
         selectedElements.forEach(element => {
-            console
             updatedElements = deleteElementRecursive(updatedElements, element);
         });
 
