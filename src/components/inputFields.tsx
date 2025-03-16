@@ -56,6 +56,22 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
         }
     };
 
+    const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>, index: number) => {
+        const startTime = performance.now();
+        dispatch({
+            type: 'UPDATE_TEXT',
+            payload: {
+                id: element.id,
+                index,
+                value: e.target.value
+            }
+        });
+        const endTime = performance.now();
+        if (process.env.NODE_ENV === 'development') {
+            console.log(`Text update for element ${element.id} at index ${index} took ${endTime - startTime} ms`);
+        }
+    };
+
     return (
         <>
             {element.texts.map((text, index) => {
@@ -69,14 +85,7 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
                         key={index}
                         ref={(el) => {fieldRefs.current[index] = el}}
                         value={text}
-                        onChange={(e) => dispatch({
-                            type: 'UPDATE_TEXT',
-                            payload: {
-                                id: element.id,
-                                index,
-                                value: e.target.value
-                            }
-                        })}
+                        onChange={(e) => handleChange(e, index)}
                         onKeyDown={(e) => handleKeyDown(e, index)}
                         className={`editable editable-${index}`}
                         style={{
@@ -90,7 +99,6 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
                             lineHeight: `${LINE_HEIGHT_RATIO}em`,
                             padding: `0`,
                             fontFamily: `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`,
-                            // border: 'none',
                             boxSizing: 'border-box',
                             WebkitFontSmoothing: 'antialiased',
                             MozOsxFontSmoothing: 'grayscale',
