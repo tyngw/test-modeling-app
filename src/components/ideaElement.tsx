@@ -154,7 +154,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
   }, []);
 
   useEffect(() => {
-    if (element.editing) return;
+    if (element.editing || !isMounted) return;
     const calculateDimensions = () => {
       const newWidth = calculateElementWidth(element.texts, TEXTAREA_PADDING.HORIZONTAL);
       const sectionHeights = element.texts.map(text => {
@@ -169,7 +169,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
 
     const { newWidth, newHeight, sectionHeights } = calculateDimensions();
 
-    if (newWidth !== element.width || newHeight !== element.height) {
+    if (!element.editing && (newWidth !== element.width || newHeight !== element.height)) {
       dispatch({
         type: 'UPDATE_ELEMENT_SIZE',
         payload: {
