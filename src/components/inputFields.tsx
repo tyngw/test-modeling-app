@@ -87,30 +87,6 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
     }
   }, [element]);
 
-  const handleFocus = useCallback((e: React.FocusEvent<HTMLTextAreaElement>, index: number) => {
-    e.stopPropagation();
-    const { scrollX, scrollY } = window;
-    setActiveIndex(index);
-    window.scrollTo(scrollX, scrollY);
-  }, []);
-
-  const handleBlur = useCallback(() => {
-    if (!element) return;
-
-    dispatch({
-      type: 'UPDATE_ELEMENT_SIZE',
-      payload: {
-        id: element.id,
-        width: SIZE.WIDTH.MAX,
-        height: localHeights.reduce((sum, h) => sum + h, 0),
-        sectionHeights: localHeights
-      }
-    });
-
-    onEndEditing?.();
-    setActiveIndex(-1);
-  }, [element, localHeights, dispatch, onEndEditing]);
-
   if (!element) return null;
 
   return (
@@ -138,8 +114,6 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
                 handleTabNavigation(index);
               }
             }}
-            onFocus={(e) => handleFocus(e, index)}
-            onBlur={handleBlur}
             onClick={(e) => e.stopPropagation()}
             style={{
               position: 'absolute',
