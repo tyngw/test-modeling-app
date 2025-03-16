@@ -73,7 +73,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
         draggingElement
     } = useElementDragEffect();
 
-    const handleKeyDown = useCallback(async (e: React.KeyboardEvent) => { // asyncに変更
+    const handleKeyDown = useCallback(async (e: React.KeyboardEvent) => {
         e.preventDefault();
         const keyCombo = `${e.ctrlKey || e.metaKey ? 'Ctrl+' : ''}${e.shiftKey ? 'Shift+' : ''}${e.key}`;
         const actionType = keyActionMap[keyCombo];
@@ -290,7 +290,10 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                 )}
                 <InputFields
                     element={editingNode as CanvasElement | undefined}
-                    onEndEditing={() => svgRef.current?.focus()}
+                    onEndEditing={() => {
+                        dispatch({ type: 'END_EDITING' });
+                        svgRef.current?.focus();
+                    }}
                 />
             </div>
         </>

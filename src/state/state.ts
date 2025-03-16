@@ -202,6 +202,9 @@ const deleteElementRecursive = (elements: { [key: string]: Element }, deleteElem
 
     const updatedElements = { ...elements };
 
+    const parent = updatedElements[deleteElement.parentId];
+    if (!parent) return updatedElements;
+
     const deleteChildren = (parentId: string) => {
         const children = Object.values(updatedElements).filter(n => n.parentId === parentId);
         children.forEach(child => {
@@ -213,20 +216,24 @@ const deleteElementRecursive = (elements: { [key: string]: Element }, deleteElem
     delete updatedElements[deleteElement.id];
     deleteChildren(deleteElement.id);
 
-    if (deleteElement.parentId) {
-        const parent = updatedElements[deleteElement.parentId];
-        if (parent) {
-            updatedElements[parent.id] = { ...parent, children: parent.children - 1 };
+    updatedElements[parent.id] = {
+        ...parent,
+        children: parent.children - 1
+    };
 
-            // 同じ parentId を持つ要素の order を再計算
-            const siblings = Object.values(updatedElements).filter(n => n.parentId === deleteElement.parentId);
-            siblings.sort((a, b) => a.order - b.order).forEach((sibling, index) => {
-                if (sibling.order !== index) {
-                    updatedElements[sibling.id] = { ...sibling, order: index };
-                }
-            });
+    // 同じparentIdを持つ要素のorderを再計算
+    const siblings = Object.values(updatedElements)
+        .filter(n => n.parentId === parent.id)
+        .sort((a, b) => a.order - b.order);
+
+    siblings.forEach((sibling, index) => {
+        if (sibling.order !== index) {
+            updatedElements[sibling.id] = {
+                ...sibling,
+                order: index
+            };
         }
-    }
+    });
 
     return updatedElements;
 };
@@ -658,13 +665,16 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
         if (selectedElements.length === 0) return state;
 
         let updatedElements = { ...state.elements };
+        
         selectedElements.forEach(element => {
             updatedElements = deleteElementRecursive(updatedElements, element);
         });
 
+        const adjustedElements = adjustElementPositions(updatedElements);
+
         return {
             ...state,
-            elements: adjustElementPositions(updatedElements)
+            elements: adjustedElements
         };
     },
 
@@ -677,11 +687,10 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
 
     END_EDITING: state => ({
         ...state,
-        elements: adjustElementPositions(
-            Object.values(state.elements).reduce<{ [key: string]: Element }>((acc, element) => {
-                acc[element.id] = { ...element, editing: false };
-                return acc;
-            }, {})
+        elements: Object.values(state.elements).reduce<{ [key: string]: Element }>((acc, element) => {
+            acc[element.id] = { ...element, editing: false };
+            return acc;
+        }, {}
         )
     }),
 
