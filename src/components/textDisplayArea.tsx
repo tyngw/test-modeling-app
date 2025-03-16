@@ -33,6 +33,8 @@ const TextDisplayArea: React.FC<TextDisplayAreaProps> = memo(({
   const textRef = useRef<HTMLDivElement>(null);
   const prevDimensions = useRef({ width: 0, height: 0 });
   const prevText = useRef(text);
+  const handleHeightChangeRef = useRef(onHeightChange);
+  handleHeightChangeRef.current = onHeightChange;
 
   useEffect(() => {
     setIsMounted(true);
@@ -41,9 +43,13 @@ const TextDisplayArea: React.FC<TextDisplayAreaProps> = memo(({
     const updateDimensions = () => {
       if (!textRef.current) return;
 
-      const currentWidth = initialWidth;
+      const currentWidth = Math.min(SIZE.WIDTH.MAX, initialWidth);
       const currentHeight = initialHeight;
 
+      // development用のログ出力
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[updateDimensions] text: ${text}  size: ${currentWidth} x ${currentHeight}`);
+      }
       const wrappedLines = wrapText(text || '', currentWidth, zoomRatio);
 
       const lineHeightValue = DEFAULT_FONT_SIZE * LINE_HEIGHT_RATIO * zoomRatio;
@@ -58,17 +64,11 @@ const TextDisplayArea: React.FC<TextDisplayAreaProps> = memo(({
       const heightChanged = Math.abs(totalHeight - prevDimensions.current.height) > 1;
 
       if (widthChanged || heightChanged) {
-        setDimensions({
+        setDimensions({  // ← 追加が必要
           width: currentWidth,
           height: totalHeight
         });
-
-        onHeightChange(totalHeight / zoomRatio);
-
-        prevDimensions.current = {
-          width: currentWidth,
-          height: totalHeight
-        };
+        prevDimensions.current = { width: currentWidth, height: totalHeight };
       }
     };
 
@@ -78,7 +78,7 @@ const TextDisplayArea: React.FC<TextDisplayAreaProps> = memo(({
     }
 
     return () => cancelAnimationFrame(animationFrame);
-  }, [text, initialWidth, initialHeight, zoomRatio, onHeightChange, isMounted]);
+  }, [text, initialWidth, initialHeight, zoomRatio, isMounted]);
 
   if (!isMounted) return null;
 
@@ -87,7 +87,7 @@ const TextDisplayArea: React.FC<TextDisplayAreaProps> = memo(({
       x={x}
       y={y}
       width={dimensions.width}
-      height={dimensions.height / zoomRatio}
+      height={Math.round(dimensions.height / zoomRatio)}
       pointerEvents="none"
     >
       <div
@@ -99,7 +99,7 @@ const TextDisplayArea: React.FC<TextDisplayAreaProps> = memo(({
           fontFamily: `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`,
           width: `${dimensions.width - TEXTAREA_PADDING.HORIZONTAL}px`,
           minHeight: `${SIZE.SECTION_HEIGHT}px`,
-          padding: `${TEXTAREA_PADDING.VERTICAL / 2}px ${TEXTAREA_PADDING.HORIZONTAL / 2}px`,
+          padding: `${TEXTAREA_PADDING.VERTICAL * 0.5}px ${TEXTAREA_PADDING.HORIZONTAL * 0.5}px`,
           overflow: 'hidden',
           whiteSpace: 'pre-wrap',
           wordWrap: 'break-word',
