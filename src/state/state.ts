@@ -332,8 +332,8 @@ const checkCollision = (element: Element, y: number, other: Element): boolean =>
 };
 
 const adjustElementPositions = (elements: ElementsMap): ElementsMap => {
-    const newElements = { ...elements };
-    const rootElements = getChildren(null, newElements);
+    const updatedElements = { ...elements };
+    const rootElements = getChildren(null, updatedElements);
     let currentY = DEFAULT_POSITION.Y;
 
     for (const root of rootElements) {
@@ -342,12 +342,12 @@ const adjustElementPositions = (elements: ElementsMap): ElementsMap => {
             root,
             0,
             currentY,
-            newElements,
+            updatedElements,
         );
         currentY = result.newY;
     }
 
-    return newElements;
+    return updatedElements;
 };
 
 const old_adjustElementAndChildrenPosition = (
@@ -665,7 +665,7 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
         if (selectedElements.length === 0) return state;
 
         let updatedElements = { ...state.elements };
-        
+
         selectedElements.forEach(element => {
             updatedElements = deleteElementRecursive(updatedElements, element);
         });
