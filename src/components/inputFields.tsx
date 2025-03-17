@@ -136,7 +136,7 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
                             margin: '1px 1px',
                             fontSize: `${DEFAULT_FONT_SIZE * state.zoomRatio}px`,
                             lineHeight: `${LINE_HEIGHT_RATIO}em`,
-                            padding: `0`,
+                            padding: `0 3px`,
                             fontFamily: DEFAULT_FONT_FAMILY,
                             boxSizing: 'border-box',
                             WebkitFontSmoothing: 'antialiased',
