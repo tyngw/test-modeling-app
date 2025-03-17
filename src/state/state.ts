@@ -11,6 +11,8 @@ import {
     SIZE,
 } from '../constants/elementSettings';
 import { v4 as uuidv4 } from 'uuid';
+import { calculateElementWidth, wrapText } from '../utils/textareaHelpers';
+import { TEXTAREA_PADDING, DEFAULT_FONT_SIZE, LINE_HEIGHT_RATIO } from '../constants/elementSettings';
 
 export interface State {
     elements: { [key: string]: Element };
@@ -651,6 +653,26 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
             ...parent,
             children: initialChildren + texts.length
         };
+
+        // 幅を自動調整
+        Object.values(newElements).forEach(element => {
+            if (element.parentId === parent.id) {
+                const newWidth = calculateElementWidth(element.texts, TEXTAREA_PADDING.HORIZONTAL);
+                const sectionHeights = element.texts.map(text => {
+                    const lines = wrapText(text || '', newWidth, state.zoomRatio).length;
+                    return Math.max(
+                        SIZE.SECTION_HEIGHT * state.zoomRatio,
+                        lines * DEFAULT_FONT_SIZE * LINE_HEIGHT_RATIO + TEXTAREA_PADDING.VERTICAL * state.zoomRatio
+                    );
+                });
+                newElements[element.id] = {
+                    ...element,
+                    width: newWidth,
+                    height: sectionHeights.reduce((sum, h) => sum + h, 0),
+                    sectionHeights
+                };
+            }
+        });
 
         return { elements: adjustElementPositions(newElements) };
     }),
