@@ -194,4 +194,57 @@ describe('切り取り、コピー、貼り付け操作', () => {
         const ids = Object.values(afterPasteState.elements).map((elm: Element) => elm.id);
         expect(new Set(ids).size).toBe(ids.length);
     });
+
+    it('コピーした要素が貼り付けられることを確認する(自身の子要素として追加するケース。ルートに子要素を追加後、追加した要素に子要素を追加する。その後、ルートを親にもつ要素をコピーして孫ノードに貼り付ける)', () => {
+        const { result } = renderHook(() => useStore());
+        const { dispatch } = result.current;
+
+        act(() => {
+            dispatch({ type: 'SELECT_ELEMENT', payload: { id: '1', ctrlKey: false, shiftKey: false } });
+            dispatch({ type: 'ADD_ELEMENT' });
+        });
+
+        let state = result.current.state;
+        const rootElement = Object.values(state.elements).find(
+            (elm: Element) => elm.parentId === null
+        ) as Element;
+
+        act(() => {
+            dispatch({ type: 'SELECT_ELEMENT', payload: { id: rootElement.id, ctrlKey: false, shiftKey: false } });
+            dispatch({ type: 'ADD_ELEMENT' });
+        });
+
+        state = result.current.state;
+        const childElement = Object.values(state.elements).find(
+            (elm: Element) => elm.parentId === rootElement.id
+        ) as Element;
+
+        act(() => {
+            dispatch({ type: 'SELECT_ELEMENT', payload: { id: childElement.id, ctrlKey: false, shiftKey: false } });
+            dispatch({ type: 'ADD_ELEMENT' });
+        });
+
+        state = result.current.state;
+        const grandchildElement = Object.values(state.elements).find(
+            (elm: Element) => elm.parentId === childElement.id
+        ) as Element;
+
+        act(() => {
+            dispatch({ type: 'SELECT_ELEMENT', payload: { id: rootElement.id, ctrlKey: false, shiftKey: false } });
+            dispatch({ type: 'COPY_ELEMENT' });
+        });
+
+        act(() => {
+            dispatch({ type: 'SELECT_ELEMENT', payload: { id: grandchildElement.id, ctrlKey: false, shiftKey: false } });
+            dispatch({ type: 'PASTE_ELEMENT' });
+        });
+
+        state = result.current.state;
+        const pastedElement = Object.values(state.elements).find(
+            (elm: Element) => elm.parentId === grandchildElement.id
+        ) as Element;
+
+        expect(pastedElement).toBeDefined();
+        expect(pastedElement.depth).toBe(grandchildElement.depth + 1);
+    });
 });
