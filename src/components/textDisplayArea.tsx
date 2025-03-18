@@ -99,7 +99,7 @@ const TextDisplayArea: React.FC<TextDisplayAreaProps> = memo(({
           fontFamily: `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`,
           width: `${dimensions.width - TEXTAREA_PADDING.HORIZONTAL}px`,
           minHeight: `${SIZE.SECTION_HEIGHT}px`,
-          padding: `${TEXTAREA_PADDING.VERTICAL / 2}px ${TEXTAREA_PADDING.HORIZONTAL / 2}px`,
+          padding: `${TEXTAREA_PADDING.VERTICAL * 0.5}px ${TEXTAREA_PADDING.HORIZONTAL * 0.5}px`,
           overflow: 'hidden',
           whiteSpace: 'pre-wrap',
           wordWrap: 'break-word',
