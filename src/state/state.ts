@@ -146,12 +146,29 @@ const pasteElements = (elements: { [key: string]: Element }, cutElements: { [key
     return updatedElements;
 };
 
-const setDepthRecursive = (elements: { [key: string]: Element }, parentElement: Element): { [key: string]: Element } => {
+const setDepthRecursive = (
+    elements: { [key: string]: Element },
+    parentElement: Element
+): { [key: string]: Element } => {
     const updatedElements = { ...elements };
+    const childMap: { [parentId: string]: Element[] } = {};
+    Object.values(updatedElements).forEach(el => {
+        const pId = el.parentId;
+        if (pId) {
+            if (!childMap[pId]) {
+                childMap[pId] = [];
+            }
+            childMap[pId].push(el);
+        }
+    });
+
     const processChildren = (parentId: string) => {
-        const children = Object.values(updatedElements).filter(n => n.parentId === parentId);
+        const children = childMap[parentId] || [];
         children.forEach(child => {
-            updatedElements[child.id] = { ...child, depth: updatedElements[parentId].depth + 1 };
+            updatedElements[child.id] = {
+                ...child,
+                depth: updatedElements[parentId].depth + 1
+            };
             processChildren(child.id);
         });
     };
@@ -159,10 +176,25 @@ const setDepthRecursive = (elements: { [key: string]: Element }, parentElement: 
     return updatedElements;
 };
 
-const setVisibilityRecursive = (elements: { [key: string]: Element }, parentElement: Element, visible: boolean): { [key: string]: Element } => {
+const setVisibilityRecursive = (
+    elements: { [key: string]: Element },
+    parentElement: Element,
+    visible: boolean
+): { [key: string]: Element } => {
     const updatedElements = { ...elements };
+    const childMap: { [parentId: string]: Element[] } = {};
+    Object.values(updatedElements).forEach(el => {
+        const pId = el.parentId;
+        if (pId) {
+            if (!childMap[pId]) {
+                childMap[pId] = [];
+            }
+            childMap[pId].push(el);
+        }
+    });
+
     const processChildren = (parentId: string) => {
-        const children = Object.values(updatedElements).filter(n => n.parentId === parentId);
+        const children = childMap[parentId] || [];
         children.forEach(child => {
             updatedElements[child.id] = { ...child, visible };
             processChildren(child.id);
