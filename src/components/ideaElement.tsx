@@ -23,6 +23,7 @@ import {
 import { Element as CanvasElement } from '../types';
 import { isDescendant } from '../state/state';
 import { safeLocalStorage } from '../utils/localStorageHelpers';
+import { debugLog } from '../utils/debugLogHelpers';
 
 interface IdeaElementProps {
   element: CanvasElement;
@@ -203,9 +204,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
       const newWidth = calculateElementWidth(element.texts, TEXTAREA_PADDING.HORIZONTAL);
       const totalHeight = newSectionHeights.reduce((sum, h) => sum + h, 0);
 
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[IdeaElement][handleHeightChange] resized: ${element.texts} ${element.width} x ${element.height} -> ${newWidth} x ${totalHeight}`);
-      }
+      debugLog(`[IdeaElement][handleHeightChange] resized: ${element.texts} ${element.width} x ${element.height} -> ${newWidth} x ${totalHeight}`);
       dispatch({
         type: 'UPDATE_ELEMENT_SIZE',
         payload: {
