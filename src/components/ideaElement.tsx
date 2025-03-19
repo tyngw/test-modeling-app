@@ -23,6 +23,7 @@ import {
 import { Element as CanvasElement } from '../types';
 import { isDescendant } from '../state/state';
 import { safeLocalStorage } from '../utils/localStorageHelpers';
+import { debugLog } from '../utils/debugLogHelpers';
 
 interface IdeaElementProps {
   element: CanvasElement;
@@ -117,7 +118,7 @@ const DebugInfo: React.FC<{ element: CanvasElement; isHovered: boolean }> = ({ e
       x={element.x + element.width + 10}
       y={element.y - 10}
       width="340"
-      height="150"
+      height="190"
       style={{ backgroundColor: 'white', border: '1px solid black', padding: '5px', zIndex: 1000, borderRadius: '5px' }}
     >
       <div style={{ fontSize: '12px', color: 'black' }}>
@@ -129,6 +130,8 @@ const DebugInfo: React.FC<{ element: CanvasElement; isHovered: boolean }> = ({ e
         <div>editing: {element.editing ? 'true' : 'false'}</div>
         <div>selected: {element.selected ? 'true' : 'false'}</div>
         <div>visible: {element.visible ? 'true' : 'false'}</div>
+        <div>x: {element.x}</div>
+        <div>y: {element.y}</div>
         <div>width: {element.width}</div>
         <div>height: {element.width}</div>
       </div>
@@ -201,9 +204,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
       const newWidth = calculateElementWidth(element.texts, TEXTAREA_PADDING.HORIZONTAL);
       const totalHeight = newSectionHeights.reduce((sum, h) => sum + h, 0);
 
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[IdeaElement][handleHeightChange] resized: ${element.texts} ${element.width} x ${element.height} -> ${newWidth} x ${totalHeight}`);
-      }
+      debugLog(`[IdeaElement][handleHeightChange] resized: ${element.texts} ${element.width} x ${element.height} -> ${newWidth} x ${totalHeight}`);
       dispatch({
         type: 'UPDATE_ELEMENT_SIZE',
         payload: {
