@@ -4,6 +4,7 @@
 import React, { memo, useEffect, useRef, useState } from 'react';
 import { SIZE, DEFAULT_FONT_SIZE, LINE_HEIGHT_RATIO, TEXTAREA_PADDING } from '../constants/elementSettings';
 import { wrapText } from '../utils/textareaHelpers';
+import { debugLog } from '../utils/debugLogHelpers';
 
 interface TextDisplayAreaProps {
   x: number;
@@ -46,10 +47,7 @@ const TextDisplayArea: React.FC<TextDisplayAreaProps> = memo(({
       const currentWidth = Math.min(SIZE.WIDTH.MAX, initialWidth);
       const currentHeight = initialHeight;
 
-      // development用のログ出力
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[updateDimensions] text: ${text}  size: ${currentWidth} x ${currentHeight}`);
-      }
+      debugLog(`[updateDimensions] text: ${text}  size: ${currentWidth} x ${currentHeight}`);
       const wrappedLines = wrapText(text || '', currentWidth, zoomRatio);
 
       const lineHeightValue = DEFAULT_FONT_SIZE * LINE_HEIGHT_RATIO * zoomRatio;

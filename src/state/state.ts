@@ -11,6 +11,9 @@ import {
     SIZE,
 } from '../constants/elementSettings';
 import { v4 as uuidv4 } from 'uuid';
+import { calculateElementWidth, wrapText } from '../utils/textareaHelpers';
+import { TEXTAREA_PADDING, DEFAULT_FONT_SIZE, LINE_HEIGHT_RATIO } from '../constants/elementSettings';
+import { debugLog } from '../utils/debugLogHelpers';
 
 export interface State {
     elements: { [key: string]: Element };
@@ -200,11 +203,25 @@ const setVisibilityRecursive = (
 const deleteElementRecursive = (elements: { [key: string]: Element }, deleteElement: Element): { [key: string]: Element } => {
     if (deleteElement.parentId === null) return elements;
 
-    const updatedElements = { ...elements };
+    debugLog(`deleteElementRecursive: 削除開始 id=${deleteElement.id}, order=${deleteElement.order}, y=${deleteElement.y}`);
 
+    const updatedElements = { ...elements };
+    const parent = updatedElements[deleteElement.parentId];
+    if (!parent) return updatedElements;
+
+    // 削除要素の位置情報を記録（後で兄弟要素の位置を調整するため）
+    const deletedElementPosition = {
+        order: deleteElement.order,
+        y: deleteElement.y,
+        height: deleteElement.height
+    };
+    debugLog(`削除要素の位置情報:`, deletedElementPosition);
+
+    // 子要素を含めて削除
     const deleteChildren = (parentId: string) => {
         const children = Object.values(updatedElements).filter(n => n.parentId === parentId);
         children.forEach(child => {
+            debugLog(`  子要素を削除: id=${child.id}, y=${child.y}`);
             delete updatedElements[child.id];
             deleteChildren(child.id);
         });
@@ -213,20 +230,29 @@ const deleteElementRecursive = (elements: { [key: string]: Element }, deleteElem
     delete updatedElements[deleteElement.id];
     deleteChildren(deleteElement.id);
 
-    if (deleteElement.parentId) {
-        const parent = updatedElements[deleteElement.parentId];
-        if (parent) {
-            updatedElements[parent.id] = { ...parent, children: parent.children - 1 };
+    // 親のchildren数を更新
+    updatedElements[parent.id] = {
+        ...parent,
+        children: parent.children - 1
+    };
+    debugLog(`親要素を更新: id=${parent.id}, children=${parent.children-1}, y=${parent.y}`);
 
-            // 同じ parentId を持つ要素の order を再計算
-            const siblings = Object.values(updatedElements).filter(n => n.parentId === deleteElement.parentId);
-            siblings.sort((a, b) => a.order - b.order).forEach((sibling, index) => {
-                if (sibling.order !== index) {
-                    updatedElements[sibling.id] = { ...sibling, order: index };
-                }
-            });
+    // 同じparentIdを持つ要素のorderを再計算
+    const siblings = Object.values(updatedElements)
+        .filter(n => n.parentId === parent.id)
+        .sort((a, b) => a.order - b.order);
+
+    debugLog(`兄弟要素の数: ${siblings.length}`);
+    // まずorderを更新
+    siblings.forEach((sibling, index) => {
+        if (sibling.order !== index) {
+            debugLog(`  兄弟要素のorder更新: id=${sibling.id}, old=${sibling.order}, new=${index}, y=${sibling.y}`);
+            updatedElements[sibling.id] = {
+                ...sibling,
+                order: index
+            };
         }
-    }
+    });
 
     return updatedElements;
 };
@@ -254,11 +280,15 @@ const layoutSubtree = (
     currentY: number,
     elements: ElementsMap,
 ): { newY: number; minY: number; maxY: number } => {
+    debugLog(`layoutSubtree開始: id=${node.id}, parentId=${node.parentId}, order=${node.order}, 初期y=${node.y}`);
+    
     if (node.parentId !== null) {
         node.x = parentX + OFFSET.X;
     }
 
     const children = getChildren(node.id, elements);
+    debugLog(`  子要素数: ${children.length}`);
+    
     let childY = currentY;
     let minY = Infinity;
     let maxY = -Infinity;
@@ -277,70 +307,344 @@ const layoutSubtree = (
     }
 
     // 親要素のY位置計算（子要素の中央配置）
+    const oldY = node.y;
     if (children.length > 0) {
-        const firstChild = children[0];
-        const lastChild = children[children.length - 1];
-        const centerY = (firstChild.y + lastChild.y + lastChild.height) / 2;
-        node.y = centerY - node.height / 2;
+        const childrenMinY = Math.min(...children.map(child => child.y));
+        const childrenMaxY = Math.max(...children.map(child => child.y + child.height));
+        const childrenMidpoint = (childrenMinY + childrenMaxY) / 2;
+        node.y = childrenMidpoint - (node.height / 2);
+        debugLog(`  子要素あり: id=${node.id}, oldY=${oldY}, newY=${node.y}, 子要素範囲=${childrenMinY}~${childrenMaxY}`);
     } else {
         node.y = currentY;
+        debugLog(`  子要素なし: id=${node.id}, oldY=${oldY}, newY=${node.y}, currentY=${currentY}`);
     }
 
     let adjustedY = node.y;
     let collisionFound = true;
 
-    // 衝突判定対象を同じ階層の要素に限定
     const siblings = node.parentId === null
         ? getChildren(null, elements).filter(e => e.id !== node.id)
         : getChildren(node.parentId, elements).filter(e => e.id !== node.id);
 
+    // order値でソートして、小さいorderの要素から順に処理
+    siblings.sort((a, b) => a.order - b.order);
+
+    // 衝突検出ループ前のY座標
+    const beforeCollisionY = adjustedY;
+    
     while (collisionFound) {
         collisionFound = false;
         for (const elem of siblings) {
-            if (checkCollision(node, adjustedY, elem)) {
-                adjustedY = elem.y + elem.height + OFFSET.Y;
-                collisionFound = true;
-                break;
+            // 自分よりorderが大きい要素との衝突は考慮しない（自分が優先）
+            if (node.order <= elem.order) {
+                if (checkCollision(node, adjustedY, elem)) {
+                    const oldAdjustedY = adjustedY;
+                    adjustedY = elem.y + elem.height + OFFSET.Y;
+                    collisionFound = true;
+                    debugLog(`  衝突検出: id=${node.id}, 衝突相手=${elem.id}, oldY=${oldAdjustedY}, newY=${adjustedY}`);
+                    break;
+                }
             }
         }
     }
 
-    node.y = adjustedY;
+    // 衝突調整により位置変更があった場合
+    if (adjustedY !== beforeCollisionY) {
+        debugLog(`  衝突調整: id=${node.id}, 調整前=${beforeCollisionY}, 調整後=${adjustedY}`);
+    }
 
+    // 衝突回避によってY座標が変更された場合、再度中央配置計算を行う必要があるか確認
+    if (adjustedY > node.y && children.length > 0) {
+        // 親の位置が下方向に移動した場合、子要素もそれに合わせて移動する必要がある場合がある
+        const deltaY = adjustedY - node.y;
+        // 閾値を超える移動の場合のみ子要素を再配置（小さな調整は無視）
+        if (deltaY > OFFSET.Y) {
+            debugLog(`  親移動に伴う子要素移動: id=${node.id}, 移動量=${deltaY}`);
+            for (const child of children) {
+                const oldChildY = child.y;
+                child.y += deltaY;
+                debugLog(`    子要素移動: id=${child.id}, oldY=${oldChildY}, newY=${child.y}`);
+            }
+            // 子要素の移動に伴い、最小Y値と最大Y値も更新
+            minY = Math.min(minY, ...children.map(child => child.y));
+            maxY = Math.max(maxY, ...children.map(child => child.y + child.height));
+        }
+    }
+
+    node.y = adjustedY;
     const nodeBottom = node.y + node.height;
     const newY = Math.max(childY, nodeBottom + OFFSET.Y);
     minY = Math.min(minY, node.y);
     maxY = Math.max(maxY, node.y + node.height);
 
+    debugLog(`layoutSubtree終了: id=${node.id}, 最終y=${node.y}, 次Y=${newY}, minY=${minY}, maxY=${maxY}`);
     return { newY, minY, maxY };
 };
 
 const checkCollision = (element: Element, y: number, other: Element): boolean => {
-    return (
-        element.x < other.x + other.width &&
-        element.x + element.width > other.x &&
-        y < other.y + other.height &&
-        y + element.height > other.y
-    );
+    // 同じ親を持つ要素間の衝突検出
+    if (element.parentId === other.parentId) {
+        // orderが小さい方が上に配置されるべき
+        if (element.order < other.order) {
+            // 自分のorderが小さい場合は、他の要素より上に配置され、
+            // 衝突があっても自分が動くべきではない
+            return false;
+        } else if (element.order > other.order) {
+            // 自分のorderが大きい場合、衝突時は自分が下に移動すべき
+            const isCollision = (
+                element.x < other.x + other.width &&
+                element.x + element.width > other.x &&
+                y < other.y + other.height &&
+                y + element.height > other.y
+            );
+            
+            if (isCollision) {
+                debugLog(`衝突検出: id=${element.id}(order=${element.order})とid=${other.id}(order=${other.order})の間で衝突`);
+            }
+            
+            return isCollision;
+        }
+    }
+    
+    // 異なる親に属する要素間の衝突検出(同じdepthの場合のみ)
+    if (element.depth === other.depth) {
+        // X座標による衝突判定（要素が視覚的に重なる場合のみ）
+        const xOverlap = (
+            element.x < other.x + other.width &&
+            element.x + element.width > other.x
+        );
+        
+        // X座標で重なっている場合のみY座標の衝突を考慮
+        if (xOverlap) {
+            const isCollision = (
+                y < other.y + other.height &&
+                y + element.height > other.y
+            );
+            
+            if (isCollision) {
+                debugLog(`同じdepthの要素間衝突検出: id=${element.id}(depth=${element.depth})とid=${other.id}(depth=${other.depth})の間で衝突`);
+            }
+            
+            return isCollision;
+        }
+    }
+    
+    return false;
 };
 
 const adjustElementPositions = (elements: ElementsMap): ElementsMap => {
-    const newElements = { ...elements };
-    const rootElements = getChildren(null, newElements);
+    debugLog(`adjustElementPositions開始: 要素数=${Object.keys(elements).length}`);
+    
+    // 新たなオブジェクトを作成して更新する
+    const updatedElements = { ...elements };
+    const rootElements = getChildren(null, updatedElements)
+        .sort((a, b) => a.order - b.order);
+    
+    debugLog(`ルート要素数: ${rootElements.length}`);
+    
+    // 初期Y位置を定数から設定（累積を防ぐ）
     let currentY = DEFAULT_POSITION.Y;
 
+    // まず最初にすべてのルート要素を配置
     for (const root of rootElements) {
+        // ルート要素のX位置を固定
         root.x = DEFAULT_POSITION.X;
+        
+        debugLog(`ルート要素配置: id=${root.id}, order=${root.order}, 開始y=${root.y}, currentY=${currentY}`);
+        
+        // layoutSubtreeを呼び出す前に一時変数を作成して位置を設定
         const result = layoutSubtree(
             root,
-            0,
+            root.x,
             currentY,
-            newElements,
+            updatedElements,
         );
+        
+        // 次の要素のY位置を更新
         currentY = result.newY;
+        debugLog(`ルート要素配置結果: id=${root.id}, 配置後y=${root.y}, 次Y=${currentY}`);
     }
 
-    return newElements;
+    // 階層ごとに要素を確認してorder順に並ぶようにする確認処理
+    debugLog(`order順序の確認処理開始`);
+    let allCorrect = true;
+    let iterationCount = 0;
+    do {
+        iterationCount++;
+        allCorrect = true;
+        
+        // 親IDごとに子要素をグループ化
+        const childrenByParent: { [parentId: string]: Element[] } = {};
+        Object.values(updatedElements).forEach(element => {
+            if (element.parentId) {
+                if (!childrenByParent[element.parentId]) {
+                    childrenByParent[element.parentId] = [];
+                }
+                childrenByParent[element.parentId].push(element);
+            }
+        });
+        
+        // 各親ごとに子要素のorderとY座標の関係を確認
+        Object.entries(childrenByParent).forEach(([parentId, siblings]) => {
+            // orderでソート
+            siblings.sort((a, b) => a.order - b.order);
+            
+            // Y座標が順番通りになっているか確認
+            for (let i = 1; i < siblings.length; i++) {
+                const prev = siblings[i-1];
+                const curr = siblings[i];
+                
+                // 順番が逆転している場合（orderが大きいのにY座標が小さい）
+                if (curr.y < prev.y + prev.height) {
+                    const oldY = curr.y;
+                    // 修正：順番に合わせてY座標を調整
+                    curr.y = prev.y + prev.height + OFFSET.Y;
+                    allCorrect = false;
+                    
+                    debugLog(`順序修正: parentId=${parentId}, 前要素id=${prev.id}(order=${prev.order}), 現在要素id=${curr.id}(order=${curr.order}), oldY=${oldY}, newY=${curr.y}`);
+                    
+                    // この要素の子要素も移動する必要がある
+                    if (curr.children > 0) {
+                        const childElements = getChildren(curr.id, updatedElements);
+                        const deltaY = curr.y - oldY;
+                        debugLog(`  子要素も移動: id=${curr.id}の子要素を移動 deltaY=${deltaY}, 子要素数=${childElements.length}`);
+                        childElements.forEach(child => {
+                            const oldChildY = child.y;
+                            child.y += deltaY;
+                            debugLog(`    子要素移動: id=${child.id}, oldY=${oldChildY}, newY=${child.y}`);
+                        });
+                    }
+                }
+            }
+        });
+        
+        if (!allCorrect) {
+            debugLog(`繰り返し修正: ${iterationCount}回目, 修正が必要`);
+        }
+    } while (!allCorrect && iterationCount < 10); // 無限ループ防止
+    
+    if (iterationCount >= 10) {
+        debugLog(`警告: 最大繰り返し回数に達しました。完全な修正ができていない可能性あり。`);
+    }
+
+    // 同じdepthを持つ要素間の衝突を解決
+    debugLog(`同じdepthの要素間の衝突チェック開始`);
+    let depthCollisionFixed = true;
+    iterationCount = 0;
+    
+    do {
+        iterationCount++;
+        depthCollisionFixed = true;
+        
+        // depthごとに要素をグループ化
+        const elementsByDepth: { [depth: number]: Element[] } = {};
+        Object.values(updatedElements).forEach(element => {
+            if (!elementsByDepth[element.depth]) {
+                elementsByDepth[element.depth] = [];
+            }
+            elementsByDepth[element.depth].push(element);
+        });
+        
+        // 各depth内で要素間の衝突を確認・解決
+        Object.entries(elementsByDepth).forEach(([depthStr, elementsWithSameDepth]) => {
+            // Y座標でソート
+            elementsWithSameDepth.sort((a, b) => a.y - b.y);
+            
+            for (let i = 0; i < elementsWithSameDepth.length; i++) {
+                const element = elementsWithSameDepth[i];
+                
+                for (let j = i + 1; j < elementsWithSameDepth.length; j++) {
+                    const other = elementsWithSameDepth[j];
+                    
+                    // 同じ親を持つ要素はすでに処理済みなのでスキップ
+                    if (element.parentId === other.parentId) {
+                        continue;
+                    }
+                    
+                    // X座標で重なっているか確認
+                    const xOverlap = (
+                        element.x < other.x + other.width &&
+                        element.x + element.width > other.x
+                    );
+                    
+                    if (xOverlap) {
+                        // Y座標で重なっているか確認
+                        const yOverlap = (
+                            element.y < other.y + other.height &&
+                            element.y + element.height > other.y
+                        );
+                        
+                        if (yOverlap) {
+                            // 衝突している場合、下の要素をさらに下に移動
+                            const oldY = other.y;
+                            other.y = element.y + element.height + OFFSET.Y;
+                            depthCollisionFixed = false;
+                            
+                            debugLog(`同じdepthの要素間衝突修正: id=${element.id}(depth=${element.depth})とid=${other.id}(depth=${other.depth})が衝突, ${other.id}を下に移動, oldY=${oldY}, newY=${other.y}`);
+                            
+                            // 移動した要素の子要素も移動
+                            if (other.children > 0) {
+                                const childElements = getChildren(other.id, updatedElements);
+                                const deltaY = other.y - oldY;
+                                debugLog(`  子要素も移動: id=${other.id}の子要素を移動 deltaY=${deltaY}, 子要素数=${childElements.length}`);
+                                childElements.forEach(child => {
+                                    const oldChildY = child.y;
+                                    child.y += deltaY;
+                                    debugLog(`    子要素移動: id=${child.id}, oldY=${oldChildY}, newY=${child.y}`);
+                                });
+                            }
+                            
+                            // 衝突は一度に1つずつ修正して再処理
+                            break;
+                        }
+                    }
+                }
+                
+                if (!depthCollisionFixed) {
+                    break; // 修正があった時点で再処理
+                }
+            }
+        });
+        
+        if (!depthCollisionFixed) {
+            debugLog(`同じdepthの要素間衝突修正: ${iterationCount}回目, 修正が必要`);
+        }
+    } while (!depthCollisionFixed && iterationCount < 10); // 無限ループ防止
+    
+    if (iterationCount >= 10) {
+        debugLog(`警告: 同じdepthの要素間衝突チェックで最大繰り返し回数に達しました。完全な修正ができていない可能性あり。`);
+    }
+
+    debugLog(`親子中央配置の最適化開始`);
+    const elementsByDepth = Object.values(updatedElements)
+        .sort((a, b) => a.depth - b.depth);
+
+    for (const element of elementsByDepth) {
+        if (element.children > 0) {
+            const childElements = getChildren(element.id, updatedElements);
+            
+            if (childElements.length > 0) {
+                // 親の中央位置と子要素の中央位置を再確認
+                const childrenMinY = Math.min(...childElements.map(child => child.y));
+                const childrenMaxY = Math.max(...childElements.map(child => child.y + child.height));
+                const childrenCenter = (childrenMinY + childrenMaxY) / 2;
+                const elementCenter = element.y + element.height / 2;
+                
+                debugLog(`親子配置確認: id=${element.id}, 子要素数=${childElements.length}, 範囲=${childrenMinY}~${childrenMaxY}, 中心=${childrenCenter}`);
+                
+                // 2つの中心点の差が大きい場合、親要素の位置を調整
+                if (Math.abs(childrenCenter - elementCenter) > OFFSET.Y / 2) {
+                    const oldY = element.y;
+                    element.y = childrenCenter - element.height / 2;
+                    
+                    debugLog(`親子中央配置調整: id=${element.id}, oldY=${oldY}, newY=${element.y}, 子要素中心=${childrenCenter}, 親中心=${elementCenter}`);
+                }
+            }
+        }
+    }
+
+    debugLog(`adjustElementPositions終了`);
+    return updatedElements;
 };
 
 const old_adjustElementAndChildrenPosition = (
@@ -645,6 +949,26 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
             children: initialChildren + texts.length
         };
 
+        // 幅を自動調整
+        Object.values(newElements).forEach(element => {
+            if (element.parentId === parent.id) {
+                const newWidth = calculateElementWidth(element.texts, TEXTAREA_PADDING.HORIZONTAL);
+                const sectionHeights = element.texts.map(text => {
+                    const lines = wrapText(text || '', newWidth, state.zoomRatio).length;
+                    return Math.max(
+                        SIZE.SECTION_HEIGHT * state.zoomRatio,
+                        lines * DEFAULT_FONT_SIZE * LINE_HEIGHT_RATIO + TEXTAREA_PADDING.VERTICAL * state.zoomRatio
+                    );
+                });
+                newElements[element.id] = {
+                    ...element,
+                    width: newWidth,
+                    height: sectionHeights.reduce((sum, h) => sum + h, 0),
+                    sectionHeights
+                };
+            }
+        });
+
         return { elements: adjustElementPositions(newElements) };
     }),
 
@@ -657,14 +981,74 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
         const selectedElements = Object.values(state.elements).filter(e => e.selected);
         if (selectedElements.length === 0) return state;
 
+        debugLog(`DELETE_ELEMENT開始: 削除対象要素数=${selectedElements.length}`);
+        
+        // 削除操作をする前に現在のY座標を記録
+        const parentIds = new Set<string>();
+        selectedElements.forEach(element => {
+            if (element.parentId) {
+                parentIds.add(element.parentId);
+            }
+            debugLog(`削除対象: id=${element.id}, parentId=${element.parentId}, order=${element.order}, y=${element.y}`);
+        });
+
         let updatedElements = { ...state.elements };
+
+        // 削除前の兄弟要素の位置関係を記録
+        const siblingsBefore: { [parentId: string]: Element[] } = {};
+        parentIds.forEach(parentId => {
+            siblingsBefore[parentId] = Object.values(updatedElements)
+                .filter(e => e.parentId === parentId)
+                .sort((a, b) => a.order - b.order);
+            
+            debugLog(`削除前の親id=${parentId}の子要素:`, siblingsBefore[parentId].map(e => ({id: e.id, order: e.order, y: e.y})));
+        });
+
+        // 要素を削除
         selectedElements.forEach(element => {
             updatedElements = deleteElementRecursive(updatedElements, element);
         });
 
+        // 明示的にY座標をリセットして完全に再配置を行う
+        // これにより累積した座標がクリアされる
+        Object.values(updatedElements).forEach(element => {
+            if (element.parentId === null) {
+                const oldY = element.y;
+                element.y = DEFAULT_POSITION.Y;
+                debugLog(`ルート要素のY座標リセット: id=${element.id}, oldY=${oldY}, newY=${element.y}`);
+            }
+        });
+
+        // 削除後の親ごとの子要素を確認
+        parentIds.forEach(parentId => {
+            if (updatedElements[parentId]) {
+                const siblingsAfter = Object.values(updatedElements)
+                    .filter(e => e.parentId === parentId)
+                    .sort((a, b) => a.order - b.order);
+                
+                debugLog(`削除後の親id=${parentId}の子要素:`, siblingsAfter.map(e => ({id: e.id, order: e.order, y: e.y})));
+            }
+        });
+
+        // レイアウトを再計算
+        debugLog(`レイアウト再計算開始`);
+        const adjustedElements = adjustElementPositions(updatedElements);
+        debugLog(`レイアウト再計算完了`);
+
+        // 再計算後の親ごとの子要素を確認
+        parentIds.forEach(parentId => {
+            if (adjustedElements[parentId]) {
+                const siblingsAfterLayout = Object.values(adjustedElements)
+                    .filter(e => e.parentId === parentId)
+                    .sort((a, b) => a.order - b.order);
+                
+                debugLog(`再計算後の親id=${parentId}の子要素:`, siblingsAfterLayout.map(e => ({id: e.id, order: e.order, y: e.y})));
+            }
+        });
+
         return {
             ...state,
-            elements: adjustElementPositions(updatedElements)
+            elements: adjustedElements
         };
     },
 
@@ -677,11 +1061,10 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
 
     END_EDITING: state => ({
         ...state,
-        elements: adjustElementPositions(
-            Object.values(state.elements).reduce<{ [key: string]: Element }>((acc, element) => {
-                acc[element.id] = { ...element, editing: false };
-                return acc;
-            }, {})
+        elements: Object.values(state.elements).reduce<{ [key: string]: Element }>((acc, element) => {
+            acc[element.id] = { ...element, editing: false };
+            return acc;
+        }, {}
         )
     }),
 
