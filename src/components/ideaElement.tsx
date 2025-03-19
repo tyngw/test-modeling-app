@@ -9,21 +9,18 @@ import DoneIcon from '@mui/icons-material/Done';
 import ClearIcon from '@mui/icons-material/Clear';
 import { calculateElementWidth, wrapText } from '../utils/textareaHelpers';
 import {
-  CURVE_CONTROL_OFFSET,
   DEFAULT_FONT_SIZE,
   OFFSET,
   TEXTAREA_PADDING,
   SHADOW_OFFSET,
   ELEM_STYLE,
   SIZE,
-  ARROW,
   LINE_HEIGHT_RATIO,
   CONNECTION_PATH_STYLE,
 } from '../constants/elementSettings';
 import { Element as CanvasElement } from '../types';
 import { isDescendant } from '../state/state';
-import { safeLocalStorage } from '../utils/localStorageHelpers';
-import { debugLog } from '../utils/debugLogHelpers';
+import { debugLog, isDevelopment } from '../utils/debugLogHelpers';
 
 interface IdeaElementProps {
   element: CanvasElement;
@@ -109,7 +106,7 @@ const renderActionButtons = (element: CanvasElement, dispatch: React.Dispatch<an
 };
 
 const DebugInfo: React.FC<{ element: CanvasElement; isHovered: boolean }> = ({ element, isHovered }) => {
-  if (safeLocalStorage.getItem('__debugMode__') !== 'true' || !isHovered) {
+  if (!isDevelopment || !isHovered) {
     return null;
   }
 
