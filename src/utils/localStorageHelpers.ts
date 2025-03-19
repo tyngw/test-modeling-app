@@ -7,7 +7,6 @@ import { VERSION } from '../constants/version';
 
 const ENCRYPTION_KEY = 'encryptionKey';
 const TABS_STORAGE_KEY = 'tabsState';
-const LAST_SAVED_FILE_KEY = 'lastSavedFileName';
 export const VERSION_KEY = 'appVersion';
 const PROMPT_KEY = 'prompt';
 const SYSTEM_PROMPT_KEY = 'systemPromptTemplate';
