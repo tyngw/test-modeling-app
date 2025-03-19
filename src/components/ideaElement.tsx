@@ -117,7 +117,7 @@ const DebugInfo: React.FC<{ element: CanvasElement; isHovered: boolean }> = ({ e
       x={element.x + element.width + 10}
       y={element.y - 10}
       width="340"
-      height="150"
+      height="190"
       style={{ backgroundColor: 'white', border: '1px solid black', padding: '5px', zIndex: 1000, borderRadius: '5px' }}
     >
       <div style={{ fontSize: '12px', color: 'black' }}>
@@ -129,6 +129,8 @@ const DebugInfo: React.FC<{ element: CanvasElement; isHovered: boolean }> = ({ e
         <div>editing: {element.editing ? 'true' : 'false'}</div>
         <div>selected: {element.selected ? 'true' : 'false'}</div>
         <div>visible: {element.visible ? 'true' : 'false'}</div>
+        <div>x: {element.x}</div>
+        <div>y: {element.y}</div>
         <div>width: {element.width}</div>
         <div>height: {element.width}</div>
       </div>
