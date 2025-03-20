@@ -6,7 +6,6 @@ import IdeaElement from './ideaElement';
 import InputFields from './inputFields';
 import useResizeEffect from '../hooks/useResizeEffect';
 import { useCanvas } from '../context/canvasContext';
-import { Marker } from './marker';
 import { keyActionMap } from '../constants/keyActionMap';
 import { useClickOutside } from '../hooks/useClickOutside';
 import { useElementDragEffect } from '../hooks/useElementDragEffect';
@@ -36,6 +35,8 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
     const [initialPinchDistance, setInitialPinchDistance] = useState(0);
     const [initialScroll, setInitialScroll] = useState({ x: 0, y: 0 });
     const editingNode = Object.values(elements).find((element) => (element as CanvasElement).editing) as CanvasElement | undefined;
+    const [hover, setHover] = useState<string | null>(null);
+    const [showMenuForElement, setShowMenuForElement] = useState<string | null>(null);
 
     useEffect(() => {
         if (!editingNode) svgRef.current?.focus();
@@ -193,23 +194,104 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
     ) => {
         if (!parentElement) return null;
         const totalHeight = element.height;
+        const offset = parentElement.connectionPathType === 'none' ? 0 : ARROW.OFFSET;
         const pathCommands = [
-            `M ${parentElement.x + parentElement.width + ARROW.OFFSET},${parentElement.y + parentElement.height / 2}`,
+            `M ${parentElement.x + parentElement.width + offset},${parentElement.y + parentElement.height / 2}`,
             `C ${parentElement.x + parentElement.width + CURVE_CONTROL_OFFSET},${parentElement.y + parentElement.height / 2}`,
             `${element.x - CURVE_CONTROL_OFFSET},${element.y + totalHeight / 2}`,
             `${element.x},${element.y + totalHeight / 2}`
         ].join(' ');
         return (
-            <path
-                key={`connection-${element.id}-${element.parentId}`}
-                d={pathCommands}
-                stroke={strokeColor}
-                strokeWidth={strokeWidth}
-                fill="none"
-                markerStart="url(#arrowhead)"
-            />
+            <g>
+                <circle
+                    cx={element.x + element.width + 10}
+                    cy={element.y + totalHeight / 2}
+                    r={10}
+                    fill="transparent"
+                    onMouseEnter={() => setHover(element.id)}
+                    onMouseLeave={() => setHover(null)}
+                    onClick={() => setShowMenuForElement(element.id)}
+                />
+                {(hover === element.id || showMenuForElement === element.id) && (
+                    <circle
+                        cx={element.x + element.width + 10}
+                        cy={element.y + totalHeight / 2}
+                        r={10}
+                        fill="gray"
+                    />
+                )}
+                <path
+                    key={`connection-${element.id}-${element.parentId}`}
+                    d={pathCommands}
+                    stroke={strokeColor}
+                    strokeWidth={strokeWidth}
+                    fill="none"
+                    markerStart={parentElement.connectionPathType === 'arrow' ? 'url(#arrowhead)' : undefined}
+                />
+                {showMenuForElement === element.id && (
+                    <foreignObject
+                        x={element.x + element.width + 15}
+                        y={element.y + totalHeight / 2 - 25}
+                        width={100}
+                        height={70}
+                        className="popup-menu"
+                        style={{ zIndex: 9999 }}
+                    >
+                        <div style={{
+                            backgroundColor: 'white',
+                            border: '1px solid black',
+                            borderRadius: '4px',
+                            boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)',
+                            padding: '8px'
+                        }}>
+                            <div
+                                style={{ padding: '4px 0', cursor: 'pointer' }}
+                                onClick={() => {
+                                    dispatch({
+                                        type: 'UPDATE_CONNECTION_PATH_TYPE',
+                                        payload: {
+                                            id: element.id,
+                                            connectionPathType: 'arrow'
+                                        }
+                                    });
+                                    setShowMenuForElement(null);
+                                }}
+                            >
+                                Arrow
+                            </div>
+                            <div
+                                style={{ padding: '4px 0', cursor: 'pointer' }}
+                                onClick={() => {
+                                    dispatch({
+                                        type: 'UPDATE_CONNECTION_PATH_TYPE',
+                                        payload: {
+                                            id: element.id,
+                                            connectionPathType: 'none'
+                                        }
+                                    });
+                                    setShowMenuForElement(null);
+                                }}
+                            >
+                                None
+                            </div>
+                        </div>
+                    </foreignObject>
+                )}
+            </g>
         );
     };
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (showMenuForElement && !(event.target as HTMLElement).closest('.popup-menu')) {
+                setShowMenuForElement(null);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [showMenuForElement]);
 
     return (
         <>
@@ -240,6 +322,15 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                         }}
                         className="svg-element"
                     >
+                        <defs>
+                            <marker id="arrowhead" markerWidth="24" markerHeight={ARROW.HEIGHT} refX={ARROW.WIDTH} refY={ARROW.HEIGHT / 2} orient="auto" fill="none" stroke="black">
+                                <polygon
+                                    points={`${ARROW.WIDTH} 0, ${ARROW.WIDTH} ${ARROW.HEIGHT}, 0 ${ARROW.HEIGHT / 2}`}
+                                    fill="none"
+                                    stroke="black"
+                                />
+                            </marker>
+                        </defs>
                         {Object.values(elements)
                             .filter((element): element is CanvasElement => element.visible)
                             .map(element => (
