@@ -53,26 +53,7 @@ export const ICONBAR_HEIGHT = 40;
 export const TABBAR_HEIGHT = 40;
 export const HEADER_HEIGHT = ICONBAR_HEIGHT + TABBAR_HEIGHT;
 
-// Markerを有効にする場合
-export const ARROW = {
-    HEIGHT: 8,
-    WIDTH: 8,
-    OFFSET: 12,
-}
-
-export const CIRCLE = {
-    HEIGHT: 8,
-    WIDTH: 8,
-    OFFSET: 12,
-};
-
-export const SQUARE = {
-    HEIGHT: 8,
-    WIDTH: 8,
-    OFFSET: 12,
-};
-
-export const DIAMOND = {
+export const MARKER = {
     HEIGHT: 8,
     WIDTH: 8,
     OFFSET: 12,
