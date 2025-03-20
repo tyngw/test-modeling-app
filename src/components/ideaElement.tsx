@@ -3,7 +3,7 @@
 
 import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { useCanvas } from '../context/canvasContext';
-import TextSection from './textDisplayArea';
+import TextDisplayArea from './textDisplayArea';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import DoneIcon from '@mui/icons-material/Done';
 import ClearIcon from '@mui/icons-material/Clear';
@@ -18,6 +18,12 @@ import {
   LINE_HEIGHT_RATIO,
   CONNECTION_PATH_STYLE,
 } from '../constants/elementSettings';
+import { 
+  getElementColor, 
+  getStrokeColor, 
+  getStrokeWidth, 
+  getFontFamily 
+} from '../utils/localStorageHelpers';
 import { Element as CanvasElement } from '../types';
 import { isDescendant } from '../state/state';
 import { debugLog, isDevelopment } from '../utils/debugLogHelpers';
@@ -161,9 +167,17 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
   const currentDropTargetId = currentDropTarget?.id || -1;
   const [isHovered, setIsHovered] = useState(false);
   const prevHoveredRef = useRef(false);
+  const [elementColor, setElementColor] = useState(ELEM_STYLE.NORMAL.COLOR);
+  const [strokeColor, setStrokeColor] = useState(ELEM_STYLE.NORMAL.STROKE_COLOR);
+  const [strokeWidth, setStrokeWidth] = useState(ELEM_STYLE.STROKE_WIDTH);
+  const [fontFamily, setFontFamily] = useState('');
 
   useEffect(() => {
     setIsMounted(true);
+    setElementColor(getElementColor());
+    setStrokeColor(getStrokeColor());
+    setStrokeWidth(getStrokeWidth());
+    setFontFamily(getFontFamily());
   }, []);
 
   useEffect(() => {
@@ -283,7 +297,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
                 rx={ELEM_STYLE.RX}
                 fill="none"
                 stroke={ELEM_STYLE.SHADDOW.COLOR}
-                strokeWidth={ELEM_STYLE.STROKE}
+                strokeWidth={strokeWidth}
               />
             ) : (
               <line
@@ -293,7 +307,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
                 x2={element.x + element.width + SHADOW_OFFSET}
                 y2={element.y + element.height + SHADOW_OFFSET}
                 stroke={ELEM_STYLE.SHADDOW.COLOR}
-                strokeWidth={ELEM_STYLE.STROKE}
+                strokeWidth={strokeWidth}
               />
             )}
             <g
@@ -341,14 +355,14 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
           width={element.width}
           height={element.height}
           rx={ELEM_STYLE.RX}
-          strokeWidth={ELEM_STYLE.STROKE}
+          strokeWidth={strokeWidth}
           stroke={
             element.texts.length > 1
               ? element.selected
                 ? ELEM_STYLE.SELECTED.STROKE_COLOR
                 : element.tentative
                   ? '#9E9E9E' // tentativeかつ非選択
-                  : ELEM_STYLE.NORMAL.STROKE_COLOR // 通常状態
+                  : strokeColor // 設定された線の色を使用
               : 'transparent'
           }
           strokeDasharray={element.tentative ? "4 2" : "none"}
@@ -360,7 +374,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
           style={{
             fill: (element.id === currentDropTargetId && dropPosition === 'child')
               ? ELEM_STYLE.DRAGGING.COLOR
-              : ELEM_STYLE.NORMAL.COLOR,
+              : elementColor, // 設定された要素の色を使用
             strokeOpacity: element.tentative ? 0.6 : 1,
             pointerEvents: 'all',
             cursor: isHovered ? 'pointer' : 'default',
@@ -377,7 +391,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
                 x2={element.x + element.width + 1}
                 y2={element.y + element.height + 2}
                 stroke="rgba(0,0,255,0.2)"
-                strokeWidth={ELEM_STYLE.STROKE}
+                strokeWidth={strokeWidth}
                 strokeLinecap="round"
                 pointerEvents="none"
               />
@@ -393,9 +407,9 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
                   ? ELEM_STYLE.SELECTED.STROKE_COLOR
                   : element.tentative
                     ? '#9E9E9E' // tentativeかつ非選択
-                    : ELEM_STYLE.NORMAL.STROKE_COLOR // 通常状態
+                    : strokeColor // 設定された線の色を使用
               }
-              strokeWidth={ELEM_STYLE.STROKE}
+              strokeWidth={strokeWidth}
               strokeDasharray={element.tentative ? "4 2" : "none"}
               pointerEvents="none"
             />
@@ -415,14 +429,14 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
             fill={ELEM_STYLE.DRAGGING.COLOR}
             rx={ELEM_STYLE.RX}
             stroke={ELEM_STYLE.DRAGGING.COLOR}
-            strokeWidth={ELEM_STYLE.STROKE}
+            strokeWidth={strokeWidth}
             style={{ pointerEvents: 'none' }} // プレビュー要素が干渉しないように
           />
         )}
         {element.texts.map((text, index) => (
           <React.Fragment key={`${element.id}-section-${index}`}>
             {!element.editing && (
-              <TextSection
+              <TextDisplayArea
                 x={element.x}
                 y={element.y + element.sectionHeights.slice(0, index).reduce((sum, h) => sum + h, 0)}
                 width={element.width}
@@ -430,6 +444,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
                 text={text}
                 fontSize={DEFAULT_FONT_SIZE}
                 zoomRatio={state.zoomRatio}
+                fontFamily={fontFamily}
                 onHeightChange={(newHeight) => handleHeightChange(index, newHeight)}
               />
             )}
@@ -439,7 +454,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
                 y1={element.y + element.sectionHeights.slice(0, index + 1).reduce((sum, h) => sum + h, 0)}
                 x2={element.x + element.width}
                 y2={element.y + element.sectionHeights.slice(0, index + 1).reduce((sum, h) => sum + h, 0)}
-                stroke={ELEM_STYLE.NORMAL.STROKE_COLOR}
+                stroke={strokeColor}
                 strokeWidth="1"
               />
             )}

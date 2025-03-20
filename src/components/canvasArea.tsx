@@ -9,11 +9,12 @@ import { useCanvas } from '../context/canvasContext';
 import { keyActionMap } from '../constants/keyActionMap';
 import { useClickOutside } from '../hooks/useClickOutside';
 import { useElementDragEffect } from '../hooks/useElementDragEffect';
-import { ICONBAR_HEIGHT, HEADER_HEIGHT, CONNECTION_PATH_STYLE, CURVE_CONTROL_OFFSET, ARROW } from '../constants/elementSettings';
+import { ICONBAR_HEIGHT, HEADER_HEIGHT, CONNECTION_PATH_STYLE, CURVE_CONTROL_OFFSET, ARROW, CIRCLE, SQUARE, DIAMOND } from '../constants/elementSettings';
 import { Element as CanvasElement } from '../types';
 import { isDescendant } from '../state/state';
 import { useToast } from '../context/toastContext';
 import { ToastMessages } from '../constants/toastMessages';
+import { getConnectionPathColor, getConnectionPathStroke, getCanvasBackgroundColor } from '../utils/localStorageHelpers';
 
 interface CanvasAreaProps {
     isHelpOpen: boolean;
@@ -25,6 +26,9 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
     const [isClient, setIsClient] = useState(false);
     const { state, dispatch } = useCanvas();
     const { elements, zoomRatio } = state;
+    const connectionPathColor = getConnectionPathColor();
+    const connectionPathStroke = getConnectionPathStroke();
+    const canvasBackgroundColor = getCanvasBackgroundColor();
     const { addToast } = useToast();
     const [displayScopeSize, setCanvasSize] = useState({
         width: 0,
@@ -194,14 +198,43 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
         strokeWidth: number = CONNECTION_PATH_STYLE.STROKE,
     ) => {
         if (!parentElement) return null;
+        let offset = 0;
+        switch (parentElement.connectionPathType) {
+            case 'arrow':
+                offset = ARROW.OFFSET;
+                break;
+            case 'circle':
+                offset = CIRCLE.OFFSET;
+                break;
+            case 'square':
+                offset = SQUARE.OFFSET;
+                break;
+            case 'diamond':
+                offset = DIAMOND.OFFSET;
+                break;
+            default:
+                offset = 0;
+        }
         const totalHeight = element.height;
-        const offset = parentElement.connectionPathType === 'none' ? 0 : ARROW.OFFSET;
         const pathCommands = [
             `M ${parentElement.x + parentElement.width + offset},${parentElement.y + parentElement.height / 2}`,
             `C ${parentElement.x + parentElement.width + CURVE_CONTROL_OFFSET},${parentElement.y + parentElement.height / 2}`,
             `${element.x - CURVE_CONTROL_OFFSET},${element.y + totalHeight / 2}`,
             `${element.x},${element.y + totalHeight / 2}`
         ].join(' ');
+
+        // マーカーの選択
+        let markerStart = undefined;
+        if (parentElement.connectionPathType === 'arrow') {
+            markerStart = 'url(#arrowhead)';
+        } else if (parentElement.connectionPathType === 'circle') {
+            markerStart = 'url(#circlemarker)';
+        } else if (parentElement.connectionPathType === 'square') {
+            markerStart = 'url(#squaremarker)';
+        } else if (parentElement.connectionPathType === 'diamond') {
+            markerStart = 'url(#diamondmarker)';
+        }
+
         return (
             <g key={`connection-${element.id}-${element.parentId}`}>
                 <circle
@@ -228,7 +261,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                     stroke={strokeColor}
                     strokeWidth={strokeWidth}
                     fill="none"
-                    markerStart={parentElement.connectionPathType === 'arrow' ? 'url(#arrowhead)' : undefined}
+                    markerStart={markerStart}
                 />
             </g>
         );
@@ -237,18 +270,24 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
     // Generate popup menus for rendering at the top level
     const renderPopupMenus = () => {
         if (!showMenuForElement) return null;
-
         const element = elements[showMenuForElement];
         if (!element) return null;
-
         const totalHeight = element.height;
+        
+        const markerOptions = [
+            { id: 'arrow', label: 'Arrow' },
+            { id: 'circle', label: 'Circle' },
+            { id: 'square', label: 'Square' },
+            { id: 'diamond', label: 'Diamond' },
+            { id: 'none', label: 'None' },
+        ];
         
         return (
             <foreignObject
                 x={element.x + element.width + 15}
                 y={element.y + totalHeight / 2 - 25}
                 width={100}
-                height={90}
+                height={160}
                 className="popup-menu"
             >
                 <div style={{
@@ -258,40 +297,30 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                     boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)',
                     padding: '8px'
                 }}>
-                    <div
-                        style={{ padding: '4px 0', cursor: 'pointer', backgroundColor: hover === 'arrow' ? '#e0e0e0' : 'white' }}
-                        onMouseEnter={() => setHover('arrow')}
-                        onMouseLeave={() => setHover(null)}
-                        onClick={() => {
-                            dispatch({
-                                type: 'UPDATE_CONNECTION_PATH_TYPE',
-                                payload: {
-                                    id: element.id,
-                                    connectionPathType: 'arrow'
-                                }
-                            });
-                            setShowMenuForElement(null);
-                        }}
-                    >
-                        Arrow
-                    </div>
-                    <div
-                        style={{ padding: '4px 0', cursor: 'pointer', backgroundColor: hover === 'none' ? '#e0e0e0' : 'white' }}
-                        onMouseEnter={() => setHover('none')}
-                        onMouseLeave={() => setHover(null)}
-                        onClick={() => {
-                            dispatch({
-                                type: 'UPDATE_CONNECTION_PATH_TYPE',
-                                payload: {
-                                    id: element.id,
-                                    connectionPathType: 'none'
-                                }
-                            });
-                            setShowMenuForElement(null);
-                        }}
-                    >
-                        None
-                    </div>
+                    {markerOptions.map(option => (
+                        <div
+                            key={option.id}
+                            style={{ 
+                                padding: '4px 0', 
+                                cursor: 'pointer', 
+                                backgroundColor: hover === option.id ? '#e0e0e0' : 'white' 
+                            }}
+                            onMouseEnter={() => setHover(option.id)}
+                            onMouseLeave={() => setHover(null)}
+                            onClick={() => {
+                                dispatch({
+                                    type: 'UPDATE_CONNECTION_PATH_TYPE',
+                                    payload: {
+                                        id: element.id,
+                                        connectionPathType: option.id
+                                    }
+                                });
+                                setShowMenuForElement(null);
+                            }}
+                        >
+                            {option.label}
+                        </div>
+                    ))}
                 </div>
             </foreignObject>
         );
@@ -374,7 +403,8 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                 top: HEADER_HEIGHT,
                 left: 0,
                 overflow: 'auto',
-                touchAction: isPinching ? 'none' : 'manipulation'
+                touchAction: isPinching ? 'none' : 'manipulation',
+                backgroundColor: canvasBackgroundColor // キャンバスの背景色を設定
             }}>
                 {isClient && (
                     <svg
@@ -397,12 +427,58 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                         className="svg-element"
                     >
                         <defs>
-                            <marker id="arrowhead" markerWidth="24" markerHeight={ARROW.HEIGHT} refX={ARROW.WIDTH} refY={ARROW.HEIGHT / 2} orient="auto" fill="none" stroke="black">
+                            {/* 矢印マーカー */}
+                            <marker 
+                                id="arrowhead" 
+                                markerWidth={ARROW.WIDTH} 
+                                markerHeight={ARROW.HEIGHT} 
+                                refX={ARROW.WIDTH} 
+                                refY={ARROW.HEIGHT / 2} 
+                                orient="auto" 
+                                fill="none" 
+                                stroke={connectionPathColor}
+                            >
                                 <polygon
                                     points={`${ARROW.WIDTH} 0, ${ARROW.WIDTH} ${ARROW.HEIGHT}, 0 ${ARROW.HEIGHT / 2}`}
                                     fill="none"
-                                    stroke="black"
+                                    stroke={connectionPathColor}
                                 />
+                            </marker>
+                            
+                            {/* 円形マーカー */}
+                            <marker 
+                                id="circlemarker" 
+                                markerWidth={CIRCLE.WIDTH} 
+                                markerHeight={CIRCLE.HEIGHT} 
+                                refX={CIRCLE.WIDTH}
+                                refY={CIRCLE.HEIGHT / 2} 
+                                orient="auto"
+                            >
+                                <circle cx={CIRCLE.WIDTH / 2} cy={CIRCLE.HEIGHT / 2} r={CIRCLE.WIDTH / 2 - 1} fill="none" stroke={connectionPathColor} strokeWidth="1" />
+                            </marker>
+                            
+                            {/* 四角形マーカー */}
+                            <marker 
+                                id="squaremarker" 
+                                markerWidth={SQUARE.WIDTH} 
+                                markerHeight={SQUARE.HEIGHT} 
+                                refX={SQUARE.WIDTH} 
+                                refY={SQUARE.HEIGHT / 2} 
+                                orient="auto"
+                            >
+                                <rect x="1" y="1" width={SQUARE.WIDTH - 2} height={SQUARE.HEIGHT - 2} fill="none" stroke={connectionPathColor} strokeWidth="1" />
+                            </marker>
+                            
+                            {/* ダイヤモンドマーカー */}
+                            <marker 
+                                id="diamondmarker" 
+                                markerWidth={DIAMOND.WIDTH} 
+                                markerHeight={DIAMOND.HEIGHT} 
+                                refX={DIAMOND.WIDTH} 
+                                refY={DIAMOND.HEIGHT / 2} 
+                                orient="auto"
+                            >
+                                <polygon points={`${DIAMOND.WIDTH / 2},1 ${DIAMOND.WIDTH - 1},${DIAMOND.HEIGHT / 2} ${DIAMOND.WIDTH / 2},${DIAMOND.HEIGHT - 1} 1,${DIAMOND.HEIGHT / 2}`} fill="none" stroke={connectionPathColor} strokeWidth="1" />
                             </marker>
                         </defs>
                         
@@ -418,7 +494,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                                 if (draggingElement && (element.id === draggingElement.id || isDescendant(state.elements, draggingElement.id, element.id))) {
                                     return null;
                                 }
-                                return renderConnectionPath(parent, element);
+                                return renderConnectionPath(parent, element, connectionPathColor, connectionPathStroke);
                             })}
 
                         {/* ドラッグプレビュー用の接続パス */}
