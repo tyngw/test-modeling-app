@@ -72,6 +72,17 @@ export const useElementDragEffect = () => {
     [convertToZoomCoordinates]
   );
 
+  const resetElementsPosition = () => {
+    const selectedElements = Object.values(state.elements).filter(el => el.selected);
+    selectedElements.forEach(element => {
+      dispatch({
+        type: 'MOVE_ELEMENT',
+        payload: { id: element.id, x: originalPosition.x, y: originalPosition.y }
+      });
+    });
+    setDraggingElement(null); // Ensure dragging state is reset
+  };
+
   const handleMouseUp = useCallback(async () => {
     if (!draggingElement) return;
 
@@ -79,25 +90,29 @@ export const useElementDragEffect = () => {
       const selectedElements = Object.values(state.elements).filter(el => el.selected);
       const leaderElement = draggingElement; // ドラッグ開始要素をリーダーとする
 
-      const resetElementsPosition = () => {
-        selectedElements.forEach(element => {
-          dispatch({
-            type: 'MOVE_ELEMENT',
-            payload: { id: element.id, x: element.x, y: element.y }
-          });
-        });
+      // 親変更の検証関数
+      const validateParentChange = (element: Element, newParentId: string | null): boolean => {
+        // 自身の子孫要素に移動しようとしている場合は無効
+        if (newParentId && isDescendant(state.elements, element.id, newParentId)) {
+          return false;
+        }
+        return true;
       };
 
-      const processChildDrop = (target: Element) => {
-        if (selectedElements.some(el => isDescendant(state.elements, target.id, el.id))) {
+      const processChildDrop = (target: Element): boolean => {
+        // 自身の子孫要素への移動チェック
+        if (selectedElements.some(el => !validateParentChange(el, target.id))) {
           addToast(ToastMessages.dropChildElement, 'warn');
-          return;
+          resetElementsPosition();
+          return false;
         }
 
         dispatch({ type: 'SNAPSHOT' });
 
         // 全要素に対して移動処理
         selectedElements.forEach(element => {
+          // childモードの場合、新しい親の深さ+1を設定
+          const newDepth = target.depth + 1;
           dispatch({
             type: 'DROP_ELEMENT',
             payload: {
@@ -105,19 +120,22 @@ export const useElementDragEffect = () => {
               oldParentId: element.parentId,
               newParentId: target.id,
               newOrder: target.children + selectedElements.indexOf(element),
-              depth: target.depth + 1,
+              depth: newDepth,
             },
           });
         });
+        return true;
       };
 
-      const processSiblingDrop = (target: Element, position: DropPosition) => {
+      const processSiblingDrop = (target: Element, position: DropPosition): boolean => {
         const baseOrder = position === 'before' ? target.order : target.order + 1;
         const newParentId = target.parentId;
 
-        if (selectedElements.some(el => el.parentId !== newParentId && !validateParentChange(el, newParentId))) {
-          addToast(ToastMessages.invalidParentChange, 'warn');
-          return;
+        // 無効な親変更をチェック
+        if (selectedElements.some(el => !validateParentChange(el, newParentId))) {
+          addToast(ToastMessages.dropChildElement, 'warn');
+          resetElementsPosition();
+          return false;
         }
 
         dispatch({ type: 'SNAPSHOT' });
@@ -135,22 +153,29 @@ export const useElementDragEffect = () => {
             },
           });
         });
+        return true;
       };
 
       if (currentDropTarget) {
         const { element: target, position } = currentDropTarget;
 
-        // 全要素の子孫関係チェック
+        // 直接自身の子孫要素かチェック
         if (selectedElements.some(el => isDescendant(state.elements, el.id, target.id))) {
           resetElementsPosition();
           addToast(ToastMessages.dropChildElement, 'warn');
           return;
         }
 
+        let dropSuccess = false;
         if (position === 'child') {
-          processChildDrop(target);
+          dropSuccess = processChildDrop(target);
         } else {
-          processSiblingDrop(target, position);
+          dropSuccess = processSiblingDrop(target, position);
+        }
+
+        if (!dropSuccess) {
+          resetElementsPosition();
+          return;
         }
       } else {
         resetElementsPosition();
@@ -158,18 +183,12 @@ export const useElementDragEffect = () => {
     } catch (error) {
       console.error('Drag error:', error);
       addToast(ToastMessages.dragError, 'warn');
+      resetElementsPosition();
     } finally {
       setDraggingElement(null);
       setCurrentDropTarget(null);
     }
-  }, [draggingElement, currentDropTarget, state.elements, dispatch, addToast]);
-
-  // 親変更の検証関数
-  const validateParentChange = (element: Element, newParentId: string | null): boolean => {
-    const newParent = newParentId ? state.elements[newParentId] : null;
-    // 新しい親が自分自身または子孫でないかチェック
-    return !(newParent && isDescendant(state.elements, element.id, newParent.id));
-  };
+  }, [draggingElement, currentDropTarget, state.elements, dispatch, addToast, originalPosition]);
 
   useEffect(() => {
     if (!draggingElement) return;
