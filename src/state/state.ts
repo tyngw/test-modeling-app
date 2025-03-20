@@ -3,7 +3,7 @@
 
 import { Undo, Redo, saveSnapshot } from './undoredo';
 import { handleArrowUp, handleArrowDown, handleArrowRight, handleArrowLeft } from '../utils/elementSelector';
-import { getNumberOfSections } from '../utils/localStorageHelpers';
+import { getNumberOfSections, getMarkerType } from '../utils/localStorageHelpers';
 import { Element } from '../types';
 import {
     OFFSET,
@@ -43,6 +43,8 @@ export const createNewElement = ({
     depth = 1,
     numSections = getNumberOfSections(),
 }: NewElementParams = {}): Element => {
+    const markerType = getMarkerType();
+    
     return {
         id: uuidv4(),
         texts: Array(numSections).fill(''),
@@ -59,6 +61,7 @@ export const createNewElement = ({
         selected: true,
         visible: true,
         tentative: false,
+        connectionPathType: markerType as 'arrow' | 'circle' | 'square' | 'diamond' | 'none', // Use the marker type from localStorage
     };
 };
 
@@ -764,6 +767,7 @@ const createElementAdder = (
         selected: options?.newElementSelect ?? false,
         editing: options?.newElementSelect ?? false,
         tentative: options?.tentative ?? false,
+        connectionPathType: 'none' as 'arrow' | 'none', // Add default connectionPathType
     };
 
     const updatedParentElement = {
@@ -822,6 +826,41 @@ const handleZoomOut = (state: State): State => ({
     ...state,
     zoomRatio: Math.max(state.zoomRatio - 0.1, 0.1)
 });
+
+const copyToClipboard = (elements: { [key: string]: Element }) => {
+    const getElementText = (element: Element, depth: number = 0): string => {
+        const children = Object.values(elements).filter(el => el.parentId === element.id);
+        const childTexts = children.map(child => getElementText(child, depth + 1));
+        const tabs = '\t'.repeat(depth);
+        return `${tabs}${element.texts[0]}
+${childTexts.join('')}`;
+    };
+
+    const selectedElement = Object.values(elements).find(el => el.selected);
+    if (!selectedElement) return;
+
+    const textToCopy = getElementText(selectedElement);
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            console.log('Copied to clipboard:', textToCopy);
+        }).catch(err => {
+            console.error('Failed to copy to clipboard:', err);
+        });
+    } else {
+        const textArea = document.createElement('textarea');
+        textArea.value = textToCopy;
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            console.log('Copied to clipboard:', textToCopy);
+        } catch (err) {
+            console.error('Failed to copy to clipboard:', err);
+        }
+        document.body.removeChild(textArea);
+    }
+};
 
 const actionHandlers: { [key: string]: (state: State, action?: any) => State } = {
     ZOOM_IN: handleZoomIn,
@@ -1259,16 +1298,20 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
             updatedElements = deleteElementRecursive(updatedElements, selectedElement);
         });
 
+        copyToClipboard(cutElements);
+
         return {
             ...state,
-            elements: adjustElementPositions(updatedElements),
+            elements: updatedElements,
             cutElements
         };
     },
 
-    COPY_ELEMENT: state => handleSelectedElementAction(state, selectedElement => ({
-        cutElements: getSelectedAndChildren(state.elements, selectedElement)
-    })),
+    COPY_ELEMENT: state => handleSelectedElementAction(state, selectedElement => {
+        const cutElements = getSelectedAndChildren(state.elements, selectedElement);
+        copyToClipboard(cutElements);
+        return { cutElements };
+    }),
 
     PASTE_ELEMENT: state => {
         const selectedElements = Object.values(state.elements).filter(e => e.selected);
@@ -1304,6 +1347,20 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
                 ...state.elements,
                 [action.payload.id]: updatedElement
             })
+        };
+    },
+    UPDATE_CONNECTION_PATH_TYPE: (state, action) => {
+        const { id, connectionPathType } = action.payload;
+        const updatedElement = {
+            ...state.elements[id],
+            connectionPathType
+        };
+        return {
+            ...state,
+            elements: {
+                ...state.elements,
+                [id]: updatedElement
+            }
         };
     },
 };

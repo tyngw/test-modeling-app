@@ -1,17 +1,31 @@
 // src/utils/localStorageHelpers.ts
 'use client';
 
-import { NUMBER_OF_SECTIONS } from '../constants/elementSettings';
+import { 
+  NUMBER_OF_SECTIONS, 
+  DEFAULT_FONT_FAMILY, 
+  ELEM_STYLE, 
+  DEFAULT_MARKER_TYPE,
+  DEFAULT_CONNECTION_PATH_COLOR,
+  DEFAULT_CONNECTION_PATH_STROKE,
+  DEFAULT_CANVAS_BACKGROUND_COLOR,
+  DEFAULT_TEXT_COLOR,
+} from '../constants/elementSettings';
 import { SYSTEM_PROMPT_TEMPLATE } from '../constants/systemPrompt';
 import { VERSION } from '../constants/version';
 
 const ENCRYPTION_KEY = 'encryptionKey';
 const TABS_STORAGE_KEY = 'tabsState';
-const LAST_SAVED_FILE_KEY = 'lastSavedFileName';
 export const VERSION_KEY = 'appVersion';
 const PROMPT_KEY = 'prompt';
 const SYSTEM_PROMPT_KEY = 'systemPromptTemplate';
 const APIKEY_KEY = 'apiKey';
+const MODEL_TYPE_KEY = 'modelType';
+
+const MODEL_ENDPOINTS: { [key: string]: string } = {
+  'gemini-1.5-flash': 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
+  'gemini-2.0-flash': 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+};
 
 // CryptoJS動的ローダー
 const loadCryptoJS = async () => {
@@ -90,6 +104,81 @@ export const setNumberOfSections = (value: number): void => {
   safeLocalStorage.setItem('numberOfSections', clampedValue.toString());
 };
 
+// Element styling related
+export const getElementColor = (): string => {
+  return safeLocalStorage.getItem('elementColor') || ELEM_STYLE.NORMAL.COLOR;
+};
+
+export const setElementColor = (color: string): void => {
+  safeLocalStorage.setItem('elementColor', color);
+};
+
+export const getStrokeColor = (): string => {
+  return safeLocalStorage.getItem('strokeColor') || ELEM_STYLE.NORMAL.STROKE_COLOR;
+};
+
+export const setStrokeColor = (color: string): void => {
+  safeLocalStorage.setItem('strokeColor', color);
+};
+
+export const getStrokeWidth = (): number => {
+  const stored = safeLocalStorage.getItem('strokeWidth');
+  return stored ? parseFloat(stored) || ELEM_STYLE.STROKE_WIDTH : ELEM_STYLE.STROKE_WIDTH;
+};
+
+export const setStrokeWidth = (width: number): void => {
+  safeLocalStorage.setItem('strokeWidth', width.toString());
+};
+
+export const getFontFamily = (): string => {
+  return safeLocalStorage.getItem('fontFamily') || DEFAULT_FONT_FAMILY;
+};
+
+export const setFontFamily = (fontFamily: string): void => {
+  safeLocalStorage.setItem('fontFamily', fontFamily);
+};
+
+export const getMarkerType = (): string => {
+  return safeLocalStorage.getItem('markerType') || DEFAULT_MARKER_TYPE;
+};
+
+export const setMarkerType = (markerType: string): void => {
+  safeLocalStorage.setItem('markerType', markerType);
+};
+
+export const getConnectionPathColor = (): string => {
+  return safeLocalStorage.getItem('connectionPathColor') || DEFAULT_CONNECTION_PATH_COLOR;
+};
+
+export const setConnectionPathColor = (color: string): void => {
+  safeLocalStorage.setItem('connectionPathColor', color);
+};
+
+export const getConnectionPathStroke = (): number => {
+  const stored = safeLocalStorage.getItem('connectionPathStroke');
+  return stored ? parseFloat(stored) || DEFAULT_CONNECTION_PATH_STROKE : DEFAULT_CONNECTION_PATH_STROKE;
+};
+
+export const setConnectionPathStroke = (stroke: number): void => {
+  safeLocalStorage.setItem('connectionPathStroke', stroke.toString());
+};
+
+export const getCanvasBackgroundColor = (): string => {
+  return safeLocalStorage.getItem('canvasBackgroundColor') || DEFAULT_CANVAS_BACKGROUND_COLOR;
+};
+
+export const setCanvasBackgroundColor = (color: string): void => {
+  safeLocalStorage.setItem('canvasBackgroundColor', color);
+};
+
+export const getTextColor = (): string => {
+  return safeLocalStorage.getItem('textColor') || DEFAULT_TEXT_COLOR;
+};
+
+export const setTextColor = (color: string): void => {
+  safeLocalStorage.setItem('textColor', color);
+};
+
 // APIキー関連
 export const getApiKey = async (): Promise<string> => {
   const result = await withCryptoJS((CryptoJS) => {
@@ -117,7 +206,15 @@ export const setApiKey = async (value: string): Promise<void> => {
   });
 };
 
-export const getApiEndpoint = (): string => safeLocalStorage.getItem('apiEndpoint') || 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+// モデルタイプ関連
+export const getModelType = (): string => safeLocalStorage.getItem(MODEL_TYPE_KEY) || 'gemini-1.5-flash';
+export const setModelType = (modelType: string) => safeLocalStorage.setItem(MODEL_TYPE_KEY, modelType);
+
+// エンドポイント取得
+export const getApiEndpoint = (): string => {
+  const modelType = getModelType();
+  return MODEL_ENDPOINTS[modelType] || MODEL_ENDPOINTS['gemini-1.5-flash'];
+};
 export const setApiEndpoint = (endpoint: string) => safeLocalStorage.setItem('apiEndpoint', endpoint);
 
 export const getPrompt = (): string => safeLocalStorage.getItem(PROMPT_KEY) || '';

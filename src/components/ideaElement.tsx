@@ -1,29 +1,32 @@
 // src/components/ideaElement.tsx
 'use client';
 
-import React, { useCallback, useMemo, useState, useEffect } from 'react';
+import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { useCanvas } from '../context/canvasContext';
-import TextSection from './textDisplayArea';
+import TextDisplayArea from './textDisplayArea';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import DoneIcon from '@mui/icons-material/Done';
 import ClearIcon from '@mui/icons-material/Clear';
 import { calculateElementWidth, wrapText } from '../utils/textareaHelpers';
 import {
-  CURVE_CONTROL_OFFSET,
   DEFAULT_FONT_SIZE,
   OFFSET,
   TEXTAREA_PADDING,
   SHADOW_OFFSET,
   ELEM_STYLE,
   SIZE,
-  ARROW,
   LINE_HEIGHT_RATIO,
   CONNECTION_PATH_STYLE,
 } from '../constants/elementSettings';
+import { 
+  getElementColor, 
+  getStrokeColor, 
+  getStrokeWidth, 
+  getFontFamily 
+} from '../utils/localStorageHelpers';
 import { Element as CanvasElement } from '../types';
 import { isDescendant } from '../state/state';
-import { safeLocalStorage } from '../utils/localStorageHelpers';
-import { debugLog } from '../utils/debugLogHelpers';
+import { debugLog, isDevelopment } from '../utils/debugLogHelpers';
 
 interface IdeaElementProps {
   element: CanvasElement;
@@ -32,6 +35,7 @@ interface IdeaElementProps {
   draggingElement: CanvasElement | null;
   handleMouseDown: (e: React.MouseEvent<SVGElement>, element: CanvasElement) => void;
   handleMouseUp: () => void;
+  onHoverChange?: (elementId: string, isHovered: boolean) => void;
 }
 
 const renderActionButtons = (element: CanvasElement, dispatch: React.Dispatch<any>, elements: CanvasElement[]) => {
@@ -108,8 +112,9 @@ const renderActionButtons = (element: CanvasElement, dispatch: React.Dispatch<an
   );
 };
 
-const DebugInfo: React.FC<{ element: CanvasElement; isHovered: boolean }> = ({ element, isHovered }) => {
-  if (safeLocalStorage.getItem('__debugMode__') !== 'true' || !isHovered) {
+// Export DebugInfo component so it can be used by parent components
+export const DebugInfo: React.FC<{ element: CanvasElement; isHovered: boolean }> = ({ element, isHovered }) => {
+  if (!isDevelopment || !isHovered) {
     return null;
   }
 
@@ -118,15 +123,24 @@ const DebugInfo: React.FC<{ element: CanvasElement; isHovered: boolean }> = ({ e
       x={element.x + element.width + 10}
       y={element.y - 10}
       width="340"
-      height="190"
-      style={{ backgroundColor: 'white', border: '1px solid black', padding: '5px', zIndex: 1000, borderRadius: '5px' }}
+      height="200"
+      className="debug-info"
     >
-      <div style={{ fontSize: '12px', color: 'black' }}>
+      <div style={{ 
+        fontSize: '12px', 
+        color: 'black', 
+        backgroundColor: 'white', 
+        border: '1px solid black', 
+        padding: '5px', 
+        borderRadius: '5px',
+        boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)'
+      }}>
         <div>id: {element.id}</div>
         <div>parentID: {element.parentId}</div>
         <div>order: {element.order}</div>
         <div>depth: {element.depth}</div>
         <div>children: {element.children}</div>
+        <div>arrow: {element.connectionPathType}</div>
         <div>editing: {element.editing ? 'true' : 'false'}</div>
         <div>selected: {element.selected ? 'true' : 'false'}</div>
         <div>visible: {element.visible ? 'true' : 'false'}</div>
@@ -145,15 +159,25 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
   dropPosition,
   draggingElement,
   handleMouseDown,
+  onHoverChange,
 }) => {
   const { state, dispatch } = useCanvas();
   const [isMounted, setIsMounted] = useState(false);
   const parentElement = state.elements[element.parentId!];
   const currentDropTargetId = currentDropTarget?.id || -1;
   const [isHovered, setIsHovered] = useState(false);
+  const prevHoveredRef = useRef(false);
+  const [elementColor, setElementColor] = useState(ELEM_STYLE.NORMAL.COLOR);
+  const [strokeColor, setStrokeColor] = useState(ELEM_STYLE.NORMAL.STROKE_COLOR);
+  const [strokeWidth, setStrokeWidth] = useState(ELEM_STYLE.STROKE_WIDTH);
+  const [fontFamily, setFontFamily] = useState('');
 
   useEffect(() => {
     setIsMounted(true);
+    setElementColor(getElementColor());
+    setStrokeColor(getStrokeColor());
+    setStrokeWidth(getStrokeWidth());
+    setFontFamily(getFontFamily());
   }, []);
 
   useEffect(() => {
@@ -229,6 +253,31 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
     });
   };
 
+  const handleMouseEnter = useCallback(() => {
+    setIsHovered(true);
+    if (onHoverChange && !prevHoveredRef.current) {
+      onHoverChange(element.id, true);
+      prevHoveredRef.current = true;
+    }
+  }, [element.id, onHoverChange]);
+
+  const handleMouseLeave = useCallback(() => {
+    setIsHovered(false);
+    if (onHoverChange && prevHoveredRef.current) {
+      onHoverChange(element.id, false);
+      prevHoveredRef.current = false;
+    }
+  }, [element.id, onHoverChange]);
+
+  // Clean up hover state when component unmounts
+  useEffect(() => {
+    return () => {
+      if (onHoverChange && prevHoveredRef.current) {
+        onHoverChange(element.id, false);
+      }
+    };
+  }, [element.id, onHoverChange]);
+
   if (!isMounted) return null;
 
   return (
@@ -248,7 +297,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
                 rx={ELEM_STYLE.RX}
                 fill="none"
                 stroke={ELEM_STYLE.SHADDOW.COLOR}
-                strokeWidth={ELEM_STYLE.STROKE}
+                strokeWidth={strokeWidth}
               />
             ) : (
               <line
@@ -258,7 +307,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
                 x2={element.x + element.width + SHADOW_OFFSET}
                 y2={element.y + element.height + SHADOW_OFFSET}
                 stroke={ELEM_STYLE.SHADDOW.COLOR}
-                strokeWidth={ELEM_STYLE.STROKE}
+                strokeWidth={strokeWidth}
               />
             )}
             <g
@@ -306,26 +355,26 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
           width={element.width}
           height={element.height}
           rx={ELEM_STYLE.RX}
-          strokeWidth={ELEM_STYLE.STROKE}
+          strokeWidth={strokeWidth}
           stroke={
             element.texts.length > 1
               ? element.selected
                 ? ELEM_STYLE.SELECTED.STROKE_COLOR
                 : element.tentative
                   ? '#9E9E9E' // tentativeかつ非選択
-                  : ELEM_STYLE.NORMAL.STROKE_COLOR // 通常状態
+                  : strokeColor // 設定された線の色を使用
               : 'transparent'
           }
           strokeDasharray={element.tentative ? "4 2" : "none"}
           onClick={handleSelect}
           onDoubleClick={() => dispatch({ type: 'EDIT_ELEMENT' })}
           onMouseDown={(e) => handleMouseDown(e, element)}
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
           style={{
             fill: (element.id === currentDropTargetId && dropPosition === 'child')
               ? ELEM_STYLE.DRAGGING.COLOR
-              : ELEM_STYLE.NORMAL.COLOR,
+              : elementColor, // 設定された要素の色を使用
             strokeOpacity: element.tentative ? 0.6 : 1,
             pointerEvents: 'all',
             cursor: isHovered ? 'pointer' : 'default',
@@ -342,7 +391,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
                 x2={element.x + element.width + 1}
                 y2={element.y + element.height + 2}
                 stroke="rgba(0,0,255,0.2)"
-                strokeWidth={ELEM_STYLE.STROKE}
+                strokeWidth={strokeWidth}
                 strokeLinecap="round"
                 pointerEvents="none"
               />
@@ -358,9 +407,9 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
                   ? ELEM_STYLE.SELECTED.STROKE_COLOR
                   : element.tentative
                     ? '#9E9E9E' // tentativeかつ非選択
-                    : ELEM_STYLE.NORMAL.STROKE_COLOR // 通常状態
+                    : strokeColor // 設定された線の色を使用
               }
-              strokeWidth={ELEM_STYLE.STROKE}
+              strokeWidth={strokeWidth}
               strokeDasharray={element.tentative ? "4 2" : "none"}
               pointerEvents="none"
             />
@@ -380,14 +429,14 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
             fill={ELEM_STYLE.DRAGGING.COLOR}
             rx={ELEM_STYLE.RX}
             stroke={ELEM_STYLE.DRAGGING.COLOR}
-            strokeWidth={ELEM_STYLE.STROKE}
+            strokeWidth={strokeWidth}
             style={{ pointerEvents: 'none' }} // プレビュー要素が干渉しないように
           />
         )}
         {element.texts.map((text, index) => (
           <React.Fragment key={`${element.id}-section-${index}`}>
             {!element.editing && (
-              <TextSection
+              <TextDisplayArea
                 x={element.x}
                 y={element.y + element.sectionHeights.slice(0, index).reduce((sum, h) => sum + h, 0)}
                 width={element.width}
@@ -395,6 +444,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
                 text={text}
                 fontSize={DEFAULT_FONT_SIZE}
                 zoomRatio={state.zoomRatio}
+                fontFamily={fontFamily}
                 onHeightChange={(newHeight) => handleHeightChange(index, newHeight)}
               />
             )}
@@ -404,13 +454,12 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
                 y1={element.y + element.sectionHeights.slice(0, index + 1).reduce((sum, h) => sum + h, 0)}
                 x2={element.x + element.width}
                 y2={element.y + element.sectionHeights.slice(0, index + 1).reduce((sum, h) => sum + h, 0)}
-                stroke={ELEM_STYLE.NORMAL.STROKE_COLOR}
+                stroke={strokeColor}
                 strokeWidth="1"
               />
             )}
           </React.Fragment>
         ))}
-        <DebugInfo element={element} isHovered={isHovered} />
       </g>
     </React.Fragment>
   );
