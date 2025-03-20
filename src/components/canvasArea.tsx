@@ -9,7 +9,14 @@ import { useCanvas } from '../context/canvasContext';
 import { keyActionMap } from '../constants/keyActionMap';
 import { useClickOutside } from '../hooks/useClickOutside';
 import { useElementDragEffect } from '../hooks/useElementDragEffect';
-import { ICONBAR_HEIGHT, HEADER_HEIGHT, CONNECTION_PATH_STYLE, CURVE_CONTROL_OFFSET, ARROW, CIRCLE, SQUARE, DIAMOND } from '../constants/elementSettings';
+import { 
+    ICONBAR_HEIGHT, 
+    HEADER_HEIGHT, 
+    CONNECTION_PATH_STYLE, 
+    CURVE_CONTROL_OFFSET, 
+    MARKER, 
+    MARKER_TYPES 
+} from '../constants/elementSettings';
 import { Element as CanvasElement } from '../types';
 import { isDescendant } from '../state/state';
 import { useToast } from '../context/toastContext';
@@ -200,17 +207,17 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
         if (!parentElement) return null;
         let offset = 0;
         switch (parentElement.connectionPathType) {
-            case 'arrow':
-                offset = ARROW.OFFSET;
+            case MARKER_TYPES.ARROW:
+                offset = MARKER.OFFSET;
                 break;
-            case 'circle':
-                offset = CIRCLE.OFFSET;
+            case MARKER_TYPES.CIRCLE:
+                offset = MARKER.OFFSET;
                 break;
-            case 'square':
-                offset = SQUARE.OFFSET;
+            case MARKER_TYPES.SQUARE:
+                offset = MARKER.OFFSET;
                 break;
-            case 'diamond':
-                offset = DIAMOND.OFFSET;
+            case MARKER_TYPES.DIAMOND:
+                offset = MARKER.OFFSET;
                 break;
             default:
                 offset = 0;
@@ -225,13 +232,13 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
 
         // マーカーの選択
         let markerStart = undefined;
-        if (parentElement.connectionPathType === 'arrow') {
+        if (parentElement.connectionPathType === MARKER_TYPES.ARROW) {
             markerStart = 'url(#arrowhead)';
-        } else if (parentElement.connectionPathType === 'circle') {
+        } else if (parentElement.connectionPathType === MARKER_TYPES.CIRCLE) {
             markerStart = 'url(#circlemarker)';
-        } else if (parentElement.connectionPathType === 'square') {
+        } else if (parentElement.connectionPathType === MARKER_TYPES.SQUARE) {
             markerStart = 'url(#squaremarker)';
-        } else if (parentElement.connectionPathType === 'diamond') {
+        } else if (parentElement.connectionPathType === MARKER_TYPES.DIAMOND) {
             markerStart = 'url(#diamondmarker)';
         }
 
@@ -422,7 +429,8 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                             outline: 'none',
                             touchAction: isPinching ? 'none' : 'manipulation',
                             userSelect: 'none',
-                            WebkitUserSelect: 'none'
+                            WebkitUserSelect: 'none',
+                            backgroundColor: canvasBackgroundColor // SVG自体にも背景色を適用
                         }}
                         className="svg-element"
                     >
@@ -430,16 +438,16 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                             {/* 矢印マーカー */}
                             <marker 
                                 id="arrowhead" 
-                                markerWidth={ARROW.WIDTH} 
-                                markerHeight={ARROW.HEIGHT} 
-                                refX={ARROW.WIDTH} 
-                                refY={ARROW.HEIGHT / 2} 
+                                markerWidth={MARKER.WIDTH} 
+                                markerHeight={MARKER.HEIGHT} 
+                                refX={MARKER.WIDTH} 
+                                refY={MARKER.HEIGHT / 2} 
                                 orient="auto" 
                                 fill="none" 
                                 stroke={connectionPathColor}
                             >
                                 <polygon
-                                    points={`${ARROW.WIDTH} 0, ${ARROW.WIDTH} ${ARROW.HEIGHT}, 0 ${ARROW.HEIGHT / 2}`}
+                                    points={`${MARKER.WIDTH} 0, ${MARKER.WIDTH} ${MARKER.HEIGHT}, 0 ${MARKER.HEIGHT / 2}`}
                                     fill="none"
                                     stroke={connectionPathColor}
                                 />
@@ -448,37 +456,57 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                             {/* 円形マーカー */}
                             <marker 
                                 id="circlemarker" 
-                                markerWidth={CIRCLE.WIDTH} 
-                                markerHeight={CIRCLE.HEIGHT} 
-                                refX={CIRCLE.WIDTH}
-                                refY={CIRCLE.HEIGHT / 2} 
+                                markerWidth={MARKER.WIDTH} 
+                                markerHeight={MARKER.HEIGHT} 
+                                refX={MARKER.WIDTH} 
+                                refY={MARKER.HEIGHT / 2} 
                                 orient="auto"
                             >
-                                <circle cx={CIRCLE.WIDTH / 2} cy={CIRCLE.HEIGHT / 2} r={CIRCLE.WIDTH / 2 - 1} fill="none" stroke={connectionPathColor} strokeWidth="1" />
+                                <circle 
+                                    cx={MARKER.WIDTH / 2} 
+                                    cy={MARKER.HEIGHT / 2} 
+                                    r={MARKER.WIDTH / 2 - 1} 
+                                    fill="none" 
+                                    stroke={connectionPathColor} 
+                                    strokeWidth="1" 
+                                />
                             </marker>
                             
                             {/* 四角形マーカー */}
                             <marker 
                                 id="squaremarker" 
-                                markerWidth={SQUARE.WIDTH} 
-                                markerHeight={SQUARE.HEIGHT} 
-                                refX={SQUARE.WIDTH} 
-                                refY={SQUARE.HEIGHT / 2} 
+                                markerWidth={MARKER.WIDTH} 
+                                markerHeight={MARKER.HEIGHT} 
+                                refX={MARKER.WIDTH} 
+                                refY={MARKER.HEIGHT / 2} 
                                 orient="auto"
                             >
-                                <rect x="1" y="1" width={SQUARE.WIDTH - 2} height={SQUARE.HEIGHT - 2} fill="none" stroke={connectionPathColor} strokeWidth="1" />
+                                <rect 
+                                    x="1" 
+                                    y="1" 
+                                    width={MARKER.WIDTH - 2} 
+                                    height={MARKER.HEIGHT - 2} 
+                                    fill="none" 
+                                    stroke={connectionPathColor} 
+                                    strokeWidth="1" 
+                                />
                             </marker>
                             
                             {/* ダイヤモンドマーカー */}
                             <marker 
                                 id="diamondmarker" 
-                                markerWidth={DIAMOND.WIDTH} 
-                                markerHeight={DIAMOND.HEIGHT} 
-                                refX={DIAMOND.WIDTH} 
-                                refY={DIAMOND.HEIGHT / 2} 
+                                markerWidth={MARKER.WIDTH} 
+                                markerHeight={MARKER.HEIGHT} 
+                                refX={MARKER.WIDTH} 
+                                refY={MARKER.HEIGHT / 2} 
                                 orient="auto"
                             >
-                                <polygon points={`${DIAMOND.WIDTH / 2},1 ${DIAMOND.WIDTH - 1},${DIAMOND.HEIGHT / 2} ${DIAMOND.WIDTH / 2},${DIAMOND.HEIGHT - 1} 1,${DIAMOND.HEIGHT / 2}`} fill="none" stroke={connectionPathColor} strokeWidth="1" />
+                                <polygon 
+                                    points={`${MARKER.WIDTH / 2},1 ${MARKER.WIDTH - 1},${MARKER.HEIGHT / 2} ${MARKER.WIDTH / 2},${MARKER.HEIGHT - 1} 1,${MARKER.HEIGHT / 2}`} 
+                                    fill="none" 
+                                    stroke={connectionPathColor} 
+                                    strokeWidth="1" 
+                                />
                             </marker>
                         </defs>
                         
