@@ -1,7 +1,7 @@
 // src/hooks/useElementDragEffect.tsx
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Element } from '../types';
 import { useCanvas } from '../context/canvasContext';
 import { isDescendant } from '../state/state';
@@ -30,6 +30,8 @@ export const useElementDragEffect = () => {
   const [dragStartOffset, setDragStartOffset] = useState<Position>({ x: 0, y: 0 });
   const [originalPosition, setOriginalPosition] = useState<Position>({ x: 0, y: 0 });
   const [currentDropTarget, setCurrentDropTarget] = useState<DropTargetInfo>(null);
+  // 元の位置を各要素ごとに記録するためのMap
+  const elementOriginalPositions = useRef<Map<string, Position>>(new Map());
 
   const convertToZoomCoordinates = useCallback((e: MouseEvent | TouchEvent): Position => {
     let clientX: number, clientY: number;
@@ -68,19 +70,32 @@ export const useElementDragEffect = () => {
         y: zoomAdjustedPos.y - element.y,
       });
       setOriginalPosition({ x: element.x, y: element.y });
+      
+      // ドラッグ開始時に選択されている全要素の元の位置を保存
+      elementOriginalPositions.current.clear();
+      const selectedElements = Object.values(state.elements).filter(el => el.selected);
+      selectedElements.forEach(el => {
+        elementOriginalPositions.current.set(el.id, { x: el.x, y: el.y });
+      });
     },
-    [convertToZoomCoordinates]
+    [convertToZoomCoordinates, state.elements]
   );
 
   const resetElementsPosition = () => {
     const selectedElements = Object.values(state.elements).filter(el => el.selected);
     selectedElements.forEach(element => {
-      dispatch({
-        type: 'MOVE_ELEMENT',
-        payload: { id: element.id, x: originalPosition.x, y: originalPosition.y }
-      });
+      // 保存した元の位置情報を使用
+      const originalPos = elementOriginalPositions.current.get(element.id);
+      if (originalPos) {
+        dispatch({
+          type: 'MOVE_ELEMENT',
+          payload: { id: element.id, x: originalPos.x, y: originalPos.y }
+        });
+      }
     });
-    setDraggingElement(null); // Ensure dragging state is reset
+    // 状態をリセット
+    setDraggingElement(null);
+    elementOriginalPositions.current.clear();
   };
 
   const handleMouseUp = useCallback(async () => {
@@ -185,10 +200,12 @@ export const useElementDragEffect = () => {
       addToast(ToastMessages.dragError, 'warn');
       resetElementsPosition();
     } finally {
+      // 状態のリセットを確実に行う
       setDraggingElement(null);
       setCurrentDropTarget(null);
+      elementOriginalPositions.current.clear();
     }
-  }, [draggingElement, currentDropTarget, state.elements, dispatch, addToast, originalPosition]);
+  }, [draggingElement, currentDropTarget, state.elements, dispatch, addToast]);
 
   useEffect(() => {
     if (!draggingElement) return;
