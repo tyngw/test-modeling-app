@@ -2,10 +2,9 @@
 'use client';
 
 import React, { memo, useEffect, useRef, useState } from 'react';
-import { SIZE, DEFAULT_FONT_SIZE, LINE_HEIGHT_RATIO, TEXTAREA_PADDING, DEFAULT_FONT_FAMILY } from '../constants/elementSettings';
+import { SIZE, DEFAULT_FONT_SIZE, LINE_HEIGHT_RATIO, TEXTAREA_PADDING, DEFAULT_FONT_FAMILY, DEFAULT_TEXT_COLOR } from '../constants/elementSettings';
 import { wrapText } from '../utils/textareaHelpers';
 import { debugLog } from '../utils/debugLogHelpers';
-import { Typography } from '@mui/material';
 import { getTextColor } from '../utils/localStorageHelpers';
 
 interface TextDisplayAreaProps {
@@ -35,11 +34,19 @@ const TextDisplayArea: React.FC<TextDisplayAreaProps> = memo(({
     height: 0
   });
   const [isMounted, setIsMounted] = useState(false);
+  const [textColor, setTextColor] = useState(DEFAULT_TEXT_COLOR);
   const textRef = useRef<HTMLDivElement>(null);
   const prevDimensions = useRef({ width: 0, height: 0 });
   const prevText = useRef(text);
   const handleHeightChangeRef = useRef(onHeightChange);
   handleHeightChangeRef.current = onHeightChange;
+
+  // テキストの色を設定
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setTextColor(getTextColor());
+    }
+  }, []);
 
   useEffect(() => {
     setIsMounted(true);
@@ -79,12 +86,14 @@ const TextDisplayArea: React.FC<TextDisplayAreaProps> = memo(({
       prevText.current = text;
     }
 
-    return () => cancelAnimationFrame(animationFrame);
+    return () => {
+      if (animationFrame) {
+        cancelAnimationFrame(animationFrame);
+      }
+    };
   }, [text, initialWidth, initialHeight, zoomRatio, isMounted]);
 
   if (!isMounted) return null;
-
-  const textColor = getTextColor();
 
   return (
     <foreignObject
@@ -94,9 +103,9 @@ const TextDisplayArea: React.FC<TextDisplayAreaProps> = memo(({
       height={Math.round(dimensions.height / zoomRatio)}
       pointerEvents="none"
     >
-      <Typography
-        component="span"
-        sx={{
+      <div 
+        ref={textRef}
+        style={{
           fontFamily: fontFamily || DEFAULT_FONT_FAMILY,
           color: textColor,
           fontSize: `${DEFAULT_FONT_SIZE}px`,
@@ -111,7 +120,7 @@ const TextDisplayArea: React.FC<TextDisplayAreaProps> = memo(({
         }}
       >
         {text}
-      </Typography>
+      </div>
     </foreignObject>
   );
 });
