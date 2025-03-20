@@ -1,7 +1,7 @@
 // src/components/ideaElement.tsx
 'use client';
 
-import React, { useCallback, useMemo, useState, useEffect } from 'react';
+import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { useCanvas } from '../context/canvasContext';
 import TextSection from './textDisplayArea';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
@@ -29,6 +29,7 @@ interface IdeaElementProps {
   draggingElement: CanvasElement | null;
   handleMouseDown: (e: React.MouseEvent<SVGElement>, element: CanvasElement) => void;
   handleMouseUp: () => void;
+  onHoverChange?: (elementId: string, isHovered: boolean) => void;
 }
 
 const renderActionButtons = (element: CanvasElement, dispatch: React.Dispatch<any>, elements: CanvasElement[]) => {
@@ -105,7 +106,8 @@ const renderActionButtons = (element: CanvasElement, dispatch: React.Dispatch<an
   );
 };
 
-const DebugInfo: React.FC<{ element: CanvasElement; isHovered: boolean }> = ({ element, isHovered }) => {
+// Export DebugInfo component so it can be used by parent components
+export const DebugInfo: React.FC<{ element: CanvasElement; isHovered: boolean }> = ({ element, isHovered }) => {
   if (!isDevelopment || !isHovered) {
     return null;
   }
@@ -116,9 +118,17 @@ const DebugInfo: React.FC<{ element: CanvasElement; isHovered: boolean }> = ({ e
       y={element.y - 10}
       width="340"
       height="200"
-      style={{ backgroundColor: 'white', border: '1px solid black', padding: '5px', zIndex: 10000, borderRadius: '5px' }}
+      className="debug-info"
     >
-      <div style={{ fontSize: '12px', color: 'black' }}>
+      <div style={{ 
+        fontSize: '12px', 
+        color: 'black', 
+        backgroundColor: 'white', 
+        border: '1px solid black', 
+        padding: '5px', 
+        borderRadius: '5px',
+        boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)'
+      }}>
         <div>id: {element.id}</div>
         <div>parentID: {element.parentId}</div>
         <div>order: {element.order}</div>
@@ -143,12 +153,14 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
   dropPosition,
   draggingElement,
   handleMouseDown,
+  onHoverChange,
 }) => {
   const { state, dispatch } = useCanvas();
   const [isMounted, setIsMounted] = useState(false);
   const parentElement = state.elements[element.parentId!];
   const currentDropTargetId = currentDropTarget?.id || -1;
   const [isHovered, setIsHovered] = useState(false);
+  const prevHoveredRef = useRef(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -226,6 +238,31 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
       }
     });
   };
+
+  const handleMouseEnter = useCallback(() => {
+    setIsHovered(true);
+    if (onHoverChange && !prevHoveredRef.current) {
+      onHoverChange(element.id, true);
+      prevHoveredRef.current = true;
+    }
+  }, [element.id, onHoverChange]);
+
+  const handleMouseLeave = useCallback(() => {
+    setIsHovered(false);
+    if (onHoverChange && prevHoveredRef.current) {
+      onHoverChange(element.id, false);
+      prevHoveredRef.current = false;
+    }
+  }, [element.id, onHoverChange]);
+
+  // Clean up hover state when component unmounts
+  useEffect(() => {
+    return () => {
+      if (onHoverChange && prevHoveredRef.current) {
+        onHoverChange(element.id, false);
+      }
+    };
+  }, [element.id, onHoverChange]);
 
   if (!isMounted) return null;
 
@@ -318,8 +355,8 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
           onClick={handleSelect}
           onDoubleClick={() => dispatch({ type: 'EDIT_ELEMENT' })}
           onMouseDown={(e) => handleMouseDown(e, element)}
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
           style={{
             fill: (element.id === currentDropTargetId && dropPosition === 'child')
               ? ELEM_STYLE.DRAGGING.COLOR
@@ -408,7 +445,6 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
             )}
           </React.Fragment>
         ))}
-        <DebugInfo element={element} isHovered={isHovered} />
       </g>
     </React.Fragment>
   );
