@@ -59,6 +59,7 @@ export const createNewElement = ({
         selected: true,
         visible: true,
         tentative: false,
+        connectionPathType: 'none', // Add default connectionPathType
     };
 };
 
@@ -764,6 +765,7 @@ const createElementAdder = (
         selected: options?.newElementSelect ?? false,
         editing: options?.newElementSelect ?? false,
         tentative: options?.tentative ?? false,
+        connectionPathType: 'none' as 'arrow' | 'none', // Add default connectionPathType
     };
 
     const updatedParentElement = {
@@ -1261,8 +1263,6 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
 
         return {
             ...state,
-            elements: adjustElementPositions(updatedElements),
-            cutElements
         };
     },
 
@@ -1304,6 +1304,20 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
                 ...state.elements,
                 [action.payload.id]: updatedElement
             })
+        };
+    },
+    UPDATE_CONNECTION_PATH_TYPE: (state, action) => {
+        const { id, connectionPathType } = action.payload;
+        const updatedElement = {
+            ...state.elements[id],
+            connectionPathType
+        };
+        return {
+            ...state,
+            elements: {
+                ...state.elements,
+                [id]: updatedElement
+            }
         };
     },
 };
