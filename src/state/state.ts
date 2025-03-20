@@ -825,6 +825,41 @@ const handleZoomOut = (state: State): State => ({
     zoomRatio: Math.max(state.zoomRatio - 0.1, 0.1)
 });
 
+const copyToClipboard = (elements: { [key: string]: Element }) => {
+    const getElementText = (element: Element, depth: number = 0): string => {
+        const children = Object.values(elements).filter(el => el.parentId === element.id);
+        const childTexts = children.map(child => getElementText(child, depth + 1));
+        const tabs = '\t'.repeat(depth);
+        return `${tabs}${element.texts[0]}
+${childTexts.join('')}`;
+    };
+
+    const selectedElement = Object.values(elements).find(el => el.selected);
+    if (!selectedElement) return;
+
+    const textToCopy = getElementText(selectedElement);
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            console.log('Copied to clipboard:', textToCopy);
+        }).catch(err => {
+            console.error('Failed to copy to clipboard:', err);
+        });
+    } else {
+        const textArea = document.createElement('textarea');
+        textArea.value = textToCopy;
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            console.log('Copied to clipboard:', textToCopy);
+        } catch (err) {
+            console.error('Failed to copy to clipboard:', err);
+        }
+        document.body.removeChild(textArea);
+    }
+};
+
 const actionHandlers: { [key: string]: (state: State, action?: any) => State } = {
     ZOOM_IN: handleZoomIn,
     ZOOM_OUT: handleZoomOut,
@@ -1261,14 +1296,20 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
             updatedElements = deleteElementRecursive(updatedElements, selectedElement);
         });
 
+        copyToClipboard(cutElements);
+
         return {
             ...state,
+            elements: updatedElements,
+            cutElements
         };
     },
 
-    COPY_ELEMENT: state => handleSelectedElementAction(state, selectedElement => ({
-        cutElements: getSelectedAndChildren(state.elements, selectedElement)
-    })),
+    COPY_ELEMENT: state => handleSelectedElementAction(state, selectedElement => {
+        const cutElements = getSelectedAndChildren(state.elements, selectedElement);
+        copyToClipboard(cutElements);
+        return { cutElements };
+    }),
 
     PASTE_ELEMENT: state => {
         const selectedElements = Object.values(state.elements).filter(e => e.selected);
