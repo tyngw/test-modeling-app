@@ -11,6 +11,12 @@ export const VERSION_KEY = 'appVersion';
 const PROMPT_KEY = 'prompt';
 const SYSTEM_PROMPT_KEY = 'systemPromptTemplate';
 const APIKEY_KEY = 'apiKey';
+const MODEL_TYPE_KEY = 'modelType';
+
+const MODEL_ENDPOINTS: { [key: string]: string } = {
+  'gemini-1.5-flash': 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
+  'gemini-2.0-flash': 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+};
 
 // CryptoJS動的ローダー
 const loadCryptoJS = async () => {
@@ -116,7 +122,15 @@ export const setApiKey = async (value: string): Promise<void> => {
   });
 };
 
-export const getApiEndpoint = (): string => safeLocalStorage.getItem('apiEndpoint') || 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+// モデルタイプ関連
+export const getModelType = (): string => safeLocalStorage.getItem(MODEL_TYPE_KEY) || 'gemini-1.5-flash';
+export const setModelType = (modelType: string) => safeLocalStorage.setItem(MODEL_TYPE_KEY, modelType);
+
+// エンドポイント取得
+export const getApiEndpoint = (): string => {
+  const modelType = getModelType();
+  return MODEL_ENDPOINTS[modelType] || MODEL_ENDPOINTS['gemini-1.5-flash'];
+};
 export const setApiEndpoint = (endpoint: string) => safeLocalStorage.setItem('apiEndpoint', endpoint);
 
 export const getPrompt = (): string => safeLocalStorage.getItem(PROMPT_KEY) || '';
