@@ -17,7 +17,7 @@ import { reducer } from './state/state';
 import { saveSvg } from './utils/fileHelpers';
 import { loadElements, saveElements } from './utils/fileHelpers';
 import { generateWithGemini } from './utils/api';
-import { getApiKey } from './utils/localStorageHelpers';
+import { getApiKey, getModelType } from './utils/localStorageHelpers';
 import { formatElementsForPrompt } from './utils/elementHelpers';
 import { createSystemPrompt } from './constants/promptHelpers';
 import { useToast } from './context/toastContext';
@@ -75,15 +75,14 @@ const AppContent: React.FC = () => {
       return;
     }
 
-
-
     try {
       const structureText = formatElementsForPrompt(
         currentTab.state.elements,
         selectedElement.id
       );
       const fullPrompt = createSystemPrompt({ structureText, inputText });
-      const result = await generateWithGemini(fullPrompt, decryptedApiKey);
+      const modelType = getModelType();
+      const result = await generateWithGemini(fullPrompt, decryptedApiKey, modelType);
 
       let childNodes: string[] = [];
       if (Array.isArray(result)) {

@@ -61,7 +61,7 @@ export const createNewElement = ({
         selected: true,
         visible: true,
         tentative: false,
-        connectionPathType: markerType, // Use the marker type from localStorage
+        connectionPathType: markerType as 'arrow' | 'circle' | 'square' | 'diamond' | 'none', // Use the marker type from localStorage
     };
 };
 
