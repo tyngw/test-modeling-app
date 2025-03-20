@@ -15,7 +15,7 @@ export interface Element {
   selected: boolean;
   visible: boolean;
   tentative: boolean;
-  connectionPathType: 'arrow' | 'none';
+  connectionPathType: 'arrow' | 'circle' | 'square' | 'diamond' | 'none';
 }
   
 export interface CanvasState {
@@ -37,4 +37,4 @@ export type CanvasAction =
     }}
   | { type: 'UNDO' }
   | { type: 'REDO' }
-  | { type: 'UPDATE_CONNECTION_PATH_TYPE'; payload: { id: string; connectionPathType: 'arrow' | 'none' } };
+  | { type: 'UPDATE_CONNECTION_PATH_TYPE'; payload: { id: string; connectionPathType: 'arrow' | 'circle' | 'square' | 'diamond' | 'none' } }

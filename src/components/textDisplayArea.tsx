@@ -2,9 +2,11 @@
 'use client';
 
 import React, { memo, useEffect, useRef, useState } from 'react';
-import { SIZE, DEFAULT_FONT_SIZE, LINE_HEIGHT_RATIO, TEXTAREA_PADDING } from '../constants/elementSettings';
+import { SIZE, DEFAULT_FONT_SIZE, LINE_HEIGHT_RATIO, TEXTAREA_PADDING, DEFAULT_FONT_FAMILY } from '../constants/elementSettings';
 import { wrapText } from '../utils/textareaHelpers';
 import { debugLog } from '../utils/debugLogHelpers';
+import { Typography } from '@mui/material';
+import { getTextColor } from '../utils/localStorageHelpers';
 
 interface TextDisplayAreaProps {
   x: number;
@@ -14,6 +16,7 @@ interface TextDisplayAreaProps {
   text: string;
   zoomRatio: number;
   fontSize: number;
+  fontFamily?: string;
   onHeightChange: (newHeight: number) => void;
 }
 
@@ -24,6 +27,7 @@ const TextDisplayArea: React.FC<TextDisplayAreaProps> = memo(({
   height: initialHeight,
   text,
   zoomRatio,
+  fontFamily,
   onHeightChange
 }) => {
   const [dimensions, setDimensions] = useState({
@@ -62,7 +66,7 @@ const TextDisplayArea: React.FC<TextDisplayAreaProps> = memo(({
       const heightChanged = Math.abs(totalHeight - prevDimensions.current.height) > 1;
 
       if (widthChanged || heightChanged) {
-        setDimensions({  // ← 追加が必要
+        setDimensions({
           width: currentWidth,
           height: totalHeight
         });
@@ -80,6 +84,8 @@ const TextDisplayArea: React.FC<TextDisplayAreaProps> = memo(({
 
   if (!isMounted) return null;
 
+  const textColor = getTextColor();
+
   return (
     <foreignObject
       x={x}
@@ -88,24 +94,24 @@ const TextDisplayArea: React.FC<TextDisplayAreaProps> = memo(({
       height={Math.round(dimensions.height / zoomRatio)}
       pointerEvents="none"
     >
-      <div
-        ref={textRef}
-        className='text-display-area'
-        style={{
+      <Typography
+        component="span"
+        sx={{
+          fontFamily: fontFamily || DEFAULT_FONT_FAMILY,
+          color: textColor,
           fontSize: `${DEFAULT_FONT_SIZE}px`,
           lineHeight: LINE_HEIGHT_RATIO,
-          fontFamily: `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`,
           width: `${dimensions.width - TEXTAREA_PADDING.HORIZONTAL}px`,
           minHeight: `${SIZE.SECTION_HEIGHT}px`,
           padding: `${TEXTAREA_PADDING.VERTICAL * 0.5}px ${TEXTAREA_PADDING.HORIZONTAL * 0.5}px`,
           overflow: 'hidden',
           whiteSpace: 'pre-wrap',
-          wordWrap: 'break-word',
+          wordBreak: 'break-word',
           boxSizing: 'content-box',
         }}
       >
         {text}
-      </div>
+      </Typography>
     </foreignObject>
   );
 });
