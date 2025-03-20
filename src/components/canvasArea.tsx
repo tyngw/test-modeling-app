@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import IdeaElement from './ideaElement';
+import IdeaElement, { DebugInfo } from './ideaElement';
 import InputFields from './inputFields';
 import useResizeEffect from '../hooks/useResizeEffect';
 import { useCanvas } from '../context/canvasContext';
@@ -37,6 +37,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
     const editingNode = Object.values(elements).find((element) => (element as CanvasElement).editing) as CanvasElement | undefined;
     const [hover, setHover] = useState<string | null>(null);
     const [showMenuForElement, setShowMenuForElement] = useState<string | null>(null);
+    const [hoveredElements, setHoveredElements] = useState<{[key: string]: boolean}>({});
 
     useEffect(() => {
         if (!editingNode) svgRef.current?.focus();
@@ -202,12 +203,13 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
             `${element.x},${element.y + totalHeight / 2}`
         ].join(' ');
         return (
-            <g>
+            <g key={`connection-${element.id}-${element.parentId}`}>
                 <circle
                     cx={element.x + element.width + 10}
                     cy={element.y + totalHeight / 2}
                     r={10}
                     fill="transparent"
+                    style={{ zIndex: 0, opacity: 0 }}
                     onMouseEnter={() => setHover(element.id)}
                     onMouseLeave={() => setHover(null)}
                     onClick={() => setShowMenuForElement(element.id)}
@@ -217,7 +219,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                         cx={element.x + element.width + 10}
                         cy={element.y + totalHeight / 2}
                         r={10}
-                        fill="gray"
+                        fill="#bfbfbf"
                     />
                 )}
                 <path
@@ -228,56 +230,70 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                     fill="none"
                     markerStart={parentElement.connectionPathType === 'arrow' ? 'url(#arrowhead)' : undefined}
                 />
-                {showMenuForElement === element.id && (
-                    <foreignObject
-                        x={element.x + element.width + 15}
-                        y={element.y + totalHeight / 2 - 25}
-                        width={100}
-                        height={70}
-                        className="popup-menu"
-                        style={{ zIndex: 9999 }}
-                    >
-                        <div style={{
-                            backgroundColor: 'white',
-                            border: '1px solid black',
-                            borderRadius: '4px',
-                            boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)',
-                            padding: '8px'
-                        }}>
-                            <div
-                                style={{ padding: '4px 0', cursor: 'pointer' }}
-                                onClick={() => {
-                                    dispatch({
-                                        type: 'UPDATE_CONNECTION_PATH_TYPE',
-                                        payload: {
-                                            id: element.id,
-                                            connectionPathType: 'arrow'
-                                        }
-                                    });
-                                    setShowMenuForElement(null);
-                                }}
-                            >
-                                Arrow
-                            </div>
-                            <div
-                                style={{ padding: '4px 0', cursor: 'pointer' }}
-                                onClick={() => {
-                                    dispatch({
-                                        type: 'UPDATE_CONNECTION_PATH_TYPE',
-                                        payload: {
-                                            id: element.id,
-                                            connectionPathType: 'none'
-                                        }
-                                    });
-                                    setShowMenuForElement(null);
-                                }}
-                            >
-                                None
-                            </div>
-                        </div>
-                    </foreignObject>
-                )}
             </g>
+        );
+    };
+
+    // Generate popup menus for rendering at the top level
+    const renderPopupMenus = () => {
+        if (!showMenuForElement) return null;
+
+        const element = elements[showMenuForElement];
+        if (!element) return null;
+
+        const totalHeight = element.height;
+        
+        return (
+            <foreignObject
+                x={element.x + element.width + 15}
+                y={element.y + totalHeight / 2 - 25}
+                width={100}
+                height={90}
+                className="popup-menu"
+            >
+                <div style={{
+                    backgroundColor: 'white',
+                    border: '2px solid black',
+                    borderRadius: '4px',
+                    boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)',
+                    padding: '8px'
+                }}>
+                    <div
+                        style={{ padding: '4px 0', cursor: 'pointer', backgroundColor: hover === 'arrow' ? '#e0e0e0' : 'white' }}
+                        onMouseEnter={() => setHover('arrow')}
+                        onMouseLeave={() => setHover(null)}
+                        onClick={() => {
+                            dispatch({
+                                type: 'UPDATE_CONNECTION_PATH_TYPE',
+                                payload: {
+                                    id: element.id,
+                                    connectionPathType: 'arrow'
+                                }
+                            });
+                            setShowMenuForElement(null);
+                        }}
+                    >
+                        Arrow
+                    </div>
+                    <div
+                        style={{ padding: '4px 0', cursor: 'pointer', backgroundColor: hover === 'none' ? '#e0e0e0' : 'white' }}
+                        onMouseEnter={() => setHover('none')}
+                        onMouseLeave={() => setHover(null)}
+                        onClick={() => {
+                            dispatch({
+                                type: 'UPDATE_CONNECTION_PATH_TYPE',
+                                payload: {
+                                    id: element.id,
+                                    connectionPathType: 'none'
+                                }
+                            });
+                            setShowMenuForElement(null);
+                        }}
+                    >
+                        None
+                    </div>
+                </div>
+            </foreignObject>
         );
     };
 
@@ -292,6 +308,64 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, [showMenuForElement]);
+
+    // Add a method to track hovered elements
+    const handleElementHover = useCallback((elementId: string, isHovered: boolean) => {
+        setHoveredElements(prev => {
+            // Only update if the state is actually changing
+            if (prev[elementId] === isHovered) {
+                return prev;
+            }
+            
+            // Create a new object to trigger re-render
+            const newState = { ...prev };
+            
+            if (isHovered) {
+                newState[elementId] = true;
+            } else {
+                delete newState[elementId];
+            }
+            
+            return newState;
+        });
+    }, []);
+
+    // Modify IdeaElement to track hover status at the top level
+    const renderElements = () => {
+        return Object.values(elements)
+            .filter((element): element is CanvasElement => element.visible)
+            .map(element => (
+                <React.Fragment key={element.id}>
+                    <IdeaElement
+                        element={element}
+                        currentDropTarget={currentDropTarget as CanvasElement | null}
+                        dropPosition={dropPosition}
+                        draggingElement={draggingElement}
+                        handleMouseDown={handleMouseDown as unknown as (e: React.MouseEvent<SVGElement>, element: CanvasElement) => void}
+                        handleMouseUp={handleMouseUp}
+                        onHoverChange={handleElementHover}
+                    />
+                </React.Fragment>
+            ));
+    };
+
+    // Render debug info at the top level
+    const renderDebugInfo = () => {
+        return Object.keys(hoveredElements)
+            .map(elementId => {
+                const element = elements[elementId];
+                if (!element || !element.visible) return null;
+                
+                return (
+                    <DebugInfo 
+                        key={`debug-${elementId}`}
+                        element={element} 
+                        isHovered={true}
+                    />
+                );
+            })
+            .filter(Boolean);
+    };
 
     return (
         <>
@@ -331,20 +405,9 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                                 />
                             </marker>
                         </defs>
-                        {Object.values(elements)
-                            .filter((element): element is CanvasElement => element.visible)
-                            .map(element => (
-                                <React.Fragment key={element.id}>
-                                    <IdeaElement
-                                        element={element}
-                                        currentDropTarget={currentDropTarget as CanvasElement | null}
-                                        dropPosition={dropPosition}
-                                        draggingElement={draggingElement}
-                                        handleMouseDown={handleMouseDown as unknown as (e: React.MouseEvent<SVGElement>, element: CanvasElement) => void}
-                                        handleMouseUp={handleMouseUp}
-                                    />
-                                </React.Fragment>
-                            ))}
+                        
+                        {/* Render main elements */}
+                        {renderElements()}
 
                         {/* 通常の接続線 */}
                         {Object.values(elements)
@@ -377,6 +440,10 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                                 );
                             })()
                         )}
+                        
+                        {/* Always render popup menus and debug info at the end so they appear on top */}
+                        {renderPopupMenus()}
+                        {renderDebugInfo()}
                     </svg>
                 )}
                 <InputFields
