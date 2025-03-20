@@ -15,24 +15,26 @@ export interface Element {
   selected: boolean;
   visible: boolean;
   tentative: boolean;
+  connectionPathType: 'arrow' | 'none';
 }
   
-  export interface CanvasState {
-    elements: Record<string, Element>;
-    width: number;
-    height: number;
-    zoomRatio: number;
-    cutNodes?: Record<string, Element>;
-  }
+export interface CanvasState {
+  elements: Record<string, Element>;
+  width: number;
+  height: number;
+  zoomRatio: number;
+  cutNodes?: Record<string, Element>;
+}
   
-  export type CanvasAction = 
-    | { type: 'LOAD_NODES'; payload: Record<string, Element> }
-    | { type: 'SELECT_NODE'; payload: string }
-    | { type: 'UPDATE_NODE_SIZE'; payload: { 
-        id: string; 
-        width: number; 
-        height: number; 
-        sectionHeights: number[] 
-      }}
-    | { type: 'UNDO' }
-    | { type: 'REDO' };
+export type CanvasAction = 
+  | { type: 'LOAD_NODES'; payload: Record<string, Element> }
+  | { type: 'SELECT_NODE'; payload: string }
+  | { type: 'UPDATE_NODE_SIZE'; payload: { 
+      id: string; 
+      width: number; 
+      height: number; 
+      sectionHeights: number[] 
+    }}
+  | { type: 'UNDO' }
+  | { type: 'REDO' }
+  | { type: 'UPDATE_CONNECTION_PATH_TYPE'; payload: { id: string; connectionPathType: 'arrow' | 'none' } };
