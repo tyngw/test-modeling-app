@@ -13,6 +13,8 @@ import {
   setPrompt,
   getSystemPromptTemplate,
   setSystemPromptTemplate,
+  getModelType,
+  setModelType,
 } from '../utils/localStorageHelpers';
 
 interface SettingsModalProps {
@@ -26,6 +28,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const [apiKey, setApiKeyState] = useState('');
   const [prompt, setPromptState] = useState('');
   const [systemPromptTemplate, setSystemPromptTemplateState] = useState('');
+  const [modelType, setModelTypeState] = useState('gemini-1.5-flash');
   const [sectionsError, setSectionsError] = useState(false);
 
   useEffect(() => {
@@ -35,6 +38,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
         setApiKeyState(await getApiKey());
         setPromptState(getPrompt());
         setSystemPromptTemplateState(getSystemPromptTemplate());
+        setModelTypeState(getModelType());
       }
     };
     loadSettings();
@@ -46,19 +50,22 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     setNumberOfSections(validSections);
     await setApiKey(apiKey);
     setPrompt(prompt);
-    setSystemPromptTemplate(systemPromptTemplate)
+    setSystemPromptTemplate(systemPromptTemplate);
+    setModelType(modelType);
     onClose();
   };
 
   const handleSectionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setNumberOfSectionsInput(value);
-
     const numValue = parseInt(value, 10);
     const isEmpty = value === '';
     const isInvalid = isEmpty || isNaN(numValue) || numValue < 1 || numValue > 10;
-    
     setSectionsError(isInvalid);
+  };
+
+  const handleModelTypeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setModelTypeState(e.target.value);
   };
 
   return (
@@ -66,13 +73,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
       <Typography variant="h6" gutterBottom>
         Preference
       </Typography>
-
       <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)}>
         <Tab label="Elements Setting" />
         <Tab label="API Setting" />
         <Tab label="Prompt" />
       </Tabs>
-
       <Box sx={{ mt: 2, minHeight: 300 }}>
         {activeTab === 0 && (
           <Box>
@@ -91,16 +96,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
             </FormHelperText>
           </Box>
         )}
-
         {activeTab === 1 && (
           <Box>
             <FormControl component="fieldset" fullWidth>
               <FormLabel component="legend">Select Model</FormLabel>
               <FormGroup>
                 <FormControlLabel
-                  value="Gemini-1.5-flash"
-                  control={<Radio checked />}
+                  value="gemini-1.5-flash"
+                  control={<Radio checked={modelType === 'gemini-1.5-flash'} onChange={handleModelTypeChange} />}
                   label="Gemini-1.5-flash"
+                />
+                <FormControlLabel
+                  value="gemini-2.0-flash"
+                  control={<Radio checked={modelType === 'gemini-2.0-flash'} onChange={handleModelTypeChange} />}
+                  label="Gemini-2.0-flash"
                 />
               </FormGroup>
             </FormControl>
@@ -140,7 +149,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
           </Box>
         )}
       </Box>
-
       <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
         <Button variant="outlined" onClick={onClose}>
           Cancel

@@ -2,7 +2,7 @@
 import axios from 'axios';
 import { getApiEndpoint } from './localStorageHelpers';
 
-export const generateWithGemini = async (prompt: string, apiKey: string) => {
+export const generateWithGemini = async (prompt: string, apiKey: string, modelType: string) => {
     try {
         console.log('prompt: \n', prompt)
         const endpoint = `${getApiEndpoint()}?key=${apiKey}`;
