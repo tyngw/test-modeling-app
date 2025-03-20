@@ -3,7 +3,7 @@
 
 import { Undo, Redo, saveSnapshot } from './undoredo';
 import { handleArrowUp, handleArrowDown, handleArrowRight, handleArrowLeft } from '../utils/elementSelector';
-import { getNumberOfSections } from '../utils/localStorageHelpers';
+import { getNumberOfSections, getMarkerType } from '../utils/localStorageHelpers';
 import { Element } from '../types';
 import {
     OFFSET,
@@ -43,6 +43,8 @@ export const createNewElement = ({
     depth = 1,
     numSections = getNumberOfSections(),
 }: NewElementParams = {}): Element => {
+    const markerType = getMarkerType();
+    
     return {
         id: uuidv4(),
         texts: Array(numSections).fill(''),
@@ -59,7 +61,7 @@ export const createNewElement = ({
         selected: true,
         visible: true,
         tentative: false,
-        connectionPathType: 'none', // Add default connectionPathType
+        connectionPathType: markerType as 'arrow' | 'circle' | 'square' | 'diamond' | 'none', // Use the marker type from localStorage
     };
 };
 

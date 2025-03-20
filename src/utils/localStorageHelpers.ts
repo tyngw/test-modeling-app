@@ -1,7 +1,16 @@
 // src/utils/localStorageHelpers.ts
 'use client';
 
-import { NUMBER_OF_SECTIONS } from '../constants/elementSettings';
+import { 
+  NUMBER_OF_SECTIONS, 
+  DEFAULT_FONT_FAMILY, 
+  ELEM_STYLE, 
+  DEFAULT_MARKER_TYPE,
+  DEFAULT_CONNECTION_PATH_COLOR,
+  DEFAULT_CONNECTION_PATH_STROKE,
+  DEFAULT_CANVAS_BACKGROUND_COLOR,
+  DEFAULT_TEXT_COLOR,
+} from '../constants/elementSettings';
 import { SYSTEM_PROMPT_TEMPLATE } from '../constants/systemPrompt';
 import { VERSION } from '../constants/version';
 
@@ -93,6 +102,81 @@ export const getNumberOfSections = (): number => {
 export const setNumberOfSections = (value: number): void => {
   const clampedValue = Math.max(1, Math.min(10, value));
   safeLocalStorage.setItem('numberOfSections', clampedValue.toString());
+};
+
+// Element styling related
+export const getElementColor = (): string => {
+  return safeLocalStorage.getItem('elementColor') || ELEM_STYLE.NORMAL.COLOR;
+};
+
+export const setElementColor = (color: string): void => {
+  safeLocalStorage.setItem('elementColor', color);
+};
+
+export const getStrokeColor = (): string => {
+  return safeLocalStorage.getItem('strokeColor') || ELEM_STYLE.NORMAL.STROKE_COLOR;
+};
+
+export const setStrokeColor = (color: string): void => {
+  safeLocalStorage.setItem('strokeColor', color);
+};
+
+export const getStrokeWidth = (): number => {
+  const stored = safeLocalStorage.getItem('strokeWidth');
+  return stored ? parseFloat(stored) || ELEM_STYLE.STROKE_WIDTH : ELEM_STYLE.STROKE_WIDTH;
+};
+
+export const setStrokeWidth = (width: number): void => {
+  safeLocalStorage.setItem('strokeWidth', width.toString());
+};
+
+export const getFontFamily = (): string => {
+  return safeLocalStorage.getItem('fontFamily') || DEFAULT_FONT_FAMILY;
+};
+
+export const setFontFamily = (fontFamily: string): void => {
+  safeLocalStorage.setItem('fontFamily', fontFamily);
+};
+
+export const getMarkerType = (): string => {
+  return safeLocalStorage.getItem('markerType') || DEFAULT_MARKER_TYPE;
+};
+
+export const setMarkerType = (markerType: string): void => {
+  safeLocalStorage.setItem('markerType', markerType);
+};
+
+export const getConnectionPathColor = (): string => {
+  return safeLocalStorage.getItem('connectionPathColor') || DEFAULT_CONNECTION_PATH_COLOR;
+};
+
+export const setConnectionPathColor = (color: string): void => {
+  safeLocalStorage.setItem('connectionPathColor', color);
+};
+
+export const getConnectionPathStroke = (): number => {
+  const stored = safeLocalStorage.getItem('connectionPathStroke');
+  return stored ? parseFloat(stored) || DEFAULT_CONNECTION_PATH_STROKE : DEFAULT_CONNECTION_PATH_STROKE;
+};
+
+export const setConnectionPathStroke = (stroke: number): void => {
+  safeLocalStorage.setItem('connectionPathStroke', stroke.toString());
+};
+
+export const getCanvasBackgroundColor = (): string => {
+  return safeLocalStorage.getItem('canvasBackgroundColor') || DEFAULT_CANVAS_BACKGROUND_COLOR;
+};
+
+export const setCanvasBackgroundColor = (color: string): void => {
+  safeLocalStorage.setItem('canvasBackgroundColor', color);
+};
+
+export const getTextColor = (): string => {
+  return safeLocalStorage.getItem('textColor') || DEFAULT_TEXT_COLOR;
+};
+
+export const setTextColor = (color: string): void => {
+  safeLocalStorage.setItem('textColor', color);
 };
 
 // APIキー関連

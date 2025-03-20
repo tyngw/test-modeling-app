@@ -5,11 +5,15 @@ import { useCanvas } from '../context/canvasContext';
 import { wrapText } from '../utils/textareaHelpers';
 import {
     DEFAULT_FONT_SIZE,
-    DEFAULT_FONT_FAMILY,
     TEXTAREA_PADDING,
     LINE_HEIGHT_RATIO,
     SIZE,
 } from '../constants/elementSettings';
+import { 
+    getFontFamily, 
+    getElementColor,
+    getTextColor 
+} from '../utils/localStorageHelpers';
 import { Element } from '../types';
 
 interface InputFieldsProps {
@@ -24,10 +28,20 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
     const [activeIndex, setActiveIndex] = useState<number>(-1);
     const measureContext = useRef<CanvasRenderingContext2D | null>(null);
     const prevElementId = useRef<string | undefined>(undefined);
+    const [fontFamily, setFontFamily] = useState('');
+    const [backgroundColor, setBackgroundColor] = useState('');
+    const [textColor, setTextColor] = useState('');
 
     useEffect(() => {
         const canvas = document.createElement('canvas');
         measureContext.current = canvas.getContext('2d');
+        
+        // クライアントサイドでのみLocalStorageの値を取得
+        if (typeof window !== 'undefined') {
+            setFontFamily(getFontFamily());
+            setBackgroundColor(getElementColor());
+            setTextColor(getTextColor());
+        }
     }, []);
 
     useEffect(() => {
@@ -137,7 +151,9 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
                             fontSize: `${DEFAULT_FONT_SIZE * state.zoomRatio}px`,
                             lineHeight: `${LINE_HEIGHT_RATIO}em`,
                             padding: `0 3px`,
-                            fontFamily: DEFAULT_FONT_FAMILY,
+                            fontFamily: fontFamily,
+                            backgroundColor: backgroundColor,
+                            color: textColor,
                             boxSizing: 'border-box',
                             WebkitFontSmoothing: 'antialiased',
                             MozOsxFontSmoothing: 'grayscale',

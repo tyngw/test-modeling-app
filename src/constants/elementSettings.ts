@@ -33,6 +33,7 @@ export const ELEM_STYLE = {
     },
     RX: 2,
     STROKE: "2px",
+    STROKE_WIDTH: 2,
 }
 export const CONNECTION_PATH_STYLE = {
     COLOR: "black",
@@ -52,9 +53,24 @@ export const ICONBAR_HEIGHT = 40;
 export const TABBAR_HEIGHT = 40;
 export const HEADER_HEIGHT = ICONBAR_HEIGHT + TABBAR_HEIGHT;
 
-// Markerを有効にする場合
-export const ARROW = {
-    HEIGHT: 24,
-    WIDTH: 24,
-    OFFSET: 15,
-}
+export const MARKER = {
+    HEIGHT: 8,
+    WIDTH: 8,
+    OFFSET: 12,
+};
+
+// Marker types
+export const MARKER_TYPES = {
+    NONE: 'none',
+    ARROW: 'arrow',
+    CIRCLE: 'circle',
+    SQUARE: 'square',
+    DIAMOND: 'diamond',
+};
+
+export const DEFAULT_MARKER_TYPE = MARKER_TYPES.NONE;
+
+export const DEFAULT_CONNECTION_PATH_COLOR = 'black';
+export const DEFAULT_CONNECTION_PATH_STROKE = 0.5;
+export const DEFAULT_CANVAS_BACKGROUND_COLOR = '#ffffff';
+export const DEFAULT_TEXT_COLOR = '#000000';
