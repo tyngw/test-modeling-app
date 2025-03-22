@@ -3,54 +3,39 @@
 
 import React, { useState, useEffect } from 'react';
 import ModalWindow from './modalWindow';
+import { SettingField } from './settings/SettingField';
+import { Box, Button, Typography, Tabs, Tab } from '@mui/material';
+import { SETTINGS_TABS, SettingField as SettingFieldType } from '../types/settings';
 import { 
-  Tabs, 
-  Tab, 
-  Box, 
-  TextField, 
-  Button, 
-  Typography, 
-  Radio, 
-  FormControlLabel, 
-  FormGroup, 
-  FormControl, 
-  FormLabel, 
-  FormHelperText,
-  Select,
-  MenuItem,
-  InputLabel
-} from '@mui/material';
-import {
+  getSystemPromptTemplate,
+  getModelType,
+  getPrompt,
   getNumberOfSections,
+  getElementColor,
+  getStrokeColor,
+  getStrokeWidth,
+  getFontFamily,
+  getMarkerType,
+  getConnectionPathColor,
+  getConnectionPathStroke,
+  getCanvasBackgroundColor,
+  getTextColor,
+  setSystemPromptTemplate,
+  setModelType,
+  setPrompt,
   setNumberOfSections,
+  setElementColor,
+  setStrokeColor,
+  setStrokeWidth,
+  setFontFamily,
+  setMarkerType,
+  setConnectionPathColor,
+  setConnectionPathStroke,
+  setCanvasBackgroundColor,
+  setTextColor,
   getApiKey,
   setApiKey,
-  getPrompt,
-  setPrompt,
-  getSystemPromptTemplate,
-  setSystemPromptTemplate,
-  getModelType,
-  setModelType,
-  getElementColor,
-  setElementColor,
-  getStrokeColor,
-  setStrokeColor,
-  getStrokeWidth,
-  setStrokeWidth,
-  getFontFamily,
-  setFontFamily,
-  getMarkerType,
-  setMarkerType,
-  getConnectionPathColor,
-  setConnectionPathColor,
-  getConnectionPathStroke,
-  setConnectionPathStroke,
-  getCanvasBackgroundColor,
-  setCanvasBackgroundColor,
-  getTextColor,
-  setTextColor
 } from '../utils/localStorageHelpers';
-import { MARKER_TYPES } from '../constants/elementSettings';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -59,97 +44,127 @@ interface SettingsModalProps {
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState(0);
-  const [numberOfSectionsInput, setNumberOfSectionsInput] = useState('3');
-  const [apiKey, setApiKeyState] = useState('');
-  const [prompt, setPromptState] = useState('');
-  const [systemPromptTemplate, setSystemPromptTemplateState] = useState('');
-  const [modelType, setModelTypeState] = useState('gemini-1.5-flash');
-  const [elementColor, setElementColorState] = useState('');
-  const [strokeColor, setStrokeColorState] = useState('');
-  const [strokeWidth, setStrokeWidthState] = useState('');
-  const [fontFamily, setFontFamilyState] = useState('');
-  const [markerType, setMarkerTypeState] = useState('');
-  const [connectionPathColor, setConnectionPathColorState] = useState('');
-  const [connectionPathStroke, setConnectionPathStrokeState] = useState('');
-  const [canvasBackgroundColor, setCanvasBackgroundColorState] = useState('');
-  const [textColor, setTextColorState] = useState('');
-  const [sectionsError, setSectionsError] = useState(false);
-  const [strokeWidthError, setStrokeWidthError] = useState(false);
+  const [values, setValues] = useState<Record<string, string | number>>({});
+  const [errors, setErrors] = useState<Record<string, boolean>>({});
 
+  // 設定値の読み込み
   useEffect(() => {
-    const loadSettings = async () => {
-      if (isOpen) {
-        setNumberOfSectionsInput(getNumberOfSections().toString());
-        setApiKeyState(await getApiKey());
-        setPromptState(getPrompt());
-        setSystemPromptTemplateState(getSystemPromptTemplate());
-        setModelTypeState(getModelType());
-        setElementColorState(getElementColor());
-        setStrokeColorState(getStrokeColor());
-        setStrokeWidthState(getStrokeWidth().toString());
-        setFontFamilyState(getFontFamily());
-        setMarkerTypeState(getMarkerType() || MARKER_TYPES.NONE); // デフォルト値を設定
-        setConnectionPathColorState(getConnectionPathColor());
-        setConnectionPathStrokeState(getConnectionPathStroke().toString());
-        setCanvasBackgroundColorState(getCanvasBackgroundColor());
-        setTextColorState(getTextColor());
-      }
-    };
-    loadSettings();
+    if (isOpen) {
+      // 即時実行関数を使用して非同期処理を正しく実行
+      (async () => {
+        const loadedValues: Record<string, string | number> = {};
+        
+        try {
+          // APIキーは非同期で取得
+          const apiKey = await getApiKey();
+          loadedValues['apiKey'] = apiKey;
+          
+          // 他の設定項目は同期的に取得
+          loadedValues['systemPromptTemplate'] = getSystemPromptTemplate();
+          loadedValues['modelType'] = getModelType();
+          loadedValues['prompt'] = getPrompt();
+          loadedValues['numberOfSections'] = getNumberOfSections();
+          loadedValues['elementColor'] = getElementColor();
+          loadedValues['strokeColor'] = getStrokeColor();
+          loadedValues['strokeWidth'] = getStrokeWidth();
+          loadedValues['fontFamily'] = getFontFamily();
+          loadedValues['markerType'] = getMarkerType();
+          loadedValues['connectionPathColor'] = getConnectionPathColor();
+          loadedValues['connectionPathStroke'] = getConnectionPathStroke();
+          loadedValues['canvasBackgroundColor'] = getCanvasBackgroundColor();
+          loadedValues['textColor'] = getTextColor();
+
+          setValues(loadedValues);
+        } catch (error) {
+          console.error('Failed to load settings:', error);
+        }
+      })();
+    }
   }, [isOpen]);
 
+  const validateField = (field: SettingFieldType, value: string | number): boolean => {
+    if (field.type === 'number') {
+      const numValue = typeof value === 'string' ? parseFloat(value) : value;
+      if (field.validation?.required && (value === '' || isNaN(numValue))) return false;
+      if (!isNaN(numValue)) {
+        if (field.validation?.min !== undefined && numValue < field.validation.min) return false;
+        if (field.validation?.max !== undefined && numValue > field.validation.max) return false;
+      }
+    }
+    return true;
+  };
+
+  const handleValueChange = (field: SettingFieldType, value: string) => {
+    setValues(prev => ({ ...prev, [field.key]: value }));
+    setErrors(prev => ({ 
+      ...prev, 
+      [field.key]: !validateField(field, value)
+    }));
+  };
+
   const handleSave = async () => {
-    let numValue = parseInt(numberOfSectionsInput, 10);
-    const validSections = Math.max(1, Math.min(10, numValue));
-    setNumberOfSections(validSections);
-    
-    await setApiKey(apiKey);
-    setPrompt(prompt);
-    setSystemPromptTemplate(systemPromptTemplate);
-    setModelType(modelType);
-    
-    // Save new settings
-    setElementColor(elementColor);
-    setStrokeColor(strokeColor);
-    
-    const strokeWidthValue = parseFloat(strokeWidth);
-    if (!isNaN(strokeWidthValue) && strokeWidthValue > 0) {
-      setStrokeWidth(strokeWidthValue);
+    let hasError = false;
+
+    // 全フィールドの検証
+    SETTINGS_TABS.forEach(tab => {
+      tab.fields.forEach(field => {
+        const value = values[field.key];
+        if (!validateField(field, value)) {
+          hasError = true;
+          setErrors(prev => ({ ...prev, [field.key]: true }));
+        }
+      });
+    });
+
+    if (hasError) return;
+
+    // APIKeyは非同期で保存
+    const apiKeyValue = values['apiKey'];
+    if (apiKeyValue !== undefined) {
+      await setApiKey(String(apiKeyValue));
     }
+
+    // 他の設定は同期的に保存
+    const value = values['systemPromptTemplate'];
+    if (value !== undefined) setSystemPromptTemplate(String(value));
     
-    setFontFamily(fontFamily);
-    setMarkerType(markerType);
-    setConnectionPathColor(connectionPathColor);
-    const connectionPathStrokeValue = parseFloat(connectionPathStroke);
-    if (!isNaN(connectionPathStrokeValue) && connectionPathStrokeValue > 0) {
-      setConnectionPathStroke(connectionPathStrokeValue);
-    }
-    setCanvasBackgroundColor(canvasBackgroundColor);
-    setTextColor(textColor);
+    const modelType = values['modelType'];
+    if (modelType !== undefined) setModelType(String(modelType));
     
+    const prompt = values['prompt'];
+    if (prompt !== undefined) setPrompt(String(prompt));
+    
+    const numberOfSections = values['numberOfSections'];
+    if (numberOfSections !== undefined) setNumberOfSections(Number(numberOfSections));
+    
+    const elementColor = values['elementColor'];
+    if (elementColor !== undefined) setElementColor(String(elementColor));
+    
+    const strokeColor = values['strokeColor'];
+    if (strokeColor !== undefined) setStrokeColor(String(strokeColor));
+    
+    const strokeWidth = values['strokeWidth'];
+    if (strokeWidth !== undefined) setStrokeWidth(Number(strokeWidth));
+    
+    const fontFamily = values['fontFamily'];
+    if (fontFamily !== undefined) setFontFamily(String(fontFamily));
+    
+    const markerType = values['markerType'];
+    if (markerType !== undefined) setMarkerType(String(markerType));
+    
+    const connectionPathColor = values['connectionPathColor'];
+    if (connectionPathColor !== undefined) setConnectionPathColor(String(connectionPathColor));
+    
+    const connectionPathStroke = values['connectionPathStroke'];
+    if (connectionPathStroke !== undefined) setConnectionPathStroke(Number(connectionPathStroke));
+    
+    const canvasBackgroundColor = values['canvasBackgroundColor'];
+    if (canvasBackgroundColor !== undefined) setCanvasBackgroundColor(String(canvasBackgroundColor));
+    
+    const textColor = values['textColor'];
+    if (textColor !== undefined) setTextColor(String(textColor));
+
     onClose();
-  };
-
-  const handleSectionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setNumberOfSectionsInput(value);
-    const numValue = parseInt(value, 10);
-    const isEmpty = value === '';
-    const isInvalid = isEmpty || isNaN(numValue) || numValue < 1 || numValue > 10;
-    setSectionsError(isInvalid);
-  };
-
-  const handleStrokeWidthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setStrokeWidthState(value);
-    const numValue = parseFloat(value);
-    const isEmpty = value === '';
-    const isInvalid = isEmpty || isNaN(numValue) || numValue <= 0;
-    setStrokeWidthError(isInvalid);
-  };
-
-  const handleModelTypeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setModelTypeState(e.target.value);
   };
 
   return (
@@ -158,189 +173,26 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
         Preference
       </Typography>
       <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)}>
-        <Tab label="Elements Setting" />
-        <Tab label="API Setting" />
-        <Tab label="Prompt" />
+        {SETTINGS_TABS.map(tab => (
+          <Tab key={tab.id} label={tab.label} />
+        ))}
       </Tabs>
       <Box sx={{ mt: 2, minHeight: 300 }}>
-        {activeTab === 0 && (
-          <Box>
-            <TextField
-              label="Number of sections"
-              type="number"
-              value={numberOfSectionsInput}
-              onChange={handleSectionChange}
-              fullWidth
-              margin="normal"
-              inputProps={{ min: 1, max: 10 }}
-              error={sectionsError}
-            />
-            <FormHelperText error={sectionsError}>
-              {sectionsError ? "1から10の数値を入力してください" : "同時に表示するセクションの数（1〜10）"}
-            </FormHelperText>
-
-            <FormControl fullWidth margin="normal">
-              <InputLabel id="marker-type-label">Default Marker Type</InputLabel>
-              <Select
-                labelId="marker-type-label"
-                value={markerType}
-                label="Default Marker Type"
-                onChange={(e) => setMarkerTypeState(e.target.value)}
-              >
-                <MenuItem value={MARKER_TYPES.NONE}>None</MenuItem>
-                <MenuItem value={MARKER_TYPES.ARROW}>Arrow</MenuItem>
-                <MenuItem value={MARKER_TYPES.CIRCLE}>Circle</MenuItem>
-                <MenuItem value={MARKER_TYPES.SQUARE}>Square</MenuItem>
-                <MenuItem value={MARKER_TYPES.DIAMOND}>Diamond</MenuItem>
-              </Select>
-              <FormHelperText>新規要素作成時のデフォルトマーカータイプ</FormHelperText>
-            </FormControl>
-
-            <TextField
-              label="Font Family"
-              value={fontFamily}
-              onChange={(e) => setFontFamilyState(e.target.value)}
-              fullWidth
-              margin="normal"
-              helperText="表示に使用するフォントファミリ"
-            />
-
-            <Box sx={{ display: 'flex', alignItems: 'center', mt: 2, mb: 1 }}>
-              <Typography variant="body1" sx={{ mr: 2, width: '120px' }}>
-                Element Color:
-              </Typography>
-              <input
-                type="color"
-                value={elementColor}
-                onChange={(e) => setElementColorState(e.target.value)}
-              />
-            </Box>
-            <FormHelperText>要素の背景色</FormHelperText>
-
-            <Box sx={{ display: 'flex', alignItems: 'center', mt: 2, mb: 1 }}>
-              <Typography variant="body1" sx={{ mr: 2, width: '120px' }}>
-                Stroke Color:
-              </Typography>
-              <input
-                type="color"
-                value={strokeColor}
-                onChange={(e) => setStrokeColorState(e.target.value)}
-              />
-            </Box>
-            <FormHelperText>要素の枠線色</FormHelperText>
-
-            <TextField
-              label="Stroke Width"
-              type="number"
-              value={strokeWidth}
-              onChange={handleStrokeWidthChange}
-              fullWidth
-              margin="normal"
-              inputProps={{ min: 0.5, step: 0.5 }}
-              error={strokeWidthError}
-              helperText={strokeWidthError ? "正の数値を入力してください" : "要素の枠線の太さ"}
-            />
-
-            <Box sx={{ display: 'flex', alignItems: 'center', mt: 2, mb: 1 }}>
-              <Typography variant="body1" sx={{ mr: 2, width: '120px' }}>
-                Connection Path Color:
-              </Typography>
-              <input
-                type="color"
-                value={connectionPathColor}
-                onChange={(e) => setConnectionPathColorState(e.target.value)}
-              />
-            </Box>
-            <FormHelperText>接続線の色</FormHelperText>
-
-            <TextField
-              label="Connection Path Stroke"
-              type="number"
-              value={connectionPathStroke}
-              onChange={(e) => setConnectionPathStrokeState(e.target.value)}
-              fullWidth
-              margin="normal"
-              inputProps={{ min: 0.5, step: 0.5 }}
-              helperText="接続線の太さ"
-            />
-
-            <Box sx={{ display: 'flex', alignItems: 'center', mt: 2, mb: 1 }}>
-              <Typography variant="body1" sx={{ mr: 2, width: '120px' }}>
-                Canvas Background Color:
-              </Typography>
-              <input
-                type="color"
-                value={canvasBackgroundColor}
-                onChange={(e) => setCanvasBackgroundColorState(e.target.value)}
-              />
-            </Box>
-            <FormHelperText>キャンバスの背景色</FormHelperText>
-
-            <Box sx={{ display: 'flex', alignItems: 'center', mt: 2, mb: 1 }}>
-              <Typography variant="body1" sx={{ mr: 2, width: '120px' }}>
-                Text Color:
-              </Typography>
-              <input
-                type="color"
-                value={textColor}
-                onChange={(e) => setTextColorState(e.target.value)}
-              />
-            </Box>
-            <FormHelperText>テキストの色</FormHelperText>
-          </Box>
-        )}
-        {activeTab === 1 && (
-          <Box>
-            <FormControl component="fieldset" fullWidth>
-              <FormLabel component="legend">Select Model</FormLabel>
-              <FormGroup>
-                <FormControlLabel
-                  value="gemini-1.5-flash"
-                  control={<Radio checked={modelType === 'gemini-1.5-flash'} onChange={handleModelTypeChange} />}
-                  label="Gemini-1.5-flash"
+        {SETTINGS_TABS.map(tab => (
+          activeTab === tab.id && (
+            <Box key={tab.id}>
+              {tab.fields.map(field => (
+                <SettingField
+                  key={field.key}
+                  field={field}
+                  value={values[field.key] ?? field.defaultValue}
+                  error={errors[field.key]}
+                  onChange={(value) => handleValueChange(field, value)}
                 />
-                <FormControlLabel
-                  value="gemini-2.0-flash"
-                  control={<Radio checked={modelType === 'gemini-2.0-flash'} onChange={handleModelTypeChange} />}
-                  label="Gemini-2.0-flash"
-                />
-              </FormGroup>
-            </FormControl>
-            <TextField
-              label="Gemini API Key"
-              type="password"
-              value={apiKey}
-              onChange={(e) => setApiKeyState(e.target.value)}
-              fullWidth
-              margin="normal"
-              helperText="入力されたキーは暗号化してlocalStorageに保存されます。サーバに送信されることはありません。"
-            />
-          </Box>
-        )}
-        {activeTab === 2 && (
-          <Box>
-            <TextField
-              label="inputText"
-              value={prompt}
-              onChange={(e) => setPromptState(e.target.value)}
-              fullWidth
-              margin="normal"
-              multiline
-              rows={6}
-              variant="outlined"
-            />
-            <TextField
-              label="SystemPromptTemplate"
-              value={systemPromptTemplate}
-              onChange={(e) => setSystemPromptTemplateState(e.target.value)}
-              fullWidth
-              margin="normal"
-              multiline
-              rows={6}
-              variant="outlined"
-            />
-          </Box>
-        )}
+              ))}
+            </Box>
+          )
+        ))}
       </Box>
       <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
         <Button variant="outlined" onClick={onClose}>
@@ -350,7 +202,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
           variant="contained" 
           onClick={handleSave} 
           color="primary"
-          disabled={sectionsError || strokeWidthError || numberOfSectionsInput === ''} 
+          disabled={Object.values(errors).some(Boolean)} 
         >
           OK
         </Button>
