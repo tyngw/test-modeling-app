@@ -40,7 +40,7 @@ export const DARK_THEME = {
   },
   // QuickMenuBar
   MENU_BAR: {
-    BACKGROUND: '#242424',
+    BACKGROUND: '#333333',
     ICON_COLOR: '#bbbbbb',
     DIVIDER_COLOR: '#444444',
   }
