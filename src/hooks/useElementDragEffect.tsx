@@ -8,7 +8,6 @@ import { isDescendant } from '../state/state';
 import { ToastMessages } from '../constants/toastMessages';
 import { HEADER_HEIGHT } from '../constants/elementSettings';
 import { useToast } from '../context/toastContext';
-import { OFFSET } from '../constants/elementSettings';
 
 const isTouchEvent = (event: MouseEvent | TouchEvent): event is TouchEvent => {
   return 'touches' in event;
@@ -103,7 +102,6 @@ export const useElementDragEffect = () => {
 
     try {
       const selectedElements = Object.values(state.elements).filter(el => el.selected);
-      const leaderElement = draggingElement; // ドラッグ開始要素をリーダーとする
 
       // 親変更の検証関数
       const validateParentChange = (element: Element, newParentId: string | null): boolean => {

@@ -16,7 +16,6 @@ import {
   ELEM_STYLE,
   SIZE,
   LINE_HEIGHT_RATIO,
-  CONNECTION_PATH_STYLE,
 } from '../constants/elementSettings';
 import { 
   getElementColor, 
@@ -163,7 +162,6 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
 }) => {
   const { state, dispatch } = useCanvas();
   const [isMounted, setIsMounted] = useState(false);
-  const parentElement = state.elements[element.parentId!];
   const currentDropTargetId = currentDropTarget?.id || -1;
   const [isHovered, setIsHovered] = useState(false);
   const prevHoveredRef = useRef(false);
