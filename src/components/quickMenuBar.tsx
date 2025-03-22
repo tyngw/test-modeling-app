@@ -1,7 +1,7 @@
 // src/components/quickMenuBar.tsx
 'use client';
 
-import React, { useRef } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import Button from '@mui/material/Button';
 import UndoIcon from '@mui/icons-material/Undo';
 import RedoIcon from '@mui/icons-material/Redo';
@@ -23,6 +23,8 @@ import { ICONBAR_HEIGHT } from '../constants/elementSettings';
 import { useCanvas } from '../context/canvasContext';
 import { tooltipTexts } from '../constants/tooltipTexts';
 import { useTabs } from '../context/tabsContext';
+import { getCurrentTheme } from '../utils/colorHelpers';
+import { getCanvasBackgroundColor } from '../utils/localStorageHelpers';
 
 interface QuickMenuBarProps {
   saveSvg: () => void;
@@ -43,149 +45,162 @@ type CanvasActionType =
   | 'EXPAND_ELEMENT'
   | 'COLLAPSE_ELEMENT';
 
-  const QuickMenuBar = ({
-    saveSvg,
-    loadElements,
-    saveElements,
-    toggleHelp,
-    toggleSettings,
-    onAIClick,
-  }: QuickMenuBarProps) => {
-    const { dispatch } = useCanvas();
-    const { addTab } = useTabs();
-    const fileInput = useRef<HTMLInputElement>(null);
-    const containerRef = useRef<HTMLDivElement>(null);
+const QuickMenuBar = ({
+  saveSvg,
+  loadElements,
+  saveElements,
+  toggleHelp,
+  toggleSettings,
+  onAIClick,
+}: QuickMenuBarProps) => {
+  const { dispatch, state } = useCanvas();
+  const { addTab } = useTabs();
+  const fileInput = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) return null;
   
-    const handleFileOpen = () => {
-      fileInput.current?.click();
-    };
-  
-    const handleAction = (action: CanvasActionType) => () => {
-      dispatch({ type: action });
-    };
-  
-    return (
-      <div 
-        style={{ 
-          position: 'fixed',
-          width: '100%',
-          height: ICONBAR_HEIGHT,
-          // zIndex: '100000',
-          overflowX: 'auto', // 水平スクロールを有効化
-          WebkitOverflowScrolling: 'touch' // iOSの慣性スクロール
-        }}
-        ref={containerRef}
-      >
-        <div style={{
-          display: 'flex',
-          justifyContent: 'left',
-          alignItems: 'center',
-          height: '100%',
-          backgroundColor: '#f1f1f1',
-          padding: '0 20px',
-          minWidth: 'max-content', // コンテンツ幅を維持
-        }}>
-          <input type="file" ref={fileInput} onChange={loadElements} style={{ display: 'none' }} />
+  // localStorage から背景色を取得する
+  const backgroundColor = getCanvasBackgroundColor();
+  // 取得した背景色をもとにテーマを決定
+  const theme = getCurrentTheme(backgroundColor);
 
-        <Tooltip title={tooltipTexts.NEW}>
-          <Button variant="text" className="iconbar-button" onClick={addTab}>
-            <InsertDriveFileOutlinedIcon sx={{ color: '#666666' }} />
-          </Button>
-        </Tooltip>
+  const handleFileOpen = () => {
+    fileInput.current?.click();
+  };
 
-        <Tooltip title={tooltipTexts.OPEN}>
-          <Button variant="text" className="iconbar-button" onClick={handleFileOpen}>
-            <FolderOpenOutlinedIcon sx={{ color: '#666666' }} />
-          </Button>
-        </Tooltip>
+  const handleAction = (action: CanvasActionType) => () => {
+    dispatch({ type: action });
+  };
 
-        <Tooltip title={tooltipTexts.SAVE}>
-          <Button variant="text" className="iconbar-button" onClick={saveElements}>
-            <SaveAsOutlinedIcon sx={{ color: '#666666' }} />
-          </Button>
-        </Tooltip>
+  return (
+    <div 
+      style={{ 
+        position: 'fixed',
+        width: '100%',
+        height: ICONBAR_HEIGHT,
+        // zIndex: '100000',
+        overflowX: 'auto', // 水平スクロールを有効化
+        WebkitOverflowScrolling: 'touch' // iOSの慣性スクロール
+      }}
+      ref={containerRef}
+    >
+      <div style={{
+        display: 'flex',
+        justifyContent: 'left',
+        alignItems: 'center',
+        height: '100%',
+        backgroundColor: theme.MENU_BAR.BACKGROUND,
+        padding: '0 20px',
+        minWidth: 'max-content', // コンテンツ幅を維持
+      }}>
+        <input type="file" ref={fileInput} onChange={loadElements} style={{ display: 'none' }} />
 
-        <Tooltip title={tooltipTexts.SAVE_SVG}>
-          <Button variant="text" className="iconbar-button" onClick={saveSvg}>
-            <SaveAltIcon sx={{ color: '#666666' }} />
-          </Button>
-        </Tooltip>
+      <Tooltip title={tooltipTexts.NEW}>
+        <Button variant="text" className="iconbar-button" onClick={addTab}>
+          <InsertDriveFileOutlinedIcon sx={{ color: theme.MENU_BAR.ICON_COLOR }} />
+        </Button>
+      </Tooltip>
 
-        <div style={{ width: '10px' }}></div>
+      <Tooltip title={tooltipTexts.OPEN}>
+        <Button variant="text" className="iconbar-button" onClick={handleFileOpen}>
+          <FolderOpenOutlinedIcon sx={{ color: theme.MENU_BAR.ICON_COLOR }} />
+        </Button>
+      </Tooltip>
 
-        <Tooltip title={tooltipTexts.ADD}>
-          <Button variant="text" className="iconbar-button" onClick={handleAction('ADD_ELEMENT')}>
-            <PlaylistAddIcon sx={{ color: '#666666' }} />
-          </Button>
-        </Tooltip>
+      <Tooltip title={tooltipTexts.SAVE}>
+        <Button variant="text" className="iconbar-button" onClick={saveElements}>
+          <SaveAsOutlinedIcon sx={{ color: theme.MENU_BAR.ICON_COLOR }} />
+        </Button>
+      </Tooltip>
 
-        <Tooltip title={tooltipTexts.DELETE}>
-          <Button variant="text" className="iconbar-button" onClick={handleAction('DELETE_ELEMENT')}>
-            <PlaylistRemoveIcon sx={{ color: '#666666' }} />
-          </Button>
-        </Tooltip>
+      <Tooltip title={tooltipTexts.SAVE_SVG}>
+        <Button variant="text" className="iconbar-button" onClick={saveSvg}>
+          <SaveAltIcon sx={{ color: theme.MENU_BAR.ICON_COLOR }} />
+        </Button>
+      </Tooltip>
 
-        <Tooltip title={tooltipTexts.AI}>
-          <Button variant="text" className="iconbar-button" onClick={onAIClick}>
-            <AutoFixOffIcon sx={{ color: '#666666' }} />
-          </Button>
-        </Tooltip>
+      <div style={{ width: '10px', backgroundColor: theme.MENU_BAR.DIVIDER_COLOR, height: '60%', margin: '0 5px', opacity: 0.3 }}></div>
 
-        <Tooltip title={tooltipTexts.EXPAND}>
-          <Button variant="text" className="iconbar-button" onClick={handleAction('EXPAND_ELEMENT')}>
-            <UnfoldMoreIcon sx={{ color: '#666666' }} />
-          </Button>
-        </Tooltip>
+      <Tooltip title={tooltipTexts.ADD}>
+        <Button variant="text" className="iconbar-button" onClick={handleAction('ADD_ELEMENT')}>
+          <PlaylistAddIcon sx={{ color: theme.MENU_BAR.ICON_COLOR }} />
+        </Button>
+      </Tooltip>
 
-        <Tooltip title={tooltipTexts.COLLAPSE}>
-          <Button variant="text" className="iconbar-button" onClick={handleAction('COLLAPSE_ELEMENT')}>
-            <UnfoldLessIcon sx={{ color: '#666666' }} />
-          </Button>
-        </Tooltip>
+      <Tooltip title={tooltipTexts.DELETE}>
+        <Button variant="text" className="iconbar-button" onClick={handleAction('DELETE_ELEMENT')}>
+          <PlaylistRemoveIcon sx={{ color: theme.MENU_BAR.ICON_COLOR }} />
+        </Button>
+      </Tooltip>
 
-        <div style={{ width: '10px' }}></div>
+      <Tooltip title={tooltipTexts.AI}>
+        <Button variant="text" className="iconbar-button" onClick={onAIClick}>
+          <AutoFixOffIcon sx={{ color: theme.MENU_BAR.ICON_COLOR }} />
+        </Button>
+      </Tooltip>
 
-        <Tooltip title={tooltipTexts.UNDO}>
-          <Button variant="text" className="iconbar-button" onClick={handleAction('UNDO')}>
-            <UndoIcon sx={{ color: '#666666' }} />
-          </Button>
-        </Tooltip>
+      <Tooltip title={tooltipTexts.EXPAND}>
+        <Button variant="text" className="iconbar-button" onClick={handleAction('EXPAND_ELEMENT')}>
+          <UnfoldMoreIcon sx={{ color: theme.MENU_BAR.ICON_COLOR }} />
+        </Button>
+      </Tooltip>
 
-        <Tooltip title={tooltipTexts.REDO}>
-          <Button variant="text" className="iconbar-button" onClick={handleAction('REDO')}>
-            <RedoIcon sx={{ color: '#666666' }} />
-          </Button>
-        </Tooltip>
+      <Tooltip title={tooltipTexts.COLLAPSE}>
+        <Button variant="text" className="iconbar-button" onClick={handleAction('COLLAPSE_ELEMENT')}>
+          <UnfoldLessIcon sx={{ color: theme.MENU_BAR.ICON_COLOR }} />
+        </Button>
+      </Tooltip>
 
-        <div style={{ width: '10px' }}></div>
+      <div style={{ width: '10px', backgroundColor: theme.MENU_BAR.DIVIDER_COLOR, height: '60%', margin: '0 5px', opacity: 0.3 }}></div>
 
-        <Tooltip title={tooltipTexts.ZOOM_IN}>
-          <Button variant="text" className="iconbar-button" onClick={handleAction('ZOOM_IN')}>
-            <ZoomInIcon sx={{ color: '#666666' }} />
-          </Button>
-        </Tooltip>
+      <Tooltip title={tooltipTexts.UNDO}>
+        <Button variant="text" className="iconbar-button" onClick={handleAction('UNDO')}>
+          <UndoIcon sx={{ color: theme.MENU_BAR.ICON_COLOR }} />
+        </Button>
+      </Tooltip>
 
-        <Tooltip title={tooltipTexts.ZOOM_OUT}>
-          <Button variant="text" className="iconbar-button" onClick={handleAction('ZOOM_OUT')}>
-            <ZoomOutIcon sx={{ color: '#666666' }} />
-          </Button>
-        </Tooltip>
+      <Tooltip title={tooltipTexts.REDO}>
+        <Button variant="text" className="iconbar-button" onClick={handleAction('REDO')}>
+          <RedoIcon sx={{ color: theme.MENU_BAR.ICON_COLOR }} />
+        </Button>
+      </Tooltip>
 
-        <div style={{ width: '10px' }}></div>
+      <div style={{ width: '10px', backgroundColor: theme.MENU_BAR.DIVIDER_COLOR, height: '60%', margin: '0 5px', opacity: 0.3 }}></div>
 
-        <Tooltip title={tooltipTexts.HELP}>
-          <Button variant="text" className="iconbar-button" onClick={toggleHelp}>
-            <HelpOutlineOutlinedIcon sx={{ color: '#666666' }} />
-          </Button>
-        </Tooltip>
+      <Tooltip title={tooltipTexts.ZOOM_IN}>
+        <Button variant="text" className="iconbar-button" onClick={handleAction('ZOOM_IN')}>
+          <ZoomInIcon sx={{ color: theme.MENU_BAR.ICON_COLOR }} />
+        </Button>
+      </Tooltip>
 
-        <Tooltip title={tooltipTexts.SETTINGS}>
-          <Button variant="text" className="iconbar-button" onClick={toggleSettings}>
-            <SettingsIcon sx={{ color: '#666666' }} />
-          </Button>
-        </Tooltip>
-      </div>
-    </div >
+      <Tooltip title={tooltipTexts.ZOOM_OUT}>
+        <Button variant="text" className="iconbar-button" onClick={handleAction('ZOOM_OUT')}>
+          <ZoomOutIcon sx={{ color: theme.MENU_BAR.ICON_COLOR }} />
+        </Button>
+      </Tooltip>
+
+      <div style={{ width: '10px', backgroundColor: theme.MENU_BAR.DIVIDER_COLOR, height: '60%', margin: '0 5px', opacity: 0.3 }}></div>
+
+      <Tooltip title={tooltipTexts.HELP}>
+        <Button variant="text" className="iconbar-button" onClick={toggleHelp}>
+          <HelpOutlineOutlinedIcon sx={{ color: theme.MENU_BAR.ICON_COLOR }} />
+        </Button>
+      </Tooltip>
+
+      <Tooltip title={tooltipTexts.SETTINGS}>
+        <Button variant="text" className="iconbar-button" onClick={toggleSettings}>
+          <SettingsIcon sx={{ color: theme.MENU_BAR.ICON_COLOR }} />
+        </Button>
+      </Tooltip>
+    </div>
+  </div >
   );
 };
 
