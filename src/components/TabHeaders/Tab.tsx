@@ -42,8 +42,8 @@ const Tab: React.FC<TabHeaderProps> = React.memo(({
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
-        minWidth: '42px', // Ensure the close button is always visible
-        maxWidth: '150px' // Adjust the max-width as needed
+        minWidth: '40px',
+        maxWidth: '150px'
       }}
       onClick={() => switchTab(tab.id)}
     >
