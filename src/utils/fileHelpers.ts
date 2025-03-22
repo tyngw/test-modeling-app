@@ -1,6 +1,6 @@
 // src/utils/fileHelpers.ts
 import { SIZE } from "../constants/elementSettings";
-import { createNewElement } from "../state/state";
+import { createNewElement } from "./elementHelpers";
 import { Element } from "../types";
 import { 
     DEFAULT_FONT_FAMILY,

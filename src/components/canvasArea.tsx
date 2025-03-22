@@ -21,7 +21,7 @@ import {
     DEFAULT_CONNECTION_PATH_STROKE,
 } from '../constants/elementSettings';
 import { Element as CanvasElement } from '../types';
-import { isDescendant } from '../state/state';
+import { isDescendant } from '../utils/elementHelpers';
 import { useToast } from '../context/toastContext';
 import { ToastMessages } from '../constants/toastMessages';
 import { getConnectionPathColor, getConnectionPathStroke, getCanvasBackgroundColor } from '../utils/localStorageHelpers';

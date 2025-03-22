@@ -5,7 +5,7 @@ import React, { createContext, useContext, ReactNode, useState, useCallback, use
 import { State, initialState } from '../state/state';
 import { v4 as uuidv4 } from 'uuid';
 import { DEFAULT_POSITION } from '../constants/elementSettings';
-import { createNewElement } from '../state/state';
+import { createNewElement } from '../utils/elementHelpers';
 import { convertLegacyElement } from '../utils/fileHelpers';
 import { getTabsState, setTabsState } from '../utils/localStorageHelpers';
 

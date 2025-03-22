@@ -24,7 +24,7 @@ import {
   getFontFamily 
 } from '../utils/localStorageHelpers';
 import { Element as CanvasElement } from '../types';
-import { isDescendant } from '../state/state';
+import { isDescendant } from '../utils/elementHelpers';
 import { debugLog, isDevelopment } from '../utils/debugLogHelpers';
 
 interface IdeaElementProps {
