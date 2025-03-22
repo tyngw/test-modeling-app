@@ -54,7 +54,14 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
     const [hoveredElements, setHoveredElements] = useState<{[key: string]: boolean}>({});
     
     useEffect(() => {
-        if (!editingNode) svgRef.current?.focus();
+        if (!editingNode) {
+            // 編集モード終了時のフォーカス処理を改善
+            requestAnimationFrame(() => {
+                const { scrollX, scrollY } = window;
+                svgRef.current?.focus({ preventScroll: true });
+                window.scrollTo(scrollX, scrollY);
+            });
+        }
     }, [editingNode]);
 
     useEffect(() => {
