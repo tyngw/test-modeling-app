@@ -43,44 +43,55 @@ interface SettingsModalProps {
 }
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
+  const [isMounted, setIsMounted] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
   const [values, setValues] = useState<Record<string, string | number>>({});
   const [errors, setErrors] = useState<Record<string, boolean>>({});
 
+  // クライアントサイドマウントのチェック
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   // 設定値の読み込み
   useEffect(() => {
-    if (isOpen) {
-      // 即時実行関数を使用して非同期処理を正しく実行
-      (async () => {
-        const loadedValues: Record<string, string | number> = {};
-        
-        try {
-          // APIキーは非同期で取得
-          const apiKey = await getApiKey();
-          loadedValues['apiKey'] = apiKey;
-          
-          // 他の設定項目は同期的に取得
-          loadedValues['systemPromptTemplate'] = getSystemPromptTemplate();
-          loadedValues['modelType'] = getModelType();
-          loadedValues['prompt'] = getPrompt();
-          loadedValues['numberOfSections'] = getNumberOfSections();
-          loadedValues['elementColor'] = getElementColor();
-          loadedValues['strokeColor'] = getStrokeColor();
-          loadedValues['strokeWidth'] = getStrokeWidth();
-          loadedValues['fontFamily'] = getFontFamily();
-          loadedValues['markerType'] = getMarkerType();
-          loadedValues['connectionPathColor'] = getConnectionPathColor();
-          loadedValues['connectionPathStroke'] = getConnectionPathStroke();
-          loadedValues['canvasBackgroundColor'] = getCanvasBackgroundColor();
-          loadedValues['textColor'] = getTextColor();
+    if (!isMounted || !isOpen) return;
 
-          setValues(loadedValues);
-        } catch (error) {
-          console.error('Failed to load settings:', error);
-        }
-      })();
-    }
-  }, [isOpen]);
+    // 即時実行関数を使用して非同期処理を正しく実行
+    (async () => {
+      const loadedValues: Record<string, string | number> = {};
+      
+      try {
+        // APIキーは非同期で取得
+        const apiKey = await getApiKey();
+        loadedValues['apiKey'] = apiKey;
+        
+        // 他の設定項目は同期的に取得
+        loadedValues['systemPromptTemplate'] = getSystemPromptTemplate();
+        loadedValues['modelType'] = getModelType();
+        loadedValues['prompt'] = getPrompt();
+        loadedValues['numberOfSections'] = getNumberOfSections();
+        loadedValues['elementColor'] = getElementColor();
+        loadedValues['strokeColor'] = getStrokeColor();
+        loadedValues['strokeWidth'] = getStrokeWidth();
+        loadedValues['fontFamily'] = getFontFamily();
+        loadedValues['markerType'] = getMarkerType();
+        loadedValues['connectionPathColor'] = getConnectionPathColor();
+        loadedValues['connectionPathStroke'] = getConnectionPathStroke();
+        loadedValues['canvasBackgroundColor'] = getCanvasBackgroundColor();
+        loadedValues['textColor'] = getTextColor();
+
+        setValues(loadedValues);
+      } catch (error) {
+        console.error('Failed to load settings:', error);
+      }
+    })();
+  }, [isMounted, isOpen]);
+
+  // 設定が読み込まれる前はレンダリングしない
+  if (!isMounted) {
+    return null;
+  }
 
   const validateField = (field: SettingFieldType, value: string | number): boolean => {
     if (field.type === 'number') {
