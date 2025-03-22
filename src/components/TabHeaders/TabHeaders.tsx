@@ -1,10 +1,9 @@
 // src/components/TabHeaders/index.tsx
-import React, { useContext } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { TabState } from '../../context/tabsContext';
 import Tab from './Tab';
 import { ICONBAR_HEIGHT, TABBAR_HEIGHT } from '../../constants/elementSettings';
 import { getCurrentTheme } from '../../utils/colorHelpers';
-import { useCanvas } from '../../context/canvasContext';
 import { getCanvasBackgroundColor } from '../../utils/localStorageHelpers';
 
 interface TabHeadersProps {
@@ -22,6 +21,14 @@ const TabHeaders: React.FC<TabHeadersProps> = React.memo(({
   closeTab,
   switchTab
 }) => {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) return null;
+
   // localStorage から背景色を取得する
   const backgroundColor = getCanvasBackgroundColor();
   // 取得した背景色をもとにテーマを決定

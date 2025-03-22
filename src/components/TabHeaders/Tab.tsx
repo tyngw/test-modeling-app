@@ -25,8 +25,6 @@ const Tab: React.FC<TabHeaderProps> = React.memo(({
 
   if (!isMounted) return null;
 
-  console.log('Theme:', theme);
-
   return (
     <div
       style={{

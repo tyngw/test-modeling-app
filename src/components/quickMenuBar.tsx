@@ -1,7 +1,7 @@
 // src/components/quickMenuBar.tsx
 'use client';
 
-import React, { useRef } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import Button from '@mui/material/Button';
 import UndoIcon from '@mui/icons-material/Undo';
 import RedoIcon from '@mui/icons-material/Redo';
@@ -57,6 +57,14 @@ const QuickMenuBar = ({
   const { addTab } = useTabs();
   const fileInput = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) return null;
   
   // localStorage から背景色を取得する
   const backgroundColor = getCanvasBackgroundColor();

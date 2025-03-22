@@ -15,7 +15,10 @@ import {
     CONNECTION_PATH_STYLE, 
     CURVE_CONTROL_OFFSET, 
     MARKER, 
-    MARKER_TYPES 
+    MARKER_TYPES,
+    DEFAULT_CANVAS_BACKGROUND_COLOR,
+    DEFAULT_CONNECTION_PATH_COLOR,
+    DEFAULT_CONNECTION_PATH_STROKE,
 } from '../constants/elementSettings';
 import { Element as CanvasElement } from '../types';
 import { isDescendant } from '../state/state';
@@ -33,9 +36,9 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
     const [isClient, setIsClient] = useState(false);
     const { state, dispatch } = useCanvas();
     const { elements, zoomRatio } = state;
-    const connectionPathColor = getConnectionPathColor();
-    const connectionPathStroke = getConnectionPathStroke();
-    const canvasBackgroundColor = getCanvasBackgroundColor();
+    const connectionPathColor = getConnectionPathColor() || DEFAULT_CONNECTION_PATH_COLOR;
+    const connectionPathStroke = getConnectionPathStroke() || DEFAULT_CONNECTION_PATH_STROKE;
+    const canvasBackgroundColor = getCanvasBackgroundColor() || DEFAULT_CANVAS_BACKGROUND_COLOR;
     const { addToast } = useToast();
     const [displayScopeSize, setCanvasSize] = useState({
         width: 0,
@@ -49,7 +52,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
     const [hover, setHover] = useState<string | null>(null);
     const [showMenuForElement, setShowMenuForElement] = useState<string | null>(null);
     const [hoveredElements, setHoveredElements] = useState<{[key: string]: boolean}>({});
-
+    
     useEffect(() => {
         if (!editingNode) svgRef.current?.focus();
     }, [editingNode]);
