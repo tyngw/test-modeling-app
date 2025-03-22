@@ -38,17 +38,23 @@ const Tab: React.FC<TabHeaderProps> = React.memo(({
         cursor: 'pointer',
         display: 'flex',
         alignItems: 'center',
-        color: theme.TAB_BAR.TAB_TEXT
+        color: theme.TAB_BAR.TAB_TEXT,
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        minWidth: '42px', // Ensure the close button is always visible
+        maxWidth: '150px' // Adjust the max-width as needed
       }}
       onClick={() => switchTab(tab.id)}
     >
-      <span>{tab.name}</span>
+      <span style={{ flex: '1 1 auto', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: '0' }}>{tab.name}</span>
       <button
         onClick={(e) => {
           e.stopPropagation();
           closeTab(tab.id);
         }}
         style={{ 
+          flex: '0 0 auto',
           marginLeft: '8px',
           border: '0',
           backgroundColor: 'transparent',
