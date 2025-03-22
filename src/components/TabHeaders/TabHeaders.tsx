@@ -5,6 +5,7 @@ import Tab from './Tab';
 import { ICONBAR_HEIGHT, TABBAR_HEIGHT } from '../../constants/elementSettings';
 import { getCurrentTheme } from '../../utils/colorHelpers';
 import { getCanvasBackgroundColor } from '../../utils/localStorageHelpers';
+import { DEFAULT_CANVAS_BACKGROUND_COLOR } from '../../constants/elementSettings';
 
 interface TabHeadersProps {
   tabs: TabState[];
@@ -22,17 +23,19 @@ const TabHeaders: React.FC<TabHeadersProps> = React.memo(({
   switchTab
 }) => {
   const [isMounted, setIsMounted] = useState(false);
+  const [backgroundColor, setBackgroundColor] = useState(DEFAULT_CANVAS_BACKGROUND_COLOR);
+  const [theme, setTheme] = useState(() => getCurrentTheme(DEFAULT_CANVAS_BACKGROUND_COLOR));
 
   useEffect(() => {
     setIsMounted(true);
+    // localStorage から背景色を取得する - only in client-side
+    const bgColor = getCanvasBackgroundColor();
+    setBackgroundColor(bgColor);
+    // 取得した背景色をもとにテーマを決定
+    setTheme(getCurrentTheme(bgColor));
   }, []);
 
   if (!isMounted) return null;
-
-  // localStorage から背景色を取得する
-  const backgroundColor = getCanvasBackgroundColor();
-  // 取得した背景色をもとにテーマを決定
-  const theme = getCurrentTheme(backgroundColor);
 
   return (
     <div style={{

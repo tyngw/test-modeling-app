@@ -36,9 +36,9 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
     const [isClient, setIsClient] = useState(false);
     const { state, dispatch } = useCanvas();
     const { elements, zoomRatio } = state;
-    const connectionPathColor = getConnectionPathColor() || DEFAULT_CONNECTION_PATH_COLOR;
-    const connectionPathStroke = getConnectionPathStroke() || DEFAULT_CONNECTION_PATH_STROKE;
-    const canvasBackgroundColor = getCanvasBackgroundColor() || DEFAULT_CANVAS_BACKGROUND_COLOR;
+    const [connectionPathColor, setConnectionPathColor] = useState(DEFAULT_CONNECTION_PATH_COLOR);
+    const [connectionPathStroke, setConnectionPathStroke] = useState(DEFAULT_CONNECTION_PATH_STROKE);
+    const [canvasBackgroundColor, setCanvasBackgroundColor] = useState(DEFAULT_CANVAS_BACKGROUND_COLOR);
     const { addToast } = useToast();
     const [displayScopeSize, setCanvasSize] = useState({
         width: 0,
@@ -65,16 +65,11 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                 height: window.innerHeight
             });
             setDisplayArea(`0 0 ${window.innerWidth} ${window.innerHeight - ICONBAR_HEIGHT}`);
-        }
-    }, []);
-
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            setCanvasSize({
-                width: window.innerWidth,
-                height: window.innerHeight
-            });
-            setDisplayArea(`0 0 ${window.innerWidth} ${window.innerHeight - ICONBAR_HEIGHT}`);
+            
+            // Get localStorage values only on the client side
+            setConnectionPathColor(getConnectionPathColor() || DEFAULT_CONNECTION_PATH_COLOR);
+            setConnectionPathStroke(getConnectionPathStroke() || DEFAULT_CONNECTION_PATH_STROKE);
+            setCanvasBackgroundColor(getCanvasBackgroundColor() || DEFAULT_CANVAS_BACKGROUND_COLOR);
         }
     }, []);
 
