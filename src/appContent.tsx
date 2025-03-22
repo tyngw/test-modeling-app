@@ -39,7 +39,6 @@ const AppContent: React.FC = () => {
   }, [currentTabId, updateTabState]);
 
   const handleCloseTabRequest = (tabId: string) => {
-    const targetTab = tabs.find(t => t.id === tabId);
     const hasUnsavedChanges = true;
 
     if (hasUnsavedChanges) {

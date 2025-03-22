@@ -20,19 +20,6 @@ export const formatElementsForPrompt = (elements: { [key: string]: any }, select
         };
     });
 
-    // 階層構造取得関数
-    const getHierarchy = (elementId: string): string[] => {
-        const path: string[] = [];
-        let currentId: string | null = elementId;
-        while (currentId) {
-            const element: ElementInfo | undefined = elementMap[currentId];
-            if (!element) break;
-            path.unshift(element.text);
-            currentId = element.parentId;
-        }
-        return path;
-    };
-
     // ツリー構築関数
     const buildTree = (parentId: string | null, depth: number): string[] => {
         return Object.values(elementMap)

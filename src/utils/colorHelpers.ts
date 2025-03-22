@@ -1,3 +1,5 @@
+import { THEME_BRIGHTNESS_THRESHOLD, LIGHT_THEME, DARK_THEME } from '../constants/themeSettings';
+
 // 色の明るさを判定し、適切なテキスト色を返す関数
 export const getAppropriateTextColor = (backgroundColor: string): string => {
   // RGBに変換できない場合はデフォルトの黒を返す
@@ -34,9 +36,6 @@ export const getColorBrightness = (color: string | { r: number; g: number; b: nu
   // W3C方式で明るさを計算
   return (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1000;
 };
-
-// テーマモードを判定する関数
-import { THEME_BRIGHTNESS_THRESHOLD, LIGHT_THEME, DARK_THEME } from '../constants/themeSettings';
 
 export const isDarkMode = (backgroundColor: string): boolean => {
   const brightness = getColorBrightness(backgroundColor);
