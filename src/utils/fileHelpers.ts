@@ -128,9 +128,35 @@ export const loadElements = (event: Event): Promise<{ elements: Record<string, E
 export const saveSvg = (svgElement: SVGSVGElement, name: string) => {
     const svgElementClone = svgElement.cloneNode(true) as SVGSVGElement;
     svgElementClone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    svgElementClone.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink");
 
     // SVGの背景色を設定
     svgElementClone.style.backgroundColor = DEFAULT_CANVAS_BACKGROUND_COLOR;
+
+    // foreignObject内のテキストスタイルを調整
+    const foreignObjects = svgElementClone.getElementsByTagName('foreignObject');
+    for (let i = 0; i < foreignObjects.length; i++) {
+        const foreignObject = foreignObjects[i];
+        // テキスト選択を可能にする属性を設定
+        foreignObject.setAttribute("requiredExtensions", "http://www.w3.org/1999/xhtml");
+        
+        // div要素を検索してスタイルを設定
+        const divElements = foreignObject.getElementsByTagName('div');
+        for (let j = 0; j < divElements.length; j++) {
+            const div = divElements[j];
+            div.style.fontFamily = DEFAULT_FONT_FAMILY;
+            div.style.fontSize = `${DEFAULT_FONT_SIZE}px`;
+            div.style.color = DEFAULT_TEXT_COLOR;
+            div.style.whiteSpace = 'pre-wrap'; // 改行と空白を保持
+            div.style.wordBreak = 'break-word'; // 単語の途中でも改行
+            div.style.lineHeight = '1.2em'; // 適切な行間
+            div.style.padding = '0px'; // パディングを削除
+            div.style.margin = '0px'; // マージンを削除
+            div.style.overflow = 'visible'; // オーバーフローを表示
+            div.style.userSelect = 'text'; // テキスト選択を明示的に有効化
+            div.style.cursor = 'text'; // テキストカーソルを表示
+        }
+    }
 
     // テキスト要素の処理
     const textElements = svgElementClone.getElementsByTagName('text');
@@ -139,6 +165,10 @@ export const saveSvg = (svgElement: SVGSVGElement, name: string) => {
         textElement.style.fontFamily = DEFAULT_FONT_FAMILY;
         textElement.style.fontSize = `${DEFAULT_FONT_SIZE}px`;
         textElement.style.fill = DEFAULT_TEXT_COLOR;
+        // テキスト選択を有効化
+        textElement.setAttribute("xml:space", "preserve");
+        textElement.style.userSelect = 'text';
+        textElement.style.cursor = 'text';
     }
 
     // rect要素（四角形）のスタイルを設定
@@ -200,6 +230,10 @@ export const saveSvg = (svgElement: SVGSVGElement, name: string) => {
         circleElement.style.fill = ELEM_STYLE.NORMAL.COLOR;
         circleElement.style.stroke = ELEM_STYLE.NORMAL.STROKE_COLOR;
     }
+
+    // SVG全体のテキスト選択を許可する属性を追加
+    svgElementClone.style.userSelect = 'text';
+    svgElementClone.setAttribute("text-rendering", "optimizeLegibility");
 
     // SVGをデータURLに変換して保存
     const svgData = new XMLSerializer().serializeToString(svgElementClone);
