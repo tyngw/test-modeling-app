@@ -33,7 +33,6 @@ describe('UNDO/REDO機能', () => {
             });
         });
 
-        const afterUpdate = result.current.state.elements;
         act(() => { dispatch({ type: 'UNDO' }); });
         expect(result.current.state.elements['1'].texts[0]).toBe(initialText);
 
