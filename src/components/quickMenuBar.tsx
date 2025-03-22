@@ -85,9 +85,10 @@ const QuickMenuBar = ({
         position: 'fixed',
         width: '100%',
         height: ICONBAR_HEIGHT,
-        // zIndex: '100000',
-        overflowX: 'auto', // 水平スクロールを有効化
-        WebkitOverflowScrolling: 'touch' // iOSの慣性スクロール
+        overflowX: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        msOverflowStyle: 'none',  // IEとEdge用
+        scrollbarWidth: 'none',   // Firefox用
       }}
       ref={containerRef}
     >
