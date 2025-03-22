@@ -54,9 +54,9 @@ export const TABBAR_HEIGHT = 40;
 export const HEADER_HEIGHT = ICONBAR_HEIGHT + TABBAR_HEIGHT;
 
 export const MARKER = {
-    HEIGHT: 8,
-    WIDTH: 8,
-    OFFSET: 12,
+    HEIGHT: 18,
+    WIDTH: 18,
+    OFFSET: 10,
 };
 
 // Marker types
