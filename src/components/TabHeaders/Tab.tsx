@@ -7,13 +7,15 @@ interface TabHeaderProps {
   isCurrent: boolean;
   closeTab: (id: string) => void;
   switchTab: (id: string) => void;
+  theme: any; // Using any type for simplicity, should ideally use a proper Theme type
 }
 
 const Tab: React.FC<TabHeaderProps> = React.memo(({ 
   tab, 
   isCurrent, 
   closeTab, 
-  switchTab 
+  switchTab,
+  theme
 }) => {
   const [isMounted, setIsMounted] = useState(false);
 
@@ -23,19 +25,22 @@ const Tab: React.FC<TabHeaderProps> = React.memo(({
 
   if (!isMounted) return null;
 
+  console.log('Theme:', theme);
+
   return (
     <div
       style={{
         padding: '8px',
         marginRight: '4px',
-        backgroundColor: isCurrent ? '#fff' : '#ddd',
-        borderBottom: isCurrent ? '3px solid #87CEFA' : 'none',
+        backgroundColor: isCurrent ? theme.TAB_BAR.ACTIVE_TAB_BACKGROUND : theme.TAB_BAR.INACTIVE_TAB_BACKGROUND,
+        borderBottom: isCurrent ? `3px solid ${theme.TAB_BAR.ACTIVE_TAB_BORDER}` : 'none',
         paddingBottom: '3px',
         borderRadius: '5px 5px 0 0',
         fontSize: '12px',
         cursor: 'pointer',
         display: 'flex',
         alignItems: 'center',
+        color: theme.TAB_BAR.TAB_TEXT
       }}
       onClick={() => switchTab(tab.id)}
     >
@@ -50,7 +55,7 @@ const Tab: React.FC<TabHeaderProps> = React.memo(({
           border: '0',
           backgroundColor: 'transparent',
           fontSize: '16px',
-          color: '#666',
+          color: theme.TAB_BAR.CLOSE_BUTTON_COLOR,
           fontWeight: 'bold',
           cursor: 'pointer',
         }}
