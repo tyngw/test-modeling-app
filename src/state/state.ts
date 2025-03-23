@@ -19,14 +19,13 @@ import {
     NewElementParams
 } from '../utils/elementHelpers';
 import { adjustElementPositions } from '../utils/layoutHelpers';
-import { getSelectedAndChildren, copyToClipboard } from '../utils/clipboardHelpers';
+import { getSelectedAndChildren, copyToClipboard, getGlobalCutElements } from '../utils/clipboardHelpers';
 
 export interface State {
     elements: ElementsMap;
     width: number;
     height: number;
     zoomRatio: number;
-    cutElements?: ElementsMap;
 }
 
 export type Action = {
@@ -208,7 +207,7 @@ function handleArrowAction(handler: (elements: ElementsMap) => string | undefine
     };
 }
 
-function handleElementMutation(state: State, mutationFn: (elements: ElementsMap, selectedElement: Element) => { elements: ElementsMap, cutElements?: ElementsMap }): State {
+function handleElementMutation(state: State, mutationFn: (elements: ElementsMap, selectedElement: Element) => { elements: ElementsMap }): State {
     const selectedElement = Object.values(state.elements).find(element => element.selected);
     if (!selectedElement) return state;
 
@@ -218,8 +217,7 @@ function handleElementMutation(state: State, mutationFn: (elements: ElementsMap,
     if ('elements' in mutationResult) {
         return {
             ...state,
-            elements: mutationResult.elements,
-            ...(mutationResult.cutElements && { cutElements: mutationResult.cutElements })
+            elements: mutationResult.elements
         };
     } else {
         return {
@@ -634,23 +632,26 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
 
         return {
             ...state,
-            elements: updatedElements,
-            cutElements
+            elements: updatedElements
         };
     },
 
     COPY_ELEMENT: state => handleSelectedElementAction(state, selectedElement => {
         const cutElements = getSelectedAndChildren(state.elements, selectedElement);
         copyToClipboard(cutElements);
-        return { cutElements };
+        return {}; // No longer need to return cutElements to state
     }),
 
     PASTE_ELEMENT: state => {
         const selectedElements = Object.values(state.elements).filter(e => e.selected);
-        if (selectedElements.length !== 1 || !state.cutElements) return state;
+        if (selectedElements.length !== 1) return state;
+        
+        // Get the cut elements from global storage instead of state
+        const globalCutElements = getGlobalCutElements();
+        if (!globalCutElements) return state;
 
         return handleElementMutation(state, (elements, selectedElement) => {
-            const pastedElements = pasteElements(elements, state.cutElements!, selectedElement);
+            const pastedElements = pasteElements(elements, globalCutElements, selectedElement);
             return {
                 elements: adjustElementPositions(pastedElements)
             };

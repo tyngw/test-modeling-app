@@ -21,6 +21,7 @@ const PROMPT_KEY = 'prompt';
 const SYSTEM_PROMPT_KEY = 'systemPromptTemplate';
 const APIKEY_KEY = 'apiKey';
 const MODEL_TYPE_KEY = 'modelType';
+const CUT_ELEMENTS_KEY = 'cutElements';
 
 const MODEL_ENDPOINTS: { [key: string]: string } = {
   'gemini-1.5-flash': 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
@@ -226,6 +227,13 @@ export const getApiEndpoint = (): string => {
   const modelType = getModelType();
   return MODEL_ENDPOINTS[modelType] || MODEL_ENDPOINTS['gemini-1.5-flash'];
 };
+
+// Cut Elements 関連
+export const getCutElements = (): string | null => 
+  safeLocalStorage.getItem(CUT_ELEMENTS_KEY);
+
+export const setCutElements = (value: string): void => 
+  safeLocalStorage.setItem(CUT_ELEMENTS_KEY, value);
 
 // タブの状態関連
 export const getTabsState = (): string | null => 
