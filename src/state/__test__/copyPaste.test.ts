@@ -69,10 +69,8 @@ describe('切り取り、コピー、貼り付け操作', () => {
         );
         
         expect(pastedElements.length).toBeGreaterThan(0);
-        if (pastedElements.length > 0) {
-            const pastedElement = pastedElements[0];
-            expect(pastedElement.depth).toBe(parentElement.depth + 1);
-        }
+        const pastedElement = pastedElements[0];
+        expect(pastedElement.depth).toBe(parentElement.depth + 1);
     });
 
     it('ノードを切り取ることができることを確認する', () => {
@@ -109,14 +107,12 @@ describe('切り取り、コピー、貼り付け操作', () => {
         
         // モックストレージに要素が保存されたことを確認
         expect(mockStorage).not.toBeNull();
-        if (mockStorage) {
-            expect(Object.keys(mockStorage).length).toBeGreaterThan(0);
-            // 切り取られた要素がモックストレージに存在するか確認
-            const cutElement = Object.values(mockStorage).find(
-                (elm: Element) => elm.id === childElement.id
-            );
-            expect(cutElement).toBeDefined();
-        }
+        expect(Object.keys(mockStorage!).length).toBeGreaterThan(0);
+        // 切り取られた要素がモックストレージに存在するか確認
+        const cutElement = Object.values(mockStorage!).find(
+            (elm: Element) => elm.id === childElement.id
+        );
+        expect(cutElement).toBeDefined();
     });
     
     it('切り取ったノードが貼り付けられることを確認する', () => {
@@ -180,7 +176,9 @@ describe('切り取り、コピー、貼り付け操作', () => {
             (elm: Element) => elm.id === newParentElement.id
         ) as Element;
         
-        expect(updatedParentElement.children).toBeGreaterThan(0);
+        expect(updatedParentElement).toMatchObject({
+            children: 1,
+        });
     });
     
     it('切り取ったノードが貼り付けられることを確認する(切り取るノードに子が存在するケース)', () => {
