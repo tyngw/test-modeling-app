@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Undo, Redo, saveSnapshot } from './undoredo';
 import { handleArrowUp, handleArrowDown, handleArrowRight, handleArrowLeft } from '../utils/elementSelector';
 import { Element } from '../types';
-import { SIZE, TEXTAREA_PADDING, DEFAULT_FONT_SIZE, LINE_HEIGHT_RATIO, DEFAULT_POSITION } from '../constants/elementSettings';
+import { SIZE, TEXTAREA_PADDING, DEFAULT_FONT_SIZE, LINE_HEIGHT_RATIO, DEFAULT_POSITION, NUMBER_OF_SECTIONS } from '../constants/elementSettings';
 import { calculateElementWidth, wrapText } from '../utils/textareaHelpers';
 import { debugLog } from '../utils/debugLogHelpers';
 import { 
@@ -26,6 +26,7 @@ export interface State {
     width: number;
     height: number;
     zoomRatio: number;
+    numberOfSections: number;
 }
 
 export type Action = {
@@ -46,18 +47,25 @@ export const initialState: State = {
     width: typeof window !== 'undefined' ? window.innerWidth : 0,
     height: typeof window !== 'undefined' ? window.innerHeight : 0,
     zoomRatio: 1,
+    numberOfSections: NUMBER_OF_SECTIONS,
 };
 
 const createElementAdder = (
     elements: ElementsMap,
     parentElement: Element,
     text?: string,
-    options?: { newElementSelect?: boolean; tentative?: boolean; order?: number; }
+    options?: { 
+        newElementSelect?: boolean; 
+        tentative?: boolean; 
+        order?: number; 
+        numberOfSections?: number; 
+    }
 ): ElementsMap => {
     const newElement = createNewElement({
         parentId: parentElement.id,
         order: options?.order ?? parentElement.children,
-        depth: parentElement.depth + 1
+        depth: parentElement.depth + 1,
+        numSections: options?.numberOfSections
     });
 
     if (text) {
@@ -86,7 +94,7 @@ const createElementAdder = (
     };
 };
 
-const createSiblingElementAdder = (elements: ElementsMap, selectedElement: Element): ElementsMap => {
+const createSiblingElementAdder = (elements: ElementsMap, selectedElement: Element, numberOfSections?: number): ElementsMap => {
     const parentId = selectedElement.parentId;
     const siblings = Object.values(elements).filter(e => e.parentId === parentId);
     const newOrder = selectedElement.order + 1;
@@ -107,7 +115,8 @@ const createSiblingElementAdder = (elements: ElementsMap, selectedElement: Eleme
     const newElement = createNewElement({
         parentId: parentId,
         order: newOrder,
-        depth: selectedElement.depth
+        depth: selectedElement.depth,
+        numSections: numberOfSections
     });
     updatedElements[selectedElement.id] = { ...selectedElement, selected: false };
     updatedElements[newElement.id] = newElement;
@@ -335,14 +344,20 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
 
     ADD_ELEMENT: (state, action) => handleElementMutation(state, (elements, selectedElement) => {
         const text = action.payload?.text;
-        const newElements = createElementAdder(elements, selectedElement, text, { newElementSelect: true });
+        const numberOfSections = state.numberOfSections; // Use the tab's numberOfSections
+        
+        const newElements = createElementAdder(elements, selectedElement, text, { 
+            newElementSelect: true,
+            numberOfSections 
+        });
         return { elements: adjustElementPositions(newElements) };
     }),
 
     ADD_ELEMENTS_SILENT: (state, action) => handleElementMutation(state, (elements, selectedElement) => {
         const texts: string[] = action.payload?.texts || [];
         const add_tentative = action.payload?.tentative || false;
-
+        const numberOfSections = state.numberOfSections; // Use the tab's numberOfSections
+        
         let newElements = { ...elements };
         const parent = { ...selectedElement };
         const initialChildren = parent.children;
@@ -351,7 +366,8 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
             newElements = createElementAdder(newElements, parent, text, {
                 newElementSelect: false,
                 tentative: add_tentative,
-                order: initialChildren + index
+                order: initialChildren + index,
+                numberOfSections
             });
         });
 
@@ -385,7 +401,8 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
     }),
 
     ADD_SIBLING_ELEMENT: state => handleElementMutation(state, (elements, selectedElement) => {
-        const newElements = createSiblingElementAdder(elements, selectedElement);
+        const numberOfSections = state.numberOfSections; // Use the tab's numberOfSections
+        const newElements = createSiblingElementAdder(elements, selectedElement, numberOfSections);
         return { elements: adjustElementPositions(newElements) };
     }),
 
