@@ -271,22 +271,14 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
 
         return (
             <g key={`connection-${element.id}-${element.parentId}`}>
-                <circle
-                    cx={element.x + element.width + 10}
-                    cy={element.y + totalHeight / 2}
-                    r={10}
-                    fill="transparent"
-                    style={{ zIndex: 0, opacity: 0 }}
-                    onMouseEnter={() => setHover(element.id)}
-                    onMouseLeave={() => setHover(null)}
-                    onClick={() => setShowMenuForElement(element.id)}
-                />
                 {(hover === element.id || showMenuForElement === element.id) && (
                     <circle
                         cx={element.x + element.width + 10}
                         cy={element.y + totalHeight / 2}
                         r={10}
                         fill="#bfbfbf"
+                        opacity={0.5}
+                        // style={{ pointerEvents: 'none' }}
                     />
                 )}
                 <path
@@ -296,7 +288,19 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                     strokeWidth={strokeWidth}
                     fill="none"
                     markerStart={markerStart}
+                    style={{ pointerEvents: 'none' }}
                 />
+                <circle
+                    cx={element.x + element.width + 10}
+                    cy={element.y + totalHeight / 2}
+                    r={10}
+                    fill="transparent"
+                    // style={{ pointerEvents: 'all' }}
+                    onMouseEnter={() => setHover(element.id)}
+                    onMouseLeave={() => setHover(null)}
+                    onClick={() => setShowMenuForElement(element.id)}
+                />
+                
             </g>
         );
     };
