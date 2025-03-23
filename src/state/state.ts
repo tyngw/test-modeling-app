@@ -157,10 +157,13 @@ const pasteElements = (elements: ElementsMap, cutElements: ElementsMap, parentEl
         };
     });
 
-    // 貼り付け先のchildren更新
+    // Set the root element of pasted content as selected, and deselect the parent
+    const pastedRootElementId = idMap.get(rootElement.id)!;
+    newElements[pastedRootElementId].selected = true;
     const updatedParent = {
         ...parentElement,
-        children: parentElement.children + 1
+        children: parentElement.children + 1,
+        selected: false
     };
 
     return {
