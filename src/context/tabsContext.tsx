@@ -4,7 +4,7 @@
 import React, { createContext, useContext, ReactNode, useState, useCallback, useMemo, useEffect } from 'react';
 import { State, initialState } from '../state/state';
 import { v4 as uuidv4 } from 'uuid';
-import { DEFAULT_POSITION } from '../constants/elementSettings';
+import { DEFAULT_POSITION, NUMBER_OF_SECTIONS } from '../constants/elementSettings';
 import { createNewElement } from '../utils/elementHelpers';
 import { convertLegacyElement } from '../utils/fileHelpers';
 import { getTabsState, setTabsState } from '../utils/localStorageHelpers';
@@ -28,20 +28,27 @@ export interface TabsContextValue {
   switchTab: (tabId: string) => void;
   updateTabState: (tabId: string, updater: (prevState: State) => State) => void;
   updateTabName: (tabId: string, newName: string) => void;
+  getCurrentTabState: () => State | undefined;
+  getCurrentTabNumberOfSections: () => number;
+  updateCurrentTabNumberOfSections: (value: number) => void;
 }
 
 const TabsContext = createContext<TabsContextValue | undefined>(undefined);
 
 const createInitialTabState = (): TabState => {
   const newRootId = "1";
+  
   return {
     id: uuidv4(),
     name: "無題",
     state: {
       ...initialState,
+      numberOfSections: NUMBER_OF_SECTIONS,
       elements: {
         [newRootId]: {
-          ...createNewElement(),
+          ...createNewElement({
+            numSections: NUMBER_OF_SECTIONS
+          }),
           id: newRootId,
           x: DEFAULT_POSITION.X,
           y: DEFAULT_POSITION.Y,
@@ -152,6 +159,24 @@ export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }));
   }, []);
 
+  const getCurrentTabState = useCallback(() => {
+    const currentTab = tabs.find(tab => tab.id === currentTabId);
+    return currentTab?.state;
+  }, [tabs, currentTabId]);
+
+  const getCurrentTabNumberOfSections = useCallback(() => {
+    const currentTab = tabs.find(tab => tab.id === currentTabId);
+    return currentTab?.state.numberOfSections ?? NUMBER_OF_SECTIONS;
+  }, [tabs, currentTabId]);
+
+  const updateCurrentTabNumberOfSections = useCallback((value: number) => {
+    const clampedValue = Math.max(1, Math.min(10, value));
+    updateTabState(currentTabId, prevState => ({
+      ...prevState,
+      numberOfSections: clampedValue
+    }));
+  }, [currentTabId, updateTabState]);
+
   const contextValue = useMemo(() => ({
     tabs,
     currentTabId,
@@ -160,7 +185,21 @@ export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     switchTab,
     updateTabState,
     updateTabName,
-  }), [tabs, currentTabId, addTab, closeTab, switchTab, updateTabState, updateTabName]);
+    getCurrentTabState,
+    getCurrentTabNumberOfSections,
+    updateCurrentTabNumberOfSections,
+  }), [
+    tabs, 
+    currentTabId, 
+    addTab, 
+    closeTab, 
+    switchTab, 
+    updateTabState, 
+    updateTabName, 
+    getCurrentTabState,
+    getCurrentTabNumberOfSections,
+    updateCurrentTabNumberOfSections
+  ]);
 
   return (
     <TabsContext.Provider value={contextValue}>
