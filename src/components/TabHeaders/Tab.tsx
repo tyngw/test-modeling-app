@@ -28,7 +28,7 @@ const Tab: React.FC<TabHeaderProps> = React.memo(({
   return (
     <div
       style={{
-        padding: '8px',
+        padding: '6px',
         marginRight: '4px',
         backgroundColor: isCurrent ? theme.TAB_BAR.ACTIVE_TAB_BACKGROUND : theme.TAB_BAR.INACTIVE_TAB_BACKGROUND,
         borderBottom: isCurrent ? `3px solid ${theme.TAB_BAR.ACTIVE_TAB_BORDER}` : 'none',
@@ -42,7 +42,7 @@ const Tab: React.FC<TabHeaderProps> = React.memo(({
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
-        minWidth: '40px',
+        minWidth: '48px',
         maxWidth: '150px'
       }}
       onClick={() => switchTab(tab.id)}
@@ -55,7 +55,7 @@ const Tab: React.FC<TabHeaderProps> = React.memo(({
         }}
         style={{ 
           flex: '0 0 auto',
-          marginLeft: '8px',
+          marginLeft: '2px',
           border: '0',
           backgroundColor: 'transparent',
           fontSize: '16px',
