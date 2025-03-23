@@ -322,10 +322,10 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
         
         return (
             <foreignObject
-                x={element.x + element.width + 15}
+                x={element.x + element.width + 20}
                 y={element.y + totalHeight / 2 - 25}
                 width={150}
-                height={260}
+                height={270}
                 className="popup-menu"
             >
                 <div style={{
