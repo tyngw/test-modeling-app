@@ -4,6 +4,8 @@
 import React, { ReactNode, useState, useEffect } from 'react';
 import { getCurrentTheme } from '../utils/colorHelpers';
 import { getCanvasBackgroundColor } from '../utils/localStorageHelpers';
+import { useCanvas } from '../context/canvasContext';
+import { useIsMounted } from '../hooks/useIsMounted';
 
 interface ModalWindowProps {
     isOpen: boolean;
@@ -12,14 +14,11 @@ interface ModalWindowProps {
 }
 
 const ModalWindow: React.FC<ModalWindowProps> = ({ isOpen, onClose, children }) => {
-    const [isMounted, setIsMounted] = useState(false);
+    const isMounted = useIsMounted();
     const [currentTheme, setCurrentTheme] = useState(() => 
         getCurrentTheme(getCanvasBackgroundColor())
     );
-
-    useEffect(() => {
-        setIsMounted(true);
-    }, []);
+    const { dispatch } = useCanvas();
 
     useEffect(() => {
         if (!isMounted) return;
@@ -27,7 +26,13 @@ const ModalWindow: React.FC<ModalWindowProps> = ({ isOpen, onClose, children }) 
         setCurrentTheme(getCurrentTheme(backgroundColor));
     }, [isMounted]);
 
-    if (!isOpen || !isMounted) {
+    useEffect(() => {
+        if (isOpen) {
+            dispatch({ type: 'END_EDITING' });
+        }
+    }, [isOpen, dispatch]);
+
+    if (!isOpen) {
         return null;
     }
 

@@ -31,12 +31,19 @@ const AppContent: React.FC = () => {
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const { addToast } = useToast();
 
-  const toggleHelp = useCallback(() => setHelpOpen(prev => !prev), []);
-  const toggleSettings = useCallback(() => setIsSettingsOpen(prev => !prev), []);
-
   const dispatch = useCallback((action: Action) => {
     updateTabState(currentTabId, prevState => reducer(prevState, action));
   }, [currentTabId, updateTabState]);
+
+  const toggleHelp = useCallback(() => {
+    dispatch({ type: 'END_EDITING' });
+    setHelpOpen(prev => !prev);
+  }, [dispatch]);
+
+  const toggleSettings = useCallback(() => {
+    dispatch({ type: 'END_EDITING' });
+    setIsSettingsOpen(prev => !prev);
+  }, [dispatch]);
 
   const handleCloseTabRequest = (tabId: string) => {
     const hasUnsavedChanges = true;
@@ -120,12 +127,12 @@ const AppContent: React.FC = () => {
       <CanvasProvider state={currentTab.state} dispatch={dispatch}>
         <CanvasArea isHelpOpen={isHelpOpen} toggleHelp={toggleHelp} />
         <TabHeaders
-        tabs={tabs}
-        currentTabId={currentTabId}
-        addTab={addTab}
-        closeTab={handleCloseTabRequest}
-        switchTab={switchTab}
-      />
+          tabs={tabs}
+          currentTabId={currentTabId}
+          addTab={addTab}
+          closeTab={handleCloseTabRequest}
+          switchTab={switchTab}
+        />
         <QuickMenuBar
           saveSvg={() => saveSvg(document.querySelector('.svg-element') as SVGSVGElement, 'download.svg')}
           loadElements={(event) => loadElements(event.nativeEvent)
@@ -140,30 +147,28 @@ const AppContent: React.FC = () => {
           toggleSettings={toggleSettings}
           onAIClick={handleAIClick}
         />
-        
+
+        <UnsaveConfirmModal
+          showCloseConfirm={showCloseConfirm}
+          setShowCloseConfirm={setShowCloseConfirm}
+          tabToClose={tabToClose}
+          closeTab={closeTab}
+        />
+
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          onClose={toggleSettings}
+        />
+        <ModalWindow isOpen={isHelpOpen} onClose={toggleHelp}>
+          <div dangerouslySetInnerHTML={{ __html: helpContent }} />
+        </ModalWindow>
       </CanvasProvider>
     );
-  }, [currentTab, dispatch, toggleHelp, isHelpOpen, currentTabId, updateTabName, toggleSettings, addToast, handleAIClick]);
+  }, [currentTab, dispatch, toggleHelp, isHelpOpen, currentTabId, updateTabName, toggleSettings, addToast, handleAIClick, showCloseConfirm, tabToClose, closeTab, isSettingsOpen]);
 
   return (
     <div>
       {memoizedCanvasProvider}
-      
-
-      <UnsaveConfirmModal
-        showCloseConfirm={showCloseConfirm}
-        setShowCloseConfirm={setShowCloseConfirm}
-        tabToClose={tabToClose}
-        closeTab={closeTab}
-      />
-
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        onClose={toggleSettings}
-      />
-      <ModalWindow isOpen={isHelpOpen} onClose={toggleHelp}>
-        <div dangerouslySetInnerHTML={{ __html: helpContent }} />
-      </ModalWindow>
     </div>
   );
 };
