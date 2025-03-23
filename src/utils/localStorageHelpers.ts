@@ -14,6 +14,33 @@ import {
 import { SYSTEM_PROMPT_TEMPLATE } from '../constants/systemPrompt';
 import { VERSION } from '../constants/version';
 
+// Style settings interface to define structure of the "styles" key
+interface StyleSettings {
+  canvasBackgroundColor: string;
+  connectionPathColor: string;
+  elementColor: string;
+  fontFamily: string;
+  markerType: string;
+  strokeColor: string;
+  strokeWidth: number;
+  textColor: string;
+  connectionPathStroke: number;
+}
+
+// Default style settings
+const DEFAULT_STYLES: StyleSettings = {
+  canvasBackgroundColor: DEFAULT_CANVAS_BACKGROUND_COLOR,
+  connectionPathColor: DEFAULT_CONNECTION_PATH_COLOR,
+  elementColor: ELEM_STYLE.NORMAL.COLOR,
+  fontFamily: DEFAULT_FONT_FAMILY,
+  markerType: DEFAULT_MARKER_TYPE,
+  strokeColor: ELEM_STYLE.NORMAL.STROKE_COLOR,
+  strokeWidth: ELEM_STYLE.STROKE_WIDTH,
+  textColor: DEFAULT_TEXT_COLOR,
+  connectionPathStroke: DEFAULT_CONNECTION_PATH_STROKE,
+};
+
+const STYLES_KEY = 'styles';
 const ENCRYPTION_KEY = 'encryptionKey';
 const TABS_STORAGE_KEY = 'tabsState';
 export const VERSION_KEY = 'appVersion';
@@ -79,7 +106,6 @@ export const safeLocalStorage = {
 // バージョンチェックと初期化
 const checkAndUpdateVersion = () => {
   if (typeof window === 'undefined') return;
-
   const storedVersion = safeLocalStorage.getItem(VERSION_KEY);
   if (storedVersion !== VERSION) {
     const keys = Object.keys(localStorage);
@@ -111,6 +137,66 @@ const setSetting = <T>(key: string, value: T): void => {
   safeLocalStorage.setItem(key, String(value));
 };
 
+// Get all style settings
+export const getStyles = (): StyleSettings => {
+  const storedStyles = safeLocalStorage.getItem(STYLES_KEY);
+  if (!storedStyles) {
+    // Migrate old settings to new format if they exist
+    const migratedStyles = migrateLegacyStyles();
+    return migratedStyles;
+  }
+  
+  try {
+    return { ...DEFAULT_STYLES, ...JSON.parse(storedStyles) };
+  } catch (e) {
+    console.error('Failed to parse styles:', e);
+    return DEFAULT_STYLES;
+  }
+};
+
+// Set all style settings
+export const setStyles = (styles: Partial<StyleSettings>): void => {
+  const currentStyles = getStyles();
+  const newStyles = { ...currentStyles, ...styles };
+  safeLocalStorage.setItem(STYLES_KEY, JSON.stringify(newStyles));
+};
+
+// Migrate legacy style settings to the new format
+const migrateLegacyStyles = (): StyleSettings => {
+  const migrated: StyleSettings = { ...DEFAULT_STYLES };
+  
+  // Get old individual settings if they exist
+  const keys: (keyof StyleSettings)[] = [
+    'canvasBackgroundColor', 'connectionPathColor', 'elementColor', 
+    'fontFamily', 'markerType', 'strokeColor', 'strokeWidth',
+    'textColor', 'connectionPathStroke'
+  ];
+  
+  let hasLegacySettings = false;
+  
+  keys.forEach(key => {
+    const oldValue = safeLocalStorage.getItem(key);
+    if (oldValue !== null) {
+      hasLegacySettings = true;
+      if (key === 'strokeWidth' || key === 'connectionPathStroke') {
+        migrated[key] = parseFloat(oldValue);
+      } else {
+        (migrated as any)[key] = oldValue;
+      }
+      
+      // Remove old individual settings
+      safeLocalStorage.removeItem(key);
+    }
+  });
+  
+  // Save migrated settings if any legacy settings were found
+  if (hasLegacySettings) {
+    safeLocalStorage.setItem(STYLES_KEY, JSON.stringify(migrated));
+  }
+  
+  return migrated;
+};
+
 // セクション数関連
 export const getNumberOfSections = (): number => 
   getSetting('numberOfSections', NUMBER_OF_SECTIONS);
@@ -120,60 +206,60 @@ export const setNumberOfSections = (value: number): void => {
   setSetting('numberOfSections', clampedValue);
 };
 
-// Element styling related
+// Element styling related - updated to use styles object
 export const getElementColor = (): string => 
-  getSetting('elementColor', ELEM_STYLE.NORMAL.COLOR);
+  getStyles().elementColor;
 
 export const setElementColor = (color: string): void => 
-  setSetting('elementColor', color);
+  setStyles({ elementColor: color });
 
 export const getStrokeColor = (): string => 
-  getSetting('strokeColor', ELEM_STYLE.NORMAL.STROKE_COLOR);
+  getStyles().strokeColor;
 
 export const setStrokeColor = (color: string): void => 
-  setSetting('strokeColor', color);
+  setStyles({ strokeColor: color });
 
 export const getStrokeWidth = (): number => 
-  getSetting('strokeWidth', ELEM_STYLE.STROKE_WIDTH);
+  getStyles().strokeWidth;
 
 export const setStrokeWidth = (width: number): void => 
-  setSetting('strokeWidth', width);
+  setStyles({ strokeWidth: width });
 
 export const getFontFamily = (): string => 
-  getSetting('fontFamily', DEFAULT_FONT_FAMILY);
+  getStyles().fontFamily;
 
 export const setFontFamily = (fontFamily: string): void => 
-  setSetting('fontFamily', fontFamily);
+  setStyles({ fontFamily: fontFamily });
 
 export const getMarkerType = (): string => 
-  getSetting('markerType', DEFAULT_MARKER_TYPE);
+  getStyles().markerType;
 
 export const setMarkerType = (markerType: string): void => 
-  setSetting('markerType', markerType);
+  setStyles({ markerType: markerType });
 
 export const getConnectionPathColor = (): string => 
-  getSetting('connectionPathColor', DEFAULT_CONNECTION_PATH_COLOR);
+  getStyles().connectionPathColor;
 
 export const setConnectionPathColor = (color: string): void => 
-  setSetting('connectionPathColor', color);
+  setStyles({ connectionPathColor: color });
 
 export const getConnectionPathStroke = (): number => 
-  getSetting('connectionPathStroke', DEFAULT_CONNECTION_PATH_STROKE);
+  getStyles().connectionPathStroke;
 
 export const setConnectionPathStroke = (stroke: number): void => 
-  setSetting('connectionPathStroke', stroke);
+  setStyles({ connectionPathStroke: stroke });
 
 export const getCanvasBackgroundColor = (): string => 
-  getSetting('canvasBackgroundColor', DEFAULT_CANVAS_BACKGROUND_COLOR);
+  getStyles().canvasBackgroundColor;
 
 export const setCanvasBackgroundColor = (color: string): void => 
-  setSetting('canvasBackgroundColor', color);
+  setStyles({ canvasBackgroundColor: color });
 
 export const getTextColor = (): string => 
-  getSetting('textColor', DEFAULT_TEXT_COLOR);
+  getStyles().textColor;
 
 export const setTextColor = (color: string): void => 
-  setSetting('textColor', color);
+  setStyles({ textColor: color });
 
 // APIキー関連
 export const getApiKey = async (): Promise<string> => {
