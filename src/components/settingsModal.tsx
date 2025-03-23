@@ -39,6 +39,7 @@ import {
 } from '../utils/localStorageHelpers';
 import { useTabs } from '../context/tabsContext';
 import { getCurrentTheme, isDarkMode } from '../utils/colorHelpers';
+import { useIsMounted } from '../hooks/useIsMounted';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -46,7 +47,7 @@ interface SettingsModalProps {
 }
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
-  const [isMounted, setIsMounted] = useState(false);
+  const isMounted = useIsMounted();
   const [activeTab, setActiveTab] = useState(0);
   const [values, setValues] = useState<Record<string, string | number>>({});
   const [errors, setErrors] = useState<Record<string, boolean>>({});
@@ -58,14 +59,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   // Get the tabs context for updating tab-specific state
   const { getCurrentTabNumberOfSections, updateCurrentTabNumberOfSections } = useTabs();
 
-  // クライアントサイドマウントのチェック
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
   // Set the theme mode based on canvas background color
   useEffect(() => {
-    if (!isMounted) return;
+    // if (!isMounted) return;
     
     const backgroundColor = getCanvasBackgroundColor();
     const darkMode = isDarkMode(backgroundColor);
