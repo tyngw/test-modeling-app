@@ -1,5 +1,9 @@
 // src/components/modalWindow.tsx
-import React, { ReactNode } from 'react';
+'use client';
+
+import React, { ReactNode, useState, useEffect } from 'react';
+import { getCurrentTheme } from '../utils/colorHelpers';
+import { getCanvasBackgroundColor } from '../utils/localStorageHelpers';
 
 interface ModalWindowProps {
     isOpen: boolean;
@@ -8,7 +12,22 @@ interface ModalWindowProps {
 }
 
 const ModalWindow: React.FC<ModalWindowProps> = ({ isOpen, onClose, children }) => {
-    if (!isOpen) {
+    const [isMounted, setIsMounted] = useState(false);
+    const [currentTheme, setCurrentTheme] = useState(() => 
+        getCurrentTheme(getCanvasBackgroundColor())
+    );
+
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
+
+    useEffect(() => {
+        if (!isMounted) return;
+        const backgroundColor = getCanvasBackgroundColor();
+        setCurrentTheme(getCurrentTheme(backgroundColor));
+    }, [isMounted]);
+
+    if (!isOpen || !isMounted) {
         return null;
     }
 
@@ -26,7 +45,8 @@ const ModalWindow: React.FC<ModalWindowProps> = ({ isOpen, onClose, children }) 
             zIndex: 9000 
         }}>
             <div style={{ 
-                backgroundColor: '#fff', 
+                backgroundColor: currentTheme.MODAL.BACKGROUND,
+                color: currentTheme.MODAL.TEXT_COLOR,
                 padding: '40px 24px 24px', 
                 borderRadius: '10px', 
                 width: '80%', 
@@ -44,7 +64,9 @@ const ModalWindow: React.FC<ModalWindowProps> = ({ isOpen, onClose, children }) 
                             top: 10, 
                             background: 'transparent', 
                             border: 'none', 
-                            fontSize: '1.5em' 
+                            fontSize: '1.5em',
+                            color: currentTheme.MODAL.TEXT_COLOR,
+                            cursor: 'pointer'
                         }}
                     >
                         ×
@@ -52,7 +74,7 @@ const ModalWindow: React.FC<ModalWindowProps> = ({ isOpen, onClose, children }) 
                     <div style={{
                         flex: 1,
                         overflow: 'auto',
-                        paddingRight: '8px' // スクロールバー対策
+                        paddingRight: '8px'
                     }}>
                         {children}
                     </div>
