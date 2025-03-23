@@ -36,6 +36,7 @@ import {
   getApiKey,
   setApiKey,
 } from '../utils/localStorageHelpers';
+import { useTabs } from '../context/tabsContext';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -47,6 +48,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState(0);
   const [values, setValues] = useState<Record<string, string | number>>({});
   const [errors, setErrors] = useState<Record<string, boolean>>({});
+  
+  // Get the tabs context for updating tab-specific state
+  const { getCurrentTabNumberOfSections, updateCurrentTabNumberOfSections } = useTabs();
 
   // クライアントサイドマウントのチェック
   useEffect(() => {
@@ -70,7 +74,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
         loadedValues['systemPromptTemplate'] = getSystemPromptTemplate();
         loadedValues['modelType'] = getModelType();
         loadedValues['prompt'] = getPrompt();
-        loadedValues['numberOfSections'] = getNumberOfSections();
+        
+        // Get numberOfSections from the current tab instead of global settings
+        loadedValues['numberOfSections'] = getCurrentTabNumberOfSections();
+        
         loadedValues['elementColor'] = getElementColor();
         loadedValues['strokeColor'] = getStrokeColor();
         loadedValues['strokeWidth'] = getStrokeWidth();
@@ -80,13 +87,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
         loadedValues['connectionPathStroke'] = getConnectionPathStroke();
         loadedValues['canvasBackgroundColor'] = getCanvasBackgroundColor();
         loadedValues['textColor'] = getTextColor();
-
+        
         setValues(loadedValues);
       } catch (error) {
         console.error('Failed to load settings:', error);
       }
     })();
-  }, [isMounted, isOpen]);
+  }, [isMounted, isOpen, getCurrentTabNumberOfSections]);
 
   // 設定が読み込まれる前はレンダリングしない
   if (!isMounted) {
@@ -145,8 +152,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     const prompt = values['prompt'];
     if (prompt !== undefined) setPrompt(String(prompt));
     
+    // Update both global setting and current tab state for numberOfSections
     const numberOfSections = values['numberOfSections'];
-    if (numberOfSections !== undefined) setNumberOfSections(Number(numberOfSections));
+    if (numberOfSections !== undefined) {
+      const numValue = Number(numberOfSections);
+      // Update global setting (for new tabs)
+      setNumberOfSections(numValue);
+      // Update current tab state
+      updateCurrentTabNumberOfSections(numValue);
+    }
     
     const elementColor = values['elementColor'];
     if (elementColor !== undefined) setElementColor(String(elementColor));

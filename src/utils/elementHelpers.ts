@@ -1,8 +1,8 @@
 // src/utils/elementHelpers.ts
 import { Element } from '../types';
 import { v4 as uuidv4 } from 'uuid';
-import { getNumberOfSections, getMarkerType } from './localStorageHelpers';
-import { SIZE } from '../constants/elementSettings';
+import { getMarkerType } from './localStorageHelpers';
+import { SIZE, NUMBER_OF_SECTIONS } from '../constants/elementSettings';
 import { debugLog } from './debugLogHelpers';
 
 export type ElementsMap = { [key: string]: Element };
@@ -18,7 +18,7 @@ export const createNewElement = ({
     parentId = null,
     order = 0,
     depth = 1,
-    numSections = getNumberOfSections(),
+    numSections = NUMBER_OF_SECTIONS,
 }: NewElementParams = {}): Element => {
     const markerType = getMarkerType();
     
