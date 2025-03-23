@@ -442,6 +442,16 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                 position: 'absolute',
                 top: HEADER_HEIGHT,
                 left: 0,
+                width: '100%',
+                height: '100%',
+                backgroundColor: canvasBackgroundColor, // キャンバスの背景色を設定
+                overflow: 'hidden',
+                zIndex: -1
+            }} />
+            <div style={{
+                position: 'absolute',
+                top: HEADER_HEIGHT,
+                left: 0,
                 overflow: 'auto',
                 touchAction: isPinching ? 'none' : 'manipulation',
                 backgroundColor: canvasBackgroundColor // キャンバスの背景色を設定
