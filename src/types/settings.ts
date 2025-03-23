@@ -51,7 +51,11 @@ export const SETTINGS_TABS: SettingTab[] = [
           { value: MARKER_TYPES.ARROW, label: 'Arrow' },
           { value: MARKER_TYPES.CIRCLE, label: 'Circle' },
           { value: MARKER_TYPES.SQUARE, label: 'Square' },
-          { value: MARKER_TYPES.DIAMOND, label: 'Diamond' }
+          { value: MARKER_TYPES.DIAMOND, label: 'Diamond' },
+          { value: MARKER_TYPES.FILLED_ARROW, label: 'Filled Arrow' },
+          { value: MARKER_TYPES.FILLED_CIRCLE, label: 'Filled Circle' },
+          { value: MARKER_TYPES.FILLED_SQUARE, label: 'Filled Square' },
+          { value: MARKER_TYPES.FILLED_DIAMOND, label: 'Filled Diamond' }
         ]
       },
       {
