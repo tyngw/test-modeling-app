@@ -27,6 +27,7 @@ import { Element as CanvasElement } from '../types';
 import { isDescendant } from '../utils/elementHelpers';
 import { debugLog, isDevelopment } from '../utils/debugLogHelpers';
 import { useTabs } from '../context/tabsContext';
+import { useIsMounted } from '../hooks/useIsMounted';
 
 interface IdeaElementProps {
   element: CanvasElement;
@@ -165,7 +166,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
   const { getCurrentTabState, getCurrentTabNumberOfSections } = useTabs();
   const tabState = getCurrentTabState() || { elements: {}, zoomRatio: 1 };
   const numberOfSections = getCurrentTabNumberOfSections();
-  const [isMounted, setIsMounted] = useState(false);
+  const isMounted = useIsMounted();
   const currentDropTargetId = currentDropTarget?.id || -1;
   const [isHovered, setIsHovered] = useState(false);
   const prevHoveredRef = useRef(false);
@@ -175,12 +176,12 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
   const [fontFamily, setFontFamily] = useState('');
 
   useEffect(() => {
-    setIsMounted(true);
+    if (!isMounted) return;
     setElementColor(getElementColor());
     setStrokeColor(getStrokeColor());
     setStrokeWidth(getStrokeWidth());
     setFontFamily(getFontFamily());
-  }, []);
+  }, [isMounted]);
 
   useEffect(() => {
     if (element.editing || !isMounted) return;

@@ -1,6 +1,7 @@
 // src/components/TabHeaders/TabHeader.tsx
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { TabState } from '../../context/tabsContext';
+import { useIsMounted } from '../../hooks/useIsMounted';
 
 interface TabHeaderProps {
   tab: TabState;
@@ -17,11 +18,7 @@ const Tab: React.FC<TabHeaderProps> = React.memo(({
   switchTab,
   theme
 }) => {
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  const isMounted = useIsMounted();
 
   if (!isMounted) return null;
 

@@ -6,6 +6,7 @@ import { ICONBAR_HEIGHT, TABBAR_HEIGHT } from '../../constants/elementSettings';
 import { getCurrentTheme } from '../../utils/colorHelpers';
 import { getCanvasBackgroundColor } from '../../utils/localStorageHelpers';
 import { DEFAULT_CANVAS_BACKGROUND_COLOR } from '../../constants/elementSettings';
+import { useIsMounted } from '../../hooks/useIsMounted';
 
 interface TabHeadersProps {
   tabs: TabState[];
@@ -22,18 +23,17 @@ const TabHeaders: React.FC<TabHeadersProps> = React.memo(({
   closeTab,
   switchTab
 }) => {
-  const [isMounted, setIsMounted] = useState(false);
+  const isMounted = useIsMounted();
   const [backgroundColor, setBackgroundColor] = useState(DEFAULT_CANVAS_BACKGROUND_COLOR);
   const [theme, setTheme] = useState(() => getCurrentTheme(DEFAULT_CANVAS_BACKGROUND_COLOR));
 
   useEffect(() => {
-    setIsMounted(true);
-    // localStorage から背景色を取得する - only in client-side
-    const bgColor = getCanvasBackgroundColor();
-    setBackgroundColor(bgColor);
-    // 取得した背景色をもとにテーマを決定
-    setTheme(getCurrentTheme(bgColor));
-  }, []);
+    if (!isMounted) return;
+    // localStorage から背景色を取得する
+    const savedBackgroundColor = getCanvasBackgroundColor();
+    setBackgroundColor(savedBackgroundColor);
+    setTheme(getCurrentTheme(savedBackgroundColor));
+  }, [isMounted]);
 
   if (!isMounted) return null;
 
