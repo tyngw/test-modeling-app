@@ -26,6 +26,7 @@ import { isDescendant } from '../utils/elementHelpers';
 import { useToast } from '../context/toastContext';
 import { ToastMessages } from '../constants/toastMessages';
 import { getConnectionPathColor, getConnectionPathStroke, getCanvasBackgroundColor } from '../utils/localStorageHelpers';
+import { getGlobalCutElements } from '../utils/clipboardHelpers';
 
 interface CanvasAreaProps {
     isHelpOpen: boolean;
@@ -96,29 +97,26 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
         e.preventDefault();
         const keyCombo = `${e.ctrlKey || e.metaKey ? 'Ctrl+' : ''}${e.shiftKey ? 'Shift+' : ''}${e.key}`;
         const actionType = keyActionMap[keyCombo];
-
         if (actionType === 'PASTE_ELEMENT') {
-            // cutElementsがある場合は通常の貼り付け
-            if (state.cutElements && Object.keys(state.cutElements).length > 0) {
+            // Get cut elements from global storage
+            const globalCutElements = getGlobalCutElements();
+            if (globalCutElements && Object.keys(globalCutElements).length > 0) {
                 dispatch({ type: actionType });
             } else {
                 try {
                     // クリップボードからテキストを取得
                     const text = await navigator.clipboard.readText();
                     const selectedElement = Object.values(state.elements).find(el => el.selected);
-
                     if (!selectedElement) {
                         addToast(ToastMessages.noSelect);
                         return;
                     }
-
                     if (text) {
                         const texts = text.split('\n').filter(t => t.trim() !== '');
                         if (texts.length === 0) {
                             addToast(ToastMessages.clipboardEmpty);
                             return;
                         }
-
                         dispatch({
                             type: 'ADD_ELEMENTS_SILENT',
                             payload: {
@@ -137,7 +135,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
         } else if (actionType) {
             dispatch({ type: actionType });
         }
-    }, [dispatch, state.cutElements, state.elements, addToast]);
+    }, [dispatch, state.elements, addToast]);
 
     const handleTouchStart = useCallback((e: React.TouchEvent<SVGSVGElement>) => {
         if (e.touches.length === 2) {
@@ -492,7 +490,6 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                             </marker>
                             {/* Filled 矢印マーカー */}
                             <marker 
-                                id="filledarrowhead" 
                                 markerWidth={MARKER.WIDTH} 
                                 markerHeight={MARKER.HEIGHT} 
                                 refX={MARKER.WIDTH} 
