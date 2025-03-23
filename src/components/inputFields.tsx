@@ -3,6 +3,7 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useCanvas } from '../context/canvasContext';
 import { wrapText } from '../utils/textareaHelpers';
+import { useIsMounted } from '../hooks/useIsMounted';
 import {
     DEFAULT_FONT_SIZE,
     TEXTAREA_PADDING,
@@ -23,6 +24,7 @@ interface InputFieldsProps {
 
 const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
     const { dispatch, state } = useCanvas();
+    const isMounted = useIsMounted();
     const fieldRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
     const [localHeights, setLocalHeights] = useState<number[]>([]);
     const [activeIndex, setActiveIndex] = useState<number>(-1);
@@ -33,18 +35,18 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
     const [textColor, setTextColor] = useState('');
 
     useEffect(() => {
+        if (!isMounted) return;
         const canvas = document.createElement('canvas');
         measureContext.current = canvas.getContext('2d');
         
-        // クライアントサイドでのみLocalStorageの値を取得
-        if (typeof window !== 'undefined') {
-            setFontFamily(getFontFamily());
-            setBackgroundColor(getElementColor());
-            setTextColor(getTextColor());
-        }
-    }, []);
+        setFontFamily(getFontFamily());
+        setBackgroundColor(getElementColor());
+        setTextColor(getTextColor());
+    }, [isMounted]);
 
     useEffect(() => {
+        if (!isMounted) return;
+        
         if (element?.id !== prevElementId.current) {
             const initialHeights = element?.sectionHeights || [];
             setLocalHeights(initialHeights);
@@ -52,7 +54,7 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
             prevElementId.current = element?.id;
             setTimeout(() => fieldRefs.current[0]?.focus({ preventScroll: true }), 50);
         }
-    }, [element]);
+    }, [element, isMounted]);
 
     const calculateDynamicHeight = useCallback((text: string) => {
         const width = SIZE.WIDTH.MAX;
@@ -115,7 +117,7 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
         }
     };
 
-    if (!element) return null;
+    if (!element || !isMounted) return null;
 
     return (
         <>
@@ -132,7 +134,7 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
                         key={`${element.id}-${index}`}
                         ref={(el) => {
                             fieldRefs.current[index] = el;
-                            if (index === activeIndex) el?.focus({ preventScroll: true });
+                            if (index === activeIndex && isMounted) el?.focus({ preventScroll: true });
                         }}
                         value={text}
                         onChange={(e) => handleChange(e, index)}
@@ -151,8 +153,8 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
                             fontSize: `${DEFAULT_FONT_SIZE * state.zoomRatio}px`,
                             lineHeight: `${LINE_HEIGHT_RATIO}em`,
                             padding: `0 3px`,
-                            fontFamily: fontFamily,
-                            backgroundColor: backgroundColor,
+                            fontFamily,
+                            backgroundColor,
                             color: textColor,
                             boxSizing: 'border-box',
                             WebkitFontSmoothing: 'antialiased',
@@ -166,7 +168,6 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
                             transition: 'all 0.2s ease-in-out',
                             pointerEvents: 'all',
                         }}
-                        autoFocus={index === 0}
                     />
                 );
             })}

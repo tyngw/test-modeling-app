@@ -19,12 +19,14 @@ import {
     DEFAULT_CANVAS_BACKGROUND_COLOR,
     DEFAULT_CONNECTION_PATH_COLOR,
     DEFAULT_CONNECTION_PATH_STROKE,
+    EQUILATERAL_MARKER,
 } from '../constants/elementSettings';
 import { Element as CanvasElement } from '../types';
-import { isDescendant } from '../state/state';
+import { isDescendant } from '../utils/elementHelpers';
 import { useToast } from '../context/toastContext';
 import { ToastMessages } from '../constants/toastMessages';
 import { getConnectionPathColor, getConnectionPathStroke, getCanvasBackgroundColor } from '../utils/localStorageHelpers';
+import { getGlobalCutElements } from '../utils/clipboardHelpers';
 
 interface CanvasAreaProps {
     isHelpOpen: boolean;
@@ -54,7 +56,14 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
     const [hoveredElements, setHoveredElements] = useState<{[key: string]: boolean}>({});
     
     useEffect(() => {
-        if (!editingNode) svgRef.current?.focus();
+        if (!editingNode) {
+            // 編集モード終了時のフォーカス処理を改善
+            requestAnimationFrame(() => {
+                const { scrollX, scrollY } = window;
+                svgRef.current?.focus({ preventScroll: true });
+                window.scrollTo(scrollX, scrollY);
+            });
+        }
     }, [editingNode]);
 
     useEffect(() => {
@@ -88,29 +97,26 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
         e.preventDefault();
         const keyCombo = `${e.ctrlKey || e.metaKey ? 'Ctrl+' : ''}${e.shiftKey ? 'Shift+' : ''}${e.key}`;
         const actionType = keyActionMap[keyCombo];
-
         if (actionType === 'PASTE_ELEMENT') {
-            // cutElementsがある場合は通常の貼り付け
-            if (state.cutElements && Object.keys(state.cutElements).length > 0) {
+            // Get cut elements from global storage
+            const globalCutElements = getGlobalCutElements();
+            if (globalCutElements && Object.keys(globalCutElements).length > 0) {
                 dispatch({ type: actionType });
             } else {
                 try {
                     // クリップボードからテキストを取得
                     const text = await navigator.clipboard.readText();
                     const selectedElement = Object.values(state.elements).find(el => el.selected);
-
                     if (!selectedElement) {
                         addToast(ToastMessages.noSelect);
                         return;
                     }
-
                     if (text) {
                         const texts = text.split('\n').filter(t => t.trim() !== '');
                         if (texts.length === 0) {
                             addToast(ToastMessages.clipboardEmpty);
                             return;
                         }
-
                         dispatch({
                             type: 'ADD_ELEMENTS_SILENT',
                             payload: {
@@ -129,7 +135,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
         } else if (actionType) {
             dispatch({ type: actionType });
         }
-    }, [dispatch, state.cutElements, state.elements, addToast]);
+    }, [dispatch, state.elements, addToast]);
 
     const handleTouchStart = useCallback((e: React.TouchEvent<SVGSVGElement>) => {
         if (e.touches.length === 2) {
@@ -206,15 +212,19 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
         let offset = 0;
         switch (parentElement.connectionPathType) {
             case MARKER_TYPES.ARROW:
+            case MARKER_TYPES.FILLED_ARROW:
                 offset = MARKER.OFFSET;
                 break;
             case MARKER_TYPES.CIRCLE:
-                offset = MARKER.OFFSET;
+            case MARKER_TYPES.FILLED_CIRCLE:
+                offset = EQUILATERAL_MARKER.OFFSET;
                 break;
             case MARKER_TYPES.SQUARE:
-                offset = MARKER.OFFSET;
+            case MARKER_TYPES.FILLED_SQUARE:
+                offset = EQUILATERAL_MARKER.OFFSET;
                 break;
             case MARKER_TYPES.DIAMOND:
+            case MARKER_TYPES.FILLED_DIAMOND:
                 offset = MARKER.OFFSET;
                 break;
             default:
@@ -230,34 +240,43 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
 
         // マーカーの選択
         let markerStart = undefined;
-        if (parentElement.connectionPathType === MARKER_TYPES.ARROW) {
-            markerStart = 'url(#arrowhead)';
-        } else if (parentElement.connectionPathType === MARKER_TYPES.CIRCLE) {
-            markerStart = 'url(#circlemarker)';
-        } else if (parentElement.connectionPathType === MARKER_TYPES.SQUARE) {
-            markerStart = 'url(#squaremarker)';
-        } else if (parentElement.connectionPathType === MARKER_TYPES.DIAMOND) {
-            markerStart = 'url(#diamondmarker)';
+        switch (parentElement.connectionPathType) {
+            case MARKER_TYPES.ARROW:
+                markerStart = 'url(#arrowhead)';
+                break;
+            case MARKER_TYPES.FILLED_ARROW:
+                markerStart = 'url(#filledarrowhead)';
+                break;
+            case MARKER_TYPES.CIRCLE:
+                markerStart = 'url(#circlemarker)';
+                break;
+            case MARKER_TYPES.FILLED_CIRCLE:
+                markerStart = 'url(#filledcirclemarker)';
+                break;
+            case MARKER_TYPES.SQUARE:
+                markerStart = 'url(#squaremarker)';
+                break;
+            case MARKER_TYPES.FILLED_SQUARE:
+                markerStart = 'url(#filledsquaremarker)';
+                break;
+            case MARKER_TYPES.DIAMOND:
+                markerStart = 'url(#diamondmarker)';
+                break;
+            case MARKER_TYPES.FILLED_DIAMOND:
+                markerStart = 'url(#filleddiamondmarker)';
+                break;
         }
 
         return (
             <g key={`connection-${element.id}-${element.parentId}`}>
-                <circle
-                    cx={element.x + element.width + 10}
-                    cy={element.y + totalHeight / 2}
-                    r={10}
-                    fill="transparent"
-                    style={{ zIndex: 0, opacity: 0 }}
-                    onMouseEnter={() => setHover(element.id)}
-                    onMouseLeave={() => setHover(null)}
-                    onClick={() => setShowMenuForElement(element.id)}
-                />
                 {(hover === element.id || showMenuForElement === element.id) && (
                     <circle
                         cx={element.x + element.width + 10}
                         cy={element.y + totalHeight / 2}
                         r={10}
                         fill="#bfbfbf"
+                        opacity={0.5}
+                        // style={{ pointerEvents: 'none' }}
                     />
                 )}
                 <path
@@ -267,7 +286,19 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                     strokeWidth={strokeWidth}
                     fill="none"
                     markerStart={markerStart}
+                    style={{ pointerEvents: 'none' }}
                 />
+                <circle
+                    cx={element.x + element.width + 10}
+                    cy={element.y + totalHeight / 2}
+                    r={10}
+                    fill="transparent"
+                    // style={{ pointerEvents: 'all' }}
+                    onMouseEnter={() => setHover(element.id)}
+                    onMouseLeave={() => setHover(null)}
+                    onClick={() => setShowMenuForElement(element.id)}
+                />
+                
             </g>
         );
     };
@@ -281,18 +312,22 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
         
         const markerOptions = [
             { id: 'arrow', label: 'Arrow' },
+            { id: 'filled_arrow', label: 'Filled Arrow' },
             { id: 'circle', label: 'Circle' },
+            { id: 'filled_circle', label: 'Filled Circle' },
             { id: 'square', label: 'Square' },
+            { id: 'filled_square', label: 'Filled Square' },
             { id: 'diamond', label: 'Diamond' },
+            { id: 'filled_diamond', label: 'Filled Diamond' },
             { id: 'none', label: 'None' },
         ];
         
         return (
             <foreignObject
-                x={element.x + element.width + 15}
+                x={element.x + element.width + 20}
                 y={element.y + totalHeight / 2 - 25}
-                width={100}
-                height={160}
+                width={150}
+                height={270}
                 className="popup-menu"
             >
                 <div style={{
@@ -443,6 +478,9 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                                 orient="auto" 
                                 fill="none" 
                                 stroke={connectionPathColor}
+                                markerUnits="userSpaceOnUse"
+                                viewBox="0 0 MARKER.WIDTH MARKER.HEIGHT"
+                                strokeWidth={connectionPathStroke}
                             >
                                 <polygon
                                     points={`${MARKER.WIDTH} 0, ${MARKER.WIDTH} ${MARKER.HEIGHT}, 0 ${MARKER.HEIGHT / 2}`}
@@ -450,46 +488,107 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                                     stroke={connectionPathColor}
                                 />
                             </marker>
-                            
+                            {/* Filled 矢印マーカー */}
+                            <marker 
+                                markerWidth={MARKER.WIDTH} 
+                                markerHeight={MARKER.HEIGHT} 
+                                refX={MARKER.WIDTH} 
+                                refY={MARKER.HEIGHT / 2} 
+                                orient="auto" 
+                                fill={connectionPathColor} 
+                                stroke={connectionPathColor}
+                                markerUnits="userSpaceOnUse"
+                                viewBox="0 0 MARKER.WIDTH MARKER.HEIGHT"
+                                strokeWidth={connectionPathStroke}
+                            >
+                                <polygon
+                                    points={`${MARKER.WIDTH} 0, ${MARKER.WIDTH} ${MARKER.HEIGHT}, 0 ${MARKER.HEIGHT / 2}`}
+                                    fill={connectionPathColor}
+                                    stroke={connectionPathColor}
+                                />
+                            </marker>
                             {/* 円形マーカー */}
                             <marker 
                                 id="circlemarker" 
-                                markerWidth={MARKER.WIDTH} 
-                                markerHeight={MARKER.HEIGHT} 
-                                refX={MARKER.WIDTH} 
-                                refY={MARKER.HEIGHT / 2} 
+                                markerWidth={EQUILATERAL_MARKER.SIZE}
+                                markerHeight={EQUILATERAL_MARKER.SIZE}
+                                refX={EQUILATERAL_MARKER.SIZE}
+                                refY={EQUILATERAL_MARKER.SIZE / 2} 
                                 orient="auto"
+                                markerUnits="userSpaceOnUse"
+                                viewBox="0 0 EQUILATERAL_MARKER.SIZE EQUILATERAL_MARKER.SIZE"
+                                strokeWidth={connectionPathStroke}
                             >
                                 <circle 
-                                    cx={MARKER.WIDTH / 2} 
-                                    cy={MARKER.HEIGHT / 2} 
-                                    r={MARKER.WIDTH / 2 - 1} 
+                                    cx={EQUILATERAL_MARKER.SIZE / 2} 
+                                    cy={EQUILATERAL_MARKER.SIZE / 2} 
+                                    r={EQUILATERAL_MARKER.SIZE / 2 - 1} 
                                     fill="none" 
-                                    stroke={connectionPathColor} 
-                                    strokeWidth="1" 
+                                    stroke={connectionPathColor}
                                 />
                             </marker>
-                            
+                            {/* Filled 円形マーカー */}
+                            <marker 
+                                id="filledcirclemarker" 
+                                markerWidth={EQUILATERAL_MARKER.SIZE}
+                                markerHeight={EQUILATERAL_MARKER.SIZE}
+                                refX={EQUILATERAL_MARKER.SIZE}
+                                refY={EQUILATERAL_MARKER.SIZE / 2} 
+                                orient="auto"
+                                markerUnits="userSpaceOnUse"
+                                viewBox="0 0 EQUILATERAL_MARKER.SIZE EQUILATERAL_MARKER.SIZE"
+                                strokeWidth={connectionPathStroke}
+                            >
+                                <circle 
+                                    cx={EQUILATERAL_MARKER.SIZE / 2} 
+                                    cy={EQUILATERAL_MARKER.SIZE / 2} 
+                                    r={EQUILATERAL_MARKER.SIZE / 2 - 1} 
+                                    fill={connectionPathColor} 
+                                    stroke={connectionPathColor}
+                                />
+                            </marker>
                             {/* 四角形マーカー */}
                             <marker 
                                 id="squaremarker" 
-                                markerWidth={MARKER.WIDTH} 
-                                markerHeight={MARKER.HEIGHT} 
-                                refX={MARKER.WIDTH} 
-                                refY={MARKER.HEIGHT / 2} 
+                                markerWidth={EQUILATERAL_MARKER.SIZE}
+                                markerHeight={EQUILATERAL_MARKER.SIZE}
+                                refX={EQUILATERAL_MARKER.SIZE}
+                                refY={EQUILATERAL_MARKER.SIZE / 2}
                                 orient="auto"
+                                markerUnits="userSpaceOnUse"
+                                viewBox="0 0 EQUILATERAL_MARKER.SIZE EQUILATERAL_MARKER.SIZE"
+                                strokeWidth={connectionPathStroke}
                             >
                                 <rect 
                                     x="1" 
                                     y="1" 
-                                    width={MARKER.WIDTH - 2} 
-                                    height={MARKER.HEIGHT - 2} 
+                                    width={EQUILATERAL_MARKER.SIZE - 2} 
+                                    height={EQUILATERAL_MARKER.SIZE - 2} 
                                     fill="none" 
-                                    stroke={connectionPathColor} 
-                                    strokeWidth="1" 
+                                    stroke={connectionPathColor}
                                 />
                             </marker>
-                            
+                            {/* Filled 四角形マーカー */}
+                            <marker 
+                                id="filledsquaremarker" 
+                                markerWidth={EQUILATERAL_MARKER.SIZE}
+                                markerHeight={EQUILATERAL_MARKER.SIZE}
+                                refX={EQUILATERAL_MARKER.SIZE}
+                                refY={EQUILATERAL_MARKER.SIZE / 2}
+                                orient="auto"
+                                markerUnits="userSpaceOnUse"
+                                viewBox="0 0 EQUILATERAL_MARKER.SIZE EQUILATERAL_MARKER.SIZE"
+                                strokeWidth={connectionPathStroke}
+                            >
+                                <rect 
+                                    x="1" 
+                                    y="1" 
+                                    width={EQUILATERAL_MARKER.SIZE - 2} 
+                                    height={EQUILATERAL_MARKER.SIZE - 2} 
+                                    fill={connectionPathColor} 
+                                    stroke={connectionPathColor}
+                                />
+                            </marker>
                             {/* ダイヤモンドマーカー */}
                             <marker 
                                 id="diamondmarker" 
@@ -498,12 +597,34 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                                 refX={MARKER.WIDTH} 
                                 refY={MARKER.HEIGHT / 2} 
                                 orient="auto"
+                                markerUnits="userSpaceOnUse"
+                                viewBox="0 0 MARKER.WIDTH MARKER.HEIGHT"
+                                strokeWidth={connectionPathStroke}
                             >
                                 <polygon 
                                     points={`${MARKER.WIDTH / 2},1 ${MARKER.WIDTH - 1},${MARKER.HEIGHT / 2} ${MARKER.WIDTH / 2},${MARKER.HEIGHT - 1} 1,${MARKER.HEIGHT / 2}`} 
                                     fill="none" 
                                     stroke={connectionPathColor} 
-                                    strokeWidth="1" 
+                                    // strokeWidth="1" 
+                                />
+                            </marker>
+                            {/* Filled ダイヤモンドマーカー */}
+                            <marker 
+                                id="filleddiamondmarker" 
+                                markerWidth={MARKER.WIDTH} 
+                                markerHeight={MARKER.HEIGHT} 
+                                refX={MARKER.WIDTH} 
+                                refY={MARKER.HEIGHT / 2} 
+                                orient="auto"
+                                markerUnits="userSpaceOnUse"
+                                viewBox="0 0 MARKER.WIDTH MARKER.HEIGHT"
+                                strokeWidth={connectionPathStroke}
+                            >
+                                <polygon 
+                                    points={`${MARKER.WIDTH / 2},1 ${MARKER.WIDTH - 1},${MARKER.HEIGHT / 2} ${MARKER.WIDTH / 2},${MARKER.HEIGHT - 1} 1,${MARKER.HEIGHT / 2}`} 
+                                    fill={connectionPathColor} 
+                                    stroke={connectionPathColor} 
+                                    // strokeWidth="1" 
                                 />
                             </marker>
                         </defs>

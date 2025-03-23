@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Element } from '../types';
 import { useCanvas } from '../context/canvasContext';
-import { isDescendant } from '../state/state';
+import { isDescendant } from '../utils/elementHelpers';
 import { ToastMessages } from '../constants/toastMessages';
 import { HEADER_HEIGHT } from '../constants/elementSettings';
 import { useToast } from '../context/toastContext';

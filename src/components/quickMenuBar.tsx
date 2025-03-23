@@ -1,7 +1,7 @@
 // src/components/quickMenuBar.tsx
 'use client';
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef } from 'react';
 import Button from '@mui/material/Button';
 import UndoIcon from '@mui/icons-material/Undo';
 import RedoIcon from '@mui/icons-material/Redo';
@@ -25,6 +25,7 @@ import { tooltipTexts } from '../constants/tooltipTexts';
 import { useTabs } from '../context/tabsContext';
 import { getCurrentTheme } from '../utils/colorHelpers';
 import { getCanvasBackgroundColor } from '../utils/localStorageHelpers';
+import { useIsMounted } from '../hooks/useIsMounted';
 
 interface QuickMenuBarProps {
   saveSvg: () => void;
@@ -57,12 +58,7 @@ const QuickMenuBar = ({
   const { addTab } = useTabs();
   const fileInput = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  const isMounted = useIsMounted();
 
   if (!isMounted) return null;
   
