@@ -19,6 +19,7 @@ import {
     DEFAULT_CANVAS_BACKGROUND_COLOR,
     DEFAULT_CONNECTION_PATH_COLOR,
     DEFAULT_CONNECTION_PATH_STROKE,
+    EQUILATERAL_MARKER,
 } from '../constants/elementSettings';
 import { Element as CanvasElement } from '../types';
 import { isDescendant } from '../utils/elementHelpers';
@@ -216,10 +217,10 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                 offset = MARKER.OFFSET;
                 break;
             case MARKER_TYPES.CIRCLE:
-                offset = MARKER.OFFSET;
+                offset = EQUILATERAL_MARKER.OFFSET;
                 break;
             case MARKER_TYPES.SQUARE:
-                offset = MARKER.OFFSET;
+                offset = EQUILATERAL_MARKER.OFFSET;
                 break;
             case MARKER_TYPES.DIAMOND:
                 offset = MARKER.OFFSET;
@@ -450,6 +451,9 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                                 orient="auto" 
                                 fill="none" 
                                 stroke={connectionPathColor}
+                                markerUnits="userSpaceOnUse"
+                                viewBox="0 0 MARKER.WIDTH MARKER.HEIGHT"
+                                strokeWidth={connectionPathStroke}
                             >
                                 <polygon
                                     points={`${MARKER.WIDTH} 0, ${MARKER.WIDTH} ${MARKER.HEIGHT}, 0 ${MARKER.HEIGHT / 2}`}
@@ -461,39 +465,43 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                             {/* 円形マーカー */}
                             <marker 
                                 id="circlemarker" 
-                                markerWidth={MARKER.WIDTH} 
-                                markerHeight={MARKER.HEIGHT} 
-                                refX={MARKER.WIDTH} 
-                                refY={MARKER.HEIGHT / 2} 
+                                markerWidth={EQUILATERAL_MARKER.SIZE}
+                                markerHeight={EQUILATERAL_MARKER.SIZE}
+                                refX={EQUILATERAL_MARKER.SIZE}
+                                refY={EQUILATERAL_MARKER.SIZE / 2} 
                                 orient="auto"
+                                markerUnits="userSpaceOnUse"
+                                viewBox="0 0 EQUILATERAL_MARKER.SIZE EQUILATERAL_MARKER.SIZE"
+                                strokeWidth={connectionPathStroke}
                             >
                                 <circle 
-                                    cx={MARKER.WIDTH / 2} 
-                                    cy={MARKER.HEIGHT / 2} 
-                                    r={MARKER.WIDTH / 2 - 1} 
+                                    cx={EQUILATERAL_MARKER.SIZE / 2} 
+                                    cy={EQUILATERAL_MARKER.SIZE / 2} 
+                                    r={EQUILATERAL_MARKER.SIZE / 2 - 1} 
                                     fill="none" 
-                                    stroke={connectionPathColor} 
-                                    strokeWidth="1" 
+                                    stroke={connectionPathColor}
                                 />
                             </marker>
                             
                             {/* 四角形マーカー */}
                             <marker 
                                 id="squaremarker" 
-                                markerWidth={MARKER.WIDTH} 
-                                markerHeight={MARKER.HEIGHT} 
-                                refX={MARKER.WIDTH} 
-                                refY={MARKER.HEIGHT / 2} 
+                                markerWidth={EQUILATERAL_MARKER.SIZE}
+                                markerHeight={EQUILATERAL_MARKER.SIZE}
+                                refX={EQUILATERAL_MARKER.SIZE}
+                                refY={EQUILATERAL_MARKER.SIZE / 2}
                                 orient="auto"
+                                markerUnits="userSpaceOnUse"
+                                viewBox="0 0 EQUILATERAL_MARKER.SIZE EQUILATERAL_MARKER.SIZE"
+                                strokeWidth={connectionPathStroke}
                             >
                                 <rect 
                                     x="1" 
                                     y="1" 
-                                    width={MARKER.WIDTH - 2} 
-                                    height={MARKER.HEIGHT - 2} 
+                                    width={EQUILATERAL_MARKER.SIZE - 2} 
+                                    height={EQUILATERAL_MARKER.SIZE - 2} 
                                     fill="none" 
-                                    stroke={connectionPathColor} 
-                                    strokeWidth="1" 
+                                    stroke={connectionPathColor}
                                 />
                             </marker>
                             
@@ -505,12 +513,15 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                                 refX={MARKER.WIDTH} 
                                 refY={MARKER.HEIGHT / 2} 
                                 orient="auto"
+                                markerUnits="userSpaceOnUse"
+                                viewBox="0 0 MARKER.WIDTH MARKER.HEIGHT"
+                                strokeWidth={connectionPathStroke}
                             >
                                 <polygon 
                                     points={`${MARKER.WIDTH / 2},1 ${MARKER.WIDTH - 1},${MARKER.HEIGHT / 2} ${MARKER.WIDTH / 2},${MARKER.HEIGHT - 1} 1,${MARKER.HEIGHT / 2}`} 
                                     fill="none" 
                                     stroke={connectionPathColor} 
-                                    strokeWidth="1" 
+                                    // strokeWidth="1" 
                                 />
                             </marker>
                         </defs>

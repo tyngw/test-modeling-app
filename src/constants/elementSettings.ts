@@ -54,12 +54,16 @@ export const TABBAR_HEIGHT = 40;
 export const HEADER_HEIGHT = ICONBAR_HEIGHT + TABBAR_HEIGHT;
 
 export const MARKER = {
-    HEIGHT: 18,
-    WIDTH: 18,
+    HEIGHT: 12,
+    WIDTH: 14,
+    OFFSET: 14,
+};
+
+export const EQUILATERAL_MARKER = {
+    SIZE: 10,
     OFFSET: 10,
 };
 
-// Marker types
 export const MARKER_TYPES = {
     NONE: 'none',
     ARROW: 'arrow',
