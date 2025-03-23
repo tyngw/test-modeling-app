@@ -38,7 +38,7 @@ export const createNewElement = ({
         selected: true,
         visible: true,
         tentative: false,
-        connectionPathType: markerType as 'arrow' | 'circle' | 'square' | 'diamond' | 'none',
+        connectionPathType: markerType as 'arrow' | 'circle' | 'square' | 'diamond' | 'none' | 'filled_arrow' | 'filled_circle' | 'filled_square' | 'filled_diamond',
     };
 };
 
