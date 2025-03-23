@@ -70,6 +70,10 @@ export const MARKER_TYPES = {
     CIRCLE: 'circle',
     SQUARE: 'square',
     DIAMOND: 'diamond',
+    FILLED_ARROW: 'filled_arrow',
+    FILLED_CIRCLE: 'filled_circle',
+    FILLED_SQUARE: 'filled_square',
+    FILLED_DIAMOND: 'filled_diamond',
 };
 
 export const DEFAULT_MARKER_TYPE = MARKER_TYPES.NONE;
