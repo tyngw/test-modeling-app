@@ -26,6 +26,7 @@ import {
 import { Element as CanvasElement } from '../types';
 import { isDescendant } from '../utils/elementHelpers';
 import { debugLog, isDevelopment } from '../utils/debugLogHelpers';
+import { useTabs } from '../context/tabsContext';
 
 interface IdeaElementProps {
   element: CanvasElement;
@@ -161,6 +162,9 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
   onHoverChange,
 }) => {
   const { state, dispatch } = useCanvas();
+  const { getCurrentTabState, getCurrentTabNumberOfSections } = useTabs();
+  const tabState = getCurrentTabState() || { elements: {}, zoomRatio: 1 };
+  const numberOfSections = getCurrentTabNumberOfSections();
   const [isMounted, setIsMounted] = useState(false);
   const currentDropTargetId = currentDropTarget?.id || -1;
   const [isHovered, setIsHovered] = useState(false);
@@ -183,10 +187,10 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
     const calculateDimensions = () => {
       const newWidth = calculateElementWidth(element.texts, TEXTAREA_PADDING.HORIZONTAL);
       const sectionHeights = element.texts.map(text => {
-        const lines = wrapText(text || '', newWidth, state.zoomRatio).length;
+        const lines = wrapText(text || '', newWidth, tabState.zoomRatio).length;
         return Math.max(
-          SIZE.SECTION_HEIGHT * state.zoomRatio,
-          lines * DEFAULT_FONT_SIZE * LINE_HEIGHT_RATIO + TEXTAREA_PADDING.VERTICAL * state.zoomRatio
+          SIZE.SECTION_HEIGHT * tabState.zoomRatio,
+          lines * DEFAULT_FONT_SIZE * LINE_HEIGHT_RATIO + TEXTAREA_PADDING.VERTICAL * tabState.zoomRatio
         );
       });
       return { newWidth, newHeight: sectionHeights.reduce((sum, h) => sum + h, 0), sectionHeights };
@@ -205,17 +209,17 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
         }
       });
     }
-  }, [element.editing, element.texts, element.width, element.height, dispatch, element.id, state.zoomRatio]);
+  }, [element.editing, element.texts, element.width, element.height, dispatch, element.id, tabState.zoomRatio]);
 
   const hiddenChildren = useMemo(
-    () => Object.values(state.elements).filter(
+    () => Object.values(tabState.elements).filter(
       (el) => el.parentId === element.id && !el.visible
     ),
-    [state.elements, element.id]
+    [tabState.elements, element.id]
   );
 
   const isDraggedOrDescendant = draggingElement
-    ? draggingElement.id === element.id || isDescendant(state.elements, draggingElement.id, element.id)
+    ? draggingElement.id === element.id || isDescendant(tabState.elements, draggingElement.id, element.id)
     : false;
 
   const handleHeightChange = useCallback((sectionIndex: number, newHeight: number) => {
@@ -282,7 +286,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
 
     <React.Fragment key={element.id}>
       <g opacity={isDraggedOrDescendant ? 0.3 : 1}>
-        {renderActionButtons(element, dispatch, Object.values(state.elements))}
+        {renderActionButtons(element, dispatch, Object.values(tabState.elements))}
         {hiddenChildren.length > 0 && (
           <>
             {element.texts.length > 1 ? (
@@ -441,7 +445,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
                 height={element.sectionHeights[index]}
                 text={text}
                 fontSize={DEFAULT_FONT_SIZE}
-                zoomRatio={state.zoomRatio}
+                zoomRatio={tabState.zoomRatio}
                 fontFamily={fontFamily}
                 onHeightChange={(newHeight) => handleHeightChange(index, newHeight)}
               />
