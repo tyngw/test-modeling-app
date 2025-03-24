@@ -30,8 +30,8 @@ const checkCollision = (element: Element, y: number, other: Element): boolean =>
         }
     }
     
-    // 異なる親に属する要素間の衝突検出(同じdepthの場合のみ)
-    if (element.depth === other.depth) {
+    // 異なる親に属する要素間の衝突検出（深さ制限を除去）
+    if (element.parentId !== other.parentId) {
         // X座標による衝突判定（要素が視覚的に重なる場合のみ）
         const xOverlap = (
             element.x < other.x + other.width &&
@@ -46,7 +46,7 @@ const checkCollision = (element: Element, y: number, other: Element): boolean =>
             );
             
             if (isCollision) {
-                debugLog(`同じdepthの要素間衝突検出: id=${element.id}(depth=${element.depth})とid=${other.id}(depth=${other.depth})の間で衝突`);
+                debugLog(`異なる親の要素間衝突検出: id=${element.id}(depth=${element.depth})とid=${other.id}(depth=${other.depth})の間で衝突`);
             }
             
             return isCollision;
