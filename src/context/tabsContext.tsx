@@ -121,13 +121,14 @@ export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const addTab = useCallback(() => {
     // 現在のタブのセクション数を取得して新しいタブに適用
-    const currentSections = getCurrentTabNumberOfSections();
+    const currentTab = tabs.find(tab => tab.id === currentTabId);
+    const currentSections = currentTab?.state.numberOfSections ?? NUMBER_OF_SECTIONS;
     const newTab = createInitialTabState(currentSections);
     setTabsState(prev => ({
       tabs: [...prev.tabs, newTab],
       currentTabId: newTab.id
     }));
-  }, [getCurrentTabNumberOfSections]);
+  }, [tabs, currentTabId]);
 
   const closeTab = useCallback((tabId: string) => {
     setTabsState(prev => {
