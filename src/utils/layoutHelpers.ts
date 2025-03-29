@@ -10,7 +10,7 @@ const layoutNode = (
     elements: ElementsMap,
     startY: number,
     depth: number
-): { newY: number; subtreeBottom: number } => {
+): { newY: number } => {
     // X座標の計算
     if (node.parentId === null) {
         node.x = DEFAULT_POSITION.X;
@@ -21,40 +21,35 @@ const layoutNode = (
 
     const children = getChildren(node.id, elements).sort((a, b) => a.order - b.order);
     let currentY = startY;
-    let maxSubtreeBottom = startY;
     let maxChildBottom = startY;
 
     if (children.length > 0) {
-        // 子要素の配置とサブツリー情報の収集
+        // 子要素ありの場合の処理
         for (const child of children) {
-            const result = layoutNode(child, elements, currentY, depth + 1);
-            
-            // 子要素の下端とサブツリー下端を追跡
-            maxChildBottom = Math.max(maxChildBottom, child.y + child.height);
-            maxSubtreeBottom = Math.max(maxSubtreeBottom, result.subtreeBottom);
-            
+            const requiredOffset = node.height * 0.5;
+            const result = layoutNode(child, elements, currentY + requiredOffset, depth + 1);
             currentY = result.newY + OFFSET.Y;
+            maxChildBottom = Math.max(maxChildBottom, child.y + child.height);
         }
 
-        // 親要素のY座標計算（子要素の中央配置）
-        const childrenMidY = (children[0].y + (children[children.length - 1].y + children[children.length - 1].height)) / 2;
+        // 親要素のY座標計算
+        const firstChild = children[0];
+        const lastChild = children[children.length - 1];
+        const childrenMidY = (firstChild.y + (lastChild.y + lastChild.height)) / 2;
         node.y = childrenMidY - node.height / 2;
 
-        // 有効下端の計算（子要素のサブツリー下端と親要素自身の下端の最大値）
+        // 下端比較
         const parentBottom = node.y + node.height;
-        const effectiveBottom = Math.max(maxSubtreeBottom, parentBottom);
-
-        return {
-            newY: effectiveBottom + OFFSET.Y,
-            subtreeBottom: effectiveBottom
-        };
+        currentY = Math.max(maxChildBottom, parentBottom) + OFFSET.Y;
+        
+        return { newY: currentY };
     } else {
+        // 子要素なしの場合の処理
         node.y = startY;
-        const bottom = node.y + node.height;
-        return {
-            newY: bottom + OFFSET.Y,
-            subtreeBottom: bottom
-        };
+        currentY = node.y + node.height + OFFSET.Y;
+        
+        // 子要素なしの場合は追加オフセットなし
+        return { newY: currentY };
     }
 };
 
@@ -62,14 +57,15 @@ export const adjustElementPositions = (elements: ElementsMap): ElementsMap => {
     debugLog(`adjustElementPositions開始: 要素数=${Object.keys(elements).length}`);
     
     const updatedElements = { ...elements };
-    const rootElements = getChildren(null, updatedElements).sort((a, b) => a.order - b.order);
+    const rootElements = getChildren(null, updatedElements)
+        .sort((a, b) => a.order - b.order);
     
     let currentY = DEFAULT_POSITION.Y;
 
     // ルート要素を順番に配置
     for (const root of rootElements) {
         const result = layoutNode(root, updatedElements, currentY, 0);
-        currentY = result.newY;
+        currentY = result.newY + OFFSET.Y;
     }
 
     debugLog(`adjustElementPositions終了`);
