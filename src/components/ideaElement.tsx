@@ -148,7 +148,7 @@ export const DebugInfo: React.FC<{ element: CanvasElement; isHovered: boolean }>
         <div>x: {element.x}</div>
         <div>y: {element.y}</div>
         <div>width: {element.width}</div>
-        <div>height: {element.width}</div>
+        <div>height: {element.height}</div>
       </div>
     </foreignObject>
   );
