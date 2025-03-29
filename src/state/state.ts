@@ -264,7 +264,7 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
 
         return {
             ...state,
-            elements: adjustElementPositions(updatedElements)
+            elements: adjustElementPositions(updatedElements, () => state.numberOfSections)
         };
     },
 
@@ -350,7 +350,9 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
             newElementSelect: true,
             numberOfSections 
         });
-        return { elements: adjustElementPositions(newElements) };
+        return {
+            elements: adjustElementPositions(newElements, () => state.numberOfSections)
+        };
     }),
 
     ADD_ELEMENTS_SILENT: (state, action) => handleElementMutation(state, (elements, selectedElement) => {
@@ -397,13 +399,15 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
             }
         });
 
-        return { elements: adjustElementPositions(newElements) };
+        return {
+            elements: adjustElementPositions(newElements, () => state.numberOfSections)
+        };
     }),
 
     ADD_SIBLING_ELEMENT: state => handleElementMutation(state, (elements, selectedElement) => {
         const numberOfSections = state.numberOfSections; // Use the tab's numberOfSections
         const newElements = createSiblingElementAdder(elements, selectedElement, numberOfSections);
-        return { elements: adjustElementPositions(newElements) };
+        return { elements: adjustElementPositions(newElements, () => state.numberOfSections) };
     }),
 
     DELETE_ELEMENT: state => {
@@ -437,7 +441,7 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
 
         return {
             ...state,
-            elements: adjustElementPositions(updatedElements)
+            elements: adjustElementPositions(updatedElements, () => state.numberOfSections)
         };
     },
 
@@ -504,17 +508,17 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
 
         return {
             ...state,
-            elements: adjustElementPositions(updatedElements)
+            elements: adjustElementPositions(updatedElements, () => state.numberOfSections)
         };
     },
 
     UNDO: state => ({
         ...state,
-        elements: adjustElementPositions(Undo(state.elements))
+        elements: adjustElementPositions(Undo(state.elements), () => state.numberOfSections)
     }),
     REDO: state => ({
         ...state,
-        elements: adjustElementPositions(Redo(state.elements))
+        elements: adjustElementPositions(Redo(state.elements), () => state.numberOfSections)
     }),
     SNAPSHOT: state => { saveSnapshot(state.elements); return state; },
 
@@ -594,7 +598,7 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
 
         return {
             ...state,
-            elements: adjustElementPositions(updatedElements)
+            elements: adjustElementPositions(updatedElements, () => state.numberOfSections)
         };
     },
 
@@ -673,17 +677,17 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
         return handleElementMutation(state, (elements, selectedElement) => {
             const pastedElements = pasteElements(elements, globalCutElements, selectedElement);
             return {
-                elements: adjustElementPositions(pastedElements)
+                elements: adjustElementPositions(pastedElements, () => state.numberOfSections)
             };
         });
     },
 
     EXPAND_ELEMENT: state => handleElementMutation(state, (elements, selectedElement) => ({
-        elements: adjustElementPositions(setVisibilityRecursive(elements, selectedElement, true))
+        elements: adjustElementPositions(setVisibilityRecursive(elements, selectedElement, true), () => state.numberOfSections)
     })),
 
     COLLAPSE_ELEMENT: state => handleElementMutation(state, (elements, selectedElement) => ({
-        elements: adjustElementPositions(setVisibilityRecursive(elements, selectedElement, false))
+        elements: adjustElementPositions(setVisibilityRecursive(elements, selectedElement, false), () => state.numberOfSections)
     })),
 
     UPDATE_ELEMENT_SIZE: (state, action) => {
@@ -699,7 +703,7 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
             elements: adjustElementPositions({
                 ...state.elements,
                 [action.payload.id]: updatedElement
-            })
+            }, () => state.numberOfSections)
         };
     },
     UPDATE_CONNECTION_PATH_TYPE: (state, action) => {
