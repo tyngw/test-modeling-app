@@ -12,12 +12,12 @@ const layoutNode = (
     depth: number,
     getNumberOfSections: () => number
 ): { newY: number } => {
-    // X座標の計算
+    // X座標の計算（問題なし）
     if (node.parentId === null) {
         node.x = DEFAULT_POSITION.X;
     } else {
         const parent = elements[node.parentId];
-        node.x = parent.x + parent.width + OFFSET.X;
+        node.x = parent.x + parent.width + OFFSET.X; // depth乗算を削除
     }
 
     const children = getChildren(node.id, elements).sort((a, b) => a.order - b.order);
@@ -25,9 +25,8 @@ const layoutNode = (
     let maxChildBottom = startY;
 
     if (children.length > 0) {
-        // 子要素ありの場合の処理
         const defaultHeight = SIZE.SECTION_HEIGHT * getNumberOfSections();
-        const requiredOffset = node.height * 0.5 - defaultHeight;
+        const requiredOffset = Math.max((node.height - defaultHeight) * 0.5, OFFSET.Y);
         currentY = currentY + requiredOffset;
 
         for (const child of children) {
@@ -36,22 +35,20 @@ const layoutNode = (
             maxChildBottom = Math.max(maxChildBottom, child.y + child.height);
         }
 
-        // 親要素のY座標計算
+        // 親要素のY座標計算（子要素の中央配置）
         const firstChild = children[0];
         const lastChild = children[children.length - 1];
-        const childrenMidY = (firstChild.y + (lastChild.y + lastChild.height)) / 2;
+        const childrenMidY = (firstChild.y + lastChild.y + lastChild.height) / 2;
         node.y = childrenMidY - node.height / 2;
 
-        // 下端比較
-        const parentBottom = node.y + node.height;
-        currentY = Math.max(maxChildBottom, parentBottom) + OFFSET.Y;
+        // 下端比較（親要素自身の下端も考慮）
+        currentY = Math.max(maxChildBottom, node.y + node.height);
         
         return { newY: currentY };
     } else {
         // 子要素なしの場合の処理
         node.y = startY;
-        currentY = node.y + node.height + OFFSET.Y;
-        // 子要素なしの場合は追加オフセットなし
+        currentY = node.y + node.height;
         return { newY: currentY };
     }
 };
