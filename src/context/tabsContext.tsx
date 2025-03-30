@@ -35,19 +35,20 @@ export interface TabsContextValue {
 
 const TabsContext = createContext<TabsContextValue | undefined>(undefined);
 
-const createInitialTabState = (): TabState => {
+const createInitialTabState = (currentSections?: number): TabState => {
   const newRootId = "1";
+  const numSections = currentSections ?? NUMBER_OF_SECTIONS;
   
   return {
     id: uuidv4(),
     name: "無題",
     state: {
       ...initialState,
-      numberOfSections: NUMBER_OF_SECTIONS,
+      numberOfSections: numSections,
       elements: {
         [newRootId]: {
           ...createNewElement({
-            numSections: NUMBER_OF_SECTIONS
+            numSections: numSections
           }),
           id: newRootId,
           x: DEFAULT_POSITION.X,
@@ -119,12 +120,15 @@ export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [tabs, currentTabId]);
 
   const addTab = useCallback(() => {
-    const newTab = createInitialTabState();
+    // 現在のタブのセクション数を取得して新しいタブに適用
+    const currentTab = tabs.find(tab => tab.id === currentTabId);
+    const currentSections = currentTab?.state.numberOfSections ?? NUMBER_OF_SECTIONS;
+    const newTab = createInitialTabState(currentSections);
     setTabsState(prev => ({
       tabs: [...prev.tabs, newTab],
       currentTabId: newTab.id
     }));
-  }, []);
+  }, [tabs, currentTabId]);
 
   const closeTab = useCallback((tabId: string) => {
     setTabsState(prev => {

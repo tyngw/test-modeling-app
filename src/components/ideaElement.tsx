@@ -17,11 +17,11 @@ import {
   SIZE,
   LINE_HEIGHT_RATIO,
 } from '../constants/elementSettings';
-import { 
-  getElementColor, 
-  getStrokeColor, 
-  getStrokeWidth, 
-  getFontFamily 
+import {
+  getElementColor,
+  getStrokeColor,
+  getStrokeWidth,
+  getFontFamily
 } from '../utils/localStorageHelpers';
 import { Element as CanvasElement } from '../types';
 import { isDescendant } from '../utils/elementHelpers';
@@ -32,11 +32,12 @@ import { useIsMounted } from '../hooks/useIsMounted';
 interface IdeaElementProps {
   element: CanvasElement;
   currentDropTarget: CanvasElement | null;
-  dropPosition: 'before' | 'after' | 'child' | null;
+  dropPosition: 'before' | 'after' | 'child' | 'between' | null;
   draggingElement: CanvasElement | null;
   handleMouseDown: (e: React.MouseEvent<SVGElement>, element: CanvasElement) => void;
   handleMouseUp: () => void;
   onHoverChange?: (elementId: string, isHovered: boolean) => void;
+  dropInsertY?: number;
 }
 
 const renderActionButtons = (element: CanvasElement, dispatch: React.Dispatch<any>, elements: CanvasElement[]) => {
@@ -127,12 +128,12 @@ export const DebugInfo: React.FC<{ element: CanvasElement; isHovered: boolean }>
       height="200"
       className="debug-info"
     >
-      <div style={{ 
-        fontSize: '12px', 
-        color: 'black', 
-        backgroundColor: 'white', 
-        border: '1px solid black', 
-        padding: '5px', 
+      <div style={{
+        fontSize: '12px',
+        color: 'black',
+        backgroundColor: 'white',
+        border: '1px solid black',
+        padding: '5px',
         borderRadius: '5px',
         boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)'
       }}>
@@ -148,7 +149,7 @@ export const DebugInfo: React.FC<{ element: CanvasElement; isHovered: boolean }>
         <div>x: {element.x}</div>
         <div>y: {element.y}</div>
         <div>width: {element.width}</div>
-        <div>height: {element.width}</div>
+        <div>height: {element.height}</div>
       </div>
     </foreignObject>
   );
@@ -161,6 +162,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
   draggingElement,
   handleMouseDown,
   onHoverChange,
+  dropInsertY,
 }) => {
   const { state, dispatch } = useCanvas();
   const { getCurrentTabState, getCurrentTabNumberOfSections } = useTabs();
@@ -418,22 +420,58 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
             />
           </>
         )}
-        {currentDropTarget?.id === element.id && draggingElement && dropPosition !== 'child' && (
+        
+        {/* 上側（before）ドロップのプレビュー表示 */}
+        {currentDropTarget?.id === element.id && draggingElement && dropPosition === 'before' && (
           <rect
-            className='drop-preview'
+            className='drop-preview-before'
             x={element.x}
-            y={
-              dropPosition === 'before'
-                ? element.y - (draggingElement.height * 0.5) - OFFSET.Y
-                : element.y + (element.height * 0.5) + OFFSET.Y
-            }
-            width={draggingElement.width}
+            y={(dropInsertY !== undefined ? dropInsertY : element.y) - 2}
+            width={element.width}
             height={draggingElement.height}
             fill={ELEM_STYLE.DRAGGING.COLOR}
             rx={ELEM_STYLE.RX}
-            stroke={ELEM_STYLE.DRAGGING.COLOR}
-            strokeWidth={strokeWidth}
-            style={{ pointerEvents: 'none' }} // プレビュー要素が干渉しないように
+            opacity={0.5}
+            stroke={ELEM_STYLE.DRAGGING.STROKE_COLOR}
+            strokeWidth={1}
+            strokeDasharray="4 2"
+            style={{ pointerEvents: 'none' }}
+          />
+        )}
+
+        {/* 下側（after）ドロップのプレビュー表示 */}
+        {currentDropTarget?.id === element.id && draggingElement && dropPosition === 'after' && (
+          <rect
+            className='drop-preview-after'
+            x={element.x}
+            y={(dropInsertY !== undefined ? dropInsertY : element.y + element.height) - 2}
+            width={element.width}
+            height={draggingElement.height}
+            fill={ELEM_STYLE.DRAGGING.COLOR}
+            rx={ELEM_STYLE.RX}
+            opacity={0.5}
+            stroke={ELEM_STYLE.DRAGGING.STROKE_COLOR}
+            strokeWidth={1}
+            strokeDasharray="4 2"
+            style={{ pointerEvents: 'none' }}
+          />
+        )}
+
+        {/* 要素間（between）ドロップのプレビュー表示 */}
+        {currentDropTarget?.id === element.id && draggingElement && dropPosition === 'between' && (
+          <rect
+            className='drop-preview-between'
+            x={element.x}
+            y={(dropInsertY !== undefined ? dropInsertY : element.y + element.height + OFFSET.Y) - 2}
+            width={element.width}
+            height={draggingElement.height}
+            fill={ELEM_STYLE.DRAGGING.COLOR}
+            rx={ELEM_STYLE.RX}
+            opacity={0.5}
+            stroke={ELEM_STYLE.DRAGGING.STROKE_COLOR}
+            strokeWidth={1}
+            strokeDasharray="4 2"
+            style={{ pointerEvents: 'none' }}
           />
         )}
         {element.texts.map((text, index) => (

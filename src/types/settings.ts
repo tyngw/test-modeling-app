@@ -32,7 +32,7 @@ export const SETTINGS_TABS: SettingTab[] = [
         key: 'numberOfSections',
         label: 'Number of sections',
         type: 'number',
-        helperText: '同時に表示するセクションの数（1〜10） ※タブごとに設定されます',
+        helperText: '同時に表示するセクションの数（1〜10） ※現在のタブと新規作成されるタブのデフォルト値として設定されます',
         defaultValue: 3,
         validation: {
           min: 1,
