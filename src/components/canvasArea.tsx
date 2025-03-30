@@ -546,7 +546,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                                 fill="none"
                                 stroke={connectionPathColor}
                                 markerUnits="userSpaceOnUse"
-                                viewBox="0 0 MARKER.WIDTH MARKER.HEIGHT"
+                                viewBox={`0 0 ${MARKER.WIDTH} ${MARKER.HEIGHT}`}
                                 strokeWidth={connectionPathStroke}
                             >
                                 <polygon
@@ -556,6 +556,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                                 />
                             </marker>
                             <marker
+                                id="filledarrowhead"
                                 markerWidth={MARKER.WIDTH}
                                 markerHeight={MARKER.HEIGHT}
                                 refX={MARKER.WIDTH}
@@ -564,7 +565,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                                 fill={connectionPathColor}
                                 stroke={connectionPathColor}
                                 markerUnits="userSpaceOnUse"
-                                viewBox="0 0 MARKER.WIDTH MARKER.HEIGHT"
+                                viewBox={`0 0 ${MARKER.WIDTH} ${MARKER.HEIGHT}`}
                                 strokeWidth={connectionPathStroke}
                             >
                                 <polygon
@@ -581,7 +582,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                                 refY={EQUILATERAL_MARKER.SIZE / 2}
                                 orient="auto"
                                 markerUnits="userSpaceOnUse"
-                                viewBox="0 0 EQUILATERAL_MARKER.SIZE EQUILATERAL_MARKER.SIZE"
+                                viewBox={`0 0 ${EQUILATERAL_MARKER.SIZE} ${EQUILATERAL_MARKER.SIZE}`}
                                 strokeWidth={connectionPathStroke}
                             >
                                 <circle
@@ -600,7 +601,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                                 refY={EQUILATERAL_MARKER.SIZE / 2}
                                 orient="auto"
                                 markerUnits="userSpaceOnUse"
-                                viewBox="0 0 EQUILATERAL_MARKER.SIZE EQUILATERAL_MARKER.SIZE"
+                                viewBox={`0 0 ${EQUILATERAL_MARKER.SIZE} ${EQUILATERAL_MARKER.SIZE}`}
                                 strokeWidth={connectionPathStroke}
                             >
                                 <circle
@@ -619,7 +620,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                                 refY={EQUILATERAL_MARKER.SIZE / 2}
                                 orient="auto"
                                 markerUnits="userSpaceOnUse"
-                                viewBox="0 0 EQUILATERAL_MARKER.SIZE EQUILATERAL_MARKER.SIZE"
+                                viewBox={`0 0 ${EQUILATERAL_MARKER.SIZE} ${EQUILATERAL_MARKER.SIZE}`}
                                 strokeWidth={connectionPathStroke}
                             >
                                 <rect
@@ -639,7 +640,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                                 refY={EQUILATERAL_MARKER.SIZE / 2}
                                 orient="auto"
                                 markerUnits="userSpaceOnUse"
-                                viewBox="0 0 EQUILATERAL_MARKER.SIZE EQUILATERAL_MARKER.SIZE"
+                                viewBox={`0 0 ${EQUILATERAL_MARKER.SIZE} ${EQUILATERAL_MARKER.SIZE}`}
                                 strokeWidth={connectionPathStroke}
                             >
                                 <rect
@@ -659,7 +660,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                                 refY={MARKER.HEIGHT / 2}
                                 orient="auto"
                                 markerUnits="userSpaceOnUse"
-                                viewBox="0 0 MARKER.WIDTH MARKER.HEIGHT"
+                                viewBox={`0 0 ${MARKER.WIDTH} ${MARKER.HEIGHT}`}
                                 strokeWidth={connectionPathStroke}
                             >
                                 <polygon
@@ -676,7 +677,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                                 refY={MARKER.HEIGHT / 2}
                                 orient="auto"
                                 markerUnits="userSpaceOnUse"
-                                viewBox="0 0 MARKER.WIDTH MARKER.HEIGHT"
+                                viewBox={`0 0 ${MARKER.WIDTH} ${MARKER.HEIGHT}`}
                                 strokeWidth={connectionPathStroke}
                             >
                                 <polygon
