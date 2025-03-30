@@ -443,9 +443,9 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
             {/* 右側のドロップエリアを示す矩形 */}
             <rect
               className='drop-preview-right'
-              x={element.x + element.width}
+              x={element.x + element.width + OFFSET.X}
               y={element.y + (element.height / 2) - (draggingElement.height / 2)}
-              width={OFFSET.X + SIZE.WIDTH.MIN} // 右側ドロップゾーンの幅を定数で設定
+              width={SIZE.WIDTH.MIN}
               height={draggingElement.height}
               fill={ELEM_STYLE.DRAGGING.COLOR}
               rx={ELEM_STYLE.RX}
