@@ -104,6 +104,12 @@ export const useElementDragEffect = () => {
     elementOriginalPositions.current.clear();
   };
 
+  const adjustElementPosition = useCallback(() => {
+    // ドロップ完了後に要素の位置を調整するロジックを追加
+    console.log('Adjusting element positions...');
+    // 必要に応じてdispatchを使用して要素の位置を更新
+  }, []);
+
   const handleMouseUp = useCallback(async () => {
     if (!draggingElement) return;
 
@@ -250,8 +256,11 @@ export const useElementDragEffect = () => {
       setDraggingElement(null);
       setCurrentDropTarget(null);
       elementOriginalPositions.current.clear();
+
+      // ドロップ完了後に要素の位置を調整
+      adjustElementPosition();
     }
-  }, [draggingElement, currentDropTarget, state.elements, dispatch, addToast, shiftedElements]);
+  }, [draggingElement, currentDropTarget, state.elements, dispatch, addToast, shiftedElements, adjustElementPosition]);
 
   useEffect(() => {
     if (!draggingElement) return;
@@ -282,13 +291,15 @@ export const useElementDragEffect = () => {
     };
 
     const isXInElementRange = (element: Element, mouseX: number): boolean => {
-      const rightSidePadding = OFFSET.X + SIZE.WIDTH.MIN; // 右側のドロップ可能領域の幅
+      // ドラッグ中の要素の幅を使用して右側のドロップ可能領域を計算
+      const rightSidePadding = OFFSET.X + (draggingElement?.width ?? SIZE.WIDTH.MIN);
+      const rightSideCoordinate = element.x + element.width;
 
       return (
         // 要素上のドロップ
-        (mouseX > element.x && mouseX < element.x + element.width) ||
+        (mouseX > element.x && mouseX < rightSideCoordinate) ||
         // 要素の右側領域でのドロップ（拡張版）
-        (mouseX >= element.x + element.width && mouseX < element.x + element.width + rightSidePadding)
+        (mouseX >= rightSideCoordinate && mouseX < rightSideCoordinate + rightSidePadding)
       );
     };
 
@@ -405,7 +416,21 @@ export const useElementDragEffect = () => {
       }
 
       const dropTarget = findDropTarget(e, state.elements);
-      setCurrentDropTarget(dropTarget);
+      
+      // 新しいドロップターゲットと現在のドロップターゲットを比較し、
+      // 実際に変更がある場合のみステートを更新する
+      const isTargetChanged = 
+        (!currentDropTarget && dropTarget) || 
+        (currentDropTarget && !dropTarget) ||
+        (currentDropTarget && dropTarget && (
+          currentDropTarget.element.id !== dropTarget.element.id ||
+          currentDropTarget.position !== dropTarget.position ||
+          currentDropTarget.insertY !== dropTarget.insertY
+        ));
+
+      if (isTargetChanged) {
+        setCurrentDropTarget(dropTarget);
+      }
 
       const zoomAdjustedPos = convertToZoomCoordinates(e);
       const newPosition = {
