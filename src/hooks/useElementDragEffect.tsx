@@ -6,7 +6,7 @@ import { Element } from '../types';
 import { useCanvas } from '../context/canvasContext';
 import { isDescendant } from '../utils/elementHelpers';
 import { ToastMessages } from '../constants/toastMessages';
-import { HEADER_HEIGHT } from '../constants/elementSettings';
+import { HEADER_HEIGHT, OFFSET, SIZE } from '../constants/elementSettings';
 import { useToast } from '../context/toastContext';
 
 const isTouchEvent = (event: MouseEvent | TouchEvent): event is TouchEvent => {
@@ -236,19 +236,36 @@ export const useElementDragEffect = () => {
     };
 
     const isXInElementRange = (element: Element, mouseX: number): boolean => {
-      return mouseX > element.x && mouseX < element.x + element.width;
+      const rightSidePadding = OFFSET.X + SIZE.WIDTH.MIN; // 右側のドロップ可能領域の幅
+
+      return (
+        // 要素上のドロップ
+        (mouseX > element.x && mouseX < element.x + element.width) ||
+        // 要素の右側領域でのドロップ（拡張版）
+        (mouseX >= element.x + element.width && mouseX < element.x + element.width + rightSidePadding)
+      );
     };
 
     const calculatePositionAndDistance = (element: Element, mouseX: number, mouseY: number) => {
       const elemTop = element.y;
       const elemBottom = element.y + element.height;
-      const thresholdY = element.height * 0.1; // 上下10%を境界
+      const elemRight = element.x + element.width;
+      const thresholdY = element.height * 0.2; // 上下20%を境界
+      
+      const rightSidePadding = OFFSET.X + SIZE.WIDTH.MIN; // 右側のドロップ可能領域の幅
 
       let position: DropPosition = 'child';
-      if (mouseY < elemTop + thresholdY) {
-        position = 'before';
-      } else if (mouseY > elemBottom - thresholdY) {
-        position = 'after';
+      
+      // 要素の右側にいるかチェック（右側にいる場合は常にchildとして扱う）
+      const isOnRightSide = mouseX >= elemRight && mouseX < elemRight + rightSidePadding;
+      
+      // 要素の上または下にいる場合はbefore/afterとして扱う
+      if (!isOnRightSide) {
+        if (mouseY < elemTop + thresholdY) {
+          position = 'before';
+        } else if (mouseY > elemBottom - thresholdY) {
+          position = 'after';
+        }
       }
 
       const centerX = element.x + element.width / 2;
