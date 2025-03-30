@@ -462,7 +462,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
           <rect
             className='drop-preview-between'
             x={element.x}
-            y={(dropInsertY !== undefined ? dropInsertY : element.y + element.height) - 2}
+            y={(dropInsertY !== undefined ? dropInsertY : element.y + element.height + OFFSET.Y) - 2}
             width={element.width}
             height={draggingElement.height}
             fill={ELEM_STYLE.DRAGGING.COLOR}
