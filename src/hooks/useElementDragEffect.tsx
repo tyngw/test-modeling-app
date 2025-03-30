@@ -18,9 +18,14 @@ interface State {
   elements: { [key: string]: Element };
 }
 
+// ElementsMap型の定義を追加
+type ElementsMap = { [key: string]: Element };
+
 type Position = { x: number; y: number };
-type DropPosition = 'before' | 'after' | 'child';
-type DropTargetInfo = { element: Element; position: DropPosition } | null;
+type DropPosition = 'before' | 'after' | 'child' | 'between';
+type DropTargetInfo = { element: Element; position: DropPosition; insertY?: number; siblingInfo?: { prevElement?: Element, nextElement?: Element } } | null;
+// 要素のシフト情報を追跡するための型
+type ShiftedElement = { id: string, originalY: number, shiftAmount: number };
 
 export const useElementDragEffect = () => {
   const { state, dispatch } = useCanvas() as { state: State; dispatch: React.Dispatch<any> };
@@ -31,6 +36,8 @@ export const useElementDragEffect = () => {
   const [currentDropTarget, setCurrentDropTarget] = useState<DropTargetInfo>(null);
   // 元の位置を各要素ごとに記録するためのMap
   const elementOriginalPositions = useRef<Map<string, Position>>(new Map());
+  // シフトされた要素を追跡するための状態
+  const [shiftedElements, setShiftedElements] = useState<ShiftedElement[]>([]);
 
   const convertToZoomCoordinates = useCallback((e: MouseEvent | TouchEvent): Position => {
     let clientX: number, clientY: number;
@@ -141,8 +148,35 @@ export const useElementDragEffect = () => {
       };
 
       const processSiblingDrop = (target: Element, position: DropPosition): boolean => {
-        const baseOrder = position === 'before' ? target.order : target.order + 1;
-        const newParentId = target.parentId;
+        // 基本的なドロップ処理
+        let baseOrder, newParentId;
+        
+        if (position === 'between' && currentDropTarget?.siblingInfo) {
+          // 要素間へのドロップ
+          const { prevElement, nextElement } = currentDropTarget.siblingInfo;
+          
+          if (prevElement && nextElement) {
+            // 要素間の場合（両方の要素が存在）
+            baseOrder = prevElement.order + 1;
+            newParentId = prevElement.parentId;
+          } else if (prevElement) {
+            // 末尾の要素の後の場合
+            baseOrder = prevElement.order + 1;
+            newParentId = prevElement.parentId;
+          } else if (nextElement) {
+            // 先頭の要素の前の場合
+            baseOrder = nextElement.order;
+            newParentId = nextElement.parentId;
+          } else {
+            // どちらも存在しない場合（通常ありえない）
+            baseOrder = target.order;
+            newParentId = target.parentId;
+          }
+        } else {
+          // 従来の before/after 処理
+          baseOrder = position === 'before' ? target.order : target.order + 1;
+          newParentId = target.parentId;
+        }
 
         // 無効な親変更をチェック
         if (selectedElements.some(el => !validateParentChange(el, newParentId))) {
@@ -198,40 +232,52 @@ export const useElementDragEffect = () => {
       addToast(ToastMessages.dragError, 'warn');
       resetElementsPosition();
     } finally {
+      // シフトされた要素を元に戻す
+      if (shiftedElements.length > 0) {
+        shiftedElements.forEach(shifted => {
+          const element = state.elements[shifted.id];
+          if (element) {
+            dispatch({
+              type: 'MOVE_ELEMENT',
+              payload: { id: shifted.id, x: element.x, y: shifted.originalY }
+            });
+          }
+        });
+        setShiftedElements([]);
+      }
+
       // 状態のリセットを確実に行う
       setDraggingElement(null);
       setCurrentDropTarget(null);
       elementOriginalPositions.current.clear();
     }
-  }, [draggingElement, currentDropTarget, state.elements, dispatch, addToast]);
+  }, [draggingElement, currentDropTarget, state.elements, dispatch, addToast, shiftedElements]);
 
   useEffect(() => {
     if (!draggingElement) return;
 
-    const findDropTarget = (e: MouseEvent | TouchEvent): DropTargetInfo => {
+    const findDropTarget = (e: MouseEvent | TouchEvent, elements: ElementsMap): DropTargetInfo => {
       const zoomAdjustedPos = convertToZoomCoordinates(e);
       const mouseX = zoomAdjustedPos.x;
       const mouseY = zoomAdjustedPos.y;
-
-      // 候補要素を事前フィルタリング
-      const candidates = Object.values(state.elements).filter(element =>
+    
+      const candidates = Object.values(elements).filter(element => 
         element.visible &&
         element.id !== draggingElement?.id &&
         isXInElementRange(element, mouseX)
       );
-
+    
       let closestTarget: DropTargetInfo = null;
       let minSquaredDistance = Infinity;
-
+    
       for (const element of candidates) {
-        const { position, distanceSq } = calculatePositionAndDistance(element, mouseX, mouseY);
-
+        const { position, distanceSq, insertY } = calculatePositionAndDistance(element, mouseX, mouseY, elements);
         if (distanceSq < minSquaredDistance) {
           minSquaredDistance = distanceSq;
-          closestTarget = { element, position };
+          closestTarget = { element, position, insertY };
         }
       }
-
+    
       return closestTarget;
     };
 
@@ -246,37 +292,111 @@ export const useElementDragEffect = () => {
       );
     };
 
-    const calculatePositionAndDistance = (element: Element, mouseX: number, mouseY: number) => {
+    const calculatePositionAndDistance = (
+      element: Element,
+      mouseX: number,
+      mouseY: number,
+      elements: ElementsMap
+    ): { position: DropPosition; distanceSq: number; insertY?: number; siblingInfo?: { prevElement?: Element, nextElement?: Element } } => {
       const elemTop = element.y;
       const elemBottom = element.y + element.height;
       const elemRight = element.x + element.width;
-      const thresholdY = element.height * 0.2; // 上下20%を境界
-      
-      const rightSidePadding = OFFSET.X + SIZE.WIDTH.MIN; // 右側のドロップ可能領域の幅
-
+      const thresholdY = element.height * 0.2;
+      const rightSidePadding = OFFSET.X + SIZE.WIDTH.MIN;
+    
       let position: DropPosition = 'child';
-      
-      // 要素の右側にいるかチェック（右側にいる場合は常にchildとして扱う）
+      let insertY = elemTop + element.height / 2;
+      let siblingInfo: { prevElement?: Element, nextElement?: Element } | undefined = undefined;
+    
       const isOnRightSide = mouseX >= elemRight && mouseX < elemRight + rightSidePadding;
-      
-      // 要素の上または下にいる場合はbefore/afterとして扱う
+    
       if (!isOnRightSide) {
-        if (mouseY < elemTop + thresholdY) {
+        // 兄弟要素の取得
+        const siblings = element.parentId 
+          ? Object.values(elements)
+              .filter(e => e.parentId === element.parentId && e.visible && e.id !== element.id)
+              .sort((a, b) => a.order - b.order)
+          : [];
+        
+        // 兄弟要素間のドロップ位置の判定を最適化
+        // 先頭要素より上の場合
+        if (mouseY < elemTop + thresholdY && element.order === 0) {
           position = 'before';
-        } else if (mouseY > elemBottom - thresholdY) {
+          insertY = elemTop - OFFSET.Y;
+        }
+        // 末尾要素より下の場合
+        else if (mouseY > elemBottom - thresholdY && !siblings.some(s => s.order > element.order)) {
           position = 'after';
+          insertY = elemBottom + OFFSET.Y;
+        }
+        // 要素間の場合
+        else {
+          // 要素間を検出
+          const nextElement = siblings.find(s => s.order > element.order);
+          
+          // 次の要素が存在する場合、要素間と判定
+          if (nextElement && mouseY > elemBottom - thresholdY) {
+            position = 'between';
+            siblingInfo = { prevElement: element, nextElement };
+            // 要素間の中心位置に表示
+            insertY = elemBottom + (nextElement.y - elemBottom) / 2 - OFFSET.Y;
+          }
+          // 要素の上半分をhover中
+          else if (mouseY < elemTop + element.height / 2) {
+            // 前の要素を探す
+            const currentIndex = siblings.findIndex(s => s.order > element.order);
+            const prevElement = currentIndex > 0 ? siblings[currentIndex - 1] : undefined;
+            
+            if (prevElement) {
+              position = 'between';
+              siblingInfo = { prevElement, nextElement: element };
+              insertY = prevElement.y + prevElement.height + (elemTop - (prevElement.y + prevElement.height)) / 2;
+            } else {
+              position = 'before';
+              insertY = elemTop - OFFSET.Y;
+            }
+          }
+          // 要素の下半分をhover中
+          else {
+            position = 'after';
+            
+            if (nextElement) {
+              position = 'between';
+              siblingInfo = { prevElement: element, nextElement };
+              insertY = elemBottom + (nextElement.y - elemBottom) / 2 - OFFSET.Y;
+            } else {
+              insertY = elemBottom + OFFSET.Y;
+            }
+          }
+        }
+      } else {
+        // 子要素ドロップ位置の処理（既存コード）
+        const children = Object.values(elements)
+          .filter(e => e.parentId === element.id && e.visible)
+          .sort((a, b) => a.order - b.order);
+    
+        let closestY = mouseY;
+        let closestIndex = children.findIndex(child => closestY < child.y + child.height / 2);
+        if (closestIndex === -1) closestIndex = children.length;
+    
+        if (children.length === 0) {
+          insertY = elemTop + element.height / 2;
+        } else if (closestIndex === 0) {
+          insertY = children[0].y - OFFSET.Y;
+        } else if (closestIndex === children.length) {
+          insertY = children[children.length - 1].y + children[children.length - 1].height + OFFSET.Y;
+        } else {
+          const prevChild = children[closestIndex - 1];
+          insertY = prevChild.y + prevChild.height + OFFSET.Y / 2;
         }
       }
-
+    
       const centerX = element.x + element.width / 2;
       const centerY = elemTop + element.height / 2;
       const dx = mouseX - centerX;
       const dy = mouseY - centerY;
-
-      return {
-        position,
-        distanceSq: dx * dx + dy * dy // 平方距離で比較
-      };
+    
+      return { position, distanceSq: dx * dx + dy * dy, insertY, siblingInfo };
     };
 
     const handleMove = (e: MouseEvent | TouchEvent) => {
@@ -284,7 +404,7 @@ export const useElementDragEffect = () => {
         e.preventDefault();
       }
 
-      const dropTarget = findDropTarget(e);
+      const dropTarget = findDropTarget(e, state.elements);
       setCurrentDropTarget(dropTarget);
 
       const zoomAdjustedPos = convertToZoomCoordinates(e);
@@ -320,11 +440,167 @@ export const useElementDragEffect = () => {
     };
   }, [draggingElement, dragStartOffset, state.elements, convertToZoomCoordinates, dispatch, handleMouseUp]);
 
+  // プレビューが表示されたときに、下にある要素を移動するための関数
+  const shiftSiblingElements = useCallback((dropTarget: Element | null, position: DropPosition | null, previewHeight: number) => {
+    // 現在のドラッグプレビューが無効か、ドラッグ中の要素が無い場合は何もしない
+    if (!dropTarget || !position || !draggingElement) {
+      // シフトされた状態があれば元に戻す
+      if (shiftedElements.length > 0) {
+        shiftedElements.forEach(shifted => {
+          const element = state.elements[shifted.id];
+          if (element) {
+            dispatch({
+              type: 'MOVE_ELEMENT',
+              payload: { id: shifted.id, x: element.x, y: shifted.originalY }
+            });
+          }
+        });
+        setShiftedElements([]);
+      }
+      return;
+    }
+
+    // まず、現在シフトされている要素をすべて元の位置に戻す
+    if (shiftedElements.length > 0) {
+      shiftedElements.forEach(shifted => {
+        const element = state.elements[shifted.id];
+        if (element) {
+          dispatch({
+            type: 'MOVE_ELEMENT',
+            payload: { id: shifted.id, x: element.x, y: shifted.originalY }
+          });
+        }
+      });
+      // シフト情報をリセット
+      setShiftedElements([]);
+    }
+    
+    // ドロップタイプによって異なる処理
+    if (position === 'child') {
+      // 子要素ドロップの場合: ターゲットの子要素（同じ親を持つ要素）をシフト
+      const siblings = Object.values(state.elements).filter(el => 
+        el.parentId === dropTarget.id && // 同じ親を持つ
+        el.visible && // 表示されている
+        el.id !== draggingElement.id // ドラッグ中の要素自身は除外
+      ).sort((a, b) => a.y - b.y); // Y座標でソート
+
+      // プレビュー要素のY位置とその高さから影響を受ける兄弟要素を特定
+      const previewY = currentDropTarget?.insertY ?? (dropTarget.y + dropTarget.height / 2 - previewHeight / 2);
+
+      // 影響を受ける要素のリスト（プレビューの下にある要素）
+      const elementsToShift = siblings.filter(sibling => sibling.y >= previewY);
+
+      // 新たに移動が必要な要素を特定
+      const newShiftedElements: ShiftedElement[] = [];
+
+      // 影響を受ける要素を下にシフト
+      elementsToShift.forEach(element => {
+        // 元のY座標を記録 (既に記録されていない場合)
+        const originalY = elementOriginalPositions.current.get(element.id)?.y ?? element.y;
+        if (!elementOriginalPositions.current.has(element.id)) {
+          elementOriginalPositions.current.set(element.id, { x: element.x, y: element.y });
+        }
+        
+        const shiftAmount = previewHeight;
+
+        // 要素を移動
+        dispatch({
+          type: 'MOVE_ELEMENT',
+          payload: { id: element.id, x: element.x, y: originalY + shiftAmount }
+        });
+
+        // 移動情報を記録
+        newShiftedElements.push({
+          id: element.id,
+          originalY: originalY,
+          shiftAmount: shiftAmount
+        });
+      });
+
+      // 移動情報を保存
+      setShiftedElements(newShiftedElements);
+    } 
+    else if (position === 'before' || position === 'after' || position === 'between') {
+      // 兄弟要素間ドロップの場合
+      const parentId = dropTarget.parentId;
+      if (parentId === null) return; // ルート要素の場合は何もしない
+
+      // 同じ親を持つ兄弟要素を取得
+      const siblings = Object.values(state.elements).filter(el => 
+        el.parentId === parentId && 
+        el.visible && 
+        el.id !== draggingElement.id
+      ).sort((a, b) => a.y - b.y); // Y座標でソート
+
+      let startY;
+      if (position === 'between' && currentDropTarget?.siblingInfo) {
+        const { nextElement } = currentDropTarget.siblingInfo;
+        // between の場合は、プレビュー表示位置から判断
+        startY = nextElement ? nextElement.y : (dropTarget.y + dropTarget.height);
+      } else if (position === 'before') {
+        startY = dropTarget.y;
+      } else { // after
+        startY = dropTarget.y + dropTarget.height;
+      }
+
+      // 影響を受ける要素のリスト（ドロップ位置より下にある要素）
+      const elementsToShift = siblings.filter(sibling => sibling.y >= startY);
+      
+      // 新たに移動が必要な要素を特定
+      const newShiftedElements: ShiftedElement[] = [];
+
+      // 影響を受ける要素を下にシフト
+      elementsToShift.forEach(element => {
+        // 元のY座標を記録 (既に記録されていない場合)
+        const originalY = elementOriginalPositions.current.get(element.id)?.y ?? element.y;
+        if (!elementOriginalPositions.current.has(element.id)) {
+          elementOriginalPositions.current.set(element.id, { x: element.x, y: element.y });
+        }
+        
+        const shiftAmount = previewHeight;
+
+        // 要素を移動
+        dispatch({
+          type: 'MOVE_ELEMENT',
+          payload: { id: element.id, x: element.x, y: originalY + shiftAmount }
+        });
+
+        // 移動情報を記録
+        newShiftedElements.push({
+          id: element.id,
+          originalY: originalY,
+          shiftAmount: shiftAmount
+        });
+      });
+
+      // 移動情報を保存
+      setShiftedElements(newShiftedElements);
+    }
+  }, [state.elements, draggingElement, shiftedElements, currentDropTarget, dispatch]);
+  
+  // ドロップターゲットが変更されたときに要素のシフトを行うエフェクト
+  useEffect(() => {
+    if (!draggingElement) return;
+    
+    // ドロップターゲットが存在する場合、ドロップ位置に応じて要素をシフト
+    if (currentDropTarget) {
+      shiftSiblingElements(
+        currentDropTarget.element,
+        currentDropTarget.position,
+        draggingElement.height
+      );
+    } else {
+      // ドロップターゲットがない場合は要素を元に戻す
+      shiftSiblingElements(null, null, 0);
+    }
+  }, [draggingElement, currentDropTarget, shiftSiblingElements]);
+
   return {
     handleMouseDown,
     handleMouseUp,
     currentDropTarget: currentDropTarget?.element || null,
     dropPosition: currentDropTarget?.position || null,
-    draggingElement
+    draggingElement,
+    dropInsertY: currentDropTarget?.insertY
   };
 };
