@@ -464,7 +464,9 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                                 currentDropTarget={currentDropTarget as CanvasElement | null}
                                 dropPosition={dropPosition}
                                 draggingElement={draggingElement}
-                                handleMouseDown={handleMouseDown as unknown as (e: React.MouseEvent<SVGElement>, element: CanvasElement) => void}
+                                handleMouseDown={(e) => {
+                                    handleMouseDown(e as unknown as React.MouseEvent<HTMLElement>, element);
+                                }}
                                 handleMouseUp={handleMouseUp}
                                 onHoverChange={handleElementHover}
                             />
