@@ -436,6 +436,39 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
             style={{ pointerEvents: 'none' }} // プレビュー要素が干渉しないように
           />
         )}
+        
+        {/* 右側（子要素）ドロップのプレビュー表示 */}
+        {currentDropTarget?.id === element.id && draggingElement && dropPosition === 'child' && (
+          <>
+            {/* 右側のドロップエリアを示す矩形 */}
+            <rect
+              className='drop-preview-right'
+              x={element.x + element.width}
+              y={element.y + (element.height / 2) - (draggingElement.height / 2)}
+              width={OFFSET.X + SIZE.WIDTH.MIN} // 右側ドロップゾーンの幅を定数で設定
+              height={draggingElement.height}
+              fill={ELEM_STYLE.DRAGGING.COLOR}
+              rx={ELEM_STYLE.RX}
+              opacity={0.5}
+              stroke={ELEM_STYLE.DRAGGING.STROKE_COLOR}
+              strokeWidth={1}
+              strokeDasharray="4 2"
+              style={{ pointerEvents: 'none' }}
+            />
+            
+            {/* 親子関係を示す矢印線のプレビュー */}
+            <line
+              className='drop-preview-connection'
+              x1={element.x + element.width}
+              y1={element.y + (element.height / 2)}
+              x2={element.x + element.width + (OFFSET.X + SIZE.WIDTH.MIN) * 0.8} // 矢印の長さも定数で調整
+              y2={element.y + (element.height / 2)}
+              stroke={ELEM_STYLE.DRAGGING.STROKE_COLOR}
+              strokeWidth={1}
+              style={{ pointerEvents: 'none' }}
+            />
+          </>
+        )}
         {element.texts.map((text, index) => (
           <React.Fragment key={`${element.id}-section-${index}`}>
             {!element.editing && (
