@@ -9,17 +9,18 @@ import { useCanvas } from '../context/canvasContext';
 import { keyActionMap } from '../constants/keyActionMap';
 import { useClickOutside } from '../hooks/useClickOutside';
 import { useElementDragEffect } from '../hooks/useElementDragEffect';
-import { 
-    ICONBAR_HEIGHT, 
-    HEADER_HEIGHT, 
-    CONNECTION_PATH_STYLE, 
-    CURVE_CONTROL_OFFSET, 
-    MARKER, 
+import {
+    ICONBAR_HEIGHT,
+    HEADER_HEIGHT,
+    CONNECTION_PATH_STYLE,
+    CURVE_CONTROL_OFFSET,
+    MARKER,
     MARKER_TYPES,
     DEFAULT_CANVAS_BACKGROUND_COLOR,
     DEFAULT_CONNECTION_PATH_COLOR,
     DEFAULT_CONNECTION_PATH_STROKE,
     EQUILATERAL_MARKER,
+    OFFSET,
 } from '../constants/elementSettings';
 import { Element as CanvasElement } from '../types';
 import { isDescendant } from '../utils/elementHelpers';
@@ -53,11 +54,10 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
     const editingNode = Object.values(elements).find((element) => (element as CanvasElement).editing) as CanvasElement | undefined;
     const [hover, setHover] = useState<string | null>(null);
     const [showMenuForElement, setShowMenuForElement] = useState<string | null>(null);
-    const [hoveredElements, setHoveredElements] = useState<{[key: string]: boolean}>({});
-    
+    const [hoveredElements, setHoveredElements] = useState<{ [key: string]: boolean }>({});
+
     useEffect(() => {
         if (!editingNode) {
-            // 編集モード終了時のフォーカス処理を改善
             requestAnimationFrame(() => {
                 const { scrollX, scrollY } = window;
                 svgRef.current?.focus({ preventScroll: true });
@@ -74,8 +74,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                 height: window.innerHeight
             });
             setDisplayArea(`0 0 ${window.innerWidth} ${window.innerHeight - ICONBAR_HEIGHT}`);
-            
-            // Get localStorage values only on the client side
+
             setConnectionPathColor(getConnectionPathColor() || DEFAULT_CONNECTION_PATH_COLOR);
             setConnectionPathStroke(getConnectionPathStroke() || DEFAULT_CONNECTION_PATH_STROKE);
             setCanvasBackgroundColor(getCanvasBackgroundColor() || DEFAULT_CANVAS_BACKGROUND_COLOR);
@@ -98,13 +97,11 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
         const keyCombo = `${e.ctrlKey || e.metaKey ? 'Ctrl+' : ''}${e.shiftKey ? 'Shift+' : ''}${e.key}`;
         const actionType = keyActionMap[keyCombo];
         if (actionType === 'PASTE_ELEMENT') {
-            // Get cut elements from global storage
             const globalCutElements = getGlobalCutElements();
             if (globalCutElements && Object.keys(globalCutElements).length > 0) {
                 dispatch({ type: actionType });
             } else {
                 try {
-                    // クリップボードからテキストを取得
                     const text = await navigator.clipboard.readText();
                     const selectedElement = Object.values(state.elements).find(el => el.selected);
                     if (!selectedElement) {
@@ -238,7 +235,6 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
             `${element.x},${element.y + totalHeight / 2}`
         ].join(' ');
 
-        // マーカーの選択
         let markerStart = undefined;
         switch (parentElement.connectionPathType) {
             case MARKER_TYPES.ARROW:
@@ -276,7 +272,6 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                         r={10}
                         fill="#bfbfbf"
                         opacity={0.5}
-                        // style={{ pointerEvents: 'none' }}
                     />
                 )}
                 <path
@@ -293,23 +288,21 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                     cy={element.y + totalHeight / 2}
                     r={10}
                     fill="transparent"
-                    // style={{ pointerEvents: 'all' }}
                     onMouseEnter={() => setHover(element.id)}
                     onMouseLeave={() => setHover(null)}
                     onClick={() => setShowMenuForElement(element.id)}
                 />
-                
+
             </g>
         );
     };
 
-    // Generate popup menus for rendering at the top level
     const renderPopupMenus = () => {
         if (!showMenuForElement) return null;
         const element = elements[showMenuForElement];
         if (!element) return null;
         const totalHeight = element.height;
-        
+
         const markerOptions = [
             { id: 'arrow', label: 'Arrow' },
             { id: 'filled_arrow', label: 'Filled Arrow' },
@@ -321,7 +314,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
             { id: 'filled_diamond', label: 'Filled Diamond' },
             { id: 'none', label: 'None' },
         ];
-        
+
         return (
             <foreignObject
                 x={element.x + element.width + 20}
@@ -340,10 +333,10 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                     {markerOptions.map(option => (
                         <div
                             key={option.id}
-                            style={{ 
-                                padding: '4px 0', 
-                                cursor: 'pointer', 
-                                backgroundColor: hover === option.id ? '#e0e0e0' : 'white' 
+                            style={{
+                                padding: '4px 0',
+                                cursor: 'pointer',
+                                backgroundColor: hover === option.id ? '#e0e0e0' : 'white'
                             }}
                             onMouseEnter={() => setHover(option.id)}
                             onMouseLeave={() => setHover(null)}
@@ -378,57 +371,122 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
         };
     }, [showMenuForElement]);
 
-    // Add a method to track hovered elements
     const handleElementHover = useCallback((elementId: string, isHovered: boolean) => {
         setHoveredElements(prev => {
-            // Only update if the state is actually changing
             if (prev[elementId] === isHovered) {
                 return prev;
             }
-            
-            // Create a new object to trigger re-render
+
             const newState = { ...prev };
-            
+
             if (isHovered) {
                 newState[elementId] = true;
             } else {
                 delete newState[elementId];
             }
-            
+
             return newState;
         });
     }, []);
 
-    // Modify IdeaElement to track hover status at the top level
     const renderElements = () => {
-        return Object.values(elements)
+        // グループ化用のオブジェクト（キー: parentId_depth）
+        const elementGroups: { [key: string]: CanvasElement[] } = {};
+
+        // 要素を可視状態でフィルタリングしつつグループ化
+        Object.values(elements)
             .filter((element): element is CanvasElement => element.visible)
-            .map(element => (
-                <React.Fragment key={element.id}>
-                    <IdeaElement
-                        element={element}
-                        currentDropTarget={currentDropTarget as CanvasElement | null}
-                        dropPosition={dropPosition}
-                        draggingElement={draggingElement}
-                        handleMouseDown={handleMouseDown as unknown as (e: React.MouseEvent<SVGElement>, element: CanvasElement) => void}
-                        handleMouseUp={handleMouseUp}
-                        onHoverChange={handleElementHover}
-                    />
-                </React.Fragment>
-            ));
+            .forEach(element => {
+                // グループキーの生成（ルート要素は特別扱い）
+                const groupKey = element.parentId
+                    ? `${element.parentId}_${element.depth}`
+                    : 'root';
+
+                // グループが存在しない場合は初期化
+                if (!elementGroups[groupKey]) {
+                    elementGroups[groupKey] = [];
+                }
+                elementGroups[groupKey].push(element);
+            });
+
+        // グループごとのレンダリング処理
+        return Object.entries(elementGroups).flatMap(([groupKey, groupElements]) => {
+            // ルート要素グループの処理
+            if (groupKey === 'root') {
+                return groupElements.map(element => (
+                    <React.Fragment key={element.id}>
+                        <IdeaElement
+                            element={element}
+                            currentDropTarget={currentDropTarget as CanvasElement | null}
+                            dropPosition={dropPosition}
+                            draggingElement={draggingElement}
+                            handleMouseDown={handleMouseDown as unknown as (e: React.MouseEvent<SVGElement>, element: CanvasElement) => void}
+                            handleMouseUp={handleMouseUp}
+                            onHoverChange={handleElementHover}
+                        />
+                    </React.Fragment>
+                ));
+            }
+
+            // グループキーから親要素IDを取得
+            const [parentId] = groupKey.split('_');
+            const parentElement = elements[parentId] as CanvasElement | undefined;
+
+            // 親要素が存在しない場合はスキップ（論理エラー防止）
+            if (!parentElement) return [];
+
+            // グループの基準位置計算（親要素の右端 + OFFSET）
+            const groupX = parentElement.x + parentElement.width + OFFSET.X;
+            const groupY = parentElement.y;
+
+            // グループ全体をSVGグループ要素でラップ
+            return [
+                <g
+                    key={groupKey}
+                    transform={`translate(${groupX}, ${groupY})`}
+                    className="element-group"
+                    data-parent-id={parentId}
+                    data-depth={groupElements[0].depth}
+                >
+                    {groupElements.map(element => {
+                        // グループ内相対座標に変換
+                        const relativeX = element.x - groupX;
+                        const relativeY = element.y - groupY;
+
+                        return (
+                            <IdeaElement
+                                key={element.id}
+                                element={{
+                                    ...element,
+                                    x: relativeX,
+                                    y: relativeY,
+                                }}
+                                currentDropTarget={currentDropTarget as CanvasElement | null}
+                                dropPosition={dropPosition}
+                                draggingElement={draggingElement}
+                                handleMouseDown={(e) => {
+                                    handleMouseDown(e as unknown as React.MouseEvent<HTMLElement>, element);
+                                }}
+                                handleMouseUp={handleMouseUp}
+                                onHoverChange={handleElementHover}
+                            />
+                        );
+                    })}
+                </g>
+            ];
+        });
     };
 
-    // Render debug info at the top level
     const renderDebugInfo = () => {
         return Object.keys(hoveredElements)
             .map(elementId => {
                 const element = elements[elementId];
                 if (!element || !element.visible) return null;
-                
+
                 return (
-                    <DebugInfo 
+                    <DebugInfo
                         key={`debug-${elementId}`}
-                        element={element} 
+                        element={element}
                         isHovered={true}
                     />
                 );
@@ -444,7 +502,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                 left: 0,
                 width: '100%',
                 height: '100%',
-                backgroundColor: canvasBackgroundColor, // キャンバスの背景色を設定
+                backgroundColor: canvasBackgroundColor,
                 overflow: 'hidden',
                 zIndex: -1
             }} />
@@ -454,7 +512,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                 left: 0,
                 overflow: 'auto',
                 touchAction: isPinching ? 'none' : 'manipulation',
-                backgroundColor: canvasBackgroundColor // キャンバスの背景色を設定
+                backgroundColor: canvasBackgroundColor
             }}>
                 {isClient && (
                     <svg
@@ -473,20 +531,19 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                             touchAction: isPinching ? 'none' : 'manipulation',
                             userSelect: 'none',
                             WebkitUserSelect: 'none',
-                            backgroundColor: canvasBackgroundColor // SVG自体にも背景色を適用
+                            backgroundColor: canvasBackgroundColor
                         }}
                         className="svg-element"
                     >
                         <defs>
-                            {/* 矢印マーカー */}
-                            <marker 
-                                id="arrowhead" 
-                                markerWidth={MARKER.WIDTH} 
-                                markerHeight={MARKER.HEIGHT} 
-                                refX={MARKER.WIDTH} 
-                                refY={MARKER.HEIGHT / 2} 
-                                orient="auto" 
-                                fill="none" 
+                            <marker
+                                id="arrowhead"
+                                markerWidth={MARKER.WIDTH}
+                                markerHeight={MARKER.HEIGHT}
+                                refX={MARKER.WIDTH}
+                                refY={MARKER.HEIGHT / 2}
+                                orient="auto"
+                                fill="none"
                                 stroke={connectionPathColor}
                                 markerUnits="userSpaceOnUse"
                                 viewBox="0 0 MARKER.WIDTH MARKER.HEIGHT"
@@ -498,14 +555,13 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                                     stroke={connectionPathColor}
                                 />
                             </marker>
-                            {/* Filled 矢印マーカー */}
-                            <marker 
-                                markerWidth={MARKER.WIDTH} 
-                                markerHeight={MARKER.HEIGHT} 
-                                refX={MARKER.WIDTH} 
-                                refY={MARKER.HEIGHT / 2} 
-                                orient="auto" 
-                                fill={connectionPathColor} 
+                            <marker
+                                markerWidth={MARKER.WIDTH}
+                                markerHeight={MARKER.HEIGHT}
+                                refX={MARKER.WIDTH}
+                                refY={MARKER.HEIGHT / 2}
+                                orient="auto"
+                                fill={connectionPathColor}
                                 stroke={connectionPathColor}
                                 markerUnits="userSpaceOnUse"
                                 viewBox="0 0 MARKER.WIDTH MARKER.HEIGHT"
@@ -517,49 +573,8 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                                     stroke={connectionPathColor}
                                 />
                             </marker>
-                            {/* 円形マーカー */}
-                            <marker 
-                                id="circlemarker" 
-                                markerWidth={EQUILATERAL_MARKER.SIZE}
-                                markerHeight={EQUILATERAL_MARKER.SIZE}
-                                refX={EQUILATERAL_MARKER.SIZE}
-                                refY={EQUILATERAL_MARKER.SIZE / 2} 
-                                orient="auto"
-                                markerUnits="userSpaceOnUse"
-                                viewBox="0 0 EQUILATERAL_MARKER.SIZE EQUILATERAL_MARKER.SIZE"
-                                strokeWidth={connectionPathStroke}
-                            >
-                                <circle 
-                                    cx={EQUILATERAL_MARKER.SIZE / 2} 
-                                    cy={EQUILATERAL_MARKER.SIZE / 2} 
-                                    r={EQUILATERAL_MARKER.SIZE / 2 - 1} 
-                                    fill="none" 
-                                    stroke={connectionPathColor}
-                                />
-                            </marker>
-                            {/* Filled 円形マーカー */}
-                            <marker 
-                                id="filledcirclemarker" 
-                                markerWidth={EQUILATERAL_MARKER.SIZE}
-                                markerHeight={EQUILATERAL_MARKER.SIZE}
-                                refX={EQUILATERAL_MARKER.SIZE}
-                                refY={EQUILATERAL_MARKER.SIZE / 2} 
-                                orient="auto"
-                                markerUnits="userSpaceOnUse"
-                                viewBox="0 0 EQUILATERAL_MARKER.SIZE EQUILATERAL_MARKER.SIZE"
-                                strokeWidth={connectionPathStroke}
-                            >
-                                <circle 
-                                    cx={EQUILATERAL_MARKER.SIZE / 2} 
-                                    cy={EQUILATERAL_MARKER.SIZE / 2} 
-                                    r={EQUILATERAL_MARKER.SIZE / 2 - 1} 
-                                    fill={connectionPathColor} 
-                                    stroke={connectionPathColor}
-                                />
-                            </marker>
-                            {/* 四角形マーカー */}
-                            <marker 
-                                id="squaremarker" 
+                            <marker
+                                id="circlemarker"
                                 markerWidth={EQUILATERAL_MARKER.SIZE}
                                 markerHeight={EQUILATERAL_MARKER.SIZE}
                                 refX={EQUILATERAL_MARKER.SIZE}
@@ -569,18 +584,16 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                                 viewBox="0 0 EQUILATERAL_MARKER.SIZE EQUILATERAL_MARKER.SIZE"
                                 strokeWidth={connectionPathStroke}
                             >
-                                <rect 
-                                    x="1" 
-                                    y="1" 
-                                    width={EQUILATERAL_MARKER.SIZE - 2} 
-                                    height={EQUILATERAL_MARKER.SIZE - 2} 
-                                    fill="none" 
+                                <circle
+                                    cx={EQUILATERAL_MARKER.SIZE / 2}
+                                    cy={EQUILATERAL_MARKER.SIZE / 2}
+                                    r={EQUILATERAL_MARKER.SIZE / 2 - 1}
+                                    fill="none"
                                     stroke={connectionPathColor}
                                 />
                             </marker>
-                            {/* Filled 四角形マーカー */}
-                            <marker 
-                                id="filledsquaremarker" 
+                            <marker
+                                id="filledcirclemarker"
                                 markerWidth={EQUILATERAL_MARKER.SIZE}
                                 markerHeight={EQUILATERAL_MARKER.SIZE}
                                 refX={EQUILATERAL_MARKER.SIZE}
@@ -590,71 +603,102 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                                 viewBox="0 0 EQUILATERAL_MARKER.SIZE EQUILATERAL_MARKER.SIZE"
                                 strokeWidth={connectionPathStroke}
                             >
-                                <rect 
-                                    x="1" 
-                                    y="1" 
-                                    width={EQUILATERAL_MARKER.SIZE - 2} 
-                                    height={EQUILATERAL_MARKER.SIZE - 2} 
-                                    fill={connectionPathColor} 
+                                <circle
+                                    cx={EQUILATERAL_MARKER.SIZE / 2}
+                                    cy={EQUILATERAL_MARKER.SIZE / 2}
+                                    r={EQUILATERAL_MARKER.SIZE / 2 - 1}
+                                    fill={connectionPathColor}
                                     stroke={connectionPathColor}
                                 />
                             </marker>
-                            {/* ダイヤモンドマーカー */}
-                            <marker 
-                                id="diamondmarker" 
-                                markerWidth={MARKER.WIDTH} 
-                                markerHeight={MARKER.HEIGHT} 
-                                refX={MARKER.WIDTH} 
-                                refY={MARKER.HEIGHT / 2} 
+                            <marker
+                                id="squaremarker"
+                                markerWidth={EQUILATERAL_MARKER.SIZE}
+                                markerHeight={EQUILATERAL_MARKER.SIZE}
+                                refX={EQUILATERAL_MARKER.SIZE}
+                                refY={EQUILATERAL_MARKER.SIZE / 2}
                                 orient="auto"
                                 markerUnits="userSpaceOnUse"
-                                viewBox="0 0 MARKER.WIDTH MARKER.HEIGHT"
+                                viewBox="0 0 EQUILATERAL_MARKER.SIZE EQUILATERAL_MARKER.SIZE"
                                 strokeWidth={connectionPathStroke}
                             >
-                                <polygon 
-                                    points={`${MARKER.WIDTH / 2},1 ${MARKER.WIDTH - 1},${MARKER.HEIGHT / 2} ${MARKER.WIDTH / 2},${MARKER.HEIGHT - 1} 1,${MARKER.HEIGHT / 2}`} 
-                                    fill="none" 
-                                    stroke={connectionPathColor} 
-                                    // strokeWidth="1" 
+                                <rect
+                                    x="1"
+                                    y="1"
+                                    width={EQUILATERAL_MARKER.SIZE - 2}
+                                    height={EQUILATERAL_MARKER.SIZE - 2}
+                                    fill="none"
+                                    stroke={connectionPathColor}
                                 />
                             </marker>
-                            {/* Filled ダイヤモンドマーカー */}
-                            <marker 
-                                id="filleddiamondmarker" 
-                                markerWidth={MARKER.WIDTH} 
-                                markerHeight={MARKER.HEIGHT} 
-                                refX={MARKER.WIDTH} 
-                                refY={MARKER.HEIGHT / 2} 
+                            <marker
+                                id="filledsquaremarker"
+                                markerWidth={EQUILATERAL_MARKER.SIZE}
+                                markerHeight={EQUILATERAL_MARKER.SIZE}
+                                refX={EQUILATERAL_MARKER.SIZE}
+                                refY={EQUILATERAL_MARKER.SIZE / 2}
+                                orient="auto"
+                                markerUnits="userSpaceOnUse"
+                                viewBox="0 0 EQUILATERAL_MARKER.SIZE EQUILATERAL_MARKER.SIZE"
+                                strokeWidth={connectionPathStroke}
+                            >
+                                <rect
+                                    x="1"
+                                    y="1"
+                                    width={EQUILATERAL_MARKER.SIZE - 2}
+                                    height={EQUILATERAL_MARKER.SIZE - 2}
+                                    fill={connectionPathColor}
+                                    stroke={connectionPathColor}
+                                />
+                            </marker>
+                            <marker
+                                id="diamondmarker"
+                                markerWidth={MARKER.WIDTH}
+                                markerHeight={MARKER.HEIGHT}
+                                refX={MARKER.WIDTH}
+                                refY={MARKER.HEIGHT / 2}
                                 orient="auto"
                                 markerUnits="userSpaceOnUse"
                                 viewBox="0 0 MARKER.WIDTH MARKER.HEIGHT"
                                 strokeWidth={connectionPathStroke}
                             >
-                                <polygon 
-                                    points={`${MARKER.WIDTH / 2},1 ${MARKER.WIDTH - 1},${MARKER.HEIGHT / 2} ${MARKER.WIDTH / 2},${MARKER.HEIGHT - 1} 1,${MARKER.HEIGHT / 2}`} 
-                                    fill={connectionPathColor} 
-                                    stroke={connectionPathColor} 
-                                    // strokeWidth="1" 
+                                <polygon
+                                    points={`${MARKER.WIDTH / 2},1 ${MARKER.WIDTH - 1},${MARKER.HEIGHT / 2} ${MARKER.WIDTH / 2},${MARKER.HEIGHT - 1} 1,${MARKER.HEIGHT / 2}`}
+                                    fill="none"
+                                    stroke={connectionPathColor}
+                                />
+                            </marker>
+                            <marker
+                                id="filleddiamondmarker"
+                                markerWidth={MARKER.WIDTH}
+                                markerHeight={MARKER.HEIGHT}
+                                refX={MARKER.WIDTH}
+                                refY={MARKER.HEIGHT / 2}
+                                orient="auto"
+                                markerUnits="userSpaceOnUse"
+                                viewBox="0 0 MARKER.WIDTH MARKER.HEIGHT"
+                                strokeWidth={connectionPathStroke}
+                            >
+                                <polygon
+                                    points={`${MARKER.WIDTH / 2},1 ${MARKER.WIDTH - 1},${MARKER.HEIGHT / 2} ${MARKER.WIDTH / 2},${MARKER.HEIGHT - 1} 1,${MARKER.HEIGHT / 2}`}
+                                    fill={connectionPathColor}
+                                    stroke={connectionPathColor}
                                 />
                             </marker>
                         </defs>
-                        
-                        {/* Render main elements */}
+
                         {renderElements()}
 
-                        {/* 通常の接続線 */}
                         {Object.values(elements)
                             .filter((element): element is CanvasElement => element.visible && !!element.parentId)
                             .map(element => {
                                 const parent = state.elements[element.parentId!];
-                                // ドラッグ中の要素またはその子孫要素の接続パスは非表示にする
                                 if (draggingElement && (element.id === draggingElement.id || isDescendant(state.elements, draggingElement.id, element.id))) {
                                     return null;
                                 }
                                 return renderConnectionPath(parent, element, connectionPathColor, connectionPathStroke);
                             })}
 
-                        {/* ドラッグプレビュー用の接続パス */}
                         {currentDropTarget && draggingElement && (
                             (() => {
                                 const newParent = dropPosition === 'child'
@@ -673,8 +717,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                                 );
                             })()
                         )}
-                        
-                        {/* Always render popup menus and debug info at the end so they appear on top */}
+
                         {renderPopupMenus()}
                         {renderDebugInfo()}
                     </svg>
