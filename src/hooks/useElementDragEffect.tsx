@@ -280,10 +280,10 @@ export const useElementDragEffect = () => {
       let minSquaredDistance = Infinity;
     
       for (const element of candidates) {
-        const { position, distanceSq, insertY } = calculatePositionAndDistance(element, mouseX, mouseY, elements);
+        const { position, distanceSq, insertY, siblingInfo } = calculatePositionAndDistance(element, mouseX, mouseY, elements);
         if (distanceSq < minSquaredDistance) {
           minSquaredDistance = distanceSq;
-          closestTarget = { element, position, insertY };
+          closestTarget = { element, position, insertY, siblingInfo };
         }
       }
     
@@ -302,112 +302,191 @@ export const useElementDragEffect = () => {
         (mouseX >= rightSideCoordinate && mouseX < rightSideCoordinate + rightSidePadding)
       );
     };
+    
+    // 要素の兄弟要素を取得するヘルパー関数
+    const getSiblings = (element: Element, elements: ElementsMap): Element[] => {
+      return element.parentId 
+        ? Object.values(elements)
+            .filter(e => e.parentId === element.parentId && e.visible && e.id !== element.id)
+            .sort((a, b) => a.order - b.order)
+        : [];
+    };
+    
+    // 要素の子要素を取得するヘルパー関数
+    const getChildren = (element: Element, elements: ElementsMap): Element[] => {
+      return Object.values(elements)
+        .filter(e => e.parentId === element.id && e.visible)
+        .sort((a, b) => a.order - b.order);
+    };
+    
+    // 右側（子要素）エリアのドロップ位置を計算する関数
+    const calculateChildPosition = (element: Element, mouseY: number, elements: ElementsMap): { position: DropPosition; insertY: number } => {
+      const elemTop = element.y;
+      const children = getChildren(element, elements);
+      
+      let closestY = mouseY;
+      let closestIndex = children.findIndex(child => closestY < child.y + child.height / 2);
+      if (closestIndex === -1) closestIndex = children.length;
+      
+      let insertY: number;
+      
+      if (children.length === 0) {
+        insertY = elemTop + element.height / 2;
+      } else if (closestIndex === 0) {
+        insertY = children[0].y - OFFSET.Y;
+      } else if (closestIndex === children.length) {
+        insertY = children[children.length - 1].y + children[children.length - 1].height + OFFSET.Y;
+      } else {
+        const prevChild = children[closestIndex - 1];
+        insertY = prevChild.y + prevChild.height + OFFSET.Y / 2;
+      }
+      
+      return { position: 'child', insertY };
+    };
+    
+    // 要素の上部にドロップする場合の位置を計算する関数
+    const calculateBeforePosition = (element: Element): { position: DropPosition; insertY: number } => {
+      return {
+        position: 'before', 
+        insertY: element.y - (draggingElement?.height || 0) - OFFSET.Y
+      };
+    };
+    
+    // 要素の下部にドロップする場合の位置を計算する関数
+    const calculateAfterPosition = (element: Element): { position: DropPosition; insertY: number } => {
+      return {
+        position: 'after',
+        insertY: element.y + element.height + OFFSET.Y
+      };
+    };
+    
+    // 要素間にドロップする場合の位置を計算する関数
+    const calculateBetweenPosition = (
+      prevElement: Element, 
+      nextElement: Element | undefined
+    ): { position: DropPosition; insertY: number; siblingInfo: { prevElement: Element; nextElement?: Element } } => {
+      let insertY: number;
+      
+      if (nextElement) {
+        // 2つの要素の間
+        insertY = prevElement.y + prevElement.height + (nextElement.y - (prevElement.y + prevElement.height)) / 2;
+      } else {
+        // 最後の要素の後
+        insertY = prevElement.y + prevElement.height + OFFSET.Y;
+      }
+      
+      return {
+        position: 'between',
+        insertY,
+        siblingInfo: { prevElement, nextElement }
+      };
+    };
 
     const calculatePositionAndDistance = (
       element: Element,
       mouseX: number,
       mouseY: number,
       elements: ElementsMap
-    ): { position: DropPosition; distanceSq: number; insertY?: number; siblingInfo?: { prevElement?: Element, nextElement?: Element } } => {
+    ): { position: DropPosition; distanceSq: number; insertY: number; siblingInfo?: { prevElement?: Element, nextElement?: Element } } => {
       const elemTop = element.y;
       const elemBottom = element.y + element.height;
       const elemRight = element.x + element.width;
-      const thresholdY = element.height * 0.2;
-      const rightSidePadding = OFFSET.X + SIZE.WIDTH.MIN;
-    
-      let position: DropPosition = 'child';
-      let insertY = elemTop + element.height / 2;
-      let siblingInfo: { prevElement?: Element, nextElement?: Element } | undefined = undefined;
-    
+      const thresholdY = element.height * 0.2; // 上下端の検出しきい値 (要素の高さの20%)
+      const rightSidePadding = OFFSET.X + (draggingElement?.width ?? 0);
+      
+      // 要素の右側（子要素として追加）かどうかを判定
       const isOnRightSide = mouseX >= elemRight && mouseX < elemRight + rightSidePadding;
-    
-      if (!isOnRightSide) {
-        // 兄弟要素の取得
-        const siblings = element.parentId 
-          ? Object.values(elements)
-              .filter(e => e.parentId === element.parentId && e.visible && e.id !== element.id)
-              .sort((a, b) => a.order - b.order)
-          : [];
+      
+      let result: {
+        position: DropPosition;
+        insertY: number;
+        siblingInfo?: { prevElement?: Element, nextElement?: Element };
+      };
+      
+      if (isOnRightSide) {
+        // 子要素として追加する場合
+        result = calculateChildPosition(element, mouseY, elements);
+      } else {
+        // 兄弟要素として追加する場合
+        const siblings = getSiblings(element, elements);
         
-        // 兄弟要素間のドロップ位置の判定を最適化
-        // 先頭要素より上の場合
-        if (mouseY < elemTop + thresholdY && element.order === 0) {
-          position = 'before';
-          insertY = elemTop - OFFSET.Y;
-        }
-        // 末尾要素より下の場合
-        else if (mouseY > elemBottom - thresholdY && !siblings.some(s => s.order > element.order)) {
-          position = 'after';
-          insertY = elemBottom + OFFSET.Y;
-        }
-        // 要素間の場合
-        else {
-          // 要素間を検出
-          const nextElement = siblings.find(s => s.order > element.order);
-          
-          // 次の要素が存在する場合、要素間と判定
-          if (nextElement && mouseY > elemBottom - thresholdY) {
-            position = 'between';
-            siblingInfo = { prevElement: element, nextElement };
-            // 要素間の中心位置に表示
-            insertY = elemBottom + (nextElement.y - elemBottom) / 2 - OFFSET.Y;
-          }
-          // 要素の上半分をhover中
-          else if (mouseY < elemTop + element.height / 2) {
-            // 前の要素を探す
+        // 要素の前後関係を判定
+        if (mouseY < elemTop + thresholdY) {
+          // 要素の上部付近
+          if (element.order === 0) {
+            // 最初の要素の場合
+            result = calculateBeforePosition(element);
+          } else {
+            // 最初の要素ではない場合、前の要素を検索
             const currentIndex = siblings.findIndex(s => s.order > element.order);
             const prevElement = currentIndex > 0 ? siblings[currentIndex - 1] : undefined;
             
             if (prevElement) {
-              position = 'between';
-              siblingInfo = { prevElement, nextElement: element };
-              insertY = prevElement.y + prevElement.height + (elemTop - (prevElement.y + prevElement.height)) / 2;
+              // 前の要素との間の空間をチェック
+              const gapBetweenElements = elemTop - (prevElement.y + prevElement.height);
+              
+              if (gapBetweenElements >= 10 && mouseY > prevElement.y + prevElement.height && mouseY < elemTop) {
+                // 十分な空間がある場合は間に配置
+                result = calculateBetweenPosition(prevElement, element);
+              } else if (mouseY < elemTop + element.height * 0.2) {
+                // それ以外で上部20%にある場合はbefore
+                result = calculateBeforePosition(element);
+              } else {
+                // デフォルトはchild
+                result = { position: 'child', insertY: elemTop + element.height / 2 };
+              }
             } else {
-              position = 'before';
-              insertY = elemTop - OFFSET.Y;
+              // 前の要素が見つからない場合はbefore
+              result = calculateBeforePosition(element);
             }
           }
-          // 要素の下半分をhover中
-          else {
-            position = 'after';
-            
-            if (nextElement) {
-              position = 'between';
-              siblingInfo = { prevElement: element, nextElement };
-              insertY = elemBottom + (nextElement.y - elemBottom) / 2 - OFFSET.Y;
-            } else {
-              insertY = elemBottom + OFFSET.Y;
-            }
+        } else if (mouseY > elemBottom - thresholdY) {
+          // 要素の下部付近
+          const nextElement = siblings.find(s => s.order > element.order);
+          
+          if (!nextElement) {
+            // 次の要素がない場合はafter
+            result = calculateAfterPosition(element);
+          } else {
+            // 次の要素がある場合はbetween
+            result = calculateBetweenPosition(element, nextElement);
           }
-        }
-      } else {
-        // 子要素ドロップ位置の処理（既存コード）
-        const children = Object.values(elements)
-          .filter(e => e.parentId === element.id && e.visible)
-          .sort((a, b) => a.order - b.order);
-    
-        let closestY = mouseY;
-        let closestIndex = children.findIndex(child => closestY < child.y + child.height / 2);
-        if (closestIndex === -1) closestIndex = children.length;
-    
-        if (children.length === 0) {
-          insertY = elemTop + element.height / 2;
-        } else if (closestIndex === 0) {
-          insertY = children[0].y - OFFSET.Y;
-        } else if (closestIndex === children.length) {
-          insertY = children[children.length - 1].y + children[children.length - 1].height + OFFSET.Y;
         } else {
-          const prevChild = children[closestIndex - 1];
-          insertY = prevChild.y + prevChild.height + OFFSET.Y / 2;
+          // 要素の中央部分
+          const elementMidpoint = elemTop + element.height / 2;
+          
+          if (mouseY < elementMidpoint) {
+            // 上半分
+            if (mouseY < elemTop + element.height * 0.2) {
+              // 上部20%はbefore
+              result = calculateBeforePosition(element);
+            } else {
+              // それ以外はchild
+              result = { position: 'child', insertY: elemTop + element.height / 2 };
+            }
+          } else {
+            // 下半分
+            const nextElement = siblings.find(s => s.order > element.order);
+            
+            if (nextElement && mouseY > elemBottom - thresholdY) {
+              // 次の要素があり、下部付近ならbetween
+              result = calculateBetweenPosition(element, nextElement);
+            } else {
+              // それ以外はchild
+              result = { position: 'child', insertY: elemTop + element.height / 2 };
+            }
+          }
         }
       }
-    
+      
+      // 要素中心からの距離を計算
       const centerX = element.x + element.width / 2;
       const centerY = elemTop + element.height / 2;
       const dx = mouseX - centerX;
       const dy = mouseY - centerY;
-    
-      return { position, distanceSq: dx * dx + dy * dy, insertY, siblingInfo };
+      const distanceSq = dx * dx + dy * dy;
+      
+      return { ...result, distanceSq };
     };
 
     const handleMove = (e: MouseEvent | TouchEvent) => {
