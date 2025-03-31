@@ -579,6 +579,13 @@ export const useElementDragEffect = () => {
       newParentId = target.parentId;
     }
 
+    // parentIdがnullの場合、ルート要素以外はドロップできないようにする
+    if (newParentId === null && !selectedElements.every(el => el.depth === 1)) {
+      addToast(ToastMessages.invalidDrop, 'warn');
+      resetElementsPosition();
+      return false;
+    }
+
     // 無効な親変更をチェック
     if (selectedElements.some(el => !validateParentChange(el, newParentId))) {
       addToast(ToastMessages.dropChildElement, 'warn');
