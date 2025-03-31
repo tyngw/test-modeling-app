@@ -549,7 +549,8 @@ export const useElementDragEffect = () => {
   // 兄弟要素としてドロップする処理
   const processSiblingDrop = useCallback((target: Element, position: DropPosition, selectedElements: Element[]): boolean => {
     // 基本的なドロップ処理
-    let baseOrder, newParentId;
+    let baseOrder: number;
+    let newParentId: string | null;
     
     if (position === 'between' && currentDropTarget?.siblingInfo) {
       // 要素間へのドロップ
