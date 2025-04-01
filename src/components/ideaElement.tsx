@@ -32,12 +32,13 @@ import { useIsMounted } from '../hooks/useIsMounted';
 interface IdeaElementProps {
   element: CanvasElement;
   currentDropTarget: CanvasElement | null;
-  dropPosition: 'before' | 'after' | 'child' | 'between' | null;
+  dropPosition: 'child' | 'between' | null;
   draggingElement: CanvasElement | null;
   handleMouseDown: (e: React.MouseEvent<SVGElement>, element: CanvasElement) => void;
   handleMouseUp: () => void;
   onHoverChange?: (elementId: string, isHovered: boolean) => void;
   dropInsertY?: number;
+  siblingInfo?: { prevElement?: CanvasElement, nextElement?: CanvasElement } | null;
 }
 
 const renderActionButtons = (element: CanvasElement, dispatch: React.Dispatch<any>, elements: CanvasElement[]) => {
@@ -115,17 +116,27 @@ const renderActionButtons = (element: CanvasElement, dispatch: React.Dispatch<an
 };
 
 // Export DebugInfo component so it can be used by parent components
-export const DebugInfo: React.FC<{ element: CanvasElement; isHovered: boolean }> = ({ element, isHovered }) => {
+export const DebugInfo: React.FC<{ 
+  element: CanvasElement; 
+  isHovered: boolean;
+  currentDropTarget: CanvasElement | null;
+  dropPosition: 'child' | 'between' | null;
+  isDraggedOrDescendant?: boolean;
+  siblingInfo?: { prevElement?: CanvasElement, nextElement?: CanvasElement } | null;
+}> = ({ element, isHovered, currentDropTarget, dropPosition, isDraggedOrDescendant, siblingInfo }) => {
   if (!isDevelopment || !isHovered) {
     return null;
   }
 
+  // ドラッグ対象の場合は表示位置を右にずらす
+  const xOffset = isDraggedOrDescendant ? element.width + 350 : element.width + 10;
+
   return (
     <foreignObject
-      x={element.x + element.width + 10}
+      x={element.x + xOffset}
       y={element.y - 10}
       width="340"
-      height="200"
+      height="400"
       className="debug-info"
     >
       <div style={{
@@ -150,6 +161,14 @@ export const DebugInfo: React.FC<{ element: CanvasElement; isHovered: boolean }>
         <div>y: {element.y}</div>
         <div>width: {element.width}</div>
         <div>height: {element.height}</div>
+        <div>currentDropTarget: {currentDropTarget ? (currentDropTarget.texts[0] || 'empty') : 'null'}</div>
+        <div>dropPosition: {dropPosition || 'null'}</div>
+        <div>siblingInfo: {
+          siblingInfo ? 
+            `prev=${siblingInfo.prevElement ? (siblingInfo.prevElement.texts[0] || 'empty') : 'null'}, 
+             next=${siblingInfo.nextElement ? (siblingInfo.nextElement.texts[0] || 'empty') : 'null'}` : 
+            'null'
+        }</div>
       </div>
     </foreignObject>
   );
@@ -163,6 +182,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
   handleMouseDown,
   onHoverChange,
   dropInsertY,
+  siblingInfo,
 }) => {
   const { state, dispatch } = useCanvas();
   const { getCurrentTabState, getCurrentTabNumberOfSections } = useTabs();
@@ -288,6 +308,18 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
   return (
 
     <React.Fragment key={element.id}>
+      {/* DebugInfoを別グループとして分離 */}
+      <g>
+        <DebugInfo 
+          element={element} 
+          isHovered={isHovered} 
+          currentDropTarget={currentDropTarget}
+          dropPosition={dropPosition}
+          isDraggedOrDescendant={isDraggedOrDescendant}
+          siblingInfo={siblingInfo}
+        />
+      </g>
+      
       <g opacity={isDraggedOrDescendant ? 0.3 : 1}>
         {renderActionButtons(element, dispatch, Object.values(tabState.elements))}
         {hiddenChildren.length > 0 && (
@@ -376,6 +408,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
           onMouseDown={(e) => handleMouseDown(e, element)}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
+          data-element-id={element.id}
           style={{
             fill: (element.id === currentDropTargetId && dropPosition === 'child')
               ? ELEM_STYLE.DRAGGING.COLOR
@@ -421,48 +454,14 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
           </>
         )}
         
-        {/* 上側（before）ドロップのプレビュー表示 */}
-        {currentDropTarget?.id === element.id && draggingElement && dropPosition === 'before' && (
-          <rect
-            className='drop-preview-before'
-            x={element.x}
-            y={(dropInsertY !== undefined ? dropInsertY : element.y) - 2}
-            width={element.width}
-            height={draggingElement.height}
-            fill={ELEM_STYLE.DRAGGING.COLOR}
-            rx={ELEM_STYLE.RX}
-            opacity={0.5}
-            stroke={ELEM_STYLE.DRAGGING.STROKE_COLOR}
-            strokeWidth={1}
-            strokeDasharray="4 2"
-            style={{ pointerEvents: 'none' }}
-          />
-        )}
-
-        {/* 下側（after）ドロップのプレビュー表示 */}
-        {currentDropTarget?.id === element.id && draggingElement && dropPosition === 'after' && (
-          <rect
-            className='drop-preview-after'
-            x={element.x}
-            y={(dropInsertY !== undefined ? dropInsertY : element.y + element.height) - 2}
-            width={element.width}
-            height={draggingElement.height}
-            fill={ELEM_STYLE.DRAGGING.COLOR}
-            rx={ELEM_STYLE.RX}
-            opacity={0.5}
-            stroke={ELEM_STYLE.DRAGGING.STROKE_COLOR}
-            strokeWidth={1}
-            strokeDasharray="4 2"
-            style={{ pointerEvents: 'none' }}
-          />
-        )}
-
         {/* 要素間（between）ドロップのプレビュー表示 */}
         {currentDropTarget?.id === element.id && draggingElement && dropPosition === 'between' && (
           <rect
             className='drop-preview-between'
             x={element.x}
-            y={(dropInsertY !== undefined ? dropInsertY : element.y + element.height + OFFSET.Y) - 2}
+            y={dropInsertY !== undefined 
+              ? dropInsertY - draggingElement.height / 2 
+              : element.y + element.height + OFFSET.Y}
             width={element.width}
             height={draggingElement.height}
             fill={ELEM_STYLE.DRAGGING.COLOR}
@@ -474,7 +473,34 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
             style={{ pointerEvents: 'none' }}
           />
         )}
-        {element.texts.map((text, index) => (
+{element.texts.map((text, index) => (
+          <React.Fragment key={`${element.id}-section-${index}`}>
+            {!element.editing && (
+              <TextDisplayArea
+                x={element.x}
+                y={element.y + element.sectionHeights.slice(0, index).reduce((sum, h) => sum + h, 0)}
+                width={element.width}
+                height={element.sectionHeights[index]}
+                text={text}
+                fontSize={DEFAULT_FONT_SIZE}
+                zoomRatio={tabState.zoomRatio}
+                fontFamily={fontFamily}
+                onHeightChange={(newHeight) => handleHeightChange(index, newHeight)}
+              />
+            )}
+            {index < element.texts.length - 1 && (
+              <line
+                x1={element.x}
+                y1={element.y + element.sectionHeights.slice(0, index + 1).reduce((sum, h) => sum + h, 0)}
+                x2={element.x + element.width}
+                y2={element.y + element.sectionHeights.slice(0, index + 1).reduce((sum, h) => sum + h, 0)}
+                stroke={strokeColor}
+                strokeWidth="1"
+              />
+            )}
+          </React.Fragment>
+        ))}
+{element.texts.map((text, index) => (
           <React.Fragment key={`${element.id}-section-${index}`}>
             {!element.editing && (
               <TextDisplayArea
