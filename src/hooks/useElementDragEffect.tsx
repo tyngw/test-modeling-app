@@ -351,41 +351,6 @@ export const useElementDragEffect = () => {
     return { ...result, distanceSq };
   }, [calculateChildPosition, draggingElement, state.zoomRatio]);
 
-  // 要素間（between）の位置にあるかどうかを判断するヘルパー関数
-  const checkIfBetweenSiblings = useCallback((
-    element: Element, 
-    mouseY: number,
-    siblings: Element[],
-    elements: ElementsMap
-  ): { prevElement: Element, nextElement?: Element } | null => {
-    // ドラッグ中の要素IDを取得
-    const draggingElementId = draggingElement?.id;
-    
-    // 同じ親を持つ兄弟要素をY座標でソート（ドラッグ中の要素を除外）
-    const sortedSiblings = [...siblings, element]
-      .filter(el => el.visible && el.id !== draggingElementId)
-      .sort((a, b) => a.y - b.y);
-    
-    debugLog(`[checkIfBetweenSiblings] Found ${sortedSiblings.length} siblings (excluding dragging element)`);
-    
-    // 各要素の間の位置を確認
-    for (let i = 0; i < sortedSiblings.length - 1; i++) {
-      const current = sortedSiblings[i];
-      const next = sortedSiblings[i + 1];
-      
-      const currentBottom = current.y + current.height;
-      const nextTop = next.y;
-      const gap = nextTop - currentBottom;
-      
-      // 要素間に十分なスペースがあり、マウスがその間にある場合
-      if (gap >= 10 && mouseY > currentBottom && mouseY < nextTop) {
-        return { prevElement: current, nextElement: next };
-      }
-    }
-    
-    return null;
-  }, [draggingElement]);
-
   const findDropTarget = useCallback((e: MouseEvent | TouchEvent, elements: ElementsMap): DropTargetInfo => {
     if (!draggingElement) return null;
     
