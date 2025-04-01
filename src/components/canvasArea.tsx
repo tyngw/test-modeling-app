@@ -89,7 +89,9 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
         handleMouseUp,
         currentDropTarget,
         dropPosition,
-        draggingElement
+        draggingElement,
+        dropInsertY,
+        siblingInfo
     } = useElementDragEffect();
 
     const handleKeyDown = useCallback(async (e: React.KeyboardEvent) => {
@@ -153,16 +155,40 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
             const touch = e.touches[0];
             const target = document.elementFromPoint(touch.clientX, touch.clientY);
 
-            if (target instanceof SVGRectElement) {
-                const syntheticEvent = new MouseEvent('mousedown', {
-                    clientX: touch.clientX,
-                    clientY: touch.clientY,
-                    bubbles: true
-                });
-                target.dispatchEvent(syntheticEvent);
+            // SVG要素からの相対位置を使って要素を特定
+            if (target && (target instanceof SVGRectElement || target instanceof SVGGElement)) {
+                // 要素の親要素からcanvasArea内の要素IDを探す
+                let currentElement = target;
+                let elementId: string | null = null;
+                
+                // 親要素を遡って要素のIDを探す
+                while (currentElement && !elementId) {
+                    if (currentElement.dataset && currentElement.dataset.elementId) {
+                        elementId = currentElement.dataset.elementId;
+                        break;
+                    }
+                    currentElement = currentElement.parentElement as any;
+                }
+                
+                if (elementId) {
+                    // IDが見つかった場合、その要素のhandleMouseDownを直接呼び出す
+                    const element = state.elements[elementId];
+                    if (element) {
+                        // 合成イベントを作成する代わりに直接ハンドラーを呼び出す
+                        const syntheticTouchEvent = {
+                            nativeEvent: e.nativeEvent,
+                            stopPropagation: () => {},
+                            preventDefault: () => {},
+                            clientX: touch.clientX,
+                            clientY: touch.clientY
+                        } as unknown as React.TouchEvent<HTMLElement>;
+                        
+                        handleMouseDown(syntheticTouchEvent, element);
+                    }
+                }
             }
         }
-    }, []);
+    }, [state.elements, handleMouseDown]);
 
     const handleTouchMove = useCallback((e: React.TouchEvent<SVGSVGElement>) => {
         if (isPinching && e.touches.length === 2) {
@@ -423,6 +449,8 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                             handleMouseDown={handleMouseDown as unknown as (e: React.MouseEvent<SVGElement>, element: CanvasElement) => void}
                             handleMouseUp={handleMouseUp}
                             onHoverChange={handleElementHover}
+                            dropInsertY={dropInsertY}
+                            siblingInfo={siblingInfo}
                         />
                     </React.Fragment>
                 ));
@@ -469,6 +497,8 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                                 }}
                                 handleMouseUp={handleMouseUp}
                                 onHoverChange={handleElementHover}
+                                dropInsertY={dropInsertY}
+                                siblingInfo={siblingInfo}
                             />
                         );
                     })}
@@ -492,6 +522,56 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                 );
             })
             .filter(Boolean);
+    };
+
+    // ドラッグドロップの視覚的なプレビューを描画
+    const renderDropPreview = () => {
+      if (!draggingElement || !currentDropTarget) return null;
+
+      // ドロップポジションに基づいて座標を計算
+      let x, y;
+      
+      if (dropPosition === 'child') {
+        // 子要素として追加する場合
+        // 子要素としての位置を計算（親要素の位置に基づく)
+        x = currentDropTarget.x + OFFSET.X; // 親要素からのオフセット
+        y = dropInsertY ? dropInsertY - draggingElement.height / 2 : currentDropTarget.y + currentDropTarget.height / 2 - draggingElement.height / 2;
+      } else {
+        // 兄弟要素として追加する場合（between）
+        // 親要素を取得
+        const parentElement = currentDropTarget.parentId ? elements[currentDropTarget.parentId] : null;
+        
+        if (parentElement) {
+          // 親要素がある場合は、親要素の右側に配置
+          x = parentElement.x + parentElement.width + OFFSET.X;
+          y = dropInsertY ? dropInsertY - draggingElement.height / 2 : currentDropTarget.y + currentDropTarget.height / 2 - draggingElement.height / 2;
+        } else {
+          // 親要素がない場合（ルート要素として配置）
+          x = OFFSET.X;
+          y = dropInsertY ? dropInsertY - draggingElement.height / 2 : currentDropTarget.y + currentDropTarget.height / 2 - draggingElement.height / 2;
+        }
+      }
+
+      // 背景色の設定
+      let bgColor = dropPosition === 'child' ? 
+        'rgba(73, 179, 147, 0.3)' :  // childモードの場合: 緑色
+        'rgba(73, 147, 179, 0.3)';   // betweenモードの場合: 青色
+      
+      return (
+        <rect
+          x={x}
+          y={y}
+          width={draggingElement.width}
+          height={draggingElement.height}
+          fill={bgColor}
+          stroke="#555"
+          strokeDasharray="5,5"
+          strokeWidth={1}
+          rx={4}
+          ry={4}
+          className="drop-preview"
+        />
+      );
     };
 
     return (
@@ -721,6 +801,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
 
                         {renderPopupMenus()}
                         {renderDebugInfo()}
+                        {renderDropPreview()}
                     </svg>
                 )}
                 <InputFields

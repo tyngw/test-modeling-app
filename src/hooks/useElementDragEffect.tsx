@@ -50,10 +50,8 @@ interface State {
 type ElementsMap = { [key: string]: Element };
 
 type Position = { x: number; y: number };
-type DropPosition = 'before' | 'after' | 'child' | 'between';
+type DropPosition = 'child' | 'between';
 type DropTargetInfo = { element: Element; position: DropPosition; insertY?: number; siblingInfo?: { prevElement?: Element, nextElement?: Element } } | null;
-// 要素のシフト情報を追跡するための型
-type ShiftedElement = { id: string, originalY: number, shiftAmount: number };
 
 // 要素の兄弟要素を取得するヘルパー関数
 const getSiblings = (element: Element, elements: ElementsMap): Element[] => {
@@ -94,8 +92,6 @@ export const useElementDragEffect = () => {
   const [currentDropTarget, setCurrentDropTarget] = useState<DropTargetInfo>(null);
   // 元の位置を各要素ごとに記録するためのMap
   const elementOriginalPositions = useRef<Map<string, Position>>(new Map());
-  // シフトされた要素を追跡するための状態
-  const [shiftedElements, setShiftedElements] = useState<ShiftedElement[]>([]);
 
   const convertToZoomCoordinates = useCallback((e: MouseEvent | TouchEvent): Position => {
     let clientX: number, clientY: number;
@@ -114,64 +110,49 @@ export const useElementDragEffect = () => {
     };
   }, [state.zoomRatio]);
 
-  // 要素の上部にドロップする場合の位置を計算する関数
-  const calculateBeforePosition = useCallback((element: Element): { position: DropPosition; insertY: number } => {
-        return {
-      position: 'before', 
-            insertY: element.y - (draggingElement?.height || 0) - OFFSET.Y
-    };
-  }, [draggingElement]);
-  
-  // 要素の下部にドロップする場合の位置を計算する関数
-  const calculateAfterPosition = useCallback((element: Element): { position: DropPosition; insertY: number } => {
-    return {
-      position: 'after',
-      insertY: element.y + element.height + OFFSET.Y
-    };
-  }, []);
-  
-  // 要素間にドロップする場合の位置を計算する関数
-  const calculateBetweenPosition = useCallback((
-    prevElement: Element, 
-    nextElement: Element | undefined
-  ): { position: DropPosition; insertY: number; siblingInfo: { prevElement: Element; nextElement?: Element } } => {
-    let insertY: number;
-    
-    if (nextElement) {
-      // 2つの要素の間
-      insertY = prevElement.y + prevElement.height + (nextElement.y - (prevElement.y + prevElement.height)) / 2;
-    } else {
-      // 最後の要素の後
-      insertY = prevElement.y + prevElement.height + OFFSET.Y;
-    }
-    
-    return {
-      position: 'between',
-      insertY,
-      siblingInfo: { prevElement, nextElement }
-    };
-  }, []);
-  
-  // 右側（子要素）エリアのドロップ位置を計算する関数
+  // 子要素エリアのドロップ位置を計算する関数
   const calculateChildPosition = useCallback((element: Element, mouseY: number, elements: ElementsMap): { position: DropPosition; insertY: number } => {
     const elemTop = element.y;
     const children = getChildren(element, elements);
     
-    let closestY = mouseY;
-    let closestIndex = children.findIndex(child => closestY < child.y + child.height / 2);
-    if (closestIndex === -1) closestIndex = children.length;
-    
-    let insertY: number;
-    
+    // 子要素が存在しない場合は、要素の中央に配置
     if (children.length === 0) {
-      insertY = elemTop + element.height / 2;
-    } else if (closestIndex === 0) {
+      return {
+        position: 'child',
+        insertY: elemTop + element.height / 2
+      };
+    }
+    
+    // 子要素がある場合は、マウス位置に基づいて挿入位置を計算
+    let insertY: number;
+    let closestChildIndex = -1;
+    
+    // マウス位置に最も近い子要素のインデックスを見つける
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i];
+      const childMidPoint = child.y + child.height / 2;
+      
+      if (mouseY < childMidPoint) {
+        closestChildIndex = i;
+        break;
+      }
+    }
+    
+    // マウスが全ての子要素よりも下にある場合
+    if (closestChildIndex === -1) {
+      const lastChild = children[children.length - 1];
+      insertY = lastChild.y + lastChild.height + OFFSET.Y;
+    } 
+    // マウスが最初の子要素より上にある場合
+    else if (closestChildIndex === 0) {
       insertY = children[0].y - OFFSET.Y;
-    } else if (closestIndex === children.length) {
-      insertY = children[children.length - 1].y + children[children.length - 1].height + OFFSET.Y;
-    } else {
-      const prevChild = children[closestIndex - 1];
-      insertY = prevChild.y + prevChild.height + OFFSET.Y / 2;
+    } 
+    // マウスが子要素の間にある場合
+    else {
+      const prevChild = children[closestChildIndex - 1];
+      const nextChild = children[closestChildIndex];
+      const gap = nextChild.y - (prevChild.y + prevChild.height);
+      insertY = prevChild.y + prevChild.height + gap / 2;
     }
     
     return { position: 'child', insertY };
@@ -189,7 +170,7 @@ export const useElementDragEffect = () => {
     const elemRight = element.x + element.width;
     const rightSidePadding = OFFSET.X + (draggingElement?.width ?? 0);
     
-    // 要素の右側（子要素として追加）かどうかを判定
+    // 要素の右側かどうかを判定
     const isOnRightSide = mouseX >= elemRight && mouseX < elemRight + rightSidePadding;
     
     // 要素の内側にあるかどうかを判定
@@ -205,180 +186,159 @@ export const useElementDragEffect = () => {
       siblingInfo?: { prevElement?: Element, nextElement?: Element };
     };
     
-    // 要素の上にある場合は子要素として追加
+    // 要素の上にある場合は子要素として追加 (child mode)
     if (isInsideElement) {
       result = calculateChildPosition(element, mouseY, elements);
       debugLog('Drop position mode (inside element):', 'child');
     } else if (isOnRightSide) {
-      // 子要素として追加する場合
-      result = calculateChildPosition(element, mouseY, elements);
-    } else {
-      // SVG要素グループを活用して判定を行う
-      // グループを特定するためのキー
-      const groupKey = `${element.parentId}_${element.depth}`;
+      // 要素の右側にある場合 (between mode)
+      const children = getChildren(element, elements);
       
-      // 同じ親を持つ要素（兄弟要素）を取得
-      const siblings = Object.values(elements).filter(el => 
-        el.visible && el.parentId === element.parentId && el.depth === element.depth
-      ).sort((a, b) => a.y - b.y);
-      
-      // グループの最初と最後の要素を特定
-      const firstSibling = siblings[0];
-      const lastSibling = siblings[siblings.length - 1];
-      
-      // グループの境界を計算
-      const groupTop = firstSibling ? firstSibling.y : element.y;
-      const groupBottom = lastSibling ? lastSibling.y + lastSibling.height : element.y + element.height;
-      
-      // SVGグループ要素を探す（存在する場合）
-      const svgGroup = document.querySelector(`.element-group[data-parent-id="${element.parentId}"][data-depth="${element.depth}"]`);
-      
-      // 判定用の閾値領域を計算
-      const halfOffset = OFFSET.Y * 0.5;
-      
-      // before/after/between領域の境界計算
-      const beforeThreshold = groupTop + halfOffset;
-      const afterThreshold = groupBottom - halfOffset;
-      
-      debugLog('Group boundaries', {
-        groupKey,
-        groupTop,
-        groupBottom,
-        mouseY,
-        beforeThreshold,
-        afterThreshold,
-        svgGroupExists: !!svgGroup
-      });
-      
-      // 領域判定
-      if (mouseY < beforeThreshold) {
-        // before: グループの上端 - (OFFSET.Y * 0.5) の領域
-        result = calculateBeforePosition(firstSibling || element);
-        debugLog('Drop position mode (top region):', 'before');
-      } else if (mouseY > afterThreshold) {
-        // after: グループの下端 + (OFFSET.Y * 0.5) の領域
-        result = calculateAfterPosition(lastSibling || element);
-        debugLog('Drop position mode (bottom region):', 'after');
+      if (children.length === 0) {
+        // 子要素がない場合は、要素の子として追加 (childモード同様の挙動)
+        result = {
+          position: 'between',
+          insertY: element.y + element.height / 2,
+          siblingInfo: { }
+        };
+        debugLog('Drop position mode (right side, no children):', 'between');
       } else {
-        // between: グループの「上端 + (OFFSET.Y * 0.5)」から「下端 - (OFFSET.Y * 0.5)」までの領域
+        // 子要素がある場合は、子要素の間に挿入
+        let prevElement: Element | undefined;
+        let nextElement: Element | undefined;
         
-        // 最も近い要素を見つけるための変数を初期化
-        let prevElement: Element | null = null;
-        let nextElement: Element | null = null;
-        
-        // SVGグループが存在する場合、その座標系内での相対位置を使って判定する
-        if (svgGroup) {
-          const groupRect = svgGroup.getBoundingClientRect();
-          // SVGグループ内での相対Y座標を計算
-          const relativeMouseY = (mouseY * state.zoomRatio) - groupRect.top;
-          debugLog('SVG group relative position', { 
-            relativeMouseY, 
-            groupRect: { top: groupRect.top, bottom: groupRect.bottom, height: groupRect.height }
-          });
-          
-          for (let i = 0; i < siblings.length; i++) {
-            const current = siblings[i];
-            if (current.id === draggingElement?.id) continue; // ドラッグ中の要素自身は無視
-            
-            // SVGグループ内での相対座標に基づく位置計算
-            const currentY = current.y;
-            const currentBottom = current.y + current.height;
-            
-            if (relativeMouseY < currentY) {
-              nextElement = current;
-              if (i > 0) prevElement = siblings[i - 1];
-              break;
-            } else if (relativeMouseY < currentBottom) {
-              const midpoint = currentY + current.height / 2;
-              if (relativeMouseY < midpoint) {
-                nextElement = current;
-                if (i > 0) prevElement = siblings[i - 1];
-              } else {
-                prevElement = current;
-                if (i < siblings.length - 1) nextElement = siblings[i + 1];
-              }
-              break;
+        // マウス位置に最も近い子要素を見つける
+        for (let i = 0; i < children.length; i++) {
+          const child = children[i];
+          if (mouseY < child.y) {
+            nextElement = child;
+            if (i > 0) prevElement = children[i - 1];
+            break;
+          } else if (mouseY < child.y + child.height) {
+            const midpoint = child.y + child.height / 2;
+            if (mouseY < midpoint) {
+              nextElement = child;
+              if (i > 0) prevElement = children[i - 1];
             } else {
-              prevElement = current;
-              if (i < siblings.length - 1) nextElement = siblings[i + 1];
+              prevElement = child;
+              if (i < children.length - 1) nextElement = children[i + 1];
             }
+            break;
+          } else if (i === children.length - 1 || mouseY < children[i + 1].y) {
+            prevElement = child;
+            if (i < children.length - 1) nextElement = children[i + 1];
+            break;
           }
-          
-          debugLog('Between elements calculation (SVG)', { 
-            prevElementId: prevElement?.id, 
-            nextElementId: nextElement?.id 
-          });
-        } else {
-          // SVGグループが見つからない場合は通常の方法で計算
-          for (let i = 0; i < siblings.length; i++) {
-            const current = siblings[i];
-            if (current.id === draggingElement?.id) continue; // ドラッグ中の要素自身は無視
-            
-            const currentBottom = current.y + current.height;
-            
-            if (mouseY < current.y) {
-              nextElement = current;
-              if (i > 0) prevElement = siblings[i - 1];
-              break;
-            } else if (mouseY < currentBottom) {
-              const midpoint = current.y + current.height / 2;
-              if (mouseY < midpoint) {
-                nextElement = current;
-                if (i > 0) prevElement = siblings[i - 1];
-              } else {
-                prevElement = current;
-                if (i < siblings.length - 1) nextElement = siblings[i + 1];
-              }
-              break;
-            } else {
-              prevElement = current;
-              if (i < siblings.length - 1) nextElement = siblings[i + 1];
-            }
-          }
-          
-          debugLog('Between elements calculation (normal)', { 
-            prevElementId: prevElement?.id, 
-            nextElementId: nextElement?.id 
-          });
         }
         
-        // between位置の計算
         if (prevElement && nextElement) {
-          // 2つの要素の間
+          // 2つの子要素の間
           const gap = nextElement.y - (prevElement.y + prevElement.height);
-          const insertY = prevElement.y + prevElement.height + gap / 2;
           result = {
             position: 'between',
-            insertY,
+            insertY: prevElement.y + prevElement.height + gap / 2,
             siblingInfo: { prevElement, nextElement }
           };
         } else if (prevElement) {
-          // 最後の要素の後
-          const insertY = prevElement.y + prevElement.height + OFFSET.Y;
+          // 最後の子要素の後
           result = {
             position: 'between',
-            insertY,
+            insertY: prevElement.y + prevElement.height + OFFSET.Y,
             siblingInfo: { prevElement }
           };
         } else if (nextElement) {
-          // 最初の要素の前
-          const insertY = nextElement.y - OFFSET.Y;
+          // 最初の子要素の前
           result = {
             position: 'between',
-            insertY,
+            insertY: nextElement.y - OFFSET.Y,
             siblingInfo: { nextElement }
           };
         } else {
-          // 要素が1つしかない場合や、ドラッグ中の要素のみの場合
+          // このケースは通常発生しないはず
           result = {
             position: 'between',
-            insertY: element.y + element.height + OFFSET.Y,
-            siblingInfo: {}
+            insertY: element.y + element.height / 2,
+            siblingInfo: { }
           };
         }
         
-        debugLog('Drop position mode (middle region):', 'between');
+        debugLog('Drop position mode (right side, with children):', 'between');
       }
+    } else {
+      // 同じ親を持つ要素（兄弟要素）を取得
+      const draggingElementId = draggingElement?.id;
+      const siblings = Object.values(elements).filter(el => 
+        el.visible && 
+        el.parentId === element.parentId && 
+        el.depth === element.depth &&
+        el.id !== draggingElementId // ドラッグ中の要素自身を除外
+      ).sort((a, b) => a.y - b.y);
+      
+      debugLog(`[calculatePositionAndDistance] Found ${siblings.length} siblings (excluding dragging element) for element ${element.id}`);
+      
+      // 兄弟要素間の位置を計算
+      let prevElement: Element | null = null;
+      let nextElement: Element | null = null;
+      
+      for (let i = 0; i < siblings.length; i++) {
+        const current = siblings[i];
+        if (current.id === draggingElement?.id) continue; // ドラッグ中の要素自身は無視
+        
+        const currentBottom = current.y + current.height;
+        
+        if (mouseY < current.y) {
+          nextElement = current;
+          if (i > 0) prevElement = siblings[i - 1];
+          break;
+        } else if (mouseY < currentBottom) {
+          const midpoint = current.y + current.height / 2;
+          if (mouseY < midpoint) {
+            nextElement = current;
+            if (i > 0) prevElement = siblings[i - 1];
+          } else {
+            prevElement = current;
+            if (i < siblings.length - 1) nextElement = siblings[i + 1];
+          }
+          break;
+        } else {
+          prevElement = current;
+          if (i < siblings.length - 1) nextElement = siblings[i + 1];
+        }
+      }
+      
+      // between位置の計算
+      if (prevElement && nextElement) {
+        // 2つの要素の間
+        const gap = nextElement.y - (prevElement.y + prevElement.height);
+        result = {
+          position: 'between',
+          insertY: prevElement.y + prevElement.height + gap / 2,
+          siblingInfo: { prevElement, nextElement }
+        };
+      } else if (prevElement) {
+        // 最後の要素の後
+        result = {
+          position: 'between',
+          insertY: prevElement.y + prevElement.height + OFFSET.Y,
+          siblingInfo: { prevElement }
+        };
+      } else if (nextElement) {
+        // 最初の要素の前
+        result = {
+          position: 'between',
+          insertY: nextElement.y - OFFSET.Y,
+          siblingInfo: { nextElement }
+        };
+      } else {
+        // 要素が1つしかない場合や、ドラッグ中の要素のみの場合
+        result = {
+          position: 'between',
+          insertY: element.y + element.height + OFFSET.Y,
+          siblingInfo: {}
+        };
+      }
+      
+      debugLog('Drop position mode (between siblings):', 'between');
     }
     
     // 要素中心からの距離を計算
@@ -389,7 +349,7 @@ export const useElementDragEffect = () => {
     const distanceSq = dx * dx + dy * dy;
     
     return { ...result, distanceSq };
-  }, [calculateChildPosition, calculateBeforePosition, calculateAfterPosition, draggingElement, state.zoomRatio]);
+  }, [calculateChildPosition, draggingElement, state.zoomRatio]);
 
   // 要素間（between）の位置にあるかどうかを判断するヘルパー関数
   const checkIfBetweenSiblings = useCallback((
@@ -398,10 +358,15 @@ export const useElementDragEffect = () => {
     siblings: Element[],
     elements: ElementsMap
   ): { prevElement: Element, nextElement?: Element } | null => {
-    // 同じ親を持つ兄弟要素をY座標でソート
+    // ドラッグ中の要素IDを取得
+    const draggingElementId = draggingElement?.id;
+    
+    // 同じ親を持つ兄弟要素をY座標でソート（ドラッグ中の要素を除外）
     const sortedSiblings = [...siblings, element]
-      .filter(el => el.visible)
+      .filter(el => el.visible && el.id !== draggingElementId)
       .sort((a, b) => a.y - b.y);
+    
+    debugLog(`[checkIfBetweenSiblings] Found ${sortedSiblings.length} siblings (excluding dragging element)`);
     
     // 各要素の間の位置を確認
     for (let i = 0; i < sortedSiblings.length - 1; i++) {
@@ -419,7 +384,7 @@ export const useElementDragEffect = () => {
     }
     
     return null;
-  }, []);
+  }, [draggingElement]);
 
   const findDropTarget = useCallback((e: MouseEvent | TouchEvent, elements: ElementsMap): DropTargetInfo => {
     if (!draggingElement) return null;
@@ -546,38 +511,60 @@ export const useElementDragEffect = () => {
     return true;
   }, [validateParentChange, addToast, resetElementsPosition, dispatch]);
 
-  // 兄弟要素としてドロップする処理
-  const processSiblingDrop = useCallback((target: Element, position: DropPosition, selectedElements: Element[]): boolean => {
-    // 基本的なドロップ処理
+  // 兄弟要素間にドロップする処理
+  const processBetweenDrop = useCallback((target: Element, selectedElements: Element[]): boolean => {
+    // ドロップ処理時のデバッグログを追加
+    debugLog(`[processBetweenDrop] target=${target.id}, siblingInfo:`, 
+      currentDropTarget?.siblingInfo?.prevElement?.id,
+      currentDropTarget?.siblingInfo?.nextElement?.id
+    );
+    
+    // 要素間へのドロップ処理
     let baseOrder: number;
     let newParentId: string | null;
     
-    if (position === 'between' && currentDropTarget?.siblingInfo) {
+    if (currentDropTarget?.siblingInfo) {
       // 要素間へのドロップ
       const { prevElement, nextElement } = currentDropTarget.siblingInfo;
       
       if (prevElement && nextElement) {
-        // 要素間の場合（両方の要素が存在）
-        baseOrder = prevElement.order + 1;
+        // 2つの要素の間にドロップする場合
+        debugLog(`  Between two elements: prev=${prevElement.id}(order=${prevElement.order}), next=${nextElement.id}(order=${nextElement.order})`);
+        
+        // prevElementとnextElementのorder値の間に挿入
+        if (nextElement.order - prevElement.order > 1) {
+          // 間に十分なスペースがある場合
+          baseOrder = prevElement.order + 1;
+        } else {
+          // 間にスペースがない場合は、後ろの要素のorderを増やす必要がある
+          baseOrder = prevElement.order + 1;
+        }
         newParentId = prevElement.parentId;
       } else if (prevElement) {
-        // 末尾の要素の後の場合
+        // 最後の要素の後にドロップする場合
+        debugLog(`  After last element: prev=${prevElement.id}(order=${prevElement.order})`);
         baseOrder = prevElement.order + 1;
         newParentId = prevElement.parentId;
       } else if (nextElement) {
-        // 先頭の要素の前の場合
-        baseOrder = nextElement.order;
+        // 最初の要素の前にドロップする場合
+        debugLog(`  Before first element: next=${nextElement.id}(order=${nextElement.order})`);
+        baseOrder = 0; // 最初の位置
         newParentId = nextElement.parentId;
       } else {
-        // どちらも存在しない場合（通常ありえない）
-        baseOrder = target.order;
-        newParentId = target.parentId;
+        // siblingInfoはあるがprevElementもnextElementもない場合
+        // 子要素が存在しない場合、親要素の子要素として追加
+        debugLog(`  No siblings: target=${target.id}`);
+        baseOrder = 0;
+        newParentId = target.id;
       }
     } else {
-      // 従来の before/after 処理
-      baseOrder = position === 'before' ? target.order : target.order + 1;
-      newParentId = target.parentId;
+      // 子要素が存在しない場合、親要素の子要素として追加
+      debugLog(`  No siblings info: target=${target.id}`);
+      baseOrder = 0;
+      newParentId = target.id;
     }
+    
+    debugLog(`  Final drop parameters: newParentId=${newParentId}, baseOrder=${baseOrder}`);
 
     // parentIdがnullの場合、ルート要素以外はドロップできないようにする
     if (newParentId === null && !selectedElements.every(el => el.depth === 1)) {
@@ -595,8 +582,60 @@ export const useElementDragEffect = () => {
 
     dispatch({ type: 'SNAPSHOT' });
 
+    // ドラッグ中の要素が移動元と移動先で同じparentIdを持つ場合の処理
+    const isMovingWithinSameParent = selectedElements.some(el => el.parentId === newParentId);
+    
+    if (isMovingWithinSameParent) {
+      // 移動対象の要素の現在のorder値を取得
+      const draggedOrders = selectedElements
+        .filter(el => el.parentId === newParentId)
+        .map(el => el.order);
+      
+      const minDraggedOrder = Math.min(...draggedOrders);
+      
+      // baseOrderより前の位置から後ろに移動する場合
+      if (minDraggedOrder < baseOrder) {
+        // 移動要素より後ろの要素のorderを調整（移動要素分のスペースを空ける）
+        const affectedElements = Object.values(state.elements).filter(el => 
+          el.parentId === newParentId && 
+          el.order >= baseOrder && 
+          !selectedElements.some(selected => selected.id === el.id)
+        );
+        
+        affectedElements.forEach(element => {
+          dispatch({
+            type: 'UPDATE_ELEMENT_ORDER',
+            payload: {
+              id: element.id,
+              order: element.order + selectedElements.length
+            }
+          });
+        });
+      }
+    } else {
+      // 異なる親に移動する場合や、同じ親でも移動先の後の要素のorderを調整
+      const affectedElements = Object.values(state.elements).filter(el => 
+        el.parentId === newParentId && 
+        el.order >= baseOrder && 
+        !selectedElements.some(selected => selected.id === el.id)
+      );
+      
+      affectedElements.forEach(element => {
+        dispatch({
+          type: 'UPDATE_ELEMENT_ORDER',
+          payload: {
+            id: element.id,
+            order: element.order + selectedElements.length
+          }
+        });
+      });
+    }
+
     // 順序を調整しながら一括移動
     selectedElements.forEach((element, index) => {
+      // 新しい親が元の要素の場合は深さを1レベル深くする、それ以外は対象要素と同じ深さにする
+      const newDepth = newParentId === target.id ? target.depth + 1 : target.depth;
+      
       dispatch({
         type: 'DROP_ELEMENT',
         payload: {
@@ -604,12 +643,12 @@ export const useElementDragEffect = () => {
           oldParentId: element.parentId,
           newParentId,
           newOrder: baseOrder + index,
-          depth: target.depth,
+          depth: newDepth,
         },
       });
     });
     return true;
-  }, [currentDropTarget, validateParentChange, addToast, resetElementsPosition, dispatch]);
+  }, [currentDropTarget, validateParentChange, addToast, resetElementsPosition, dispatch, state.elements]);
 
   const handleMouseUp = useCallback(async () => {
     if (!draggingElement) return;
@@ -629,9 +668,11 @@ export const useElementDragEffect = () => {
 
         let dropSuccess = false;
         if (position === 'child') {
+          // 子要素としてドロップ
           dropSuccess = processChildDrop(target, selectedElements);
-        } else {
-          dropSuccess = processSiblingDrop(target, position, selectedElements);
+        } else if (position === 'between') {
+          // 要素間（右側）にドロップ
+          dropSuccess = processBetweenDrop(target, selectedElements);
         }
 
         if (!dropSuccess) {
@@ -646,20 +687,6 @@ export const useElementDragEffect = () => {
       addToast(ToastMessages.dragError, 'warn');
       resetElementsPosition();
     } finally {
-      // シフトされた要素を元に戻す
-      if (shiftedElements.length > 0) {
-        shiftedElements.forEach(shifted => {
-          const element = state.elements[shifted.id];
-          if (element) {
-            dispatch({
-              type: 'MOVE_ELEMENT',
-              payload: { id: shifted.id, x: element.x, y: shifted.originalY }
-            });
-          }
-        });
-        setShiftedElements([]);
-      }
-
       // 状態のリセットを確実に行う
       setDraggingElement(null);
       setCurrentDropTarget(null);
@@ -671,10 +698,9 @@ export const useElementDragEffect = () => {
     state.elements, 
     dispatch, 
     addToast, 
-    shiftedElements, 
     resetElementsPosition, 
     processChildDrop, 
-    processSiblingDrop
+    processBetweenDrop
   ]);
 
   // ドラッグ中に実行される処理
@@ -738,169 +764,13 @@ export const useElementDragEffect = () => {
     };
   }, [draggingElement, handleMove, handleMouseUp]);
 
-  // シフトされた要素を元の位置に戻す処理を関数として抽出
-  const resetShiftedElements = useCallback(() => {
-    if (shiftedElements.length > 0) {
-      shiftedElements.forEach(shifted => {
-        const element = state.elements[shifted.id];
-        if (element) {
-          dispatch({
-            type: 'MOVE_ELEMENT',
-            payload: { id: shifted.id, x: element.x, y: shifted.originalY }
-          });
-        }
-      });
-      setShiftedElements([]);
-    }
-  }, [dispatch, shiftedElements, state.elements]);
-
-  // プレビューが表示されたときに、下にある要素を移動するための関数
-  const shiftSiblingElements = useCallback((dropTarget: Element | null, position: DropPosition | null, previewHeight: number) => {
-    // 現在のドラッグプレビューが無効か、ドラッグ中の要素が無い場合は何もしない
-    if (!dropTarget || !position || !draggingElement) {
-      resetShiftedElements();
-      return;
-    }
-
-    // まず、現在シフトされている要素をすべて元の位置に戻す
-    resetShiftedElements();
-    
-    // 影響を受ける要素を特定する
-    let elementsToShift: Element[] = [];
-    
-    if (position === 'child') {
-      // 子要素ドロップの場合
-      const siblings = getChildren(dropTarget, state.elements);
-      const previewY = currentDropTarget?.insertY ?? (dropTarget.y + dropTarget.height / 2 - previewHeight / 2);
-      elementsToShift = siblings.filter(sibling => 
-        sibling.visible && 
-        sibling.id !== draggingElement.id &&
-        sibling.y >= previewY
-      );
-    } else if (['before', 'after', 'between'].includes(position)) {
-      // 兄弟要素間ドロップの場合
-      const parentId = dropTarget.parentId;
-      if (parentId === null) return; // ルート要素の場合は何もしない
-
-      // 同じ親を持つ兄弟要素を取得
-      const siblings = getSiblings(dropTarget, state.elements);
-
-      // 要素が移動し始める基準のY座標を決定
-      let startY: number;
-      
-      if (position === 'between' && currentDropTarget?.siblingInfo) {
-        const { nextElement } = currentDropTarget.siblingInfo;
-        startY = nextElement ? nextElement.y : (dropTarget.y + dropTarget.height);
-      } else if (position === 'before') {
-        // beforeモードの場合は、対象要素自体と自身を除くすべての要素をシフト
-        // order=0の要素の上にドラッグした場合も同様に処理する
-        startY = dropTarget.y;
-        
-        // order=0の要素上にドラッグした場合も含む
-        elementsToShift = [...siblings, dropTarget].filter(sibling => 
-          sibling.visible && 
-          sibling.id !== draggingElement.id &&
-          sibling.y >= startY
-        );
-        
-        // elementsToShiftが既に設定されているので早期リターン
-        if (elementsToShift.length > 0) {
-          // 新たに移動が必要な要素を特定
-          const newShiftedElements: ShiftedElement[] = [];
-          
-          // 影響を受ける要素を下にシフト
-          elementsToShift.forEach(element => {
-            // 元のY座標を記録 (既に記録されていない場合)
-            const originalY = elementOriginalPositions.current.get(element.id)?.y ?? element.y;
-            if (!elementOriginalPositions.current.has(element.id)) {
-              elementOriginalPositions.current.set(element.id, { x: element.x, y: element.y });
-            }
-            
-            // 要素を移動
-            dispatch({
-              type: 'MOVE_ELEMENT',
-              payload: { id: element.id, x: element.x, y: originalY + previewHeight }
-            });
-
-            // 移動情報を記録
-            newShiftedElements.push({
-              id: element.id,
-              originalY: originalY,
-              shiftAmount: previewHeight
-            });
-          });
-
-          // 移動情報を保存
-          setShiftedElements(newShiftedElements);
-          return;
-        }
-      } else { // after
-        startY = dropTarget.y + dropTarget.height;
-      }
-
-      // ドロップ位置より下にある兄弟要素を特定
-      elementsToShift = siblings.filter(sibling => 
-        sibling.visible && 
-        sibling.id !== draggingElement.id &&
-        sibling.y >= startY
-      );
-    }
-    
-    // 影響を受ける要素が存在しない場合は何もしない
-    if (elementsToShift.length === 0) return;
-    
-    // 新たに移動が必要な要素を特定
-    const newShiftedElements: ShiftedElement[] = [];
-    
-    // 影響を受ける要素を下にシフト
-    elementsToShift.forEach(element => {
-      // 元のY座標を記録 (既に記録されていない場合)
-      const originalY = elementOriginalPositions.current.get(element.id)?.y ?? element.y;
-      if (!elementOriginalPositions.current.has(element.id)) {
-        elementOriginalPositions.current.set(element.id, { x: element.x, y: element.y });
-      }
-      
-      // 要素を移動
-      dispatch({
-        type: 'MOVE_ELEMENT',
-        payload: { id: element.id, x: element.x, y: originalY + previewHeight }
-      });
-
-      // 移動情報を記録
-      newShiftedElements.push({
-        id: element.id,
-        originalY: originalY,
-        shiftAmount: previewHeight
-      });
-    });
-
-    // 移動情報を保存
-    setShiftedElements(newShiftedElements);
-  }, [state.elements, draggingElement, currentDropTarget, resetShiftedElements, dispatch]);
-  
-  // ドロップターゲットが変更されたときに要素のシフトを行うエフェクト
-  useEffect(() => {
-    if (!draggingElement) return;
-    
-    // ドロップターゲットが存在する場合、ドロップ位置に応じて要素をシフト
-    if (currentDropTarget) {
-      shiftSiblingElements(
-        currentDropTarget.element,
-        currentDropTarget.position,
-        draggingElement.height
-      );
-    } else {
-      // ドロップターゲットがない場合は要素を元に戻す
-      shiftSiblingElements(null, null, 0);
-    }
-  }, [draggingElement, currentDropTarget, shiftSiblingElements]);
-
   return {
     handleMouseDown,
     handleMouseUp,
     currentDropTarget: currentDropTarget?.element || null,
     dropPosition: currentDropTarget?.position || null,
     draggingElement,
-    dropInsertY: currentDropTarget?.insertY
+    dropInsertY: currentDropTarget?.insertY,
+    siblingInfo: currentDropTarget?.siblingInfo || null
   };
 };
