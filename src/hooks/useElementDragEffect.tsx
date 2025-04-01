@@ -101,15 +101,20 @@ export const useElementDragEffect = () => {
   }, [state.zoomRatio]);
 
   // 子要素エリアのドロップ位置を計算する関数
-  const calculateChildPosition = useCallback((element: Element, mouseY: number, elements: ElementsMap): { position: DropPosition; insertY: number } => {
+  const calculateChildPosition = useCallback((element: Element, mouseY: number, elements: ElementsMap): { position: DropPosition; insertY: number; insertX?: number } => {
     const elemTop = element.y;
     const children = getChildren(element, elements);
+    
+    // childモードでもbetweenモードと同じx座標を使用する
+    // 要素の右側に配置するようにする
+    const insertX = element.x + element.width + OFFSET.X;
     
     // 子要素が存在しない場合は、要素の中央に配置
     if (children.length === 0) {
       return {
         position: 'child',
-        insertY: elemTop + element.height / 2
+        insertY: elemTop + element.height / 2,
+        insertX
       };
     }
     
@@ -117,45 +122,9 @@ export const useElementDragEffect = () => {
     // これにより、マウス位置に関わらず常に同じ位置にプレビュー表示される
     return {
       position: 'child',
-      insertY: elemTop + element.height / 2
+      insertY: elemTop + element.height / 2,
+      insertX
     };
-    
-    // 以下のコメントアウトされたコードは、マウス位置に基づいて挿入位置を計算する元の実装
-    /*
-    // 子要素がある場合は、マウス位置に基づいて挿入位置を計算
-    let insertY: number;
-    let closestChildIndex = -1;
-    
-    // マウス位置に最も近い子要素のインデックスを見つける
-    for (let i = 0; i < children.length; i++) {
-      const child = children[i];
-      const childMidPoint = child.y + child.height / 2;
-      
-      if (mouseY < childMidPoint) {
-        closestChildIndex = i;
-        break;
-      }
-    }
-    
-    // マウスが全ての子要素よりも下にある場合
-    if (closestChildIndex === -1) {
-      const lastChild = children[children.length - 1];
-      insertY = lastChild.y + lastChild.height + OFFSET.Y;
-    } 
-    // マウスが最初の子要素より上にある場合
-    else if (closestChildIndex === 0) {
-      insertY = children[0].y - OFFSET.Y;
-    } 
-    // マウスが子要素の間にある場合
-    else {
-      const prevChild = children[closestChildIndex - 1];
-      const nextChild = children[closestChildIndex];
-      const gap = nextChild.y - (prevChild.y + prevChild.height);
-      insertY = prevChild.y + prevChild.height + gap / 2;
-    }
-    
-    return { position: 'child', insertY };
-    */
   }, []);
 
   // ドロップ位置と要素中心からの距離を計算する関数
