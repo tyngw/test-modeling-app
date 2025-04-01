@@ -535,9 +535,18 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
       
       if (dropPosition === 'child') {
         // 子要素として追加する場合
-        // 子要素としての位置を計算（親要素の位置に基づく)
-        x = currentDropTarget.x + OFFSET.X; // 親要素からのオフセット
-        y = dropInsertY ? dropInsertY - draggingElement.height / 2 : currentDropTarget.y + currentDropTarget.height / 2 - draggingElement.height / 2;
+        // betweenモードと同じx座標計算を使用（親要素からのオフセット）
+        const parentElement = currentDropTarget.parentId ? elements[currentDropTarget.parentId] : null;
+        
+        if (parentElement) {
+          // 親要素がある場合は、親要素の右側に配置
+          x = parentElement.x + parentElement.width + OFFSET.X;
+          y = dropInsertY ? dropInsertY - draggingElement.height / 2 : currentDropTarget.y + currentDropTarget.height / 2 - draggingElement.height / 2;
+        } else {
+          // 親要素がない場合（ルート要素として配置）
+          x = OFFSET.X;
+          y = dropInsertY ? dropInsertY - draggingElement.height / 2 : currentDropTarget.y + currentDropTarget.height / 2 - draggingElement.height / 2;
+        }
       } else {
         // 兄弟要素として追加する場合（between）
         // 親要素を取得
