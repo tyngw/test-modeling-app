@@ -518,6 +518,8 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                         key={`debug-${elementId}`}
                         element={element}
                         isHovered={true}
+                        currentDropTarget={currentDropTarget}
+                        dropPosition={dropPosition}
                     />
                 );
             })

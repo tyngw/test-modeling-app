@@ -515,8 +515,7 @@ export const useElementDragEffect = () => {
   const processBetweenDrop = useCallback((target: Element, selectedElements: Element[]): boolean => {
     // ドロップ処理時のデバッグログを追加
     debugLog(`[processBetweenDrop] target=${target.id}, siblingInfo:`, 
-      currentDropTarget?.siblingInfo?.prevElement?.id,
-      currentDropTarget?.siblingInfo?.nextElement?.id
+      currentDropTarget?.siblingInfo?.prevElement?.id
     );
     
     // 要素間へのドロップ処理
