@@ -53,15 +53,6 @@ type Position = { x: number; y: number };
 type DropPosition = 'child' | 'between';
 type DropTargetInfo = { element: Element; position: DropPosition; insertY?: number; siblingInfo?: { prevElement?: Element, nextElement?: Element } } | null;
 
-// 要素の兄弟要素を取得するヘルパー関数
-const getSiblings = (element: Element, elements: ElementsMap): Element[] => {
-  return element.parentId 
-    ? Object.values(elements)
-        .filter(e => e.parentId === element.parentId && e.visible && e.id !== element.id)
-        .sort((a, b) => a.order - b.order)
-    : [];
-};
-
 // 要素の子要素を取得するヘルパー関数
 const getChildren = (element: Element, elements: ElementsMap): Element[] => {
   return Object.values(elements)
@@ -88,7 +79,6 @@ export const useElementDragEffect = () => {
   const { addToast } = useToast();
   const [draggingElement, setDraggingElement] = useState<Element | null>(null);
   const [dragStartOffset, setDragStartOffset] = useState<Position>({ x: 0, y: 0 });
-  const [originalPosition, setOriginalPosition] = useState<Position>({ x: 0, y: 0 });
   const [currentDropTarget, setCurrentDropTarget] = useState<DropTargetInfo>(null);
   // 元の位置を各要素ごとに記録するためのMap
   const elementOriginalPositions = useRef<Map<string, Position>>(new Map());
@@ -123,6 +113,15 @@ export const useElementDragEffect = () => {
       };
     }
     
+    // 子要素がある場合でも、常に親要素の中央に配置する
+    // これにより、マウス位置に関わらず常に同じ位置にプレビュー表示される
+    return {
+      position: 'child',
+      insertY: elemTop + element.height / 2
+    };
+    
+    // 以下のコメントアウトされたコードは、マウス位置に基づいて挿入位置を計算する元の実装
+    /*
     // 子要素がある場合は、マウス位置に基づいて挿入位置を計算
     let insertY: number;
     let closestChildIndex = -1;
@@ -156,6 +155,7 @@ export const useElementDragEffect = () => {
     }
     
     return { position: 'child', insertY };
+    */
   }, []);
 
   // ドロップ位置と要素中心からの距離を計算する関数
@@ -407,8 +407,6 @@ export const useElementDragEffect = () => {
         x: zoomAdjustedPos.x - element.x,
         y: zoomAdjustedPos.y - element.y,
       });
-      
-      setOriginalPosition({ x: element.x, y: element.y });
       
       // ドラッグ開始時に選択されている全要素の元の位置を保存
       elementOriginalPositions.current.clear();
@@ -758,8 +756,10 @@ export const useElementDragEffect = () => {
       (currentDropTarget && !dropTarget) ||
       (currentDropTarget && dropTarget && (
         currentDropTarget.element.id !== dropTarget.element.id ||
-        currentDropTarget.position !== dropTarget.position ||
-        currentDropTarget.insertY !== dropTarget.insertY
+        // childモードの場合は、同じ要素上にドロップする際にポジションの変更をスキップする
+        // betweenモードの場合は、子要素の間に挿入するため、挿入位置の変更を許可する
+        (currentDropTarget.position !== dropTarget.position) ||
+        (dropTarget.position === 'between' && currentDropTarget.insertY !== dropTarget.insertY)
       ));
 
     if (isTargetChanged) {
