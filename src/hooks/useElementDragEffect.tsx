@@ -69,7 +69,7 @@ const isXInElementRange = (element: Element, mouseX: number, draggingElementWidt
   return (
     // 要素上のドロップ
     (mouseX > element.x && mouseX < rightSideCoordinate) ||
-    // 要素の右側領域でのドロップ（拡張版）
+    // 要素の右側領域でのドロップ（一律の判定幅を使用）
     (mouseX >= rightSideCoordinate && mouseX < rightSideCoordinate + rightSidePadding)
   );
 };
@@ -148,6 +148,12 @@ export const useElementDragEffect = () => {
       mouseX < elemRight && 
       mouseY >= elemTop && 
       mouseY <= elemBottom;
+
+    // 要素の右側かつY座標が要素の範囲内かどうかを判定
+    const isOnRightSideInYRange = 
+      isOnRightSide && 
+      mouseY >= elemTop && 
+      mouseY <= elemBottom;
   
     let result: {
       position: DropPosition;
@@ -159,18 +165,20 @@ export const useElementDragEffect = () => {
     if (isInsideElement) {
       result = calculateChildPosition(element, mouseY, elements);
       debugLog('Drop position mode (inside element):', 'child');
-    } else if (isOnRightSide) {
-      // 要素の右側にある場合 (between mode)
+    } else if (isOnRightSideInYRange) {
+      // 要素の右側かつY座標範囲内の場合 (between mode)
       const children = getChildren(element, elements);
       
       if (children.length === 0) {
         // 子要素がない場合は、要素の子として追加 (childモード同様の挙動)
+        // 位置は子要素モードと同じく、要素の右側に表示
+        const insertX = element.x + element.width + OFFSET.X;
         result = {
-          position: 'between',
+          position: 'child', // betweenからchildに変更: 子要素として追加するため
           insertY: element.y + element.height / 2,
-          siblingInfo: { }
+          siblingInfo: { } // siblingInfoは保持
         };
-        debugLog('Drop position mode (right side, no children):', 'between');
+        debugLog('Drop position mode (right side, no children):', 'child');
       } else {
         // 子要素がある場合は、子要素の間に挿入
         let prevElement: Element | undefined;
@@ -326,17 +334,63 @@ export const useElementDragEffect = () => {
     const zoomAdjustedPos = convertToZoomCoordinates(e);
     const mouseX = zoomAdjustedPos.x;
     const mouseY = zoomAdjustedPos.y;
-  
-    const candidates = Object.values(elements).filter(
-      (element) =>
-        element.visible &&
-        element.id !== draggingElement.id &&
-        isXInElementRange(element, mouseX, draggingElement.width ?? SIZE.WIDTH.MIN)
-    );
-  
+
+    // 各parentId毎に、そのグループの要素の最大幅（x + width）を計算
+    const parentGroupMaxWidths = new Map<string | null, number>();
+    Object.values(elements).forEach(element => {
+      if (element.visible) {
+        const parentId = element.parentId;
+        const rightEdge = element.x + element.width;
+        const currentMax = parentGroupMaxWidths.get(parentId) || 0;
+        if (rightEdge > currentMax) {
+          parentGroupMaxWidths.set(parentId, rightEdge);
+        }
+      }
+    });
+
+    // 候補となる要素をフィルタリング
+    const candidates = Object.values(elements).filter(element => {
+      if (!element.visible || element.id === draggingElement.id) {
+        return false;
+      }
+      
+      const elemTop = element.y;
+      const elemBottom = element.y + element.height;
+      const elemRight = element.x + element.width;
+      const rightSidePadding = OFFSET.X + (draggingElement?.width ?? SIZE.WIDTH.MIN);
+      
+      // 要素の右側かつY座標が要素の範囲内かどうかを判定（childモード）
+      const isOnRightSide = 
+        mouseX >= elemRight && 
+        mouseX < elemRight + rightSidePadding && 
+        mouseY >= elemTop && 
+        mouseY <= elemBottom;
+      
+      // 要素の内側にあるかどうかを判定（childモード）
+      const isInsideElement = 
+        mouseX >= element.x && 
+        mouseX < elemRight && 
+        mouseY >= elemTop && 
+        mouseY <= elemBottom;
+      
+      // 同じparentIdを持つ要素グループのx座標の最大値（右端）を取得
+      const groupMaxWidth = parentGroupMaxWidths.get(element.parentId) || 0;
+      
+      // betweenモードの判定: 同じparentIdグループの最大幅の範囲内に限定
+      const isBetweenModeValid = 
+        mouseX >= element.x && 
+        mouseX <= groupMaxWidth && 
+        mouseY >= elemTop - OFFSET.Y && 
+        mouseY <= elemBottom + OFFSET.Y && 
+        !isInsideElement && 
+        !isOnRightSide;
+      
+      return isInsideElement || isOnRightSide || isBetweenModeValid;
+    });
+
     let closestTarget: DropTargetInfo = null;
     let minSquaredDistance = Infinity;
-  
+
     for (const element of candidates) {
       const { position, distanceSq, insertY, siblingInfo } = calculatePositionAndDistance(
         element,
