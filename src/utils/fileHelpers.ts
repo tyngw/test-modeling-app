@@ -2,6 +2,7 @@
 import { SIZE } from "../constants/elementSettings";
 import { createNewElement } from "./elementHelpers";
 import { Element } from "../types";
+import { v4 as uuidv4 } from 'uuid';
 import { 
     DEFAULT_FONT_FAMILY,
     DEFAULT_FONT_SIZE,
@@ -45,6 +46,8 @@ export const convertLegacyElement = (element: unknown): Element => {
       ...element,
       texts: element.texts,
       sectionHeights: element.sectionHeights,
+      x: element.hasOwnProperty('x') ? element.x : 0,
+      y: element.hasOwnProperty('y') ? element.y : 0,
       tentative: element.hasOwnProperty('tentative') ? element.tentative : false,
       connectionPathType: element.hasOwnProperty('connectionPathType') ? element.connectionPathType : 'arrow'
     } as Element
@@ -63,6 +66,8 @@ export const convertLegacyElement = (element: unknown): Element => {
       element.section2Height || SIZE.SECTION_HEIGHT,
       element.section3Height || SIZE.SECTION_HEIGHT
     ],
+    x: element.hasOwnProperty('x') ? element.x : 0,
+    y: element.hasOwnProperty('y') ? element.y : 0,
     text: undefined,
     text2: undefined,
     text3: undefined,
@@ -94,47 +99,50 @@ export const loadElements = (event: Event): Promise<{ elements: Record<string, E
         }
 
         const parsedData = JSON.parse(contents)
-        let elements: Element[]
+        let rawElements: any[] = []
 
         // データ形式の判定
         if (Array.isArray(parsedData)) {
           // 配列形式（新形式）
-          elements = parsedData.map((elem, index) => {
-            // idプロパティの存在確認
-            if (!elem.id && !elem.hasOwnProperty('id')) {
-              console.warn(`要素にIDがありません。インデックス: ${index}。デフォルトIDを生成します。`);
-              elem.id = `generated-${Date.now()}-${index}`;
-            }
-            return convertLegacyElement(elem);
-          })
+          rawElements = parsedData
         } else if (typeof parsedData === 'object' && parsedData !== null) {
           // オブジェクト形式（旧形式または状態全体）
-          const rawElements = 'elements' in parsedData 
-            ? parsedData.elements  // 状態全体が保存されていた場合
-            : parsedData           // 要素だけが保存されていた場合
-          
-          let index = 0;
-          elements = Object.values(rawElements).map(elem => {
-            // idプロパティの存在確認
-            if (!elem.id && !elem.hasOwnProperty('id')) {
-              console.warn(`要素にIDがありません。キー: ${Object.keys(rawElements)[index]}。デフォルトIDを生成します。`);
-              elem.id = `generated-${Date.now()}-${index}`;
-            }
-            index++;
-            return convertLegacyElement(elem);
-          })
+          rawElements = 'elements' in parsedData 
+            ? Object.values(parsedData.elements)  // 状態全体が保存されていた場合
+            : Object.values(parsedData)           // 要素だけが保存されていた場合
         } else {
           throw new Error('Invalid data format')
         }
 
-        // 要素をIDをキーとしたオブジェクトに変換
-        const elementsMap = elements.reduce((acc, element) => {
-          if (!element.id) {
-            throw new Error('要素にIDがありません');
+        // IDが欠けている要素をフィルタリング
+        const validRawElements = rawElements.filter(elem => {
+          if (!elem.id && !elem.hasOwnProperty('id')) {
+            console.warn('IDが欠けている要素を削除します');
+            return false;
           }
-          acc[element.id] = element
-          return acc
-        }, {} as Record<string, Element>)
+          return true;
+        });
+
+        // 要素を変換
+        const convertedElements = validRawElements.map(elem => convertLegacyElement(elem));
+        
+        // 有効なIDのセットを作成
+        const validIds = new Set(convertedElements.map(elem => elem.id));
+        
+        // 存在しないparentIdを参照している要素をフィルタリング
+        const validElements = convertedElements.filter(elem => {
+          if (elem.parentId && !validIds.has(elem.parentId)) {
+            console.warn(`存在しないparentId "${elem.parentId}" を参照している要素 "${elem.id}" を削除します`);
+            return false;
+          }
+          return true;
+        });
+
+        // 要素をIDをキーとしたオブジェクトに変換
+        const elementsMap = validElements.reduce((acc, element) => {
+          acc[element.id] = element;
+          return acc;
+        }, {} as Record<string, Element>);
 
         resolve({ elements: elementsMap, fileName: file.name })
       } catch (error) {
@@ -143,8 +151,8 @@ export const loadElements = (event: Event): Promise<{ elements: Record<string, E
       }
     }
 
-    reader.onerror = (error) => {
-      console.error('ファイル読み込みエラー:', error);
+    reader.onerror = () => {
+      console.error('ファイル読み込みエラー');
       reject(new Error('Error: ファイルの読み込みに失敗しました'))
     }
     reader.readAsText(file)
