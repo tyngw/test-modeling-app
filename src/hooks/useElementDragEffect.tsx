@@ -357,7 +357,7 @@ export const useElementDragEffect = () => {
              mouseY >= dropAreaTop && mouseY <= dropAreaBottom;
     });
 
-    // 要素グループの最後の要素を下回る位置にマウスがある場合のための特別処理
+    // 要素間の領域を検出 - 特に子要素を持つ要素間のスペースを考慮
     if (candidates.length === 0) {
       // すべての可視要素を親のIDでグループ化
       const elementsByParent: { [parentId: string]: Element[] } = {};
@@ -372,7 +372,58 @@ export const useElementDragEffect = () => {
           elementsByParent[parentId].push(el);
         });
       
-      // 各グループごとに、最も下にある要素を検出
+      // 各グループを順序でソート
+      for (const parentId in elementsByParent) {
+        elementsByParent[parentId].sort((a, b) => a.y - b.y);
+      }
+      
+      // 各グループ内で要素間の空間を検出
+      for (const [parentId, groupElements] of Object.entries(elementsByParent)) {
+        if (groupElements.length < 2) continue; // 少なくとも2つの要素が必要
+        
+        // 順序付けされたグループ内の要素間を検出
+        for (let i = 0; i < groupElements.length - 1; i++) {
+          const currentElement = groupElements[i];
+          const nextElement = groupElements[i + 1];
+          
+          // 要素間の空間を計算
+          const gap = nextElement.y - (currentElement.y + currentElement.height);
+          
+          // 空間が十分大きいか確認（小さすぎる隙間は対象外）
+          if (gap < 5) continue; // 最小ギャップの閾値
+          
+          // 要素間の領域を定義
+          const gapAreaTop = currentElement.y + currentElement.height;
+          const gapAreaBottom = nextElement.y;
+          
+          // X座標の検出範囲を定義
+          // 2つの要素のX座標とX座標+幅から共通の水平範囲を計算
+          const currentElementRight = currentElement.x + currentElement.width;
+          const nextElementRight = nextElement.x + nextElement.width;
+          
+          // X方向の判定領域を、2つの要素の幅のみに制限する
+          const gapAreaLeft = Math.min(currentElement.x, nextElement.x);
+          const gapAreaRight = Math.max(currentElementRight, nextElementRight);
+          
+          // マウスが要素間の空間にあるかチェック
+          if (mouseX >= gapAreaLeft && mouseX <= gapAreaRight && 
+              mouseY >= gapAreaTop && mouseY <= gapAreaBottom) {
+            
+            // 要素間の空間が見つかった場合、betweenモードでのドロップを提案
+            return {
+              element: currentElement, // 上側の要素を参照として使用
+              position: 'between',
+              insertY: gapAreaTop + gap / 2, // 空間の中心に配置
+              siblingInfo: { 
+                prevElement: currentElement, 
+                nextElement: nextElement 
+              }
+            };
+          }
+        }
+      }
+      
+      // グループの最後の要素の下部領域の検出
       for (const [parentId, groupElements] of Object.entries(elementsByParent)) {
         if (groupElements.length === 0) continue;
         
@@ -382,8 +433,19 @@ export const useElementDragEffect = () => {
         }, groupElements[0]);
         
         // マウスがこのグループの水平範囲内で、最後の要素よりも下にあるかチェック
-        const groupLeft = lastElement.x - OFFSET.X;
-        const groupRight = lastElement.x + lastElement.width + OFFSET.X;
+        const parentElement = parentId !== 'root' ? elements[parentId] : null;
+        let groupLeft, groupRight;
+        
+        if (parentElement) {
+          // 親要素がある場合は親の右側から検出範囲を計算
+          groupLeft = parentElement.x + parentElement.width;
+          groupRight = groupLeft + OFFSET.X * 2 + lastElement.width;
+        } else {
+          // ルート要素の場合
+          groupLeft = lastElement.x - OFFSET.X;
+          groupRight = lastElement.x + lastElement.width + OFFSET.X;
+        }
+        
         const bottomThreshold = lastElement.y + lastElement.height + OFFSET.Y * 2;
         
         if (mouseX >= groupLeft && mouseX <= groupRight && 
