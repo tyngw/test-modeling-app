@@ -294,13 +294,49 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
         setInitialScroll({ x: 0, y: 0 });
     }, []);
 
+    // マーカー設定ボタンを描画する共通関数
+    const renderMarkerButton = useCallback((
+        element: CanvasElement,
+        absolutePosition: { x: number, y: number },
+    ) => {
+        const totalHeight = element.height;
+        
+        return (
+            <g key={`marker-button-${element.id}`}>
+                {(hover === element.id || showMenuForElement === element.id) && (
+                    <circle
+                        cx={absolutePosition.x + element.width + 10}
+                        cy={absolutePosition.y + totalHeight / 2}
+                        r={10}
+                        fill="#bfbfbf"
+                        opacity={0.5}
+                    />
+                )}
+                <circle
+                    cx={absolutePosition.x + element.width + 10}
+                    cy={absolutePosition.y + totalHeight / 2}
+                    r={10}
+                    fill="transparent"
+                    onMouseEnter={() => setHover(element.id)}
+                    onMouseLeave={() => setHover(null)}
+                    onClick={() => setShowMenuForElement(element.id)}
+                />
+            </g>
+        );
+    }, [hover, showMenuForElement]);
+
     const renderConnectionPath = (
         parentElement: CanvasElement | undefined,
         element: CanvasElement,
+        absolutePositions: { 
+            parent: { x: number, y: number }, 
+            element: { x: number, y: number } 
+        },
         strokeColor: string = CONNECTION_PATH_STYLE.COLOR,
         strokeWidth: number = CONNECTION_PATH_STYLE.STROKE,
     ) => {
         if (!parentElement) return null;
+        
         let offset = 0;
         switch (parentElement.connectionPathType) {
             case MARKER_TYPES.ARROW:
@@ -322,29 +358,23 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
             default:
                 offset = 0;
         }
+        
+        const parentPos = absolutePositions.parent;
+        const elementPos = absolutePositions.element;
         const totalHeight = element.height;
+        
         const pathCommands = [
-            `M ${parentElement.x + parentElement.width + offset},${parentElement.y + parentElement.height / 2}`,
-            `C ${parentElement.x + parentElement.width + CURVE_CONTROL_OFFSET},${parentElement.y + parentElement.height / 2}`,
-            `${element.x - CURVE_CONTROL_OFFSET},${element.y + totalHeight / 2}`,
-            `${element.x},${element.y + totalHeight / 2}`
+            `M ${parentPos.x + parentElement.width + offset},${parentPos.y + parentElement.height / 2}`,
+            `C ${parentPos.x + parentElement.width + CURVE_CONTROL_OFFSET},${parentPos.y + parentElement.height / 2}`,
+            `${elementPos.x - CURVE_CONTROL_OFFSET},${elementPos.y + totalHeight / 2}`,
+            `${elementPos.x},${elementPos.y + totalHeight / 2}`
         ].join(' ');
 
         const markerStart = getMarkerUrlByType(parentElement.connectionPathType);
 
         return (
             <g key={`connection-${element.id}-${element.parentId}`}>
-                {(hover === element.id || showMenuForElement === element.id) && (
-                    <circle
-                        cx={element.x + element.width + 10}
-                        cy={element.y + totalHeight / 2}
-                        r={10}
-                        fill="#bfbfbf"
-                        opacity={0.5}
-                    />
-                )}
                 <path
-                    key={`connection-${element.id}-${element.parentId}`}
                     d={pathCommands}
                     stroke={strokeColor}
                     strokeWidth={strokeWidth}
@@ -352,16 +382,6 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                     markerStart={markerStart}
                     style={{ pointerEvents: 'none' }}
                 />
-                <circle
-                    cx={element.x + element.width + 10}
-                    cy={element.y + totalHeight / 2}
-                    r={10}
-                    fill="transparent"
-                    onMouseEnter={() => setHover(element.id)}
-                    onMouseLeave={() => setHover(null)}
-                    onClick={() => setShowMenuForElement(element.id)}
-                />
-
             </g>
         );
     };
@@ -371,6 +391,10 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
         const element = elements[showMenuForElement];
         if (!element) return null;
         const totalHeight = element.height;
+
+        // ポップアップメニューの表示位置を計算
+        const popupX = element.x + element.width + 20;
+        const popupY = element.y + totalHeight / 2 - 25;
 
         const markerOptions = [
             { id: 'arrow', label: 'Arrow' },
@@ -386,8 +410,8 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
 
         return (
             <foreignObject
-                x={element.x + element.width + 20}
-                y={element.y + totalHeight / 2 - 25}
+                x={popupX}
+                y={popupY}
                 width={150}
                 height={270}
                 className="popup-menu"
@@ -497,6 +521,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                             dropInsertY={dropInsertY}
                             siblingInfo={siblingInfo}
                         />
+                        {renderMarkerButton(element, { x: element.x, y: element.y })}
                     </React.Fragment>
                 ));
             }
@@ -698,6 +723,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
 
                         {renderElements()}
 
+                        {/* 子要素の接続線を描画 */}
                         {Object.values(elements)
                             .filter((element): element is CanvasElement => element.visible && !!element.parentId)
                             .map(element => {
@@ -705,7 +731,24 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                                 if (draggingElement && (element.id === draggingElement.id || isDescendant(state.elements, draggingElement.id, element.id))) {
                                     return null;
                                 }
-                                return renderConnectionPath(parent, element, connectionPathColor, connectionPathStroke);
+                                
+                                // 接続線を描画
+                                return (
+                                    <React.Fragment key={`connection-group-${element.id}`}>
+                                        {renderConnectionPath(
+                                            parent,
+                                            element,
+                                            {
+                                                parent: { x: parent.x, y: parent.y },
+                                                element: { x: element.x, y: element.y }
+                                            },
+                                            connectionPathColor,
+                                            connectionPathStroke
+                                        )}
+                                        {/* 子要素のマーカー設定ボタンを描画 */}
+                                        {renderMarkerButton(element, { x: element.x, y: element.y })}
+                                    </React.Fragment>
+                                );
                             })}
 
                         {currentDropTarget && draggingElement && (
@@ -721,6 +764,10 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                                 return newParent && draggingPos && renderConnectionPath(
                                     newParent,
                                     draggingPos,
+                                    {
+                                        parent: { x: newParent.x, y: newParent.y },
+                                        element: { x: draggingPos.x, y: draggingPos.y }
+                                    },
                                     CONNECTION_PATH_STYLE.DRAGGING_COLOR,
                                     CONNECTION_PATH_STYLE.STROKE
                                 );
