@@ -32,7 +32,7 @@ import { useIsMounted } from '../hooks/useIsMounted';
 interface IdeaElementProps {
   element: CanvasElement;
   currentDropTarget: CanvasElement | null;
-  dropPosition: 'child' | 'between' | null;
+  dropPosition: 'child' | 'sibling' | 'between' | null;
   draggingElement: CanvasElement | null;
   handleMouseDown: (e: React.MouseEvent<SVGElement>, element: CanvasElement) => void;
   handleMouseUp: () => void;
@@ -120,7 +120,7 @@ export const DebugInfo: React.FC<{
   element: CanvasElement; 
   isHovered: boolean;
   currentDropTarget: CanvasElement | null;
-  dropPosition: 'child' | 'between' | null;
+  dropPosition: 'child' | 'sibling' | 'between' | null;
   isDraggedOrDescendant?: boolean;
   siblingInfo?: { prevElement?: CanvasElement, nextElement?: CanvasElement } | null;
 }> = ({ element, isHovered, currentDropTarget, dropPosition, isDraggedOrDescendant, siblingInfo }) => {
@@ -454,52 +454,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
           </>
         )}
         
-        {/* 要素間（between）ドロップのプレビュー表示 */}
-        {currentDropTarget?.id === element.id && draggingElement && dropPosition === 'between' && (
-          <rect
-            className='drop-preview-between'
-            x={element.x}
-            y={dropInsertY !== undefined 
-              ? dropInsertY - draggingElement.height / 2 
-              : element.y + element.height + OFFSET.Y}
-            width={element.width}
-            height={draggingElement.height}
-            fill={ELEM_STYLE.DRAGGING.COLOR}
-            rx={ELEM_STYLE.RX}
-            opacity={0.5}
-            stroke={ELEM_STYLE.DRAGGING.STROKE_COLOR}
-            strokeWidth={1}
-            strokeDasharray="4 2"
-            style={{ pointerEvents: 'none' }}
-          />
-        )}
-{element.texts.map((text, index) => (
-          <React.Fragment key={`${element.id}-section-${index}`}>
-            {!element.editing && (
-              <TextDisplayArea
-                x={element.x}
-                y={element.y + element.sectionHeights.slice(0, index).reduce((sum, h) => sum + h, 0)}
-                width={element.width}
-                height={element.sectionHeights[index]}
-                text={text}
-                fontSize={DEFAULT_FONT_SIZE}
-                zoomRatio={tabState.zoomRatio}
-                fontFamily={fontFamily}
-                onHeightChange={(newHeight) => handleHeightChange(index, newHeight)}
-              />
-            )}
-            {index < element.texts.length - 1 && (
-              <line
-                x1={element.x}
-                y1={element.y + element.sectionHeights.slice(0, index + 1).reduce((sum, h) => sum + h, 0)}
-                x2={element.x + element.width}
-                y2={element.y + element.sectionHeights.slice(0, index + 1).reduce((sum, h) => sum + h, 0)}
-                stroke={strokeColor}
-                strokeWidth="1"
-              />
-            )}
-          </React.Fragment>
-        ))}
+        {/* ここではbetweenモードのプレビューを表示しない - canvasArea.tsxで一元管理する */}
 {element.texts.map((text, index) => (
           <React.Fragment key={`${element.id}-section-${index}`}>
             {!element.editing && (
