@@ -1,5 +1,5 @@
 // src/components/TabHeaders/TabHeader.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import { TabState } from '../../context/tabsContext';
 import { useIsMounted } from '../../hooks/useIsMounted';
 
@@ -19,6 +19,7 @@ const Tab: React.FC<TabHeaderProps> = React.memo(({
   theme
 }) => {
   const isMounted = useIsMounted();
+  const [isHovered, setIsHovered] = useState(false);
 
   if (!isMounted) return null;
 
@@ -49,15 +50,18 @@ const Tab: React.FC<TabHeaderProps> = React.memo(({
           e.stopPropagation();
           closeTab(tab.id);
         }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
         style={{ 
           flex: '0 0 auto',
           marginLeft: '2px',
           border: '0',
           backgroundColor: 'transparent',
           fontSize: '16px',
-          color: theme.TAB_BAR.CLOSE_BUTTON_COLOR,
+          color: isHovered ? theme.TAB_BAR.CLOSE_BUTTON_HOVER_COLOR || '#9999ff' : theme.TAB_BAR.CLOSE_BUTTON_COLOR,
           fontWeight: 'bold',
           cursor: 'pointer',
+          transition: 'color 0.2s ease',
         }}
       >
         ×
