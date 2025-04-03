@@ -416,28 +416,63 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
 
         debugLog(`DELETE_ELEMENT開始: 削除対象要素数=${selectedElements.length}`);
         
-        // 削除操作をする前に現在のY座標を記録
-        const parentIds = new Set<string>();
-        selectedElements.forEach(element => {
-            if (element.parentId) {
-                parentIds.add(element.parentId);
+        // 削除操作をする前に、削除後に選択する要素の候補を探す
+        let remainingElements = { ...state.elements };
+        const nextSelectedId = (() => {
+            // すべての選択された要素の親IDを収集
+            const parentIds = new Set(selectedElements.map(e => e.parentId).filter(id => id !== null));
+            
+            // 最初の選択要素の情報を基に兄弟要素を探す
+            const firstSelected = selectedElements[0];
+            if (!firstSelected.parentId) return null;
+
+            // 兄弟要素の取得（選択されている要素を除く）
+            const siblings = Object.values(remainingElements)
+                .filter(e => 
+                    e.parentId === firstSelected.parentId && 
+                    !selectedElements.some(sel => sel.id === e.id)
+                )
+                .sort((a, b) => a.order - b.order);
+
+            // 兄弟要素がある場合
+            if (siblings.length > 0) {
+                // 削除する要素の中で最小のorderを持つ要素の直前か直後の要素を選択
+                const minOrder = Math.min(...selectedElements.map(e => e.order));
+                const maxOrder = Math.max(...selectedElements.map(e => e.order));
+                
+                // 直後の要素を優先的に選択
+                const nextSibling = siblings.find(s => s.order > maxOrder);
+                if (nextSibling) return nextSibling.id;
+                
+                // 直後の要素がない場合は直前の要素を選択
+                const prevSibling = siblings.reverse().find(s => s.order < minOrder);
+                if (prevSibling) return prevSibling.id;
             }
-            debugLog(`削除対象: id=${element.id}, parentId=${element.parentId}, order=${element.order}, y=${element.y}`);
-        });
 
-        let updatedElements = { ...state.elements };
-
+            // 兄弟要素がない場合は親要素を選択
+            return firstSelected.parentId;
+        })();
+        
         // 要素を削除
         selectedElements.forEach(element => {
-            updatedElements = deleteElementRecursive(updatedElements, element);
+            remainingElements = deleteElementRecursive(remainingElements, element);
         });
 
         // 明示的にY座標をリセットして完全に再配置を行う
-        Object.values(updatedElements).forEach(element => {
+        Object.values(remainingElements).forEach(element => {
             if (element.parentId === null) {
                 element.y = DEFAULT_POSITION.Y;
             }
         });
+
+        // 次に選択する要素があれば、その要素のみを選択状態にし、他の要素は非選択状態にする
+        const updatedElements = Object.entries(remainingElements).reduce((acc, [id, element]) => {
+            acc[id] = {
+                ...element,
+                selected: id === nextSelectedId
+            };
+            return acc;
+        }, {} as typeof remainingElements);
 
         return {
             ...state,
