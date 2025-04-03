@@ -2,6 +2,8 @@
 import React from 'react';
 import ModalWindow from './modalWindow';
 import { Button } from '@mui/material';
+import { getCurrentTheme } from '../utils/colorHelpers';
+import { getCanvasBackgroundColor } from '../utils/localStorageHelpers';
 
 interface UnsaveConfirmModalProps {
   showCloseConfirm: boolean;
@@ -17,32 +19,110 @@ const UnsaveConfirmModal: React.FC<UnsaveConfirmModalProps> = ({
   closeTab,
 }) => {
   if (!showCloseConfirm) return null;
+
+  const currentTheme = getCurrentTheme(getCanvasBackgroundColor());
+  
+  // Custom button style to match the modern design
+  const buttonBaseStyle = {
+    borderRadius: '8px',
+    padding: '8px 20px',
+    fontSize: '14px',
+    fontWeight: 500,
+    textTransform: 'none' as const,
+    boxShadow: 'none',
+    transition: 'all 0.2s ease',
+  };
+
   return (
     <ModalWindow
       isOpen={showCloseConfirm}
       onClose={() => setShowCloseConfirm(false)}
     >
-      <div style={{ padding: '20px' }}>
-        <p style={{ marginBottom: '20px' }}>
-          タブを閉じてよろしいですか？
-        </p>
+      <div style={{ 
+        padding: '10px 5px 20px',
+        textAlign: 'center' as const,
+      }}>
+        <div style={{ 
+          marginBottom: '20px',
+          display: 'flex',
+          flexDirection: 'column' as const,
+          alignItems: 'center',
+          gap: '15px'
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '15px',
+            marginBottom: '10px'
+          }}>
+            <div style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '50%',
+              backgroundColor: `${currentTheme.MODAL.TEXT_COLOR}15`,
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 5V13" stroke={currentTheme.MODAL.TEXT_COLOR} strokeWidth="2" strokeLinecap="round"/>
+                <circle cx="12" cy="17" r="1" fill={currentTheme.MODAL.TEXT_COLOR}/>
+              </svg>
+            </div>
+            <h3 style={{ 
+              margin: 0,
+              fontSize: '20px',
+              fontWeight: 600
+            }}>
+              確認
+            </h3>
+          </div>
+          <p style={{ 
+            margin: '0 0 10px',
+            fontSize: '15px',
+            opacity: 0.8,
+            lineHeight: 1.5,
+            maxWidth: '350px'
+          }}>
+            タブを閉じてよろしいですか？
+          </p>
+        </div>
         <div style={{
           display: 'flex',
-          justifyContent: 'flex-end',
-          gap: '10px'
+          justifyContent: 'center',
+          gap: '16px',
+          marginTop: '30px'
         }}>
           <Button
             variant="outlined"
             onClick={() => setShowCloseConfirm(false)}
+            sx={{
+              ...buttonBaseStyle,
+              borderColor: `${currentTheme.MODAL.TEXT_COLOR}30`,
+              color: currentTheme.MODAL.TEXT_COLOR,
+              '&:hover': {
+                borderColor: `${currentTheme.MODAL.TEXT_COLOR}50`,
+                backgroundColor: `${currentTheme.MODAL.TEXT_COLOR}10`,
+                transform: 'translateY(-2px)',
+              }
+            }}
           >
             いいえ
           </Button>
           <Button
             variant="contained"
-            color="primary"
             onClick={() => {
               if (tabToClose) closeTab(tabToClose);
               setShowCloseConfirm(false);
+            }}
+            sx={{
+              ...buttonBaseStyle,
+              backgroundColor: '#3b82f6',
+              color: '#ffffff',
+              '&:hover': {
+                backgroundColor: '#2563eb',
+                transform: 'translateY(-2px)',
+              }
             }}
           >
             はい

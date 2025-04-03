@@ -19,6 +19,7 @@ const ModalWindow: React.FC<ModalWindowProps> = ({ isOpen, onClose, children }) 
         getCurrentTheme(getCanvasBackgroundColor())
     );
     const { dispatch } = useCanvas();
+    const [isAnimating, setIsAnimating] = useState(false);
 
     useEffect(() => {
         if (!isMounted) return;
@@ -29,49 +30,99 @@ const ModalWindow: React.FC<ModalWindowProps> = ({ isOpen, onClose, children }) 
     useEffect(() => {
         if (isOpen) {
             dispatch({ type: 'END_EDITING' });
+            setIsAnimating(true);
         }
     }, [isOpen, dispatch]);
+
+    const handleClose = () => {
+        setIsAnimating(false);
+        // Delay actual closing to allow for animation
+        setTimeout(() => {
+            onClose();
+        }, 300);
+    };
 
     if (!isOpen) {
         return null;
     }
 
+    // Modern shadow with layered effect
+    const modalShadow = `
+        0 10px 15px -3px rgba(0, 0, 0, 0.1),
+        0 4px 6px -2px rgba(0, 0, 0, 0.05),
+        0 0 0 1px rgba(255, 255, 255, 0.1)
+    `;
+
     return (
-        <div style={{ 
-            position: 'fixed', 
-            top: 0, 
-            left: 0, 
-            width: '100%', 
-            height: '100%', 
-            backgroundColor: 'rgba(0, 0, 0, 0.5)', 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center', 
-            zIndex: 9000 
-        }}>
-            <div style={{ 
-                backgroundColor: currentTheme.MODAL.BACKGROUND,
-                color: currentTheme.MODAL.TEXT_COLOR,
-                padding: '40px 24px 24px', 
-                borderRadius: '10px', 
-                width: '80%', 
-                maxWidth: '500px', 
-                overflow: 'hidden', 
-                position: 'relative',
-                zIndex: 9001
-            }}>
-                <div style={{ maxHeight: '80vh', overflow: 'auto' }}>
+        <div 
+            style={{ 
+                position: 'fixed', 
+                top: 0, 
+                left: 0, 
+                width: '100%', 
+                height: '100%', 
+                backgroundColor: 'rgba(0, 0, 0, 0.6)', 
+                display: 'flex', 
+                justifyContent: 'center', 
+                alignItems: 'center', 
+                zIndex: 9000,
+                backdropFilter: 'blur(3px)',
+                opacity: isAnimating ? 1 : 0,
+                transition: 'opacity 0.3s ease-in-out',
+            }}
+            onClick={handleClose}
+        >
+            <div 
+                style={{ 
+                    backgroundColor: currentTheme.MODAL.BACKGROUND,
+                    color: currentTheme.MODAL.TEXT_COLOR,
+                    padding: '40px 24px 24px', 
+                    borderRadius: '16px', 
+                    width: '80%', 
+                    maxWidth: '500px', 
+                    overflow: 'hidden', 
+                    position: 'relative',
+                    zIndex: 9001,
+                    boxShadow: modalShadow,
+                    transform: isAnimating ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.95)',
+                    transition: 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease-in-out',
+                    opacity: isAnimating ? 1 : 0,
+                }}
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div style={{ 
+                    maxHeight: '80vh', 
+                    overflow: 'auto',
+                    scrollbarWidth: 'thin',
+                    scrollbarColor: `${currentTheme.MODAL.TEXT_COLOR}40 transparent`,
+                }}>
                     <button 
-                        onClick={onClose} 
+                        onClick={handleClose} 
                         style={{ 
                             position: 'absolute', 
-                            right: 10, 
-                            top: 10, 
-                            background: 'transparent', 
+                            right: 16, 
+                            top: 16, 
+                            background: `${currentTheme.MODAL.TEXT_COLOR}15`, 
                             border: 'none', 
-                            fontSize: '1.5em',
+                            borderRadius: '50%',
+                            width: '32px',
+                            height: '32px',
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            fontSize: '1.2em',
                             color: currentTheme.MODAL.TEXT_COLOR,
-                            cursor: 'pointer'
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            outline: 'none',
+                        }}
+                        onMouseOver={(e) => {
+                            e.currentTarget.style.background = `${currentTheme.MODAL.TEXT_COLOR}25`;
+                            e.currentTarget.style.transform = 'scale(1.1)';
+                        }}
+                        onMouseOut={(e) => {
+                            e.currentTarget.style.background = `${currentTheme.MODAL.TEXT_COLOR}15`;
+                            e.currentTarget.style.transform = 'scale(1)';
                         }}
                     >
                         ×
@@ -79,7 +130,7 @@ const ModalWindow: React.FC<ModalWindowProps> = ({ isOpen, onClose, children }) 
                     <div style={{
                         flex: 1,
                         overflow: 'auto',
-                        paddingRight: '8px'
+                        paddingRight: '8px',
                     }}>
                         {children}
                     </div>
