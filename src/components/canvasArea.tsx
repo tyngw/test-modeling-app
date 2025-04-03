@@ -299,6 +299,12 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
         element: CanvasElement,
         absolutePosition: { x: number, y: number },
     ) => {
+        // 子要素があるかどうかをチェック
+        const hasChildren = Object.values(elements).some(el => el.parentId === element.id && el.visible);
+        
+        // 子要素がない場合はボタンを表示しない
+        if (!hasChildren) return null;
+        
         const totalHeight = element.height;
         
         return (
@@ -323,7 +329,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                 />
             </g>
         );
-    }, [hover, showMenuForElement]);
+    }, [hover, showMenuForElement, elements]);
 
     const renderConnectionPath = (
         parentElement: CanvasElement | undefined,
