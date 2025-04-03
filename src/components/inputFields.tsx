@@ -130,6 +130,11 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
             onEndEditing?.();
             dispatch({ type: 'END_EDITING' });
         }
+        if (e.key === 'Enter' && (e.altKey || e.metaKey || e.ctrlKey)) {
+            e.preventDefault();
+            onEndEditing?.();
+            dispatch({ type: 'END_EDITING' });
+        }
     };
 
     if (!element || !isMounted) return null;
