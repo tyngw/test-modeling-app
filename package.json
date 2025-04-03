@@ -15,7 +15,7 @@
     "axios": "^1.8.2",
     "canvas": "^2.11.2",
     "crypto-js": "^4.2.0",
-    "next": "^15.2.3",
+    "next": "^15.2.4",
     "node-polyfill-webpack-plugin": "^3.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
