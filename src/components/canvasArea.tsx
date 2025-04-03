@@ -408,7 +408,9 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
             if (isHovered) {
                 newState[elementId] = true;
             } else {
-                delete newState[elementId];
+                if (Object.prototype.hasOwnProperty.call(newState, elementId)) {
+                    delete newState[elementId];
+                }
             }
 
             return newState;
@@ -586,8 +588,8 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
 
       // 背景色の設定
       let bgColor = dropPosition === 'child' ? 
-        'rgba(73, 179, 147, 0.3)' :  // childモードの場合: 緑色
-        'rgba(73, 147, 179, 0.3)';   // betweenモードの場合: 青色
+        'rgba(103, 208, 113, 0.3)' :  // childモードの場合: 緑色
+        'rgba(157, 172, 244, 0.3)';   // betweenモードの場合: 青色
       
       return (
         <rect
@@ -597,7 +599,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
           height={draggingElement.height}
           fill={bgColor}
           stroke="#555"
-          strokeDasharray="5,5"
+          strokeDasharray="2,2"
           strokeWidth={1}
           rx={4}
           ry={4}
