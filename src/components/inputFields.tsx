@@ -52,7 +52,17 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
             setLocalHeights(initialHeights);
             setActiveIndex(0);
             prevElementId.current = element?.id;
-            setTimeout(() => fieldRefs.current[0]?.focus({ preventScroll: true }), 50);
+            
+            // テキストエリアにフォーカスし、カーソルを文字列の末尾に配置する
+            setTimeout(() => {
+                const textarea = fieldRefs.current[0];
+                if (textarea) {
+                    textarea.focus({ preventScroll: true });
+                    // カーソルを文字列の末尾に配置
+                    const textLength = element?.texts[0]?.length || 0;
+                    textarea.setSelectionRange(textLength, textLength);
+                }
+            }, 50);
         }
     }, [element, isMounted]);
 
@@ -96,6 +106,11 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
             if (nextField) {
                 const { scrollX, scrollY } = window;
                 nextField.focus({ preventScroll: true });
+                
+                // タブ移動時もカーソルを文字列の末尾に配置
+                const textLength = element.texts[nextIndex]?.length || 0;
+                nextField.setSelectionRange(textLength, textLength);
+                
                 setActiveIndex(nextIndex);
                 window.scrollTo(scrollX, scrollY);
             }
@@ -135,7 +150,7 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
                         ref={(el) => {
                             fieldRefs.current[index] = el;
                             if (index === activeIndex && isMounted) el?.focus({ preventScroll: true });
-                        }}
+                                                        }}
                         value={text}
                         onChange={(e) => handleChange(e, index)}
                         onKeyDown={(e) => handleKeyDown(e, index)}
