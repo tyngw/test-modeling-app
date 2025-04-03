@@ -45,6 +45,8 @@ export const convertLegacyElement = (element: unknown): Element => {
       ...element,
       texts: element.texts,
       sectionHeights: element.sectionHeights,
+      tentative: element.hasOwnProperty('tentative') ? element.tentative : false,
+      connectionPathType: element.hasOwnProperty('connectionPathType') ? element.connectionPathType : 'arrow'
     } as Element
   }
 
@@ -66,7 +68,9 @@ export const convertLegacyElement = (element: unknown): Element => {
     text3: undefined,
     section1Height: undefined,
     section2Height: undefined,
-    section3Height: undefined
+    section3Height: undefined,
+    tentative: element.hasOwnProperty('tentative') ? element.tentative : false,
+    connectionPathType: element.hasOwnProperty('connectionPathType') ? element.connectionPathType : 'arrow'
   } as unknown as Element
 }
 
@@ -95,31 +99,54 @@ export const loadElements = (event: Event): Promise<{ elements: Record<string, E
         // データ形式の判定
         if (Array.isArray(parsedData)) {
           // 配列形式（新形式）
-          elements = parsedData.map(convertLegacyElement)
+          elements = parsedData.map((elem, index) => {
+            // idプロパティの存在確認
+            if (!elem.id && !elem.hasOwnProperty('id')) {
+              console.warn(`要素にIDがありません。インデックス: ${index}。デフォルトIDを生成します。`);
+              elem.id = `generated-${Date.now()}-${index}`;
+            }
+            return convertLegacyElement(elem);
+          })
         } else if (typeof parsedData === 'object' && parsedData !== null) {
           // オブジェクト形式（旧形式または状態全体）
           const rawElements = 'elements' in parsedData 
             ? parsedData.elements  // 状態全体が保存されていた場合
             : parsedData           // 要素だけが保存されていた場合
-            
-          elements = Object.values(rawElements).map(convertLegacyElement)
+          
+          let index = 0;
+          elements = Object.values(rawElements).map(elem => {
+            // idプロパティの存在確認
+            if (!elem.id && !elem.hasOwnProperty('id')) {
+              console.warn(`要素にIDがありません。キー: ${Object.keys(rawElements)[index]}。デフォルトIDを生成します。`);
+              elem.id = `generated-${Date.now()}-${index}`;
+            }
+            index++;
+            return convertLegacyElement(elem);
+          })
         } else {
           throw new Error('Invalid data format')
         }
 
         // 要素をIDをキーとしたオブジェクトに変換
         const elementsMap = elements.reduce((acc, element) => {
+          if (!element.id) {
+            throw new Error('要素にIDがありません');
+          }
           acc[element.id] = element
           return acc
         }, {} as Record<string, Element>)
 
         resolve({ elements: elementsMap, fileName: file.name })
       } catch (error) {
-        reject(new Error('Error: ファイルの読み込みに失敗しました'))
+        console.error('ファイル読み込みエラー:', error);
+        reject(new Error(`Error: ファイルの読み込みに失敗しました - ${error instanceof Error ? error.message : String(error)}`))
       }
     }
 
-    reader.onerror = () => reject(new Error('Error: ファイルの読み込みに失敗しました'))
+    reader.onerror = (error) => {
+      console.error('ファイル読み込みエラー:', error);
+      reject(new Error('Error: ファイルの読み込みに失敗しました'))
+    }
     reader.readAsText(file)
     input.value = ''
   })
