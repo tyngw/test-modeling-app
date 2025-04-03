@@ -32,7 +32,6 @@ const Tab: React.FC<TabHeaderProps> = React.memo(({
         paddingBottom: '3px',
         borderRadius: '5px 5px 0 0',
         fontSize: '12px',
-        cursor: 'pointer',
         display: 'flex',
         alignItems: 'center',
         color: theme.TAB_BAR.TAB_TEXT,
