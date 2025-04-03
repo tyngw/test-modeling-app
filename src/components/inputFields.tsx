@@ -16,6 +16,7 @@ import {
     getTextColor 
 } from '../utils/localStorageHelpers';
 import { Element } from '../types';
+import { inputFieldKeyActionMap } from '../constants/keyActionMap';
 
 interface InputFieldsProps {
     element?: Element;
@@ -121,19 +122,26 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
     }, [element, onEndEditing, dispatch]);
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>, index: number) => {
-        if (e.key === 'Tab') {
+        const keyCombo = [
+            e.ctrlKey && 'Ctrl',
+            e.altKey && 'Alt',
+            e.metaKey && 'Meta',
+            e.key
+        ].filter(Boolean).join('+');
+
+        const action = inputFieldKeyActionMap[keyCombo];
+
+        if (action) {
             e.preventDefault();
-            handleTabNavigation(index);
-        }
-        if (e.key === 'Escape') {
-            e.preventDefault();
-            onEndEditing?.();
-            dispatch({ type: 'END_EDITING' });
-        }
-        if (e.key === 'Enter' && (e.altKey || e.metaKey || e.ctrlKey)) {
-            e.preventDefault();
-            onEndEditing?.();
-            dispatch({ type: 'END_EDITING' });
+            switch (action) {
+                case 'NEXT_FIELD':
+                    handleTabNavigation(index);
+                    break;
+                case 'END_EDITING':
+                    onEndEditing?.();
+                    dispatch({ type: 'END_EDITING' });
+                    break;
+            }
         }
     };
 
