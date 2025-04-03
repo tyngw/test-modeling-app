@@ -4,28 +4,15 @@
 /**
  * useElementDragEffect
  *
- * このカスタムフックは、キャンバス内の要素に対するドラッグ＆ドロップ機能を提供します。
- * 要素のドラッグ中の状態を管理し、ドロップターゲットを計算し、要素の位置を更新します。
+ * このカスタムフックは、マインドマップに類似した体験を提供するドラッグ＆ドロップ機能を実装します。
+ * 要素のドラッグ操作を通じて階層的な関係を視覚的に表現し、直感的なインターフェースを実現します。
  *
  * 主な機能:
- * - 現在ドラッグ中の要素とマウス位置からのオフセットを追跡します。
- * - マウス位置と要素の境界に基づいて有効なドロップターゲットを特定します。
- * - ドラッグ中に要素の位置を動的に更新します。
- * - 無効なターゲットや子孫要素へのドロップなどのエッジケースを処理します。
- * - キャンバスと統合するためのマウスイベント（mousedown、mouseup、mousemove）のコールバックを提供します。
- *
- * 依存関係:
- * - `useCanvas`: キャンバスの状態とdispatch関数へのアクセスを提供します。
- * - `useToast`: ユーザーへのフィードバック用のトーストメッセージを表示します。
- * - 位置計算、ドロップの検証、要素の関係管理のためのユーティリティ関数。
- *
- * 戻り値:
- * - `handleMouseDown`: 要素のドラッグを開始するためのコールバック。
- * - `handleMouseUp`: ドラッグ操作を完了するためのコールバック。
- * - `currentDropTarget`: 現在のドロップターゲット要素（存在する場合）。
- * - `dropPosition`: ドロップターゲットに対する位置（例: before, after, child）。
- * - `draggingElement`: 現在ドラッグ中の要素。
- * - `dropInsertY`: ドラッグされた要素を挿入するためのY座標。
+ * - 要素のドラッグ＆ドロップで親子関係をシームレスに構築
+ * - 接続線の視覚的なフィードバックによる関係性の明示
+ * - 親要素からの相対的な位置で子要素を配置
+ * - 放射状/階層的なレイアウトの自動調整
+ * - ドラッグ中の位置プレビューとハイライト効果
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -33,7 +20,7 @@ import { Element } from '../types';
 import { useCanvas } from '../context/canvasContext';
 import { isDescendant } from '../utils/elementHelpers';
 import { ToastMessages } from '../constants/toastMessages';
-import { HEADER_HEIGHT, OFFSET, SIZE } from '../constants/elementSettings';
+import { HEADER_HEIGHT, OFFSET, SIZE, CURVE_CONTROL_OFFSET } from '../constants/elementSettings';
 import { useToast } from '../context/toastContext';
 import { debugLog } from '../utils/debugLogHelpers';
 
@@ -50,8 +37,16 @@ interface State {
 type ElementsMap = { [key: string]: Element };
 
 type Position = { x: number; y: number };
-type DropPosition = 'child' | 'between';
-type DropTargetInfo = { element: Element; position: DropPosition; insertY?: number; siblingInfo?: { prevElement?: Element, nextElement?: Element } } | null;
+type DropPosition = 'child' | 'sibling' | 'between';
+type DropTargetInfo = { 
+  element: Element; 
+  position: DropPosition; 
+  insertY?: number; 
+  insertX?: number;
+  angle?: number; // 親要素からの角度（放射状レイアウト用）
+  distance?: number; // 親要素からの距離
+  siblingInfo?: { prevElement?: Element, nextElement?: Element } 
+} | null;
 
 // 要素の子要素を取得するヘルパー関数
 const getChildren = (element: Element, elements: ElementsMap): Element[] => {
@@ -335,58 +330,75 @@ export const useElementDragEffect = () => {
     const mouseX = zoomAdjustedPos.x;
     const mouseY = zoomAdjustedPos.y;
 
-    // 各parentId毎に、そのグループの要素の最大幅（x + width）を計算
-    const parentGroupMaxWidths = new Map<string | null, number>();
-    Object.values(elements).forEach(element => {
-      if (element.visible) {
-        const parentId = element.parentId;
-        const rightEdge = element.x + element.width;
-        const currentMax = parentGroupMaxWidths.get(parentId) || 0;
-        if (rightEdge > currentMax) {
-          parentGroupMaxWidths.set(parentId, rightEdge);
-        }
-      }
-    });
+    // 選択中の全要素のIDリストを取得（これらはドロップ先から除外する必要がある）
+    const selectedElementIds = Object.values(elements)
+      .filter(el => el.selected)
+      .map(el => el.id);
 
-    // 候補となる要素をフィルタリング
+    // 候補となる要素をフィルタリング - 自分自身と選択中の要素を除外
     const candidates = Object.values(elements).filter(element => {
-      if (!element.visible || element.id === draggingElement.id) {
+      if (!element.visible || selectedElementIds.includes(element.id)) {
         return false;
       }
       
+      // マウス位置が要素の範囲内かチェック
       const elemTop = element.y;
       const elemBottom = element.y + element.height;
+      const elemLeft = element.x;
       const elemRight = element.x + element.width;
-      const rightSidePadding = OFFSET.X + (draggingElement?.width ?? SIZE.WIDTH.MIN);
       
-      // 要素の右側かつY座標が要素の範囲内かどうかを判定（childモード）
-      const isOnRightSide = 
-        mouseX >= elemRight && 
-        mouseX < elemRight + rightSidePadding && 
-        mouseY >= elemTop && 
-        mouseY <= elemBottom;
+      // 要素の周辺領域も含めたドロップ可能範囲
+      const dropAreaTop = elemTop - OFFSET.Y;
+      const dropAreaBottom = elemBottom + OFFSET.Y;
+      const dropAreaLeft = elemLeft - OFFSET.X;
+      const dropAreaRight = elemRight + OFFSET.X;
       
-      // 要素の内側にあるかどうかを判定（childモード）
-      const isInsideElement = 
-        mouseX >= element.x && 
-        mouseX < elemRight && 
-        mouseY >= elemTop && 
-        mouseY <= elemBottom;
-      
-      // 同じparentIdを持つ要素グループのx座標の最大値（右端）を取得
-      const groupMaxWidth = parentGroupMaxWidths.get(element.parentId) || 0;
-      
-      // betweenモードの判定: 同じparentIdグループの最大幅の範囲内に限定
-      const isBetweenModeValid = 
-        mouseX >= element.x && 
-        mouseX <= groupMaxWidth && 
-        mouseY >= elemTop - OFFSET.Y && 
-        mouseY <= elemBottom + OFFSET.Y && 
-        !isInsideElement && 
-        !isOnRightSide;
-      
-      return isInsideElement || isOnRightSide || isBetweenModeValid;
+      return mouseX >= dropAreaLeft && mouseX <= dropAreaRight && 
+             mouseY >= dropAreaTop && mouseY <= dropAreaBottom;
     });
+
+    // 要素グループの最後の要素を下回る位置にマウスがある場合のための特別処理
+    if (candidates.length === 0) {
+      // すべての可視要素を親のIDでグループ化
+      const elementsByParent: { [parentId: string]: Element[] } = {};
+      
+      Object.values(elements)
+        .filter(el => el.visible && !selectedElementIds.includes(el.id))
+        .forEach(el => {
+          const parentId = el.parentId || 'root';
+          if (!elementsByParent[parentId]) {
+            elementsByParent[parentId] = [];
+          }
+          elementsByParent[parentId].push(el);
+        });
+      
+      // 各グループごとに、最も下にある要素を検出
+      for (const [parentId, groupElements] of Object.entries(elementsByParent)) {
+        if (groupElements.length === 0) continue;
+        
+        // グループ内で最も下にある要素を探す
+        const lastElement = groupElements.reduce((last, current) => {
+          return (current.y + current.height > last.y + last.height) ? current : last;
+        }, groupElements[0]);
+        
+        // マウスがこのグループの水平範囲内で、最後の要素よりも下にあるかチェック
+        const groupLeft = lastElement.x - OFFSET.X;
+        const groupRight = lastElement.x + lastElement.width + OFFSET.X;
+        const bottomThreshold = lastElement.y + lastElement.height + OFFSET.Y * 2;
+        
+        if (mouseX >= groupLeft && mouseX <= groupRight && 
+            mouseY >= lastElement.y + lastElement.height && mouseY <= bottomThreshold) {
+          
+          // 最後の要素の下部にドロップする場合
+          return {
+            element: lastElement,
+            position: 'between',
+            insertY: lastElement.y + lastElement.height + OFFSET.Y,
+            siblingInfo: { prevElement: lastElement }
+          };
+        }
+      }
+    }
 
     let closestTarget: DropTargetInfo = null;
     let minSquaredDistance = Infinity;
@@ -398,8 +410,6 @@ export const useElementDragEffect = () => {
         mouseY,
         elements
       );
-
-      debugLog('Drop position mode:', position);
       
       if (distanceSq < minSquaredDistance) {
         minSquaredDistance = distanceSq;
@@ -412,7 +422,9 @@ export const useElementDragEffect = () => {
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent<HTMLElement> | React.TouchEvent<HTMLElement>, element: Element) => {
-      if (!element.parentId) return;
+      // 要素が選択状態でない場合はドラッグを開始しない
+      if (!element.selected || !element.parentId) return;
+      
       e.stopPropagation();
 
       let nativeEvent: MouseEvent | TouchEvent;
@@ -439,7 +451,7 @@ export const useElementDragEffect = () => {
         elementOriginalPositions.current.set(el.id, { x: el.x, y: el.y });
       });
     },
-    [convertToZoomCoordinates, state.elements]
+    [convertToZoomCoordinates, state.elements, dispatch]
   );
 
   const resetElementsPosition = useCallback(() => {
@@ -460,19 +472,53 @@ export const useElementDragEffect = () => {
   }, [state.elements, dispatch]);
 
   // 要素をドロップする際の親変更を検証する関数
-  const validateParentChange = useCallback((element: Element, newParentId: string | null): boolean => {
-    // 自身の子孫要素に移動しようとしている場合は無効
-    if (newParentId && isDescendant(state.elements, element.id, newParentId)) {
-      return false;
+  const validateParentChange = useCallback((element: Element, newParentId: string | null): { isValid: boolean; errorMessage?: string } => {
+    // 新しい親IDがない場合は有効（ルート要素への移動）
+    if (newParentId === null) {
+      return { isValid: true };
     }
-    return true;
+
+    // 自分自身を親にしようとしている場合は無効
+    if (element.id === newParentId) {
+      debugLog(`無効な操作: 自分自身を親にしようとしています element=${element.id}, newParentId=${newParentId}`);
+      return {
+        isValid: false,
+        errorMessage: ToastMessages.dropSelfChild
+      };
+    }
+
+    // 自身の子孫要素に移動しようとしている場合は無効
+    if (isDescendant(state.elements, element.id, newParentId)) {
+      // 直接の子要素への移動かどうかを判定
+      const isDirectChild = state.elements[newParentId]?.parentId === element.id;
+      debugLog(`無効な操作: ${isDirectChild ? '自身の子要素' : '循環参照'} element=${element.id}, newParentId=${newParentId}`);
+      return {
+        isValid: false,
+        errorMessage: isDirectChild ? ToastMessages.dropSelfChild : ToastMessages.dropCircularReference
+      };
+    }
+
+    // 階層構造の制約チェック
+    const newParentDepth = newParentId ? state.elements[newParentId]?.depth || 0 : 0;
+    const maxAllowedDepth = 10; // 最大深さの制限値
+    if (newParentDepth >= maxAllowedDepth) {
+      debugLog(`無効な操作: 最大深さ超過 currentDepth=${newParentDepth}, max=${maxAllowedDepth}`);
+      return {
+        isValid: false,
+        errorMessage: ToastMessages.dropInvalidHierarchy
+      };
+    }
+
+    return { isValid: true };
   }, [state.elements]);
 
   // 子要素としてドロップする処理
   const processChildDrop = useCallback((target: Element, selectedElements: Element[]): boolean => {
     // 自身の子孫要素への移動チェック
-    if (selectedElements.some(el => !validateParentChange(el, target.id))) {
-      addToast(ToastMessages.dropChildElement, 'warn');
+    const invalidElement = selectedElements.find(el => !validateParentChange(el, target.id).isValid);
+    if (invalidElement) {
+      const { errorMessage } = validateParentChange(invalidElement, target.id);
+      addToast(errorMessage || ToastMessages.dropChildElement, 'warn');
       resetElementsPosition();
       return false;
     }
@@ -544,9 +590,11 @@ export const useElementDragEffect = () => {
     }
 
     // 無効な親変更をチェック
-    if (selectedElements.some(el => !validateParentChange(el, newParentId))) {
-      addToast(ToastMessages.dropChildElement, 'warn');
-      resetElementsPosition();
+    const invalidElement = selectedElements.find(el => !validateParentChange(el, newParentId).isValid);
+    if (invalidElement) {
+      const { errorMessage } = validateParentChange(invalidElement, newParentId);
+      addToast(errorMessage || ToastMessages.dropChildElement, 'warn');
+      resetElementsPosition(); // 必ず位置をリセットする
       return false;
     }
 
@@ -719,9 +767,11 @@ export const useElementDragEffect = () => {
         const { element: target, position } = currentDropTarget;
 
         // 直接自身の子孫要素かチェック
-        if (selectedElements.some(el => isDescendant(state.elements, el.id, target.id))) {
+        const invalidElement = selectedElements.find(el => !validateParentChange(el, target.id).isValid);
+        if (invalidElement) {
+          const { errorMessage } = validateParentChange(invalidElement, target.id);
+          addToast(errorMessage || ToastMessages.dropChildElement, 'warn');
           resetElementsPosition();
-          addToast(ToastMessages.dropChildElement, 'warn');
           return;
         }
 
@@ -759,7 +809,8 @@ export const useElementDragEffect = () => {
     addToast, 
     resetElementsPosition, 
     processChildDrop, 
-    processBetweenDrop
+    processBetweenDrop, 
+    validateParentChange
   ]);
 
   // ドラッグ中に実行される処理
