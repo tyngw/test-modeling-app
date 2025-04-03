@@ -535,19 +535,14 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
       
       if (dropPosition === 'child') {
         // 子要素として追加する場合
-        // betweenモードと同じx座標計算を使用（親要素からのオフセット）
-        const parentElement = currentDropTarget.parentId ? elements[currentDropTarget.parentId] : null;
+        // ドロップ後の親要素となる要素(currentDropTarget)の右端 + オフセット
+        x = currentDropTarget.x + currentDropTarget.width + OFFSET.X;
         
-        if (parentElement) {
-          // 親要素がある場合は、親要素の右側に配置
-          x = parentElement.x + parentElement.width + OFFSET.X;
-          y = dropInsertY ? dropInsertY - draggingElement.height / 2 : currentDropTarget.y + currentDropTarget.height / 2 - draggingElement.height / 2;
-        } else {
-          // 親要素がない場合（ルート要素として配置）
-          x = OFFSET.X;
-          y = dropInsertY ? dropInsertY - draggingElement.height / 2 : currentDropTarget.y + currentDropTarget.height / 2 - draggingElement.height / 2;
-        }
-      } else {
+        // Y座標の計算（parentElementは使用しない）
+        y = dropInsertY 
+          ? dropInsertY - draggingElement.height / 2 
+          : currentDropTarget.y + currentDropTarget.height / 2 - draggingElement.height / 2;
+      } else if (dropPosition === 'between') {
         // 兄弟要素として追加する場合（between）
         // 親要素を取得
         const parentElement = currentDropTarget.parentId ? elements[currentDropTarget.parentId] : null;
@@ -555,12 +550,38 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
         if (parentElement) {
           // 親要素がある場合は、親要素の右側に配置
           x = parentElement.x + parentElement.width + OFFSET.X;
-          y = dropInsertY ? dropInsertY - draggingElement.height / 2 : currentDropTarget.y + currentDropTarget.height / 2 - draggingElement.height / 2;
+          
+          // siblingInfo情報に基づいてY座標を決定
+          if (siblingInfo) {
+            const { prevElement, nextElement } = siblingInfo;
+            
+            if (nextElement && !prevElement) {
+              // 先頭要素の前にドロップする場合
+              // 先頭要素のY座標からドラッグ要素の高さを引いた位置に表示
+              y = nextElement.y - draggingElement.height;
+            } else if (prevElement && !nextElement) {
+              // 末尾要素の後にドロップする場合
+              // 末尾要素のY座標 + 高さの位置に表示
+              y = prevElement.y + prevElement.height;
+            } else if (prevElement && nextElement) {
+              // 要素間にドロップする場合
+              // 間の中央に配置（既存の計算ロジックを使用）
+              y = dropInsertY ? dropInsertY - draggingElement.height / 2 : (prevElement.y + prevElement.height + nextElement.y) / 2 - draggingElement.height / 2;
+            } else {
+              // siblingInfoはあるが、prevもnextも無い場合（通常は発生しない）
+              y = dropInsertY ? dropInsertY - draggingElement.height / 2 : currentDropTarget.y + currentDropTarget.height / 2 - draggingElement.height / 2;
+            }
+          } else {
+            // siblingInfo情報がない場合は既存の計算方法を使用
+            y = dropInsertY ? dropInsertY - draggingElement.height / 2 : currentDropTarget.y + currentDropTarget.height / 2 - draggingElement.height / 2;
+          }
         } else {
           // 親要素がない場合（ルート要素として配置）
           x = OFFSET.X;
           y = dropInsertY ? dropInsertY - draggingElement.height / 2 : currentDropTarget.y + currentDropTarget.height / 2 - draggingElement.height / 2;
         }
+      } else {
+        return null;
       }
 
       // 背景色の設定
