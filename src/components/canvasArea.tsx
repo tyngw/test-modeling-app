@@ -22,17 +22,86 @@ import {
     EQUILATERAL_MARKER,
     OFFSET,
 } from '../constants/elementSettings';
-import { Element as CanvasElement } from '../types';
+import { Element as CanvasElement, MarkerType } from '../types';
 import { isDescendant } from '../utils/elementHelpers';
 import { useToast } from '../context/toastContext';
 import { ToastMessages } from '../constants/toastMessages';
 import { getConnectionPathColor, getConnectionPathStroke, getCanvasBackgroundColor } from '../utils/localStorageHelpers';
 import { getGlobalCutElements } from '../utils/clipboardHelpers';
+import { MARKER_CONFIGS, getMarkerUrlByType } from '../constants/markerConfigs';
 
 interface CanvasAreaProps {
     isHelpOpen: boolean;
     toggleHelp: () => void;
 }
+
+// マーカー生成用のヘルパー関数
+const createMarkerElements = (
+  connectionPathColor: string,
+  connectionPathStroke: number
+) => {
+  // SVGマーカー要素を生成する
+  return Object.values(MARKER_CONFIGS).map(config => {
+    const { id, width, height, isFilled, shape, pointsOrAttributes } = config;
+    const fillColor = isFilled ? connectionPathColor : 'none';
+
+    // マーカー要素の共通属性
+    const markerProps = {
+      id,
+      markerWidth: width,
+      markerHeight: height,
+      refX: width,
+      refY: height / 2,
+      orient: 'auto',
+      markerUnits: 'userSpaceOnUse',
+      viewBox: `0 0 ${width} ${height}`,
+      strokeWidth: connectionPathStroke,
+      fill: fillColor,
+      stroke: connectionPathColor
+    };
+
+    let shapeElement;
+    // シェイプ要素の生成
+    if (shape === 'polygon') {
+      shapeElement = (
+        <polygon
+          points={pointsOrAttributes as string}
+          fill={fillColor}
+          stroke={connectionPathColor}
+        />
+      );
+    } else if (shape === 'circle') {
+      const attrs = pointsOrAttributes as Record<string, number>;
+      shapeElement = (
+        <circle
+          cx={attrs.cx}
+          cy={attrs.cy}
+          r={attrs.r}
+          fill={fillColor}
+          stroke={connectionPathColor}
+        />
+      );
+    } else if (shape === 'rect') {
+      const attrs = pointsOrAttributes as Record<string, number>;
+      shapeElement = (
+        <rect
+          x={attrs.x}
+          y={attrs.y}
+          width={attrs.width}
+          height={attrs.height}
+          fill={fillColor}
+          stroke={connectionPathColor}
+        />
+      );
+    }
+
+    return (
+      <marker key={id} {...markerProps}>
+        {shapeElement}
+      </marker>
+    );
+  });
+};
 
 const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
     const svgRef = useRef<SVGSVGElement>(null);
@@ -261,33 +330,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
             `${element.x},${element.y + totalHeight / 2}`
         ].join(' ');
 
-        let markerStart = undefined;
-        switch (parentElement.connectionPathType) {
-            case MARKER_TYPES.ARROW:
-                markerStart = 'url(#arrowhead)';
-                break;
-            case MARKER_TYPES.FILLED_ARROW:
-                markerStart = 'url(#filledarrowhead)';
-                break;
-            case MARKER_TYPES.CIRCLE:
-                markerStart = 'url(#circlemarker)';
-                break;
-            case MARKER_TYPES.FILLED_CIRCLE:
-                markerStart = 'url(#filledcirclemarker)';
-                break;
-            case MARKER_TYPES.SQUARE:
-                markerStart = 'url(#squaremarker)';
-                break;
-            case MARKER_TYPES.FILLED_SQUARE:
-                markerStart = 'url(#filledsquaremarker)';
-                break;
-            case MARKER_TYPES.DIAMOND:
-                markerStart = 'url(#diamondmarker)';
-                break;
-            case MARKER_TYPES.FILLED_DIAMOND:
-                markerStart = 'url(#filleddiamondmarker)';
-                break;
-        }
+        const markerStart = getMarkerUrlByType(parentElement.connectionPathType);
 
         return (
             <g key={`connection-${element.id}-${element.parentId}`}>
@@ -650,156 +693,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                         className="svg-element"
                     >
                         <defs>
-                            <marker
-                                id="arrowhead"
-                                markerWidth={MARKER.WIDTH}
-                                markerHeight={MARKER.HEIGHT}
-                                refX={MARKER.WIDTH}
-                                refY={MARKER.HEIGHT / 2}
-                                orient="auto"
-                                fill="none"
-                                stroke={connectionPathColor}
-                                markerUnits="userSpaceOnUse"
-                                viewBox={`0 0 ${MARKER.WIDTH} ${MARKER.HEIGHT}`}
-                                strokeWidth={connectionPathStroke}
-                            >
-                                <polygon
-                                    points={`${MARKER.WIDTH} 0, ${MARKER.WIDTH} ${MARKER.HEIGHT}, 0 ${MARKER.HEIGHT / 2}`}
-                                    fill="none"
-                                    stroke={connectionPathColor}
-                                />
-                            </marker>
-                            <marker
-                                id="filledarrowhead"
-                                markerWidth={MARKER.WIDTH}
-                                markerHeight={MARKER.HEIGHT}
-                                refX={MARKER.WIDTH}
-                                refY={MARKER.HEIGHT / 2}
-                                orient="auto"
-                                fill={connectionPathColor}
-                                stroke={connectionPathColor}
-                                markerUnits="userSpaceOnUse"
-                                viewBox={`0 0 ${MARKER.WIDTH} ${MARKER.HEIGHT}`}
-                                strokeWidth={connectionPathStroke}
-                            >
-                                <polygon
-                                    points={`${MARKER.WIDTH} 0, ${MARKER.WIDTH} ${MARKER.HEIGHT}, 0 ${MARKER.HEIGHT / 2}`}
-                                    fill={connectionPathColor}
-                                    stroke={connectionPathColor}
-                                />
-                            </marker>
-                            <marker
-                                id="circlemarker"
-                                markerWidth={EQUILATERAL_MARKER.SIZE}
-                                markerHeight={EQUILATERAL_MARKER.SIZE}
-                                refX={EQUILATERAL_MARKER.SIZE}
-                                refY={EQUILATERAL_MARKER.SIZE / 2}
-                                orient="auto"
-                                markerUnits="userSpaceOnUse"
-                                viewBox={`0 0 ${EQUILATERAL_MARKER.SIZE} ${EQUILATERAL_MARKER.SIZE}`}
-                                strokeWidth={connectionPathStroke}
-                            >
-                                <circle
-                                    cx={EQUILATERAL_MARKER.SIZE / 2}
-                                    cy={EQUILATERAL_MARKER.SIZE / 2}
-                                    r={EQUILATERAL_MARKER.SIZE / 2 - 1}
-                                    fill="none"
-                                    stroke={connectionPathColor}
-                                />
-                            </marker>
-                            <marker
-                                id="filledcirclemarker"
-                                markerWidth={EQUILATERAL_MARKER.SIZE}
-                                markerHeight={EQUILATERAL_MARKER.SIZE}
-                                refX={EQUILATERAL_MARKER.SIZE}
-                                refY={EQUILATERAL_MARKER.SIZE / 2}
-                                orient="auto"
-                                markerUnits="userSpaceOnUse"
-                                viewBox={`0 0 ${EQUILATERAL_MARKER.SIZE} ${EQUILATERAL_MARKER.SIZE}`}
-                                strokeWidth={connectionPathStroke}
-                            >
-                                <circle
-                                    cx={EQUILATERAL_MARKER.SIZE / 2}
-                                    cy={EQUILATERAL_MARKER.SIZE / 2}
-                                    r={EQUILATERAL_MARKER.SIZE / 2 - 1}
-                                    fill={connectionPathColor}
-                                    stroke={connectionPathColor}
-                                />
-                            </marker>
-                            <marker
-                                id="squaremarker"
-                                markerWidth={EQUILATERAL_MARKER.SIZE}
-                                markerHeight={EQUILATERAL_MARKER.SIZE}
-                                refX={EQUILATERAL_MARKER.SIZE}
-                                refY={EQUILATERAL_MARKER.SIZE / 2}
-                                orient="auto"
-                                markerUnits="userSpaceOnUse"
-                                viewBox={`0 0 ${EQUILATERAL_MARKER.SIZE} ${EQUILATERAL_MARKER.SIZE}`}
-                                strokeWidth={connectionPathStroke}
-                            >
-                                <rect
-                                    x="1"
-                                    y="1"
-                                    width={EQUILATERAL_MARKER.SIZE - 2}
-                                    height={EQUILATERAL_MARKER.SIZE - 2}
-                                    fill="none"
-                                    stroke={connectionPathColor}
-                                />
-                            </marker>
-                            <marker
-                                id="filledsquaremarker"
-                                markerWidth={EQUILATERAL_MARKER.SIZE}
-                                markerHeight={EQUILATERAL_MARKER.SIZE}
-                                refX={EQUILATERAL_MARKER.SIZE}
-                                refY={EQUILATERAL_MARKER.SIZE / 2}
-                                orient="auto"
-                                markerUnits="userSpaceOnUse"
-                                viewBox={`0 0 ${EQUILATERAL_MARKER.SIZE} ${EQUILATERAL_MARKER.SIZE}`}
-                                strokeWidth={connectionPathStroke}
-                            >
-                                <rect
-                                    x="1"
-                                    y="1"
-                                    width={EQUILATERAL_MARKER.SIZE - 2}
-                                    height={EQUILATERAL_MARKER.SIZE - 2}
-                                    fill={connectionPathColor}
-                                    stroke={connectionPathColor}
-                                />
-                            </marker>
-                            <marker
-                                id="diamondmarker"
-                                markerWidth={MARKER.WIDTH}
-                                markerHeight={MARKER.HEIGHT}
-                                refX={MARKER.WIDTH}
-                                refY={MARKER.HEIGHT / 2}
-                                orient="auto"
-                                markerUnits="userSpaceOnUse"
-                                viewBox={`0 0 ${MARKER.WIDTH} ${MARKER.HEIGHT}`}
-                                strokeWidth={connectionPathStroke}
-                            >
-                                <polygon
-                                    points={`${MARKER.WIDTH / 2},1 ${MARKER.WIDTH - 1},${MARKER.HEIGHT / 2} ${MARKER.WIDTH / 2},${MARKER.HEIGHT - 1} 1,${MARKER.HEIGHT / 2}`}
-                                    fill="none"
-                                    stroke={connectionPathColor}
-                                />
-                            </marker>
-                            <marker
-                                id="filleddiamondmarker"
-                                markerWidth={MARKER.WIDTH}
-                                markerHeight={MARKER.HEIGHT}
-                                refX={MARKER.WIDTH}
-                                refY={MARKER.HEIGHT / 2}
-                                orient="auto"
-                                markerUnits="userSpaceOnUse"
-                                viewBox={`0 0 ${MARKER.WIDTH} ${MARKER.HEIGHT}`}
-                                strokeWidth={connectionPathStroke}
-                            >
-                                <polygon
-                                    points={`${MARKER.WIDTH / 2},1 ${MARKER.WIDTH - 1},${MARKER.HEIGHT / 2} ${MARKER.WIDTH / 2},${MARKER.HEIGHT - 1} 1,${MARKER.HEIGHT / 2}`}
-                                    fill={connectionPathColor}
-                                    stroke={connectionPathColor}
-                                />
-                            </marker>
+                            {createMarkerElements(connectionPathColor, connectionPathStroke)}
                         </defs>
 
                         {renderElements()}

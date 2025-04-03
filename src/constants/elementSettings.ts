@@ -1,4 +1,6 @@
 // src/constants/elementSettings.ts
+import { MarkerType } from '../types';
+
 export const DEFAULT_ZOOM_RATIO = 0.8;
 export const NUMBER_OF_SECTIONS = 3;
 export const DEFAULT_POSITION = {
@@ -64,7 +66,7 @@ export const EQUILATERAL_MARKER = {
     OFFSET: 10,
 };
 
-export const MARKER_TYPES = {
+export const MARKER_TYPES: Record<string, MarkerType> = {
     NONE: 'none',
     ARROW: 'arrow',
     CIRCLE: 'circle',
