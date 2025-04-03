@@ -765,14 +765,68 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                                         ? state.elements[currentDropTarget.parentId]
                                         : null;
 
-                                const draggingPos = state.elements[draggingElement.id];
+                                // Calculate preview position instead of using the dragging element's current position
+                                let previewX, previewY;
+                                if (dropPosition === 'child') {
+                                    // Child mode preview position
+                                    previewX = currentDropTarget.x + currentDropTarget.width + OFFSET.X;
+                                    previewY = dropInsertY 
+                                        ? dropInsertY - draggingElement.height / 2 
+                                        : currentDropTarget.y + currentDropTarget.height / 2 - draggingElement.height / 2;
+                                } else if (dropPosition === 'between') {
+                                    // Between mode preview position
+                                    const parentElement = currentDropTarget.parentId ? elements[currentDropTarget.parentId] : null;
+                                    
+                                    if (parentElement) {
+                                        previewX = parentElement.x + parentElement.width + OFFSET.X;
+                                        
+                                        if (siblingInfo) {
+                                            const { prevElement, nextElement } = siblingInfo;
+                                            
+                                            if (nextElement && !prevElement) {
+                                                // Before first element
+                                                previewY = nextElement.y - draggingElement.height;
+                                            } else if (prevElement && !nextElement) {
+                                                // After last element
+                                                previewY = prevElement.y + prevElement.height;
+                                            } else if (prevElement && nextElement) {
+                                                // Between two elements
+                                                previewY = dropInsertY ? dropInsertY - draggingElement.height / 2 : 
+                                                    (prevElement.y + prevElement.height + nextElement.y) / 2 - draggingElement.height / 2;
+                                            } else {
+                                                // Fallback
+                                                previewY = dropInsertY ? dropInsertY - draggingElement.height / 2 : 
+                                                    currentDropTarget.y + currentDropTarget.height / 2 - draggingElement.height / 2;
+                                            }
+                                        } else {
+                                            // Fallback when no sibling info
+                                            previewY = dropInsertY ? dropInsertY - draggingElement.height / 2 : 
+                                                currentDropTarget.y + currentDropTarget.height / 2 - draggingElement.height / 2;
+                                        }
+                                    } else {
+                                        // Root level
+                                        previewX = OFFSET.X;
+                                        previewY = dropInsertY ? dropInsertY - draggingElement.height / 2 : 
+                                            currentDropTarget.y + currentDropTarget.height / 2 - draggingElement.height / 2;
+                                    }
+                                } else {
+                                    // Fallback to dragging element's current position
+                                    const draggingPos = state.elements[draggingElement.id];
+                                    previewX = draggingPos.x;
+                                    previewY = draggingPos.y;
+                                }
 
-                                return newParent && draggingPos && renderConnectionPath(
+                                return newParent && renderConnectionPath(
                                     newParent,
-                                    draggingPos,
+                                    // Create a temporary object with preview position instead of using the actual dragging element
+                                    {
+                                        ...draggingElement,
+                                        x: previewX,
+                                        y: previewY
+                                    },
                                     {
                                         parent: { x: newParent.x, y: newParent.y },
-                                        element: { x: draggingPos.x, y: draggingPos.y }
+                                        element: { x: previewX, y: previewY }
                                     },
                                     CONNECTION_PATH_STYLE.DRAGGING_COLOR,
                                     CONNECTION_PATH_STYLE.STROKE
