@@ -163,14 +163,18 @@ export const deleteElementRecursive = (elements: ElementsMap, deleteElement: Ele
     return updatedElements;
 };
 
-export const isDescendant = (elements: ElementsMap, nodeId: string, targetParentId: string): boolean => {
-    let currentId: string | null = targetParentId;
+export const isDescendant = (elements: ElementsMap, ancestorId: string, descendantId: string): boolean => {
+    // ある要素(ancestorId)が別の要素(descendantId)の祖先かどうかをチェック
+    // つまり、descendantIdからparentIdを辿っていって、ancestorIdに到達するかどうか
+    let currentId: string | null = descendantId;
+    
     while (currentId !== null) {
-        if (currentId === nodeId) {
+        if (currentId === ancestorId) {
             return true;
         }
         currentId = elements[currentId]?.parentId ?? null;
     }
+    
     return false;
 };
 
