@@ -1,4 +1,17 @@
 // src/types.ts
+export type MarkerType = 'arrow' | 'filled_arrow' | 'circle' | 'filled_circle' | 'square' | 'filled_square' | 'diamond' | 'filled_diamond' | 'none';
+
+export type MarkerConfig = {
+    id: string;
+    width: number;
+    height: number;
+    isFilled: boolean;
+    shape: 'polygon' | 'circle' | 'rect';
+    pointsOrAttributes: string | Record<string, number | string>;
+};
+
+export type MarkerConfigMap = Record<string, MarkerConfig>;
+
 export interface Element {
   id: string;
   texts: string[];
@@ -15,7 +28,7 @@ export interface Element {
   selected: boolean;
   visible: boolean;
   tentative: boolean;
-  connectionPathType: 'arrow' | 'circle' | 'square' | 'diamond' | 'none' | 'filled_arrow' | 'filled_circle' | 'filled_square' | 'filled_diamond';
+  connectionPathType: MarkerType;
 }
   
 export interface CanvasState {
@@ -37,4 +50,4 @@ export type CanvasAction =
     }}
   | { type: 'UNDO' }
   | { type: 'REDO' }
-  | { type: 'UPDATE_CONNECTION_PATH_TYPE'; payload: { id: string; connectionPathType: 'arrow' | 'circle' | 'square' | 'diamond' | 'none' | 'filled_arrow' | 'filled_circle' | 'filled_square' | 'filled_diamond' } }
+  | { type: 'UPDATE_CONNECTION_PATH_TYPE'; payload: { id: string; connectionPathType: MarkerType } }

@@ -2,6 +2,9 @@
 export const ToastMessages = {
     invalidDrop: '無効なドロップ操作です',
     dropChildElement: '子要素にドロップすることはできません',
+    dropSelfChild: '自身の子要素に移動することはできません',
+    dropCircularReference: '循環参照となるため移動できません',
+    dropInvalidHierarchy: '要素の階層構造が不正となるため移動できません',
     selectParentElement: '子要素を追加する要素を選択してください',
     noSelect: '要素を選択してから実行してください',
     dragError: 'ドラッグ操作中にエラーが発生しました',

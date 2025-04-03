@@ -22,17 +22,86 @@ import {
     EQUILATERAL_MARKER,
     OFFSET,
 } from '../constants/elementSettings';
-import { Element as CanvasElement } from '../types';
+import { Element as CanvasElement, MarkerType } from '../types';
 import { isDescendant } from '../utils/elementHelpers';
 import { useToast } from '../context/toastContext';
 import { ToastMessages } from '../constants/toastMessages';
 import { getConnectionPathColor, getConnectionPathStroke, getCanvasBackgroundColor } from '../utils/localStorageHelpers';
 import { getGlobalCutElements } from '../utils/clipboardHelpers';
+import { MARKER_CONFIGS, getMarkerUrlByType } from '../constants/markerConfigs';
 
 interface CanvasAreaProps {
     isHelpOpen: boolean;
     toggleHelp: () => void;
 }
+
+// マーカー生成用のヘルパー関数
+const createMarkerElements = (
+  connectionPathColor: string,
+  connectionPathStroke: number
+) => {
+  // SVGマーカー要素を生成する
+  return Object.values(MARKER_CONFIGS).map(config => {
+    const { id, width, height, isFilled, shape, pointsOrAttributes } = config;
+    const fillColor = isFilled ? connectionPathColor : 'none';
+
+    // マーカー要素の共通属性
+    const markerProps = {
+      id,
+      markerWidth: width,
+      markerHeight: height,
+      refX: width,
+      refY: height / 2,
+      orient: 'auto',
+      markerUnits: 'userSpaceOnUse',
+      viewBox: `0 0 ${width} ${height}`,
+      strokeWidth: connectionPathStroke,
+      fill: fillColor,
+      stroke: connectionPathColor
+    };
+
+    let shapeElement;
+    // シェイプ要素の生成
+    if (shape === 'polygon') {
+      shapeElement = (
+        <polygon
+          points={pointsOrAttributes as string}
+          fill={fillColor}
+          stroke={connectionPathColor}
+        />
+      );
+    } else if (shape === 'circle') {
+      const attrs = pointsOrAttributes as Record<string, number>;
+      shapeElement = (
+        <circle
+          cx={attrs.cx}
+          cy={attrs.cy}
+          r={attrs.r}
+          fill={fillColor}
+          stroke={connectionPathColor}
+        />
+      );
+    } else if (shape === 'rect') {
+      const attrs = pointsOrAttributes as Record<string, number>;
+      shapeElement = (
+        <rect
+          x={attrs.x}
+          y={attrs.y}
+          width={attrs.width}
+          height={attrs.height}
+          fill={fillColor}
+          stroke={connectionPathColor}
+        />
+      );
+    }
+
+    return (
+      <marker key={id} {...markerProps}>
+        {shapeElement}
+      </marker>
+    );
+  });
+};
 
 const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
     const svgRef = useRef<SVGSVGElement>(null);
@@ -89,7 +158,9 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
         handleMouseUp,
         currentDropTarget,
         dropPosition,
-        draggingElement
+        draggingElement,
+        dropInsertY,
+        siblingInfo
     } = useElementDragEffect();
 
     const handleKeyDown = useCallback(async (e: React.KeyboardEvent) => {
@@ -153,16 +224,40 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
             const touch = e.touches[0];
             const target = document.elementFromPoint(touch.clientX, touch.clientY);
 
-            if (target instanceof SVGRectElement) {
-                const syntheticEvent = new MouseEvent('mousedown', {
-                    clientX: touch.clientX,
-                    clientY: touch.clientY,
-                    bubbles: true
-                });
-                target.dispatchEvent(syntheticEvent);
+            // SVG要素からの相対位置を使って要素を特定
+            if (target && (target instanceof SVGRectElement || target instanceof SVGGElement)) {
+                // 要素の親要素からcanvasArea内の要素IDを探す
+                let currentElement = target;
+                let elementId: string | null = null;
+                
+                // 親要素を遡って要素のIDを探す
+                while (currentElement && !elementId) {
+                    if (currentElement.dataset && currentElement.dataset.elementId) {
+                        elementId = currentElement.dataset.elementId;
+                        break;
+                    }
+                    currentElement = currentElement.parentElement as any;
+                }
+                
+                if (elementId) {
+                    // IDが見つかった場合、その要素のhandleMouseDownを直接呼び出す
+                    const element = state.elements[elementId];
+                    if (element) {
+                        // 合成イベントを作成する代わりに直接ハンドラーを呼び出す
+                        const syntheticTouchEvent = {
+                            nativeEvent: e.nativeEvent,
+                            stopPropagation: () => {},
+                            preventDefault: () => {},
+                            clientX: touch.clientX,
+                            clientY: touch.clientY
+                        } as unknown as React.TouchEvent<HTMLElement>;
+                        
+                        handleMouseDown(syntheticTouchEvent, element);
+                    }
+                }
             }
         }
-    }, []);
+    }, [state.elements, handleMouseDown]);
 
     const handleTouchMove = useCallback((e: React.TouchEvent<SVGSVGElement>) => {
         if (isPinching && e.touches.length === 2) {
@@ -199,13 +294,55 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
         setInitialScroll({ x: 0, y: 0 });
     }, []);
 
+    // マーカー設定ボタンを描画する共通関数
+    const renderMarkerButton = useCallback((
+        element: CanvasElement,
+        absolutePosition: { x: number, y: number },
+    ) => {
+        // 子要素があるかどうかをチェック
+        const hasChildren = Object.values(elements).some(el => el.parentId === element.id && el.visible);
+        
+        // 子要素がない場合はボタンを表示しない
+        if (!hasChildren) return null;
+        
+        const totalHeight = element.height;
+        
+        return (
+            <g key={`marker-button-${element.id}`}>
+                {(hover === element.id || showMenuForElement === element.id) && (
+                    <circle
+                        cx={absolutePosition.x + element.width + 10}
+                        cy={absolutePosition.y + totalHeight / 2}
+                        r={10}
+                        fill="#bfbfbf"
+                        opacity={0.5}
+                    />
+                )}
+                <circle
+                    cx={absolutePosition.x + element.width + 10}
+                    cy={absolutePosition.y + totalHeight / 2}
+                    r={10}
+                    fill="transparent"
+                    onMouseEnter={() => setHover(element.id)}
+                    onMouseLeave={() => setHover(null)}
+                    onClick={() => setShowMenuForElement(element.id)}
+                />
+            </g>
+        );
+    }, [hover, showMenuForElement, elements]);
+
     const renderConnectionPath = (
         parentElement: CanvasElement | undefined,
         element: CanvasElement,
+        absolutePositions: { 
+            parent: { x: number, y: number }, 
+            element: { x: number, y: number } 
+        },
         strokeColor: string = CONNECTION_PATH_STYLE.COLOR,
         strokeWidth: number = CONNECTION_PATH_STYLE.STROKE,
     ) => {
         if (!parentElement) return null;
+        
         let offset = 0;
         switch (parentElement.connectionPathType) {
             case MARKER_TYPES.ARROW:
@@ -227,55 +364,23 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
             default:
                 offset = 0;
         }
+        
+        const parentPos = absolutePositions.parent;
+        const elementPos = absolutePositions.element;
         const totalHeight = element.height;
+        
         const pathCommands = [
-            `M ${parentElement.x + parentElement.width + offset},${parentElement.y + parentElement.height / 2}`,
-            `C ${parentElement.x + parentElement.width + CURVE_CONTROL_OFFSET},${parentElement.y + parentElement.height / 2}`,
-            `${element.x - CURVE_CONTROL_OFFSET},${element.y + totalHeight / 2}`,
-            `${element.x},${element.y + totalHeight / 2}`
+            `M ${parentPos.x + parentElement.width + offset},${parentPos.y + parentElement.height / 2}`,
+            `C ${parentPos.x + parentElement.width + CURVE_CONTROL_OFFSET},${parentPos.y + parentElement.height / 2}`,
+            `${elementPos.x - CURVE_CONTROL_OFFSET},${elementPos.y + totalHeight / 2}`,
+            `${elementPos.x},${elementPos.y + totalHeight / 2}`
         ].join(' ');
 
-        let markerStart = undefined;
-        switch (parentElement.connectionPathType) {
-            case MARKER_TYPES.ARROW:
-                markerStart = 'url(#arrowhead)';
-                break;
-            case MARKER_TYPES.FILLED_ARROW:
-                markerStart = 'url(#filledarrowhead)';
-                break;
-            case MARKER_TYPES.CIRCLE:
-                markerStart = 'url(#circlemarker)';
-                break;
-            case MARKER_TYPES.FILLED_CIRCLE:
-                markerStart = 'url(#filledcirclemarker)';
-                break;
-            case MARKER_TYPES.SQUARE:
-                markerStart = 'url(#squaremarker)';
-                break;
-            case MARKER_TYPES.FILLED_SQUARE:
-                markerStart = 'url(#filledsquaremarker)';
-                break;
-            case MARKER_TYPES.DIAMOND:
-                markerStart = 'url(#diamondmarker)';
-                break;
-            case MARKER_TYPES.FILLED_DIAMOND:
-                markerStart = 'url(#filleddiamondmarker)';
-                break;
-        }
+        const markerStart = getMarkerUrlByType(parentElement.connectionPathType);
 
         return (
             <g key={`connection-${element.id}-${element.parentId}`}>
-                {(hover === element.id || showMenuForElement === element.id) && (
-                    <circle
-                        cx={element.x + element.width + 10}
-                        cy={element.y + totalHeight / 2}
-                        r={10}
-                        fill="#bfbfbf"
-                        opacity={0.5}
-                    />
-                )}
                 <path
-                    key={`connection-${element.id}-${element.parentId}`}
                     d={pathCommands}
                     stroke={strokeColor}
                     strokeWidth={strokeWidth}
@@ -283,16 +388,6 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                     markerStart={markerStart}
                     style={{ pointerEvents: 'none' }}
                 />
-                <circle
-                    cx={element.x + element.width + 10}
-                    cy={element.y + totalHeight / 2}
-                    r={10}
-                    fill="transparent"
-                    onMouseEnter={() => setHover(element.id)}
-                    onMouseLeave={() => setHover(null)}
-                    onClick={() => setShowMenuForElement(element.id)}
-                />
-
             </g>
         );
     };
@@ -302,6 +397,10 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
         const element = elements[showMenuForElement];
         if (!element) return null;
         const totalHeight = element.height;
+
+        // ポップアップメニューの表示位置を計算
+        const popupX = element.x + element.width + 20;
+        const popupY = element.y + totalHeight / 2 - 25;
 
         const markerOptions = [
             { id: 'arrow', label: 'Arrow' },
@@ -317,8 +416,8 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
 
         return (
             <foreignObject
-                x={element.x + element.width + 20}
-                y={element.y + totalHeight / 2 - 25}
+                x={popupX}
+                y={popupY}
                 width={150}
                 height={270}
                 className="popup-menu"
@@ -382,7 +481,9 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
             if (isHovered) {
                 newState[elementId] = true;
             } else {
-                delete newState[elementId];
+                if (Object.prototype.hasOwnProperty.call(newState, elementId)) {
+                    delete newState[elementId];
+                }
             }
 
             return newState;
@@ -423,7 +524,10 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                             handleMouseDown={handleMouseDown as unknown as (e: React.MouseEvent<SVGElement>, element: CanvasElement) => void}
                             handleMouseUp={handleMouseUp}
                             onHoverChange={handleElementHover}
+                            dropInsertY={dropInsertY}
+                            siblingInfo={siblingInfo}
                         />
+                        {renderMarkerButton(element, { x: element.x, y: element.y })}
                     </React.Fragment>
                 ));
             }
@@ -469,6 +573,8 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                                 }}
                                 handleMouseUp={handleMouseUp}
                                 onHoverChange={handleElementHover}
+                                dropInsertY={dropInsertY}
+                                siblingInfo={siblingInfo}
                             />
                         );
                     })}
@@ -488,10 +594,92 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                         key={`debug-${elementId}`}
                         element={element}
                         isHovered={true}
+                        currentDropTarget={currentDropTarget}
+                        dropPosition={dropPosition}
                     />
                 );
             })
             .filter(Boolean);
+    };
+
+    // ドラッグドロップの視覚的なプレビューを描画
+    const renderDropPreview = () => {
+      if (!draggingElement || !currentDropTarget) return null;
+
+      // ドロップポジションに基づいて座標を計算
+      let x, y;
+      
+      if (dropPosition === 'child') {
+        // 子要素として追加する場合
+        // ドロップ後の親要素となる要素(currentDropTarget)の右端 + オフセット
+        x = currentDropTarget.x + currentDropTarget.width + OFFSET.X;
+        
+        // Y座標の計算（parentElementは使用しない）
+        y = dropInsertY 
+          ? dropInsertY - draggingElement.height / 2 
+          : currentDropTarget.y + currentDropTarget.height / 2 - draggingElement.height / 2;
+      } else if (dropPosition === 'between') {
+        // 兄弟要素として追加する場合（between）
+        // 親要素を取得
+        const parentElement = currentDropTarget.parentId ? elements[currentDropTarget.parentId] : null;
+        
+        if (parentElement) {
+          // 親要素がある場合は、親要素の右側に配置
+          x = parentElement.x + parentElement.width + OFFSET.X;
+          
+          // siblingInfo情報に基づいてY座標を決定
+          if (siblingInfo) {
+            const { prevElement, nextElement } = siblingInfo;
+            
+            if (nextElement && !prevElement) {
+              // 先頭要素の前にドロップする場合
+              // 先頭要素のY座標からドラッグ要素の高さを引いた位置に表示
+              y = nextElement.y - draggingElement.height;
+            } else if (prevElement && !nextElement) {
+              // 末尾要素の後にドロップする場合
+              // 末尾要素のY座標 + 高さの位置に表示
+              y = prevElement.y + prevElement.height;
+            } else if (prevElement && nextElement) {
+              // 要素間にドロップする場合
+              // 間の中央に配置（既存の計算ロジックを使用）
+              y = dropInsertY ? dropInsertY - draggingElement.height / 2 : (prevElement.y + prevElement.height + nextElement.y) / 2 - draggingElement.height / 2;
+            } else {
+              // siblingInfoはあるが、prevもnextも無い場合（通常は発生しない）
+              y = dropInsertY ? dropInsertY - draggingElement.height / 2 : currentDropTarget.y + currentDropTarget.height / 2 - draggingElement.height / 2;
+            }
+          } else {
+            // siblingInfo情報がない場合は既存の計算方法を使用
+            y = dropInsertY ? dropInsertY - draggingElement.height / 2 : currentDropTarget.y + currentDropTarget.height / 2 - draggingElement.height / 2;
+          }
+        } else {
+          // 親要素がない場合（ルート要素として配置）
+          x = OFFSET.X;
+          y = dropInsertY ? dropInsertY - draggingElement.height / 2 : currentDropTarget.y + currentDropTarget.height / 2 - draggingElement.height / 2;
+        }
+      } else {
+        return null;
+      }
+
+      // 背景色の設定
+      let bgColor = dropPosition === 'child' ? 
+        'rgba(103, 208, 113, 0.3)' :  // childモードの場合: 緑色
+        'rgba(157, 172, 244, 0.3)';   // betweenモードの場合: 青色
+      
+      return (
+        <rect
+          x={x}
+          y={y}
+          width={draggingElement.width}
+          height={draggingElement.height}
+          fill={bgColor}
+          stroke="#555"
+          strokeDasharray="2,2"
+          strokeWidth={1}
+          rx={4}
+          ry={4}
+          className="drop-preview"
+        />
+      );
     };
 
     return (
@@ -536,160 +724,12 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                         className="svg-element"
                     >
                         <defs>
-                            <marker
-                                id="arrowhead"
-                                markerWidth={MARKER.WIDTH}
-                                markerHeight={MARKER.HEIGHT}
-                                refX={MARKER.WIDTH}
-                                refY={MARKER.HEIGHT / 2}
-                                orient="auto"
-                                fill="none"
-                                stroke={connectionPathColor}
-                                markerUnits="userSpaceOnUse"
-                                viewBox={`0 0 ${MARKER.WIDTH} ${MARKER.HEIGHT}`}
-                                strokeWidth={connectionPathStroke}
-                            >
-                                <polygon
-                                    points={`${MARKER.WIDTH} 0, ${MARKER.WIDTH} ${MARKER.HEIGHT}, 0 ${MARKER.HEIGHT / 2}`}
-                                    fill="none"
-                                    stroke={connectionPathColor}
-                                />
-                            </marker>
-                            <marker
-                                id="filledarrowhead"
-                                markerWidth={MARKER.WIDTH}
-                                markerHeight={MARKER.HEIGHT}
-                                refX={MARKER.WIDTH}
-                                refY={MARKER.HEIGHT / 2}
-                                orient="auto"
-                                fill={connectionPathColor}
-                                stroke={connectionPathColor}
-                                markerUnits="userSpaceOnUse"
-                                viewBox={`0 0 ${MARKER.WIDTH} ${MARKER.HEIGHT}`}
-                                strokeWidth={connectionPathStroke}
-                            >
-                                <polygon
-                                    points={`${MARKER.WIDTH} 0, ${MARKER.WIDTH} ${MARKER.HEIGHT}, 0 ${MARKER.HEIGHT / 2}`}
-                                    fill={connectionPathColor}
-                                    stroke={connectionPathColor}
-                                />
-                            </marker>
-                            <marker
-                                id="circlemarker"
-                                markerWidth={EQUILATERAL_MARKER.SIZE}
-                                markerHeight={EQUILATERAL_MARKER.SIZE}
-                                refX={EQUILATERAL_MARKER.SIZE}
-                                refY={EQUILATERAL_MARKER.SIZE / 2}
-                                orient="auto"
-                                markerUnits="userSpaceOnUse"
-                                viewBox={`0 0 ${EQUILATERAL_MARKER.SIZE} ${EQUILATERAL_MARKER.SIZE}`}
-                                strokeWidth={connectionPathStroke}
-                            >
-                                <circle
-                                    cx={EQUILATERAL_MARKER.SIZE / 2}
-                                    cy={EQUILATERAL_MARKER.SIZE / 2}
-                                    r={EQUILATERAL_MARKER.SIZE / 2 - 1}
-                                    fill="none"
-                                    stroke={connectionPathColor}
-                                />
-                            </marker>
-                            <marker
-                                id="filledcirclemarker"
-                                markerWidth={EQUILATERAL_MARKER.SIZE}
-                                markerHeight={EQUILATERAL_MARKER.SIZE}
-                                refX={EQUILATERAL_MARKER.SIZE}
-                                refY={EQUILATERAL_MARKER.SIZE / 2}
-                                orient="auto"
-                                markerUnits="userSpaceOnUse"
-                                viewBox={`0 0 ${EQUILATERAL_MARKER.SIZE} ${EQUILATERAL_MARKER.SIZE}`}
-                                strokeWidth={connectionPathStroke}
-                            >
-                                <circle
-                                    cx={EQUILATERAL_MARKER.SIZE / 2}
-                                    cy={EQUILATERAL_MARKER.SIZE / 2}
-                                    r={EQUILATERAL_MARKER.SIZE / 2 - 1}
-                                    fill={connectionPathColor}
-                                    stroke={connectionPathColor}
-                                />
-                            </marker>
-                            <marker
-                                id="squaremarker"
-                                markerWidth={EQUILATERAL_MARKER.SIZE}
-                                markerHeight={EQUILATERAL_MARKER.SIZE}
-                                refX={EQUILATERAL_MARKER.SIZE}
-                                refY={EQUILATERAL_MARKER.SIZE / 2}
-                                orient="auto"
-                                markerUnits="userSpaceOnUse"
-                                viewBox={`0 0 ${EQUILATERAL_MARKER.SIZE} ${EQUILATERAL_MARKER.SIZE}`}
-                                strokeWidth={connectionPathStroke}
-                            >
-                                <rect
-                                    x="1"
-                                    y="1"
-                                    width={EQUILATERAL_MARKER.SIZE - 2}
-                                    height={EQUILATERAL_MARKER.SIZE - 2}
-                                    fill="none"
-                                    stroke={connectionPathColor}
-                                />
-                            </marker>
-                            <marker
-                                id="filledsquaremarker"
-                                markerWidth={EQUILATERAL_MARKER.SIZE}
-                                markerHeight={EQUILATERAL_MARKER.SIZE}
-                                refX={EQUILATERAL_MARKER.SIZE}
-                                refY={EQUILATERAL_MARKER.SIZE / 2}
-                                orient="auto"
-                                markerUnits="userSpaceOnUse"
-                                viewBox={`0 0 ${EQUILATERAL_MARKER.SIZE} ${EQUILATERAL_MARKER.SIZE}`}
-                                strokeWidth={connectionPathStroke}
-                            >
-                                <rect
-                                    x="1"
-                                    y="1"
-                                    width={EQUILATERAL_MARKER.SIZE - 2}
-                                    height={EQUILATERAL_MARKER.SIZE - 2}
-                                    fill={connectionPathColor}
-                                    stroke={connectionPathColor}
-                                />
-                            </marker>
-                            <marker
-                                id="diamondmarker"
-                                markerWidth={MARKER.WIDTH}
-                                markerHeight={MARKER.HEIGHT}
-                                refX={MARKER.WIDTH}
-                                refY={MARKER.HEIGHT / 2}
-                                orient="auto"
-                                markerUnits="userSpaceOnUse"
-                                viewBox={`0 0 ${MARKER.WIDTH} ${MARKER.HEIGHT}`}
-                                strokeWidth={connectionPathStroke}
-                            >
-                                <polygon
-                                    points={`${MARKER.WIDTH / 2},1 ${MARKER.WIDTH - 1},${MARKER.HEIGHT / 2} ${MARKER.WIDTH / 2},${MARKER.HEIGHT - 1} 1,${MARKER.HEIGHT / 2}`}
-                                    fill="none"
-                                    stroke={connectionPathColor}
-                                />
-                            </marker>
-                            <marker
-                                id="filleddiamondmarker"
-                                markerWidth={MARKER.WIDTH}
-                                markerHeight={MARKER.HEIGHT}
-                                refX={MARKER.WIDTH}
-                                refY={MARKER.HEIGHT / 2}
-                                orient="auto"
-                                markerUnits="userSpaceOnUse"
-                                viewBox={`0 0 ${MARKER.WIDTH} ${MARKER.HEIGHT}`}
-                                strokeWidth={connectionPathStroke}
-                            >
-                                <polygon
-                                    points={`${MARKER.WIDTH / 2},1 ${MARKER.WIDTH - 1},${MARKER.HEIGHT / 2} ${MARKER.WIDTH / 2},${MARKER.HEIGHT - 1} 1,${MARKER.HEIGHT / 2}`}
-                                    fill={connectionPathColor}
-                                    stroke={connectionPathColor}
-                                />
-                            </marker>
+                            {createMarkerElements(connectionPathColor, connectionPathStroke)}
                         </defs>
 
                         {renderElements()}
 
+                        {/* 子要素の接続線を描画 */}
                         {Object.values(elements)
                             .filter((element): element is CanvasElement => element.visible && !!element.parentId)
                             .map(element => {
@@ -697,7 +737,24 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                                 if (draggingElement && (element.id === draggingElement.id || isDescendant(state.elements, draggingElement.id, element.id))) {
                                     return null;
                                 }
-                                return renderConnectionPath(parent, element, connectionPathColor, connectionPathStroke);
+                                
+                                // 接続線を描画
+                                return (
+                                    <React.Fragment key={`connection-group-${element.id}`}>
+                                        {renderConnectionPath(
+                                            parent,
+                                            element,
+                                            {
+                                                parent: { x: parent.x, y: parent.y },
+                                                element: { x: element.x, y: element.y }
+                                            },
+                                            connectionPathColor,
+                                            connectionPathStroke
+                                        )}
+                                        {/* 子要素のマーカー設定ボタンを描画 */}
+                                        {renderMarkerButton(element, { x: element.x, y: element.y })}
+                                    </React.Fragment>
+                                );
                             })}
 
                         {currentDropTarget && draggingElement && (
@@ -708,11 +765,69 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                                         ? state.elements[currentDropTarget.parentId]
                                         : null;
 
-                                const draggingPos = state.elements[draggingElement.id];
+                                // Calculate preview position instead of using the dragging element's current position
+                                let previewX, previewY;
+                                if (dropPosition === 'child') {
+                                    // Child mode preview position
+                                    previewX = currentDropTarget.x + currentDropTarget.width + OFFSET.X;
+                                    previewY = dropInsertY 
+                                        ? dropInsertY - draggingElement.height / 2 
+                                        : currentDropTarget.y + currentDropTarget.height / 2 - draggingElement.height / 2;
+                                } else if (dropPosition === 'between') {
+                                    // Between mode preview position
+                                    const parentElement = currentDropTarget.parentId ? elements[currentDropTarget.parentId] : null;
+                                    
+                                    if (parentElement) {
+                                        previewX = parentElement.x + parentElement.width + OFFSET.X;
+                                        
+                                        if (siblingInfo) {
+                                            const { prevElement, nextElement } = siblingInfo;
+                                            
+                                            if (nextElement && !prevElement) {
+                                                // Before first element
+                                                previewY = nextElement.y - draggingElement.height;
+                                            } else if (prevElement && !nextElement) {
+                                                // After last element
+                                                previewY = prevElement.y + prevElement.height;
+                                            } else if (prevElement && nextElement) {
+                                                // Between two elements
+                                                previewY = dropInsertY ? dropInsertY - draggingElement.height / 2 : 
+                                                    (prevElement.y + prevElement.height + nextElement.y) / 2 - draggingElement.height / 2;
+                                            } else {
+                                                // Fallback
+                                                previewY = dropInsertY ? dropInsertY - draggingElement.height / 2 : 
+                                                    currentDropTarget.y + currentDropTarget.height / 2 - draggingElement.height / 2;
+                                            }
+                                        } else {
+                                            // Fallback when no sibling info
+                                            previewY = dropInsertY ? dropInsertY - draggingElement.height / 2 : 
+                                                currentDropTarget.y + currentDropTarget.height / 2 - draggingElement.height / 2;
+                                        }
+                                    } else {
+                                        // Root level
+                                        previewX = OFFSET.X;
+                                        previewY = dropInsertY ? dropInsertY - draggingElement.height / 2 : 
+                                            currentDropTarget.y + currentDropTarget.height / 2 - draggingElement.height / 2;
+                                    }
+                                } else {
+                                    // Fallback to dragging element's current position
+                                    const draggingPos = state.elements[draggingElement.id];
+                                    previewX = draggingPos.x;
+                                    previewY = draggingPos.y;
+                                }
 
-                                return newParent && draggingPos && renderConnectionPath(
+                                return newParent && renderConnectionPath(
                                     newParent,
-                                    draggingPos,
+                                    // Create a temporary object with preview position instead of using the actual dragging element
+                                    {
+                                        ...draggingElement,
+                                        x: previewX,
+                                        y: previewY
+                                    },
+                                    {
+                                        parent: { x: newParent.x, y: newParent.y },
+                                        element: { x: previewX, y: previewY }
+                                    },
                                     CONNECTION_PATH_STYLE.DRAGGING_COLOR,
                                     CONNECTION_PATH_STYLE.STROKE
                                 );
@@ -721,6 +836,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
 
                         {renderPopupMenus()}
                         {renderDebugInfo()}
+                        {renderDropPreview()}
                     </svg>
                 )}
                 <InputFields

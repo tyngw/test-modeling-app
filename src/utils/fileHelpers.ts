@@ -2,6 +2,7 @@
 import { SIZE } from "../constants/elementSettings";
 import { createNewElement } from "./elementHelpers";
 import { Element } from "../types";
+import { v4 as uuidv4 } from 'uuid';
 import { 
     DEFAULT_FONT_FAMILY,
     DEFAULT_FONT_SIZE,
@@ -45,6 +46,10 @@ export const convertLegacyElement = (element: unknown): Element => {
       ...element,
       texts: element.texts,
       sectionHeights: element.sectionHeights,
+      x: element.hasOwnProperty('x') ? element.x : 0,
+      y: element.hasOwnProperty('y') ? element.y : 0,
+      tentative: element.hasOwnProperty('tentative') ? element.tentative : false,
+      connectionPathType: element.hasOwnProperty('connectionPathType') ? element.connectionPathType : 'arrow'
     } as Element
   }
 
@@ -61,12 +66,16 @@ export const convertLegacyElement = (element: unknown): Element => {
       element.section2Height || SIZE.SECTION_HEIGHT,
       element.section3Height || SIZE.SECTION_HEIGHT
     ],
+    x: element.hasOwnProperty('x') ? element.x : 0,
+    y: element.hasOwnProperty('y') ? element.y : 0,
     text: undefined,
     text2: undefined,
     text3: undefined,
     section1Height: undefined,
     section2Height: undefined,
-    section3Height: undefined
+    section3Height: undefined,
+    tentative: element.hasOwnProperty('tentative') ? element.tentative : false,
+    connectionPathType: element.hasOwnProperty('connectionPathType') ? element.connectionPathType : 'arrow'
   } as unknown as Element
 }
 
@@ -90,36 +99,62 @@ export const loadElements = (event: Event): Promise<{ elements: Record<string, E
         }
 
         const parsedData = JSON.parse(contents)
-        let elements: Element[]
+        let rawElements: any[] = []
 
         // データ形式の判定
         if (Array.isArray(parsedData)) {
           // 配列形式（新形式）
-          elements = parsedData.map(convertLegacyElement)
+          rawElements = parsedData
         } else if (typeof parsedData === 'object' && parsedData !== null) {
           // オブジェクト形式（旧形式または状態全体）
-          const rawElements = 'elements' in parsedData 
-            ? parsedData.elements  // 状態全体が保存されていた場合
-            : parsedData           // 要素だけが保存されていた場合
-            
-          elements = Object.values(rawElements).map(convertLegacyElement)
+          rawElements = 'elements' in parsedData 
+            ? Object.values(parsedData.elements)  // 状態全体が保存されていた場合
+            : Object.values(parsedData)           // 要素だけが保存されていた場合
         } else {
           throw new Error('Invalid data format')
         }
 
+        // IDが欠けている要素をフィルタリング
+        const validRawElements = rawElements.filter(elem => {
+          if (!elem.id && !elem.hasOwnProperty('id')) {
+            console.warn('IDが欠けている要素を削除します');
+            return false;
+          }
+          return true;
+        });
+
+        // 要素を変換
+        const convertedElements = validRawElements.map(elem => convertLegacyElement(elem));
+        
+        // 有効なIDのセットを作成
+        const validIds = new Set(convertedElements.map(elem => elem.id));
+        
+        // 存在しないparentIdを参照している要素をフィルタリング
+        const validElements = convertedElements.filter(elem => {
+          if (elem.parentId && !validIds.has(elem.parentId)) {
+            console.warn(`存在しないparentId "${elem.parentId}" を参照している要素 "${elem.id}" を削除します`);
+            return false;
+          }
+          return true;
+        });
+
         // 要素をIDをキーとしたオブジェクトに変換
-        const elementsMap = elements.reduce((acc, element) => {
-          acc[element.id] = element
-          return acc
-        }, {} as Record<string, Element>)
+        const elementsMap = validElements.reduce((acc, element) => {
+          acc[element.id] = element;
+          return acc;
+        }, {} as Record<string, Element>);
 
         resolve({ elements: elementsMap, fileName: file.name })
       } catch (error) {
-        reject(new Error('Error: ファイルの読み込みに失敗しました'))
+        console.error('ファイル読み込みエラー:', error);
+        reject(new Error(`Error: ファイルの読み込みに失敗しました - ${error instanceof Error ? error.message : String(error)}`))
       }
     }
 
-    reader.onerror = () => reject(new Error('Error: ファイルの読み込みに失敗しました'))
+    reader.onerror = () => {
+      console.error('ファイル読み込みエラー');
+      reject(new Error('Error: ファイルの読み込みに失敗しました'))
+    }
     reader.readAsText(file)
     input.value = ''
   })
