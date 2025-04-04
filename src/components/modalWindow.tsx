@@ -88,7 +88,7 @@ const ModalWindow: React.FC<ModalWindowProps> = ({
                 style={{ 
                     backgroundColor: currentTheme.MODAL.BACKGROUND,
                     color: currentTheme.MODAL.TEXT_COLOR,
-                    padding: '16px 24px 24px', // 上部のパディングを減らす
+                    padding: '20px 24px 24px', // 上部のパディングを減らす
                     borderRadius: '16px', 
                     width: '80%', 
                     maxWidth: '500px', 
