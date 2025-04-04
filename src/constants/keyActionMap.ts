@@ -14,6 +14,7 @@ export const keyActionMap: { [key: string]: string } = {
     'Ctrl+v': 'PASTE_ELEMENT',
     'Tab': 'ADD_ELEMENT',
     'Shift+Tab': 'ADD_SIBLING_ELEMENT',
+    'Shift+Enter': 'ADD_SIBLING_ELEMENT',
     'Delete': 'DELETE_ELEMENT',
     'Backspace': 'DELETE_ELEMENT',
     'Enter': 'EDIT_ELEMENT'
