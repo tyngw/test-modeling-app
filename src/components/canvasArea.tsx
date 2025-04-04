@@ -324,7 +324,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                     <circle
                         cx={buttonX}
                         cy={absolutePosition.y + totalHeight / 2}
-                        r={10}
+                        r={MARKER.WIDTH / 2}
                         fill="#bfbfbf"
                         opacity={0.5}
                     />
@@ -332,7 +332,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                 <circle
                     cx={buttonX}
                     cy={absolutePosition.y + totalHeight / 2}
-                    r={10}
+                    r={MARKER.WIDTH / 2}
                     fill="transparent"
                     onMouseEnter={() => setHover(buttonId)}
                     onMouseLeave={() => setHover(null)}
