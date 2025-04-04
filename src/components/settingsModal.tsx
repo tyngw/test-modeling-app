@@ -23,6 +23,7 @@ import {
   getConnectionPathStroke,
   getCanvasBackgroundColor,
   getTextColor,
+  getSelectedStrokeColor,
   setSystemPromptTemplate,
   setModelType,
   setPrompt,
@@ -36,6 +37,7 @@ import {
   setConnectionPathStroke,
   setCanvasBackgroundColor,
   setTextColor,
+  setSelectedStrokeColor,
   getApiKey,
   setApiKey,
 } from '../utils/localStorageHelpers';
@@ -101,6 +103,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
         loadedValues['connectionPathStroke'] = getConnectionPathStroke();
         loadedValues['canvasBackgroundColor'] = getCanvasBackgroundColor();
         loadedValues['textColor'] = getTextColor();
+        loadedValues['selectedStrokeColor'] = getSelectedStrokeColor();
         
         setValues(loadedValues);
       } catch (error) {
@@ -242,6 +245,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     
     const textColor = values['textColor'];
     if (textColor !== undefined) setTextColor(String(textColor));
+    
+    const selectedStrokeColor = values['selectedStrokeColor'];
+    if (selectedStrokeColor !== undefined) setSelectedStrokeColor(String(selectedStrokeColor));
 
     onClose();
   };

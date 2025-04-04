@@ -1,4 +1,10 @@
-import { MARKER_TYPES } from '../constants/elementSettings';
+import { 
+  MARKER_TYPES, 
+  ELEM_STYLE, 
+  DEFAULT_CANVAS_BACKGROUND_COLOR, 
+  DEFAULT_TEXT_COLOR,
+  DEFAULT_CONNECTION_PATH_COLOR
+} from '../constants/elementSettings';
 
 export type SettingValue = string | number;
 
@@ -63,28 +69,35 @@ export const SETTINGS_TABS: SettingTab[] = [
         label: 'Canvas Background Color',
         type: 'color',
         helperText: 'キャンバスの背景色',
-        defaultValue: '#ffffff'
+        defaultValue: DEFAULT_CANVAS_BACKGROUND_COLOR
       },
       {
         key: 'elementColor',
         label: 'Element Color',
         type: 'color',
         helperText: '要素の背景色',
-        defaultValue: '#ffffff'
+        defaultValue: ELEM_STYLE.NORMAL.COLOR
       },
       {
         key: 'textColor',
         label: 'Text Color',
         type: 'color',
         helperText: 'テキストの色',
-        defaultValue: '#000000'
+        defaultValue: DEFAULT_TEXT_COLOR
       },
       {
         key: 'strokeColor',
         label: 'Stroke Color',
         type: 'color',
         helperText: '要素の枠線色',
-        defaultValue: '#000000'
+        defaultValue: ELEM_STYLE.NORMAL.STROKE_COLOR
+      },
+      {
+        key: 'selectedStrokeColor',
+        label: 'Selected Stroke Color',
+        type: 'color',
+        helperText: '選択時の要素の枠線色',
+        defaultValue: ELEM_STYLE.SELECTED.STROKE_COLOR
       },
       {
         key: 'strokeWidth',
@@ -103,7 +116,7 @@ export const SETTINGS_TABS: SettingTab[] = [
         label: 'Connection Path Color',
         type: 'color',
         helperText: '接続線の色',
-        defaultValue: '#000000'
+        defaultValue: DEFAULT_CONNECTION_PATH_COLOR
       },
       {
         key: 'connectionPathStroke',
