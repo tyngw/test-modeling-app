@@ -298,20 +298,31 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
     const renderMarkerButton = useCallback((
         element: CanvasElement,
         absolutePosition: { x: number, y: number },
+        isEndMarker: boolean = false
     ) => {
-        // 子要素があるかどうかをチェック
-        const hasChildren = Object.values(elements).some(el => el.parentId === element.id && el.visible);
-        
-        // 子要素がない場合はボタンを表示しない
-        if (!hasChildren) return null;
+        // ボタン表示条件のチェック
+        if (isEndMarker) {
+            // 終点マーカーの場合：親要素が存在するかチェック
+            if (!element.parentId) return null;
+        } else {
+            // 始点マーカーの場合：子要素があるかチェック
+            const hasChildren = Object.values(elements).some(el => el.parentId === element.id && el.visible);
+            if (!hasChildren) return null;
+        }
         
         const totalHeight = element.height;
+        const buttonId = isEndMarker ? `end-${element.id}` : element.id;
+        
+        // ボタン位置の計算（終点マーカーは左側、始点マーカーは右側）
+        const buttonX = isEndMarker 
+            ? absolutePosition.x - 10  // 左側（終点）
+            : absolutePosition.x + element.width + 10;  // 右側（始点）
         
         return (
-            <g key={`marker-button-${element.id}`}>
-                {(hover === element.id || showMenuForElement === element.id) && (
+            <g key={`marker-button-${buttonId}`}>
+                {(hover === buttonId || showMenuForElement === buttonId) && (
                     <circle
-                        cx={absolutePosition.x + element.width + 10}
+                        cx={buttonX}
                         cy={absolutePosition.y + totalHeight / 2}
                         r={10}
                         fill="#bfbfbf"
@@ -319,51 +330,17 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                     />
                 )}
                 <circle
-                    cx={absolutePosition.x + element.width + 10}
+                    cx={buttonX}
                     cy={absolutePosition.y + totalHeight / 2}
                     r={10}
                     fill="transparent"
-                    onMouseEnter={() => setHover(element.id)}
+                    onMouseEnter={() => setHover(buttonId)}
                     onMouseLeave={() => setHover(null)}
-                    onClick={() => setShowMenuForElement(element.id)}
+                    onClick={() => setShowMenuForElement(buttonId)}
                 />
             </g>
         );
     }, [hover, showMenuForElement, elements]);
-
-    // 終点マーカー設定ボタンを描画する関数
-    const renderEndMarkerButton = useCallback((
-        element: CanvasElement,
-        absolutePosition: { x: number, y: number },
-    ) => {
-        // 親要素が存在するかをチェック（エッジケース対応）
-        if (!element.parentId) return null;
-        
-        const totalHeight = element.height;
-        
-        return (
-            <g key={`end-marker-button-${element.id}`}>
-                {(hover === `end-${element.id}` || showMenuForElement === `end-${element.id}`) && (
-                    <circle
-                        cx={absolutePosition.x - 10}
-                        cy={absolutePosition.y + totalHeight / 2}
-                        r={10}
-                        fill="#bfbfbf"
-                        opacity={0.5}
-                    />
-                )}
-                <circle
-                    cx={absolutePosition.x - 10}
-                    cy={absolutePosition.y + totalHeight / 2}
-                    r={10}
-                    fill="transparent"
-                    onMouseEnter={() => setHover(`end-${element.id}`)}
-                    onMouseLeave={() => setHover(null)}
-                    onClick={() => setShowMenuForElement(`end-${element.id}`)}
-                />
-            </g>
-        );
-    }, [hover, showMenuForElement]);
 
     const renderConnectionPath = (
         parentElement: CanvasElement | undefined,
@@ -842,7 +819,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                                         {/* 始点マーカー設定ボタンを描画 */}
                                         {renderMarkerButton(parent, { x: parent.x, y: parent.y })}
                                         {/* 終点マーカー設定ボタンを描画 */}
-                                        {renderEndMarkerButton(element, { x: element.x, y: element.y })}
+                                        {renderMarkerButton(element, { x: element.x, y: element.y }, true)}
                                     </React.Fragment>
                                 );
                             })}
