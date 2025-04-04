@@ -11,9 +11,15 @@ interface ModalWindowProps {
     isOpen: boolean;
     onClose: () => void;
     children: ReactNode;
+    closeOnOverlayClick?: boolean; // 追加：領域外クリックでの閉じるを制御
 }
 
-const ModalWindow: React.FC<ModalWindowProps> = ({ isOpen, onClose, children }) => {
+const ModalWindow: React.FC<ModalWindowProps> = ({ 
+    isOpen, 
+    onClose, 
+    children,
+    closeOnOverlayClick = true // デフォルトでは領域外クリックで閉じる（既存の動作を維持）
+}) => {
     const isMounted = useIsMounted();
     const [currentTheme, setCurrentTheme] = useState(() => 
         getCurrentTheme(getCanvasBackgroundColor())
@@ -40,6 +46,12 @@ const ModalWindow: React.FC<ModalWindowProps> = ({ isOpen, onClose, children }) 
         setTimeout(() => {
             onClose();
         }, 300);
+    };
+
+    const handleOverlayClick = (e: React.MouseEvent) => {
+        if (closeOnOverlayClick) {
+            handleClose();
+        }
     };
 
     if (!isOpen) {
@@ -70,13 +82,13 @@ const ModalWindow: React.FC<ModalWindowProps> = ({ isOpen, onClose, children }) 
                 opacity: isAnimating ? 1 : 0,
                 transition: 'opacity 0.3s ease-in-out',
             }}
-            onClick={handleClose}
+            onClick={handleOverlayClick}
         >
             <div 
                 style={{ 
                     backgroundColor: currentTheme.MODAL.BACKGROUND,
                     color: currentTheme.MODAL.TEXT_COLOR,
-                    padding: '40px 24px 24px', 
+                    padding: '20px 24px 24px', // 上部のパディングを減らす
                     borderRadius: '16px', 
                     width: '80%', 
                     maxWidth: '500px', 
@@ -90,50 +102,49 @@ const ModalWindow: React.FC<ModalWindowProps> = ({ isOpen, onClose, children }) 
                 }}
                 onClick={(e) => e.stopPropagation()}
             >
-                <div style={{ 
-                    maxHeight: '80vh', 
-                    overflow: 'auto',
-                    scrollbarWidth: 'thin',
-                    scrollbarColor: `${currentTheme.MODAL.TEXT_COLOR}40 transparent`,
-                }}>
-                    <button 
-                        onClick={handleClose} 
-                        style={{ 
-                            position: 'absolute', 
-                            right: 16, 
-                            top: 16, 
-                            background: `${currentTheme.MODAL.TEXT_COLOR}15`, 
-                            border: 'none', 
-                            borderRadius: '50%',
-                            width: '32px',
-                            height: '32px',
-                            display: 'flex',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            fontSize: '1.2em',
-                            color: currentTheme.MODAL.TEXT_COLOR,
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease',
-                            outline: 'none',
-                        }}
-                        onMouseOver={(e) => {
-                            e.currentTarget.style.background = `${currentTheme.MODAL.TEXT_COLOR}25`;
-                            e.currentTarget.style.transform = 'scale(1.1)';
-                        }}
-                        onMouseOut={(e) => {
-                            e.currentTarget.style.background = `${currentTheme.MODAL.TEXT_COLOR}15`;
-                            e.currentTarget.style.transform = 'scale(1)';
-                        }}
-                    >
-                        ×
-                    </button>
-                    <div style={{
-                        flex: 1,
-                        overflow: 'auto',
-                        paddingRight: '8px',
-                    }}>
-                        {children}
-                    </div>
+                <button 
+                    onClick={handleClose} 
+                    style={{ 
+                        position: 'absolute', 
+                        right: 16, 
+                        top: 16, 
+                        background: `${currentTheme.MODAL.TEXT_COLOR}15`, 
+                        border: 'none', 
+                        borderRadius: '50%',
+                        width: '32px',
+                        height: '32px',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        fontSize: '1.2em',
+                        color: currentTheme.MODAL.TEXT_COLOR,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        outline: 'none',
+                    }}
+                    onMouseOver={(e) => {
+                        e.currentTarget.style.background = `${currentTheme.MODAL.TEXT_COLOR}25`;
+                        e.currentTarget.style.transform = 'scale(1.1)';
+                    }}
+                    onMouseOut={(e) => {
+                        e.currentTarget.style.background = `${currentTheme.MODAL.TEXT_COLOR}15`;
+                        e.currentTarget.style.transform = 'scale(1)';
+                    }}
+                >
+                    ×
+                </button>
+                <div 
+                    style={{
+                        position: 'relative',
+                        maxHeight: 'calc(80vh - 56px)', // モーダルの上下パディングを考慮
+                        marginTop: '32px', // closeボタン分の余白
+                        overflowY: 'auto',
+                        overflowX: 'hidden',
+                        scrollbarWidth: 'thin',
+                        scrollbarColor: `${currentTheme.MODAL.TEXT_COLOR}40 transparent`,
+                    }}
+                >
+                    {children}
                 </div>
             </div>
         </div>

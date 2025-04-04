@@ -304,13 +304,17 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   };
 
   return (
-    <ModalWindow isOpen={isOpen} onClose={onClose}>
+    <ModalWindow isOpen={isOpen} onClose={onClose} closeOnOverlayClick={false}>
       <ThemeProvider theme={theme}>
       <Box sx={{ 
         backgroundColor: currentTheme.MODAL.BACKGROUND, 
         color: currentTheme.MODAL.TEXT_COLOR,
         padding: 2,
-        borderRadius: 1
+        borderRadius: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        height: '80vh',
+        maxHeight: 600
       }}>
         <Typography variant="h6" gutterBottom color="textPrimary">
           Preference
@@ -325,7 +329,23 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
             <Tab key={tab.id} label={tab.label} />
           ))}
         </Tabs>
-        <Box sx={{ mt: 2, minHeight: 300 }}>
+        <Box sx={{ 
+          mt: 2, 
+          flex: 1,
+          overflowY: 'auto',
+          // スクロールバーのスタイリング
+          '&::-webkit-scrollbar': {
+            width: '8px',
+          },
+          '&::-webkit-scrollbar-track': {
+            background: 'transparent',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: currentTheme.MODAL.TEXT_COLOR,
+            opacity: 0.2,
+            borderRadius: '4px',
+          },
+        }}>
           {SETTINGS_TABS.map(tab => (
             activeTab === tab.id && (
               <Box key={tab.id}>
@@ -342,7 +362,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
             )
           ))}
         </Box>
-        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Box sx={{ 
+          mt: 2, 
+          pt: 2,
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          borderTop: `1px solid ${currentTheme.MODAL.TEXT_COLOR}20`,
+          backgroundColor: currentTheme.MODAL.BACKGROUND,
+        }}>
           {/* Hidden file input for importing settings */}
           <input 
             type="file" 
