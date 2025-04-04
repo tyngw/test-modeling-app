@@ -21,22 +21,12 @@ const UnsaveConfirmModal: React.FC<UnsaveConfirmModalProps> = ({
   if (!showCloseConfirm) return null;
 
   const currentTheme = getCurrentTheme(getCanvasBackgroundColor());
-  
-  // Custom button style to match the modern design
-  const buttonBaseStyle = {
-    borderRadius: '8px',
-    padding: '8px 20px',
-    fontSize: '14px',
-    fontWeight: 500,
-    textTransform: 'none' as const,
-    boxShadow: 'none',
-    transition: 'all 0.2s ease',
-  };
 
   return (
     <ModalWindow
       isOpen={showCloseConfirm}
       onClose={() => setShowCloseConfirm(false)}
+      closeOnOverlayClick={false}
     >
       <div style={{ 
         padding: '10px 5px 20px',
@@ -97,13 +87,19 @@ const UnsaveConfirmModal: React.FC<UnsaveConfirmModalProps> = ({
             variant="outlined"
             onClick={() => setShowCloseConfirm(false)}
             sx={{
-              ...buttonBaseStyle,
-              borderColor: `${currentTheme.MODAL.TEXT_COLOR}30`,
-              color: currentTheme.MODAL.TEXT_COLOR,
+              borderRadius: '8px',
+              padding: '8px 20px',
+              fontSize: '14px',
+              fontWeight: 500,
+              textTransform: 'none',
+              boxShadow: 'none',
+              transition: 'all 0.2s ease',
+              backgroundColor: currentTheme.MODAL.BUTTON_BACKGROUND,
+              borderColor: currentTheme.MODAL.BUTTON_BORDER,
+              color: currentTheme.MODAL.BUTTON_TEXT,
               '&:hover': {
-                borderColor: `${currentTheme.MODAL.TEXT_COLOR}50`,
-                backgroundColor: `${currentTheme.MODAL.TEXT_COLOR}10`,
-                transform: 'translateY(-2px)',
+                backgroundColor: currentTheme.MODAL.BUTTON_BACKGROUND,
+                opacity: 0.9,
               }
             }}
           >
@@ -116,12 +112,18 @@ const UnsaveConfirmModal: React.FC<UnsaveConfirmModalProps> = ({
               setShowCloseConfirm(false);
             }}
             sx={{
-              ...buttonBaseStyle,
-              backgroundColor: '#3b82f6',
-              color: '#ffffff',
+              borderRadius: '8px',
+              padding: '8px 20px',
+              fontSize: '14px',
+              fontWeight: 500,
+              textTransform: 'none',
+              boxShadow: 'none',
+              transition: 'all 0.2s ease',
+              backgroundColor: currentTheme.MODAL.BUTTON_PRIMARY_BACKGROUND,
+              color: currentTheme.MODAL.BUTTON_PRIMARY_TEXT,
               '&:hover': {
-                backgroundColor: '#2563eb',
-                transform: 'translateY(-2px)',
+                backgroundColor: currentTheme.MODAL.BUTTON_PRIMARY_BACKGROUND,
+                opacity: 0.9,
               }
             }}
           >
