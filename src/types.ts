@@ -28,7 +28,8 @@ export interface Element {
   selected: boolean;
   visible: boolean;
   tentative: boolean;
-  connectionPathType: MarkerType;
+  startMarker: MarkerType;
+  endMarker: MarkerType;
 }
   
 export interface CanvasState {
@@ -50,4 +51,5 @@ export type CanvasAction =
     }}
   | { type: 'UNDO' }
   | { type: 'REDO' }
-  | { type: 'UPDATE_CONNECTION_PATH_TYPE'; payload: { id: string; connectionPathType: MarkerType } }
+  | { type: 'UPDATE_START_MARKER'; payload: { id: string; startMarker: MarkerType } }
+  | { type: 'UPDATE_END_MARKER'; payload: { id: string; endMarker: MarkerType } }
