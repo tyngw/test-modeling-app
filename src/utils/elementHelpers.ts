@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { getMarkerType } from './localStorageHelpers';
 import { SIZE, NUMBER_OF_SECTIONS } from '../constants/elementSettings';
 import { debugLog } from './debugLogHelpers';
+import { MarkerType } from '../types';
 
 export type ElementsMap = { [key: string]: Element };
 
@@ -38,7 +39,8 @@ export const createNewElement = ({
         selected: true,
         visible: true,
         tentative: false,
-        connectionPathType: markerType as 'arrow' | 'circle' | 'square' | 'diamond' | 'none' | 'filled_arrow' | 'filled_circle' | 'filled_square' | 'filled_diamond',
+        startMarker: markerType as MarkerType,
+        endMarker: 'none' as MarkerType,
     };
 };
 

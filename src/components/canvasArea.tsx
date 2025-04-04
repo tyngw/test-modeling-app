@@ -50,7 +50,7 @@ const createMarkerElements = (
       id,
       markerWidth: width,
       markerHeight: height,
-      refX: width,
+      refX: id.endsWith('-end') ? 0 : width,
       refY: height / 2,
       orient: 'auto',
       markerUnits: 'userSpaceOnUse',
@@ -331,6 +331,40 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
         );
     }, [hover, showMenuForElement, elements]);
 
+    // 終点マーカー設定ボタンを描画する関数
+    const renderEndMarkerButton = useCallback((
+        element: CanvasElement,
+        absolutePosition: { x: number, y: number },
+    ) => {
+        // 親要素が存在するかをチェック（エッジケース対応）
+        if (!element.parentId) return null;
+        
+        const totalHeight = element.height;
+        
+        return (
+            <g key={`end-marker-button-${element.id}`}>
+                {(hover === `end-${element.id}` || showMenuForElement === `end-${element.id}`) && (
+                    <circle
+                        cx={absolutePosition.x - 10}
+                        cy={absolutePosition.y + totalHeight / 2}
+                        r={10}
+                        fill="#bfbfbf"
+                        opacity={0.5}
+                    />
+                )}
+                <circle
+                    cx={absolutePosition.x - 10}
+                    cy={absolutePosition.y + totalHeight / 2}
+                    r={10}
+                    fill="transparent"
+                    onMouseEnter={() => setHover(`end-${element.id}`)}
+                    onMouseLeave={() => setHover(null)}
+                    onClick={() => setShowMenuForElement(`end-${element.id}`)}
+                />
+            </g>
+        );
+    }, [hover, showMenuForElement]);
+
     const renderConnectionPath = (
         parentElement: CanvasElement | undefined,
         element: CanvasElement,
@@ -343,26 +377,48 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
     ) => {
         if (!parentElement) return null;
         
-        let offset = 0;
-        switch (parentElement.connectionPathType) {
+        let startOffset = 0;
+        switch (parentElement.startMarker) {
             case MARKER_TYPES.ARROW:
             case MARKER_TYPES.FILLED_ARROW:
-                offset = MARKER.OFFSET;
+                startOffset = MARKER.OFFSET;
                 break;
             case MARKER_TYPES.CIRCLE:
             case MARKER_TYPES.FILLED_CIRCLE:
-                offset = EQUILATERAL_MARKER.OFFSET;
+                startOffset = EQUILATERAL_MARKER.OFFSET;
                 break;
             case MARKER_TYPES.SQUARE:
             case MARKER_TYPES.FILLED_SQUARE:
-                offset = EQUILATERAL_MARKER.OFFSET;
+                startOffset = EQUILATERAL_MARKER.OFFSET;
                 break;
             case MARKER_TYPES.DIAMOND:
             case MARKER_TYPES.FILLED_DIAMOND:
-                offset = MARKER.OFFSET;
+                startOffset = MARKER.OFFSET;
                 break;
             default:
-                offset = 0;
+                startOffset = 0;
+        }
+        
+        let endOffset = 0;
+        switch (element.endMarker) {
+            case MARKER_TYPES.ARROW:
+            case MARKER_TYPES.FILLED_ARROW:
+                endOffset = MARKER.OFFSET;
+                break;
+            case MARKER_TYPES.CIRCLE:
+            case MARKER_TYPES.FILLED_CIRCLE:
+                endOffset = EQUILATERAL_MARKER.OFFSET;
+                break;
+            case MARKER_TYPES.SQUARE:
+            case MARKER_TYPES.FILLED_SQUARE:
+                endOffset = EQUILATERAL_MARKER.OFFSET;
+                break;
+            case MARKER_TYPES.DIAMOND:
+            case MARKER_TYPES.FILLED_DIAMOND:
+                endOffset = MARKER.OFFSET;
+                break;
+            default:
+                endOffset = 0;
         }
         
         const parentPos = absolutePositions.parent;
@@ -370,13 +426,14 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
         const totalHeight = element.height;
         
         const pathCommands = [
-            `M ${parentPos.x + parentElement.width + offset},${parentPos.y + parentElement.height / 2}`,
+            `M ${parentPos.x + parentElement.width + startOffset},${parentPos.y + parentElement.height / 2}`,
             `C ${parentPos.x + parentElement.width + CURVE_CONTROL_OFFSET},${parentPos.y + parentElement.height / 2}`,
             `${elementPos.x - CURVE_CONTROL_OFFSET},${elementPos.y + totalHeight / 2}`,
-            `${elementPos.x},${elementPos.y + totalHeight / 2}`
+            `${elementPos.x - endOffset},${elementPos.y + totalHeight / 2}`
         ].join(' ');
 
-        const markerStart = getMarkerUrlByType(parentElement.connectionPathType);
+        const markerStart = getMarkerUrlByType(parentElement.startMarker);
+        const markerEnd = getMarkerUrlByType(element.endMarker, true);
 
         return (
             <g key={`connection-${element.id}-${element.parentId}`}>
@@ -386,6 +443,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                     strokeWidth={strokeWidth}
                     fill="none"
                     markerStart={markerStart}
+                    markerEnd={markerEnd}
                     style={{ pointerEvents: 'none' }}
                 />
             </g>
@@ -394,13 +452,33 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
 
     const renderPopupMenus = () => {
         if (!showMenuForElement) return null;
-        const element = elements[showMenuForElement];
+        
+        // 通常のマーカー設定か、終点マーカー設定かを判断
+        const isEndMarkerMenu = showMenuForElement.startsWith('end-');
+        let elementId = showMenuForElement;
+        
+        // 終点マーカーの場合はプレフィックスを削除
+        if (isEndMarkerMenu) {
+            elementId = showMenuForElement.substring(4);
+        }
+        
+        const element = elements[elementId];
         if (!element) return null;
+        
         const totalHeight = element.height;
-
+        
         // ポップアップメニューの表示位置を計算
-        const popupX = element.x + element.width + 20;
-        const popupY = element.y + totalHeight / 2 - 25;
+        let popupX, popupY;
+        
+        if (isEndMarkerMenu) {
+            // 終点マーカーの場合は要素の左側に表示
+            popupX = element.x - 170; // メニューの幅(150px) + マージン(20px)
+            popupY = element.y + totalHeight / 2 - 25;
+        } else {
+            // 始点マーカーの場合は要素の右側に表示
+            popupX = element.x + element.width + 20;
+            popupY = element.y + totalHeight / 2 - 25;
+        }
 
         const markerOptions = [
             { id: 'arrow', label: 'Arrow' },
@@ -440,13 +518,23 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                             onMouseEnter={() => setHover(option.id)}
                             onMouseLeave={() => setHover(null)}
                             onClick={() => {
-                                dispatch({
-                                    type: 'UPDATE_CONNECTION_PATH_TYPE',
-                                    payload: {
-                                        id: element.id,
-                                        connectionPathType: option.id
-                                    }
-                                });
+                                if (isEndMarkerMenu) {
+                                    dispatch({
+                                        type: 'UPDATE_END_MARKER',
+                                        payload: {
+                                            id: element.id,
+                                            endMarker: option.id as MarkerType
+                                        }
+                                    });
+                                } else {
+                                    dispatch({
+                                        type: 'UPDATE_START_MARKER',
+                                        payload: {
+                                            id: element.id,
+                                            startMarker: option.id as MarkerType
+                                        }
+                                    });
+                                }
                                 setShowMenuForElement(null);
                             }}
                         >
@@ -751,8 +839,10 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                                             connectionPathColor,
                                             connectionPathStroke
                                         )}
-                                        {/* 子要素のマーカー設定ボタンを描画 */}
-                                        {renderMarkerButton(element, { x: element.x, y: element.y })}
+                                        {/* 始点マーカー設定ボタンを描画 */}
+                                        {renderMarkerButton(parent, { x: parent.x, y: parent.y })}
+                                        {/* 終点マーカー設定ボタンを描画 */}
+                                        {renderEndMarkerButton(element, { x: element.x, y: element.y })}
                                     </React.Fragment>
                                 );
                             })}
