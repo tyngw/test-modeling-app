@@ -432,8 +432,9 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
                 y1={element.y + element.height + 2}
                 x2={element.x + element.width + 1}
                 y2={element.y + element.height + 2}
-                stroke="rgba(0,0,255,0.2)"
-                strokeWidth={strokeWidth}
+                strokeOpacity={0.4}
+                stroke={strokeColor}
+                strokeWidth={element.selected && strokeWidth === 0 ? 2 : strokeWidth}
                 strokeLinecap="round"
                 pointerEvents="none"
               />
@@ -451,7 +452,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
                     ? '#9E9E9E' // tentativeかつ非選択
                     : strokeColor // 設定された線の色を使用
               }
-              strokeWidth={strokeWidth}
+              strokeWidth={element.selected && strokeWidth === 0 ? 2 : strokeWidth}
               strokeDasharray={element.tentative ? "4 2" : "none"}
               pointerEvents="none"
             />
