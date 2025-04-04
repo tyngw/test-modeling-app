@@ -11,9 +11,15 @@ interface ModalWindowProps {
     isOpen: boolean;
     onClose: () => void;
     children: ReactNode;
+    closeOnOverlayClick?: boolean; // 追加：領域外クリックでの閉じるを制御
 }
 
-const ModalWindow: React.FC<ModalWindowProps> = ({ isOpen, onClose, children }) => {
+const ModalWindow: React.FC<ModalWindowProps> = ({ 
+    isOpen, 
+    onClose, 
+    children,
+    closeOnOverlayClick = true // デフォルトでは領域外クリックで閉じる（既存の動作を維持）
+}) => {
     const isMounted = useIsMounted();
     const [currentTheme, setCurrentTheme] = useState(() => 
         getCurrentTheme(getCanvasBackgroundColor())
@@ -40,6 +46,12 @@ const ModalWindow: React.FC<ModalWindowProps> = ({ isOpen, onClose, children }) 
         setTimeout(() => {
             onClose();
         }, 300);
+    };
+
+    const handleOverlayClick = (e: React.MouseEvent) => {
+        if (closeOnOverlayClick) {
+            handleClose();
+        }
     };
 
     if (!isOpen) {
@@ -70,7 +82,7 @@ const ModalWindow: React.FC<ModalWindowProps> = ({ isOpen, onClose, children }) 
                 opacity: isAnimating ? 1 : 0,
                 transition: 'opacity 0.3s ease-in-out',
             }}
-            onClick={handleClose}
+            onClick={handleOverlayClick}
         >
             <div 
                 style={{ 

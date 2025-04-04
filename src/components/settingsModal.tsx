@@ -304,7 +304,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   };
 
   return (
-    <ModalWindow isOpen={isOpen} onClose={onClose}>
+    <ModalWindow isOpen={isOpen} onClose={onClose} closeOnOverlayClick={false}>
       <ThemeProvider theme={theme}>
       <Box sx={{ 
         backgroundColor: currentTheme.MODAL.BACKGROUND, 
