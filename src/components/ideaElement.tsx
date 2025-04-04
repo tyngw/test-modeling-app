@@ -154,7 +154,8 @@ export const DebugInfo: React.FC<{
         <div>order: {element.order}</div>
         <div>depth: {element.depth}</div>
         <div>children: {element.children}</div>
-        <div>arrow: {element.connectionPathType}</div>
+        <div>start marker: {element.startMarker}</div>
+        <div>end marker: {element.endMarker}</div>
         <div>editing: {element.editing ? 'true' : 'false'}</div>
         <div>selected: {element.selected ? 'true' : 'false'}</div>
         <div>visible: {element.visible ? 'true' : 'false'}</div>
