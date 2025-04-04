@@ -23,6 +23,24 @@ export const MARKER_CONFIGS: MarkerConfigMap = {
     shape: 'polygon',
     pointsOrAttributes: `${MARKER.WIDTH} 0, ${MARKER.WIDTH} ${MARKER.HEIGHT}, 0 ${MARKER.HEIGHT / 2}`
   },
+  // 終点用の反転した矢印（通常）
+  arrowEnd: {
+    id: 'arrowhead-end',
+    width: MARKER.WIDTH,
+    height: MARKER.HEIGHT,
+    isFilled: false,
+    shape: 'polygon',
+    pointsOrAttributes: `0 0, 0 ${MARKER.HEIGHT}, ${MARKER.WIDTH} ${MARKER.HEIGHT / 2}`
+  },
+  // 終点用の反転した矢印（塗りつぶし）
+  filledArrowEnd: {
+    id: 'filledarrowhead-end',
+    width: MARKER.WIDTH,
+    height: MARKER.HEIGHT,
+    isFilled: true,
+    shape: 'polygon',
+    pointsOrAttributes: `0 0, 0 ${MARKER.HEIGHT}, ${MARKER.WIDTH} ${MARKER.HEIGHT / 2}`
+  },
   circle: {
     id: 'circlemarker',
     width: EQUILATERAL_MARKER.SIZE,
@@ -37,6 +55,31 @@ export const MARKER_CONFIGS: MarkerConfigMap = {
   },
   filledCircle: {
     id: 'filledcirclemarker',
+    width: EQUILATERAL_MARKER.SIZE,
+    height: EQUILATERAL_MARKER.SIZE,
+    isFilled: true,
+    shape: 'circle',
+    pointsOrAttributes: {
+      cx: EQUILATERAL_MARKER.SIZE / 2,
+      cy: EQUILATERAL_MARKER.SIZE / 2,
+      r: EQUILATERAL_MARKER.SIZE / 2 - 1
+    }
+  },
+  // 円形マーカーは対称なので、終点用は同じ
+  circleEnd: {
+    id: 'circlemarker-end',
+    width: EQUILATERAL_MARKER.SIZE,
+    height: EQUILATERAL_MARKER.SIZE,
+    isFilled: false,
+    shape: 'circle',
+    pointsOrAttributes: {
+      cx: EQUILATERAL_MARKER.SIZE / 2,
+      cy: EQUILATERAL_MARKER.SIZE / 2,
+      r: EQUILATERAL_MARKER.SIZE / 2 - 1
+    }
+  },
+  filledCircleEnd: {
+    id: 'filledcirclemarker-end',
     width: EQUILATERAL_MARKER.SIZE,
     height: EQUILATERAL_MARKER.SIZE,
     isFilled: true,
@@ -73,6 +116,33 @@ export const MARKER_CONFIGS: MarkerConfigMap = {
       height: EQUILATERAL_MARKER.SIZE - 2
     }
   },
+  // 四角形マーカーは対称なので、終点用は同じ
+  squareEnd: {
+    id: 'squaremarker-end',
+    width: EQUILATERAL_MARKER.SIZE,
+    height: EQUILATERAL_MARKER.SIZE,
+    isFilled: false,
+    shape: 'rect',
+    pointsOrAttributes: {
+      x: 1,
+      y: 1,
+      width: EQUILATERAL_MARKER.SIZE - 2,
+      height: EQUILATERAL_MARKER.SIZE - 2
+    }
+  },
+  filledSquareEnd: {
+    id: 'filledsquaremarker-end',
+    width: EQUILATERAL_MARKER.SIZE,
+    height: EQUILATERAL_MARKER.SIZE,
+    isFilled: true,
+    shape: 'rect',
+    pointsOrAttributes: {
+      x: 1,
+      y: 1,
+      width: EQUILATERAL_MARKER.SIZE - 2,
+      height: EQUILATERAL_MARKER.SIZE - 2
+    }
+  },
   diamond: {
     id: 'diamondmarker',
     width: MARKER.WIDTH,
@@ -83,6 +153,23 @@ export const MARKER_CONFIGS: MarkerConfigMap = {
   },
   filledDiamond: {
     id: 'filleddiamondmarker',
+    width: MARKER.WIDTH,
+    height: MARKER.HEIGHT,
+    isFilled: true,
+    shape: 'polygon',
+    pointsOrAttributes: `${MARKER.WIDTH / 2},1 ${MARKER.WIDTH - 1},${MARKER.HEIGHT / 2} ${MARKER.WIDTH / 2},${MARKER.HEIGHT - 1} 1,${MARKER.HEIGHT / 2}`
+  },
+  // ダイヤモンドマーカーは対称なので、終点用は同じ
+  diamondEnd: {
+    id: 'diamondmarker-end',
+    width: MARKER.WIDTH,
+    height: MARKER.HEIGHT,
+    isFilled: false,
+    shape: 'polygon',
+    pointsOrAttributes: `${MARKER.WIDTH / 2},1 ${MARKER.WIDTH - 1},${MARKER.HEIGHT / 2} ${MARKER.WIDTH / 2},${MARKER.HEIGHT - 1} 1,${MARKER.HEIGHT / 2}`
+  },
+  filledDiamondEnd: {
+    id: 'filleddiamondmarker-end',
     width: MARKER.WIDTH,
     height: MARKER.HEIGHT,
     isFilled: true,
@@ -102,24 +189,26 @@ export const getMarkerUrlById = (markerId: string): string | undefined => {
 /**
  * マーカータイプから対応するマーカーURLを取得する関数
  */
-export const getMarkerUrlByType = (type: string): string | undefined => {
+export const getMarkerUrlByType = (type: string, isEnd: boolean = false): string | undefined => {
+  const suffix = isEnd ? '-end' : '';
+  
   switch (type) {
     case 'arrow':
-      return 'url(#arrowhead)';
+      return `url(#arrowhead${suffix})`;
     case 'filled_arrow':
-      return 'url(#filledarrowhead)';
+      return `url(#filledarrowhead${suffix})`;
     case 'circle':
-      return 'url(#circlemarker)';
+      return `url(#circlemarker${suffix})`;
     case 'filled_circle':
-      return 'url(#filledcirclemarker)';
+      return `url(#filledcirclemarker${suffix})`;
     case 'square':
-      return 'url(#squaremarker)';
+      return `url(#squaremarker${suffix})`;
     case 'filled_square': 
-      return 'url(#filledsquaremarker)';
+      return `url(#filledsquaremarker${suffix})`;
     case 'diamond':
-      return 'url(#diamondmarker)';
+      return `url(#diamondmarker${suffix})`;
     case 'filled_diamond':
-      return 'url(#filleddiamondmarker)';
+      return `url(#filleddiamondmarker${suffix})`;
     default:
       return undefined;
   }

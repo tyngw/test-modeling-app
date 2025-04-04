@@ -755,6 +755,46 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
             }
         };
     },
+    UPDATE_END_CONNECTION_PATH_TYPE: (state, action) => {
+        const { id, endConnectionPathType } = action.payload;
+        return {
+            ...state,
+            elements: {
+                ...state.elements,
+                [id]: {
+                    ...state.elements[id],
+                    endConnectionPathType
+                }
+            }
+        };
+    },
+    UPDATE_START_MARKER: (state, action) => {
+        const { id, startMarker } = action.payload;
+        const updatedElement = {
+            ...state.elements[id],
+            startMarker
+        };
+        return {
+            ...state,
+            elements: {
+                ...state.elements,
+                [id]: updatedElement
+            }
+        };
+    },
+    UPDATE_END_MARKER: (state, action) => {
+        const { id, endMarker } = action.payload;
+        return {
+            ...state,
+            elements: {
+                ...state.elements,
+                [id]: {
+                    ...state.elements[id],
+                    endMarker
+                }
+            }
+        };
+    },
 };
 
 export const reducer = (state: State, action: Action): State => {
