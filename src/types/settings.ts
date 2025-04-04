@@ -106,7 +106,7 @@ export const SETTINGS_TABS: SettingTab[] = [
         helperText: '要素の枠線の太さ',
         defaultValue: 1,
         validation: {
-          min: 0.5,
+          min: 0,
           step: 0.5,
           required: true
         }
