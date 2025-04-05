@@ -20,13 +20,13 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import AutoFixOffIcon from '@mui/icons-material/AutoFixOff';
 import Tooltip from '@mui/material/Tooltip';
 import { ICONBAR_HEIGHT } from '../constants/elementSettings';
-import { useCanvas } from '../context/canvasContext';
+import { useCanvas } from '../context/CanvasContext';
 import { tooltipTexts } from '../constants/tooltipTexts';
-import { useTabs } from '../context/tabsContext';
+import { useTabs } from '../context/TabsContext';
 import { getCurrentTheme } from '../utils/colorHelpers';
 import { getCanvasBackgroundColor } from '../utils/localStorageHelpers';
 import { useIsMounted } from '../hooks/useIsMounted';
-import LoadingIndicator from './loadingIndicator';
+import LoadingIndicator from './LoadingIndicator';
 
 interface QuickMenuBarProps {
   saveSvg: () => void;

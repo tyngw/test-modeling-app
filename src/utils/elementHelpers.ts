@@ -1,10 +1,10 @@
 // src/utils/elementHelpers.ts
-import { Element } from '../types';
+import { Element } from '../types/types';
 import { v4 as uuidv4 } from 'uuid';
 import { getMarkerType } from './localStorageHelpers';
 import { SIZE, NUMBER_OF_SECTIONS } from '../constants/elementSettings';
 import { debugLog } from './debugLogHelpers';
-import { MarkerType } from '../types';
+import { MarkerType } from '../types/types';
 
 export type ElementsMap = { [key: string]: Element };
 

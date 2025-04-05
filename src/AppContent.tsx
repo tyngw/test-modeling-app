@@ -3,16 +3,16 @@
 
 import { ToastMessages } from './constants/toastMessages';
 import React, { useState, useCallback, useMemo } from 'react';
-import CanvasArea from './components/canvasArea';
-import QuickMenuBar from './components/quickMenuBar';
-import TabHeaders from './components/tabHeaders/tabHeaders';
-import SettingsModal from './components/settingsModal';
-import UnsaveConfirmModal from './components/unsaveConfiromModal';
-import ModalWindow from './components/modalWindow';
+import CanvasArea from './components/CanvasArea';
+import QuickMenuBar from './components/QuickMenuBar';
+import TabHeaders from './components/tabHeaders/TabHeaders';
+import SettingsModal from './components/SettingsModal';
+import UnsaveConfirmModal from './components/UnsaveConfiromModal';
+import ModalWindow from './components/ModalWindow';
 import { helpContent } from './constants/helpContent';
-import { CanvasProvider } from './context/canvasContext';
+import { CanvasProvider } from './context/CanvasContext';
 import { Action } from './state/state';
-import { useTabs } from './context/tabsContext';
+import { useTabs } from './context/TabsContext';
 import { reducer } from './state/state';
 import { saveSvg } from './utils/fileHelpers';
 import { loadElements, saveElements } from './utils/fileHelpers';
@@ -20,7 +20,7 @@ import { generateWithGemini } from './utils/api';
 import { getApiKey, getModelType } from './utils/localStorageHelpers';
 import { formatElementsForPrompt } from './utils/elementHelpers';
 import { createSystemPrompt } from './constants/promptHelpers';
-import { useToast } from './context/toastContext';
+import { useToast } from './context/ToastContext';
 
 const AppContent: React.FC = () => {
   const { tabs, currentTabId, addTab, closeTab, switchTab, updateTabState, updateTabName } = useTabs();
