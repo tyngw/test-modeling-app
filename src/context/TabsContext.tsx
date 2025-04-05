@@ -8,6 +8,7 @@ import { DEFAULT_POSITION, NUMBER_OF_SECTIONS } from '../constants/elementSettin
 import { createNewElement } from '../utils/elementHelpers';
 import { convertLegacyElement } from '../utils/fileHelpers';
 import { getTabsState, setTabsState } from '../utils/localStorageHelpers';
+import { LayoutMode } from '../types/types';
 
 export interface TabState {
   id: string;
@@ -32,12 +33,12 @@ export interface TabsContextValue {
   getCurrentTabNumberOfSections: () => number;
   updateCurrentTabNumberOfSections: (value: number) => void;
   getCurrentTabLayoutMode: () => string;
-  updateCurrentTabLayoutMode: (value: string) => void;
+  updateCurrentTabLayoutMode: (value: LayoutMode) => void;
 }
 
 const TabsContext = createContext<TabsContextValue | undefined>(undefined);
 
-const createInitialTabState = (currentSections?: number, currentLayoutMode?: string): TabState => {
+const createInitialTabState = (currentSections?: number, currentLayoutMode?: LayoutMode): TabState => {
   const newRootId = "1";
   const numSections = currentSections ?? NUMBER_OF_SECTIONS;
   
@@ -190,7 +191,7 @@ export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return currentTab?.state.layoutMode ?? '';
   }, [tabs, currentTabId]);
 
-  const updateCurrentTabLayoutMode = useCallback((value: string) => {
+  const updateCurrentTabLayoutMode = useCallback((value: LayoutMode) => {
     updateTabState(currentTabId, prevState => ({
       ...prevState,
       layoutMode: value

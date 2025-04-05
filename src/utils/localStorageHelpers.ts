@@ -14,6 +14,7 @@ import {
 } from '../constants/elementSettings';
 import { SYSTEM_PROMPT_TEMPLATE } from '../constants/systemPrompt';
 import { VERSION } from '../constants/version';
+import { LayoutMode } from '../types/types';
 
 // Style settings interface to define structure of the "styles" key
 interface StyleSettings {
@@ -27,7 +28,7 @@ interface StyleSettings {
   textColor: string;
   connectionPathStroke: number;
   selectedStrokeColor: string;
-  layoutMode: string;
+  layoutMode: LayoutMode;
 }
 
 // Default style settings
@@ -295,7 +296,7 @@ export const setSelectedStrokeColor = (color: string): void =>
 export const getLayoutMode = (): string => 
   getStyles().layoutMode || DEFAULT_LAYOUT_MODE;
 
-export const setLayoutMode = (mode: string): void => 
+export const setLayoutMode = (mode: LayoutMode): void => 
   setStyles({ layoutMode: mode });
 
 // APIキー関連

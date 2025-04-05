@@ -1,5 +1,5 @@
 // src/constants/elementSettings.ts
-import { MarkerType } from '../types/types';
+import { LayoutMode, MarkerType } from '../types/types';
 
 export const DEFAULT_ZOOM_RATIO = 0.8;
 export const NUMBER_OF_SECTIONS = 3;
@@ -80,12 +80,12 @@ export const MARKER_TYPES: Record<string, MarkerType> = {
 
 export const DEFAULT_MARKER_TYPE = MARKER_TYPES.NONE;
 
-// レイアウトモード定義
-export const LAYOUT_MODES = {
+export const LAYOUT_MODES: Record<string, LayoutMode> = {
     DEFAULT: 'default',
-    MIND_MAP: 'mind_map',
+    MIND_MAP: 'mindmap',
 };
 
+// LayoutMode型で定義
 export const DEFAULT_LAYOUT_MODE = LAYOUT_MODES.DEFAULT;
 
 export const DEFAULT_CONNECTION_PATH_COLOR = 'black';

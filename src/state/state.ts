@@ -5,6 +5,7 @@ import { Undo, Redo, saveSnapshot } from './undoredo';
 import { handleArrowUp, handleArrowDown, handleArrowRight, handleArrowLeft } from '../utils/elementSelector';
 import { SIZE, TEXTAREA_PADDING, DEFAULT_FONT_SIZE, LINE_HEIGHT_RATIO, DEFAULT_POSITION, NUMBER_OF_SECTIONS, DEFAULT_LAYOUT_MODE } from '../constants/elementSettings';
 import { calculateElementWidth, wrapText } from '../utils/textareaHelpers';
+import { LayoutMode } from '../types/types';
 import { debugLog } from '../utils/debugLogHelpers';
 import { 
     createNewElement, 
@@ -40,7 +41,7 @@ export interface State {
     height: number;
     zoomRatio: number;
     numberOfSections: number;
-    layoutMode: string;
+    layoutMode: LayoutMode
 }
 
 export type Action = {
@@ -62,6 +63,7 @@ export const initialState: State = {
     height: typeof window !== 'undefined' ? window.innerHeight : 0,
     zoomRatio: 1,
     numberOfSections: NUMBER_OF_SECTIONS,
+    // layoutMode: DEFAULT_LAYOUT_MODE,
     layoutMode: DEFAULT_LAYOUT_MODE,
 };
 

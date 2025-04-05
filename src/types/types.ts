@@ -53,3 +53,5 @@ export type CanvasAction =
   | { type: 'REDO' }
   | { type: 'UPDATE_START_MARKER'; payload: { id: string; startMarker: MarkerType } }
   | { type: 'UPDATE_END_MARKER'; payload: { id: string; endMarker: MarkerType } }
+
+export type LayoutMode = 'default' | 'mindmap';
