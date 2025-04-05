@@ -1,7 +1,7 @@
 // src/state/__test__/basicOperations.test.ts
 import { renderHook, act } from '@testing-library/react';
 import { useStore } from './textUtils';
-import { Element } from '../../types';
+import { Element } from '../../types/types';
 import { SIZE } from '../../constants/elementSettings';
 
 describe('基本操作', () => {
