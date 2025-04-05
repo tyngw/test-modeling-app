@@ -2,7 +2,7 @@
 import React from 'react'
 import type { Metadata } from 'next'
 import { Providers } from '../components/Providers'
-import { GoogleAnalytics } from '../components/googleAnalytics'
+import { GoogleAnalytics } from '../components/GoogleAnalytics'
 import '../index.css'
 // import '../src/App.css'
 
