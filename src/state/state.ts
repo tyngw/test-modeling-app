@@ -1,22 +1,16 @@
 // src/state/state.ts
 'use client';
 
-import { v4 as uuidv4 } from 'uuid';
 import { Undo, Redo, saveSnapshot } from './undoredo';
 import { handleArrowUp, handleArrowDown, handleArrowRight, handleArrowLeft } from '../utils/elementSelector';
-import { Element } from '../types/types';
 import { SIZE, TEXTAREA_PADDING, DEFAULT_FONT_SIZE, LINE_HEIGHT_RATIO, DEFAULT_POSITION, NUMBER_OF_SECTIONS } from '../constants/elementSettings';
 import { calculateElementWidth, wrapText } from '../utils/textareaHelpers';
 import { debugLog } from '../utils/debugLogHelpers';
 import { 
     createNewElement, 
-    getChildren, 
-    setDepthRecursive, 
     setVisibilityRecursive, 
     deleteElementRecursive, 
-    isDescendant,
     ElementsMap,
-    NewElementParams
 } from '../utils/elementHelpers';
 import { adjustElementPositions } from '../utils/layoutHelpers';
 import { getSelectedAndChildren, copyToClipboard, getGlobalCutElements } from '../utils/clipboardHelpers';
@@ -30,7 +24,6 @@ import {
     handleZoomIn,
     handleZoomOut,
     updateElementProperty,
-    updateMultipleElements,
     updateElementsByCondition,
     deselectAllElements,
     handleElementMove,
@@ -157,7 +150,7 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
             numberOfSections 
         });
         return {
-            elements: adjustElementPositions(newElements, () => state.numberOfSections)
+            elements: newElements
         };
     }),
 
@@ -206,14 +199,14 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
         });
 
         return {
-            elements: adjustElementPositions(newElements, () => state.numberOfSections)
+            elements: newElements
         };
     }),
 
     ADD_SIBLING_ELEMENT: state => handleElementMutation(state, (elements, selectedElement) => {
         const numberOfSections = state.numberOfSections;
         const newElements = createSiblingElementAdder(elements, selectedElement, numberOfSections);
-        return { elements: adjustElementPositions(newElements, () => state.numberOfSections) };
+        return { elements: newElements };
     }),
 
     DELETE_ELEMENT: state => {
@@ -280,7 +273,7 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
 
         return {
             ...state,
-            elements: adjustElementPositions(updatedElements, () => state.numberOfSections)
+            elements: updatedElements
         };
     },
 
@@ -341,17 +334,17 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
 
         return {
             ...state,
-            elements: adjustElementPositions(updatedElements, () => state.numberOfSections)
+            elements: updatedElements
         };
     },
 
     UNDO: state => ({
         ...state,
-        elements: adjustElementPositions(Undo(state.elements), () => state.numberOfSections)
+        elements: Undo(state.elements)
     }),
     REDO: state => ({
         ...state,
-        elements: adjustElementPositions(Redo(state.elements), () => state.numberOfSections)
+        elements: Redo(state.elements)
     }),
     SNAPSHOT: state => { saveSnapshot(state.elements); return state; },
 
@@ -370,7 +363,7 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
         
         return {
             ...state,
-            elements: adjustElementPositions(updatedElements, () => state.numberOfSections)
+            elements: updatedElements
         };
     },
 
@@ -423,17 +416,17 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
         return handleElementMutation(state, (elements, selectedElement) => {
             const pastedElements = pasteElements(elements, globalCutElements, selectedElement);
             return {
-                elements: adjustElementPositions(pastedElements, () => state.numberOfSections)
+                elements: pastedElements
             };
         });
     },
 
     EXPAND_ELEMENT: state => handleElementMutation(state, (elements, selectedElement) => ({
-        elements: adjustElementPositions(setVisibilityRecursive(elements, selectedElement, true), () => state.numberOfSections)
+        elements: setVisibilityRecursive(elements, selectedElement, true)
     })),
 
     COLLAPSE_ELEMENT: state => handleElementMutation(state, (elements, selectedElement) => ({
-        elements: adjustElementPositions(setVisibilityRecursive(elements, selectedElement, false), () => state.numberOfSections)
+        elements: setVisibilityRecursive(elements, selectedElement, false)
     })),
 
     UPDATE_ELEMENT_SIZE: (state, action) => 
@@ -488,5 +481,42 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
 
 export const reducer = (state: State, action: Action): State => {
     const handler = actionHandlers[action.type];
-    return handler ? handler(state, action) : state;
+    if (!handler) return state;
+    
+    // アクションハンドラを実行
+    const newState = handler(state, action);
+    
+    // 要素の位置を調整する必要があるアクションのみ処理する
+    // 一部のアクションは位置調整が不要なため除外する
+    const skipPositionAdjustment = [
+        'MOVE_ELEMENT',
+        'SNAPSHOT',
+        'EDIT_ELEMENT',
+        'END_EDITING',
+        'SELECT_ELEMENT',
+        'DESELECT_ALL',
+        'COPY_ELEMENT',
+        'UPDATE_START_MARKER',
+        'UPDATE_END_MARKER',
+        'UPDATE_CONNECTION_PATH_TYPE',
+        'UPDATE_END_CONNECTION_PATH_TYPE',
+        'CONFIRM_TENTATIVE_ELEMENTS'
+    ];
+    
+    // 要素の配置調整が必要かどうかを判断する
+    const shouldAdjustPositions = (
+        newState !== state && 
+        newState.elements !== state.elements && 
+        !skipPositionAdjustment.includes(action.type)
+    );
+    
+    // 要素の配置を調整する必要がある場合のみ実行
+    if (shouldAdjustPositions) {
+        return {
+            ...newState,
+            elements: adjustElementPositions(newState.elements, () => newState.numberOfSections)
+        };
+    }
+    
+    return newState;
 };
