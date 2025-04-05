@@ -7,7 +7,7 @@ import CanvasArea from './canvasArea';
 import QuickMenuBar from './quickMenuBar';
 import TabHeaders from './tabHeaders/tabHeaders';
 import SettingsModal from './settingsModal';
-import UnsaveConfirmModal from './unsaveConfiromModal';
+import UnsaveConfirmModal from './UnsaveConfirmModal';
 import ModalWindow from './modalWindow';
 import { helpContent } from '../constants/helpContent';
 import { CanvasProvider } from '../context/canvasContext';
