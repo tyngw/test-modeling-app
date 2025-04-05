@@ -2,10 +2,10 @@
 'use client';
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import IdeaElement, { DebugInfo } from './ideaElement';
-import InputFields from './inputFields';
+import IdeaElement, { DebugInfo } from './IdeaElement';
+import InputFields from './InputFields';
 import useResizeEffect from '../hooks/useResizeEffect';
-import { useCanvas } from '../context/canvasContext';
+import { useCanvas } from '../context/CanvasContext';
 import { keyActionMap } from '../constants/keyActionMap';
 import { useClickOutside } from '../hooks/useClickOutside';
 import { useElementDragEffect } from '../hooks/useElementDragEffect';
@@ -22,9 +22,9 @@ import {
     EQUILATERAL_MARKER,
     OFFSET,
 } from '../constants/elementSettings';
-import { Element as CanvasElement, MarkerType } from '../types';
+import { Element as CanvasElement, MarkerType } from '../types/types';
 import { isDescendant } from '../utils/elementHelpers';
-import { useToast } from '../context/toastContext';
+import { useToast } from '../context/ToastContext';
 import { ToastMessages } from '../constants/toastMessages';
 import { getConnectionPathColor, getConnectionPathStroke, getCanvasBackgroundColor } from '../utils/localStorageHelpers';
 import { getGlobalCutElements } from '../utils/clipboardHelpers';

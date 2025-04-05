@@ -1,6 +1,6 @@
 // src/state/__test__/copyPaste.test.ts
 import { renderHook, act } from '@testing-library/react';
-import { Element } from '../../types';
+import { Element } from '../../types/types';
 import { useStore } from './textUtils';
 import * as clipboardHelpers from '../../utils/clipboardHelpers';
 import { ElementsMap } from '../../utils/elementHelpers';
