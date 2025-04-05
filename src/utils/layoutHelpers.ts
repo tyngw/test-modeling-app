@@ -10,16 +10,16 @@ const layoutNode = (
     elements: ElementsMap,
     startY: number,
     depth: number,
-    getNumberOfSections: () => number
+    getNumberOfSections: () => number,
+    layoutMode: string = 'default'
 ): { newY: number } => {
-    debugLog(`[layoutNode]「${node.texts}」 id=${node.id}, depth=${depth}, startY=${startY} ---`);
+    debugLog(`[layoutNode]「${node.texts}」 id=${node.id}, depth=${depth}, startY=${startY}, layoutMode=${layoutMode} ---`);
 
     // X座標の計算
     if (node.parentId === null) {
         node.x = DEFAULT_POSITION.X;
     } else {
         const parent = elements[node.parentId];
-        node.x = parent.x + parent.width + OFFSET.X;
     }
 
     const children = getChildren(node.id, elements).sort((a, b) => a.order - b.order);
@@ -33,7 +33,7 @@ const layoutNode = (
         currentY = currentY + requiredOffset;
 
         for (const child of children) {
-            const result = layoutNode(child, elements, currentY, depth + 1, getNumberOfSections);
+            const result = layoutNode(child, elements, currentY, depth + 1, getNumberOfSections, layoutMode);
             currentY = result.newY + OFFSET.Y;
             maxChildBottom = Math.max(maxChildBottom, result.newY);
         }
@@ -57,7 +57,8 @@ const layoutNode = (
 
 export const adjustElementPositions = (
     elements: ElementsMap,
-    getNumberOfSections: () => number
+    getNumberOfSections: () => number,
+    getLayoutMode: () => string = () => 'default'
 ): ElementsMap => {
     debugLog(`adjustElementPositions開始: 要素数=${Object.keys(elements).length}`);
     
@@ -66,13 +67,14 @@ export const adjustElementPositions = (
         .sort((a, b) => a.order - b.order);
     
     let currentY = DEFAULT_POSITION.Y;
+    const layoutMode = getLayoutMode();
 
     // ルート要素を順番に配置
     for (const root of rootElements) {
-        const result = layoutNode(root, updatedElements, currentY, 0, getNumberOfSections);
+        const result = layoutNode(root, updatedElements, currentY, 0, getNumberOfSections, layoutMode);
         currentY = result.newY + OFFSET.Y;
     }
 
-    debugLog(`adjustElementPositions終了`);
+    debugLog(`adjustElementPositions終了: レイアウトモード=${layoutMode}`);
     return updatedElements;
 };

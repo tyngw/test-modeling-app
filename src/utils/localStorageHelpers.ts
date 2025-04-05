@@ -216,25 +216,17 @@ const migrateLegacyStyles = (): StyleSettings => {
   return migrated;
 };
 
-/**
- * Return the number of sections for the current tab.
- * Note: This function now relies on the TabsContext and the current tab state.
- * It returns the global setting as a fallback if the context is not available.
- */
 export const getNumberOfSections = (): number => {
-  // When used from components, this should get the number from current tab state
-  // Default/fallback to the global setting in settings
-  return getSetting('numberOfSections', NUMBER_OF_SECTIONS);
+  return NUMBER_OF_SECTIONS;
 };
 
 /**
- * Set the number of sections.
- * Note: This function only updates the global setting, which is used as a default
- * for new tabs. For existing tabs, use TabsContext.updateTabState to change the numberOfSections.
+ * この関数は非推奨となります。代わりにTabsContext.updateCurrentTabNumberOfSectionsを使用してください。
+ * @deprecated Use TabsContext.updateCurrentTabNumberOfSections instead
  */
 export const setNumberOfSections = (value: number): void => {
-  const clampedValue = Math.max(1, Math.min(10, value));
-  setSetting('numberOfSections', clampedValue);
+  // タブごとの設定を使用するため、この関数は何もしません
+  console.warn('setNumberOfSections is deprecated. Use TabsContext.updateCurrentTabNumberOfSections instead.');
 };
 
 // Element styling related - updated to use styles object

@@ -3,7 +3,7 @@
 
 import { Undo, Redo, saveSnapshot } from './undoredo';
 import { handleArrowUp, handleArrowDown, handleArrowRight, handleArrowLeft } from '../utils/elementSelector';
-import { SIZE, TEXTAREA_PADDING, DEFAULT_FONT_SIZE, LINE_HEIGHT_RATIO, DEFAULT_POSITION, NUMBER_OF_SECTIONS } from '../constants/elementSettings';
+import { SIZE, TEXTAREA_PADDING, DEFAULT_FONT_SIZE, LINE_HEIGHT_RATIO, DEFAULT_POSITION, NUMBER_OF_SECTIONS, DEFAULT_LAYOUT_MODE } from '../constants/elementSettings';
 import { calculateElementWidth, wrapText } from '../utils/textareaHelpers';
 import { debugLog } from '../utils/debugLogHelpers';
 import { 
@@ -40,6 +40,7 @@ export interface State {
     height: number;
     zoomRatio: number;
     numberOfSections: number;
+    layoutMode: string;
 }
 
 export type Action = {
@@ -61,6 +62,7 @@ export const initialState: State = {
     height: typeof window !== 'undefined' ? window.innerHeight : 0,
     zoomRatio: 1,
     numberOfSections: NUMBER_OF_SECTIONS,
+    layoutMode: DEFAULT_LAYOUT_MODE,
 };
 
 const actionHandlers: { [key: string]: (state: State, action?: any) => State } = {
@@ -486,7 +488,11 @@ export const reducer = (state: State, action: Action): State => {
     if (shouldAdjustPositions) {
         return {
             ...newState,
-            elements: adjustElementPositions(newState.elements, () => newState.numberOfSections)
+            elements: adjustElementPositions(
+                newState.elements, 
+                () => newState.numberOfSections,
+                () => newState.layoutMode
+            )
         };
     }
     

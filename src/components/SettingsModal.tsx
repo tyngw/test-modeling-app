@@ -13,7 +13,6 @@ import {
   getSystemPromptTemplate,
   getModelType,
   getPrompt,
-  getNumberOfSections,
   getElementColor,
   getStrokeColor,
   getStrokeWidth,
@@ -24,11 +23,9 @@ import {
   getCanvasBackgroundColor,
   getTextColor,
   getSelectedStrokeColor,
-  getLayoutMode,
   setSystemPromptTemplate,
   setModelType,
   setPrompt,
-  setNumberOfSections,
   setElementColor,
   setStrokeColor,
   setStrokeWidth,
@@ -65,7 +62,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Get the tabs context for updating tab-specific state
-  const { getCurrentTabNumberOfSections, updateCurrentTabNumberOfSections } = useTabs();
+  const { 
+    getCurrentTabNumberOfSections, 
+    updateCurrentTabNumberOfSections,
+    getCurrentTabLayoutMode,
+    updateCurrentTabLayoutMode
+  } = useTabs();
 
   // Set the theme mode based on canvas background color
   useEffect(() => {
@@ -93,8 +95,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
         loadedValues['modelType'] = getModelType();
         loadedValues['prompt'] = getPrompt();
         
-        // レイアウトモードの取得
-        loadedValues['layoutMode'] = getLayoutMode();
+        // レイアウトモードを現在のタブから取得
+        loadedValues['layoutMode'] = getCurrentTabLayoutMode();
         
         // Get numberOfSections from the current tab instead of global settings
         loadedValues['numberOfSections'] = getCurrentTabNumberOfSections();
@@ -115,7 +117,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
         console.error('Failed to load settings:', error);
       }
     })();
-  }, [isMounted, isOpen, getCurrentTabNumberOfSections]);
+  }, [isMounted, isOpen, getCurrentTabNumberOfSections, getCurrentTabLayoutMode]);
 
   // 設定が読み込まれる前はレンダリングしない
   if (!isMounted) {
@@ -216,15 +218,18 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     
     // レイアウトモードの保存
     const layoutMode = values['layoutMode'];
-    if (layoutMode !== undefined) setLayoutMode(String(layoutMode));
+    if (layoutMode !== undefined) {
+      // グローバル設定の更新（新しいタブのデフォルト値として）
+      setLayoutMode(String(layoutMode));
+      // 現在のタブの状態を更新
+      updateCurrentTabLayoutMode(String(layoutMode));
+    }
     
-    // Update both global setting and current tab state for numberOfSections
+    // numberOfSectionsはタブごとの設定のみ更新（グローバル設定は使用しない）
     const numberOfSections = values['numberOfSections'];
     if (numberOfSections !== undefined) {
       const numValue = Number(numberOfSections);
-      // Update global setting (for new tabs)
-      setNumberOfSections(numValue);
-      // Update current tab state
+      // タブ状態のみ更新
       updateCurrentTabNumberOfSections(numValue);
     }
     
