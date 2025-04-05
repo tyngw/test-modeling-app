@@ -30,7 +30,8 @@ import {
     handleElementSizeUpdate,
     handleTextUpdate,
     handleElementsLoad,
-    handleElementDrop
+    handleElementDrop,
+    addMultipleElements
 } from '../utils/stateHelpers';
 
 export interface State {
@@ -153,51 +154,22 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
             elements: newElements
         };
     }),
-
+    
     ADD_ELEMENTS_SILENT: (state, action) => handleElementMutation(state, (elements, selectedElement) => {
         const texts: string[] = action.payload?.texts || [];
         const add_tentative = action.payload?.tentative || false;
-        const numberOfSections = state.numberOfSections;
         
-        let newElements = { ...elements };
-        const parent = { ...selectedElement };
-        const initialChildren = parent.children;
-
-        texts.forEach((text, index) => {
-            newElements = createElementAdder(newElements, parent, text, {
-                newElementSelect: false,
+        const newElements = addMultipleElements(
+            elements,
+            selectedElement,
+            texts,
+            {
                 tentative: add_tentative,
-                order: initialChildren + index,
-                numberOfSections
-            });
-        });
-
-        // 親のchildrenを一括更新
-        newElements[parent.id] = {
-            ...parent,
-            children: initialChildren + texts.length
-        };
-
-        // 幅を自動調整
-        Object.values(newElements).forEach(element => {
-            if (element.parentId === parent.id) {
-                const newWidth = calculateElementWidth(element.texts, TEXTAREA_PADDING.HORIZONTAL);
-                const sectionHeights = element.texts.map(text => {
-                    const lines = wrapText(text || '', newWidth, state.zoomRatio).length;
-                    return Math.max(
-                        SIZE.SECTION_HEIGHT * state.zoomRatio,
-                        lines * DEFAULT_FONT_SIZE * LINE_HEIGHT_RATIO + TEXTAREA_PADDING.VERTICAL * state.zoomRatio
-                    );
-                });
-                newElements[element.id] = {
-                    ...element,
-                    width: newWidth,
-                    height: sectionHeights.reduce((sum, h) => sum + h, 0),
-                    sectionHeights
-                };
-            }
-        });
-
+                numberOfSections: state.numberOfSections
+            },
+            state.zoomRatio
+        );
+        
         return {
             elements: newElements
         };

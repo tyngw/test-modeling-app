@@ -6,6 +6,87 @@ import { ElementsMap, createNewElement, isDescendant, setDepthRecursive, setVisi
 import { Element } from '../types/types';
 import { State } from '../state/state';
 import { adjustElementPositions } from '../utils/layoutHelpers';
+import { calculateElementWidth, wrapText } from '../utils/textareaHelpers';
+import { SIZE, TEXTAREA_PADDING, DEFAULT_FONT_SIZE, LINE_HEIGHT_RATIO } from '../constants/elementSettings';
+
+/**
+ * 子要素の幅と高さを自動調整する関数
+ * @param elements 要素のマップ
+ * @param parentId 親要素のID
+ * @param zoomRatio 現在のズーム比率
+ * @returns 更新された要素のマップ
+ */
+export function autoAdjustChildrenSize(
+    elements: ElementsMap,
+    parentId: string,
+    zoomRatio: number
+): ElementsMap {
+    const updatedElements = { ...elements };
+    
+    Object.values(updatedElements).forEach(element => {
+        if (element.parentId === parentId) {
+            const newWidth = calculateElementWidth(element.texts, TEXTAREA_PADDING.HORIZONTAL);
+            const sectionHeights = element.texts.map(text => {
+                const lines = wrapText(text || '', newWidth, zoomRatio).length;
+                return Math.max(
+                    SIZE.SECTION_HEIGHT * zoomRatio,
+                    lines * DEFAULT_FONT_SIZE * LINE_HEIGHT_RATIO + TEXTAREA_PADDING.VERTICAL * zoomRatio
+                );
+            });
+            
+            updatedElements[element.id] = {
+                ...element,
+                width: newWidth,
+                height: sectionHeights.reduce((sum, h) => sum + h, 0),
+                sectionHeights
+            };
+        }
+    });
+    
+    return updatedElements;
+}
+
+/**
+ * 複数の要素を親要素に追加する関数
+ * @param elements 要素のマップ
+ * @param parent 親要素
+ * @param texts 追加するテキストの配列
+ * @param options オプション（tentative, numberOfSections）
+ * @param zoomRatio 現在のズーム比率
+ * @returns 更新された要素のマップ
+ */
+export function addMultipleElements(
+    elements: ElementsMap,
+    parent: Element,
+    texts: string[],
+    options: {
+        tentative?: boolean;
+        numberOfSections: number;
+    },
+    zoomRatio: number
+): ElementsMap {
+    let updatedElements = { ...elements };
+    const initialChildren = parent.children;
+    
+    // 子要素の追加
+    texts.forEach((text, index) => {
+        updatedElements = createElementAdder(updatedElements, parent, text, {
+            newElementSelect: false,
+            tentative: options.tentative || false,
+            order: initialChildren + index,
+            numberOfSections: options.numberOfSections
+        });
+    });
+    
+    // 親のchildren数を一括更新
+    updatedElements[parent.id] = {
+        ...parent,
+        children: initialChildren + texts.length
+    };
+    
+    // 子要素の幅と高さを自動調整
+    return autoAdjustChildrenSize(updatedElements, parent.id, zoomRatio);
+}
 
 export const createElementAdder = (
     elements: ElementsMap,
