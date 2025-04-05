@@ -2,7 +2,7 @@
 import { Element } from '../types/types';
 import { v4 as uuidv4 } from 'uuid';
 import { getMarkerType } from './localStorageHelpers';
-import { SIZE, NUMBER_OF_SECTIONS } from '../constants/elementSettings';
+import { SIZE, NUMBER_OF_SECTIONS, DEFAULT_ELEMENT_DIRECTION, ELEMENT_DIRECTIONS } from '../constants/elementSettings';
 import { debugLog } from './debugLogHelpers';
 import { MarkerType } from '../types/types';
 
@@ -41,6 +41,7 @@ export const createNewElement = ({
         tentative: false,
         startMarker: markerType as MarkerType,
         endMarker: 'none' as MarkerType,
+        direction: parentId === null ? 'none' : DEFAULT_ELEMENT_DIRECTION, // デフォルトはleft、ルート要素の場合はnone
     };
 };
 

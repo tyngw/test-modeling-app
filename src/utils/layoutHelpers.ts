@@ -1,5 +1,5 @@
 import { Element } from '../types/types';
-import { OFFSET, DEFAULT_POSITION, SIZE } from '../constants/elementSettings';
+import { OFFSET, DEFAULT_POSITION, SIZE, ELEMENT_DIRECTIONS } from '../constants/elementSettings';
 import { debugLog } from './debugLogHelpers';
 import { getChildren } from './elementHelpers';
 
@@ -20,6 +20,9 @@ const layoutNode = (
         node.x = DEFAULT_POSITION.X;
     } else {
         const parent = elements[node.parentId];
+        // direction に応じてXオフセットの符号を決定
+        const xOffsetMultiplier = node.direction === ELEMENT_DIRECTIONS.LEFT ? -1 : 1;
+        node.x = parent.x + (OFFSET.X * xOffsetMultiplier * depth);
     }
 
     const children = getChildren(node.id, elements).sort((a, b) => a.order - b.order);

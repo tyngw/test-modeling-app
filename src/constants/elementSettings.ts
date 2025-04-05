@@ -1,5 +1,5 @@
 // src/constants/elementSettings.ts
-import { LayoutMode, MarkerType } from '../types/types';
+import { ElementDirection, LayoutMode, MarkerType } from '../types/types';
 
 export const DEFAULT_ZOOM_RATIO = 0.8;
 export const NUMBER_OF_SECTIONS = 3;
@@ -87,6 +87,14 @@ export const LAYOUT_MODES: Record<string, LayoutMode> = {
 
 // LayoutMode型で定義
 export const DEFAULT_LAYOUT_MODE = LAYOUT_MODES.DEFAULT;
+
+export const ELEMENT_DIRECTIONS: Record<string, ElementDirection> = {
+    RIGHT: 'right',
+    LEFT: 'left',
+    NONE: 'none',
+};
+
+export const DEFAULT_ELEMENT_DIRECTION = ELEMENT_DIRECTIONS.LEFT;
 
 export const DEFAULT_CONNECTION_PATH_COLOR = 'black';
 export const DEFAULT_CONNECTION_PATH_STROKE = 0.5;

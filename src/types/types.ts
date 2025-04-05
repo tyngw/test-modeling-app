@@ -1,6 +1,9 @@
 // src/types.ts
 export type MarkerType = 'arrow' | 'filled_arrow' | 'circle' | 'filled_circle' | 'square' | 'filled_square' | 'diamond' | 'filled_diamond' | 'none';
 
+// 方向を表す型の定義
+export type ElementDirection = 'right' | 'left' | 'none';
+
 export type MarkerConfig = {
     id: string;
     width: number;
@@ -30,6 +33,7 @@ export interface Element {
   tentative: boolean;
   startMarker: MarkerType;
   endMarker: MarkerType;
+  direction: ElementDirection; // 方向プロパティを追加
 }
   
 export interface CanvasState {

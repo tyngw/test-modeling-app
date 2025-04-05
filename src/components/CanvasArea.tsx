@@ -314,10 +314,28 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
         const totalHeight = element.height;
         const buttonId = isEndMarker ? `end-${element.id}` : element.id;
         
-        // ボタン位置の計算（終点マーカーは左側、始点マーカーは右側）
-        const buttonX = isEndMarker 
-            ? absolutePosition.x - MARKER.WIDTH /2
-            : absolutePosition.x + element.width + MARKER.WIDTH / 2;
+        // directionに応じてボタン位置を計算
+        let buttonX;
+        
+        if (isEndMarker) {
+            // 終点マーカーの場合
+            if (element.direction === ELEMENT_DIRECTIONS.LEFT) {
+                // 左方向の場合は右側に表示
+                buttonX = absolutePosition.x + element.width + MARKER.WIDTH / 2;
+            } else {
+                // 右方向の場合は左側に表示（既存の動作）
+                buttonX = absolutePosition.x - MARKER.WIDTH / 2;
+            }
+        } else {
+            // 始点マーカーの場合
+            if (element.direction === ELEMENT_DIRECTIONS.LEFT) {
+                // 左方向の場合は左側に表示
+                buttonX = absolutePosition.x - MARKER.WIDTH / 2;
+            } else {
+                // 右方向の場合は右側に表示（既存の動作）
+                buttonX = absolutePosition.x + element.width + MARKER.WIDTH / 2;
+            }
+        }
         
         return (
             <g key={`marker-button-${buttonId}`}>
@@ -403,12 +421,26 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
         const elementPos = absolutePositions.element;
         const totalHeight = element.height;
         
-        const pathCommands = [
-            `M ${parentPos.x + parentElement.width + startOffset},${parentPos.y + parentElement.height / 2}`,
-            `C ${parentPos.x + parentElement.width + CURVE_CONTROL_OFFSET},${parentPos.y + parentElement.height / 2}`,
-            `${elementPos.x - CURVE_CONTROL_OFFSET},${elementPos.y + totalHeight / 2}`,
-            `${elementPos.x - endOffset},${elementPos.y + totalHeight / 2}`
-        ].join(' ');
+        // 方向に応じてパスの開始点と終了点、およびコントロールポイントを計算
+        let pathCommands;
+        
+        if (element.direction === ELEMENT_DIRECTIONS.LEFT) {
+            // 左方向の場合：子要素が親要素の左側にある
+            pathCommands = [
+                `M ${parentPos.x},${parentPos.y + parentElement.height / 2}`,
+                `C ${parentPos.x - CURVE_CONTROL_OFFSET},${parentPos.y + parentElement.height / 2}`,
+                `${elementPos.x + element.width + CURVE_CONTROL_OFFSET},${elementPos.y + totalHeight / 2}`,
+                `${elementPos.x + element.width + endOffset},${elementPos.y + totalHeight / 2}`
+            ].join(' ');
+        } else {
+            // 右方向の場合（デフォルト）：子要素が親要素の右側にある
+            pathCommands = [
+                `M ${parentPos.x + parentElement.width + startOffset},${parentPos.y + parentElement.height / 2}`,
+                `C ${parentPos.x + parentElement.width + CURVE_CONTROL_OFFSET},${parentPos.y + parentElement.height / 2}`,
+                `${elementPos.x - CURVE_CONTROL_OFFSET},${elementPos.y + totalHeight / 2}`,
+                `${elementPos.x - endOffset},${elementPos.y + totalHeight / 2}`
+            ].join(' ');
+        }
 
         const markerStart = getMarkerUrlByType(parentElement.startMarker);
         const markerEnd = getMarkerUrlByType(element.endMarker, true);
@@ -445,17 +477,31 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
         
         const totalHeight = element.height;
         
-        // ポップアップメニューの表示位置を計算
+        // ポップアップメニューの表示位置を計算 - directionに応じて調整
         let popupX, popupY;
         
         if (isEndMarkerMenu) {
-            // 終点マーカーの場合は要素の左側に表示
-            popupX = element.x - 170; // メニューの幅(150px) + マージン(20px)
-            popupY = element.y + totalHeight / 2 - 25;
+            // 終点マーカーの場合
+            if (element.direction === ELEMENT_DIRECTIONS.LEFT) {
+                // 左方向の場合は要素の右側に表示
+                popupX = element.x + element.width + 20;
+            } else {
+                // 右方向の場合は要素の左側に表示
+                popupX = element.x - 170; // メニューの幅(150px) + マージン(20px)
+            }
         } else {
-            // 始点マーカーの場合は要素の右側に表示
-            popupY = element.y + totalHeight / 2 - 25;
+            // 始点マーカーの場合
+            if (element.direction === ELEMENT_DIRECTIONS.LEFT) {
+                // 左方向の場合は要素の左側に表示
+                popupX = element.x - 170; // メニューの幅(150px) + マージン(20px)
+            } else {
+                // 右方向の場合は要素の右側に表示
+                popupX = element.x + element.width + 20;
+            }
         }
+        
+        // Y座標はdirectionに関係なく共通
+        popupY = element.y + totalHeight / 2 - 25;
 
         const markerOptions = [
             { id: 'arrow', label: 'Arrow' },
@@ -676,10 +722,17 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
       
       if (dropPosition === 'child') {
         // 子要素として追加する場合
-        // ドロップ後の親要素となる要素(currentDropTarget)の右端 + オフセット
-        x = currentDropTarget.x + currentDropTarget.width + OFFSET.X;
+        // 子要素として追加される場合、parentの方向を継承する
+        const parentDirection = currentDropTarget.direction;
+        if (parentDirection === ELEMENT_DIRECTIONS.LEFT) {
+          // 左方向の場合、親要素の左側に配置
+          x = currentDropTarget.x - draggingElement.width - OFFSET.X;
+        } else {
+          // 右方向の場合、親要素の右側に配置（従来の処理）
+          x = currentDropTarget.x + currentDropTarget.width + OFFSET.X;
+        }
         
-        // Y座標の計算（parentElementは使用しない）
+        // Y座標の計算
         y = dropInsertY 
           ? dropInsertY - draggingElement.height / 2 
           : currentDropTarget.y + currentDropTarget.height / 2 - draggingElement.height / 2;
@@ -689,8 +742,15 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
         const parentElement = currentDropTarget.parentId ? elements[currentDropTarget.parentId] : null;
         
         if (parentElement) {
-          // 親要素がある場合は、親要素の右側に配置
-          x = parentElement.x + parentElement.width + OFFSET.X;
+          // 兄弟として追加される場合、他の兄弟と同じ方向を持つはず
+          const siblingDirection = currentDropTarget.direction;
+          if (siblingDirection === ELEMENT_DIRECTIONS.LEFT) {
+            // 左方向の場合、親要素の左側に配置
+            x = parentElement.x - draggingElement.width - OFFSET.X;
+          } else {
+            // 右方向の場合、親要素の右側に配置（従来の処理）
+            x = parentElement.x + parentElement.width + OFFSET.X;
+          }
           
           // siblingInfo情報に基づいてY座標を決定
           if (siblingInfo) {
@@ -698,15 +758,12 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
             
             if (nextElement && !prevElement) {
               // 先頭要素の前にドロップする場合
-              // 先頭要素のY座標からドラッグ要素の高さを引いた位置に表示
               y = nextElement.y - draggingElement.height;
             } else if (prevElement && !nextElement) {
               // 末尾要素の後にドロップする場合
-              // 末尾要素のY座標 + 高さの位置に表示
               y = prevElement.y + prevElement.height;
             } else if (prevElement && nextElement) {
               // 要素間にドロップする場合
-              // 間の中央に配置（既存の計算ロジックを使用）
               y = dropInsertY ? dropInsertY - draggingElement.height / 2 : (prevElement.y + prevElement.height + nextElement.y) / 2 - draggingElement.height / 2;
             } else {
               // siblingInfoはあるが、prevもnextも無い場合（通常は発生しない）
@@ -836,7 +893,14 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                                 let previewX, previewY;
                                 if (dropPosition === 'child') {
                                     // Child mode preview position
-                                    previewX = currentDropTarget.x + currentDropTarget.width + OFFSET.X;
+                                    const parentDirection = currentDropTarget.direction;
+                                    if (parentDirection === ELEMENT_DIRECTIONS.LEFT) {
+                                        // 左方向の場合、親要素の左側に配置
+                                        previewX = currentDropTarget.x - draggingElement.width - OFFSET.X;
+                                    } else {
+                                        // 右方向の場合、親要素の右側に配置
+                                        previewX = currentDropTarget.x + currentDropTarget.width + OFFSET.X;
+                                    }
                                     previewY = dropInsertY 
                                         ? dropInsertY - draggingElement.height / 2 
                                         : currentDropTarget.y + currentDropTarget.height / 2 - draggingElement.height / 2;
@@ -845,7 +909,14 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                                     const parentElement = currentDropTarget.parentId ? elements[currentDropTarget.parentId] : null;
                                     
                                     if (parentElement) {
-                                        previewX = parentElement.x + parentElement.width + OFFSET.X;
+                                        const siblingDirection = currentDropTarget.direction;
+                                        if (siblingDirection === ELEMENT_DIRECTIONS.LEFT) {
+                                            // 左方向の場合、親要素の左側に配置
+                                            previewX = parentElement.x - draggingElement.width - OFFSET.X;
+                                        } else {
+                                            // 右方向の場合、親要素の右側に配置
+                                            previewX = parentElement.x + parentElement.width + OFFSET.X;
+                                        }
                                         
                                         if (siblingInfo) {
                                             const { prevElement, nextElement } = siblingInfo;
@@ -883,14 +954,21 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                                     previewY = draggingPos.y;
                                 }
 
+                                // ドラッグ時に拡張した要素を作成（方向プロパティを継承）
+                                const previewElement = {
+                                    ...draggingElement,
+                                    x: previewX,
+                                    y: previewY,
+                                    direction: dropPosition === 'child' 
+                                        ? currentDropTarget.direction 
+                                        : currentDropTarget.parentId 
+                                            ? elements[currentDropTarget.parentId].direction 
+                                            : 'right'
+                                };
+
                                 return newParent && renderConnectionPath(
                                     newParent,
-                                    // Create a temporary object with preview position instead of using the actual dragging element
-                                    {
-                                        ...draggingElement,
-                                        x: previewX,
-                                        y: previewY
-                                    },
+                                    previewElement,
                                     {
                                         parent: { x: newParent.x, y: newParent.y },
                                         element: { x: previewX, y: previewY }

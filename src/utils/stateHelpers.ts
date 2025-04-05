@@ -119,6 +119,9 @@ export const createElementAdder = (
         newElement.tentative = options.tentative;
     }
 
+    // 親要素からdirectionを継承
+    newElement.direction = parentElement.direction;
+
     const updatedParentElement = {
         ...parentElement,
         children: parentElement.children + 1,
@@ -156,6 +159,10 @@ export const createSiblingElementAdder = (elements: ElementsMap, selectedElement
         depth: selectedElement.depth,
         numSections: numberOfSections
     });
+    
+    // 選択された要素から方向を継承
+    newElement.direction = selectedElement.direction;
+    
     updatedElements[selectedElement.id] = { ...selectedElement, selected: false };
     updatedElements[newElement.id] = newElement;
 
