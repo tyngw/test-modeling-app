@@ -1,25 +1,39 @@
 // src/state/state.ts
 'use client';
 
-import { v4 as uuidv4 } from 'uuid';
 import { Undo, Redo, saveSnapshot } from './undoredo';
 import { handleArrowUp, handleArrowDown, handleArrowRight, handleArrowLeft } from '../utils/elementSelector';
-import { Element } from '../types/types';
-import { SIZE, TEXTAREA_PADDING, DEFAULT_FONT_SIZE, LINE_HEIGHT_RATIO, DEFAULT_POSITION, NUMBER_OF_SECTIONS } from '../constants/elementSettings';
+import { SIZE, TEXTAREA_PADDING, DEFAULT_FONT_SIZE, LINE_HEIGHT_RATIO, DEFAULT_POSITION, NUMBER_OF_SECTIONS, DEFAULT_LAYOUT_MODE } from '../constants/elementSettings';
 import { calculateElementWidth, wrapText } from '../utils/textareaHelpers';
+import { LayoutMode } from '../types/types';
 import { debugLog } from '../utils/debugLogHelpers';
 import { 
     createNewElement, 
-    getChildren, 
-    setDepthRecursive, 
     setVisibilityRecursive, 
     deleteElementRecursive, 
-    isDescendant,
     ElementsMap,
-    NewElementParams
 } from '../utils/elementHelpers';
 import { adjustElementPositions } from '../utils/layoutHelpers';
 import { getSelectedAndChildren, copyToClipboard, getGlobalCutElements } from '../utils/clipboardHelpers';
+import {
+    createElementAdder,
+    createSiblingElementAdder,
+    pasteElements,
+    handleArrowAction,
+    handleElementMutation,
+    handleSelectedElementAction,
+    handleZoomIn,
+    handleZoomOut,
+    updateElementProperty,
+    updateElementsByCondition,
+    deselectAllElements,
+    handleElementMove,
+    handleElementSizeUpdate,
+    handleTextUpdate,
+    handleElementsLoad,
+    handleElementDrop,
+    addMultipleElements
+} from '../utils/stateHelpers';
 
 export interface State {
     elements: ElementsMap;
@@ -27,6 +41,7 @@ export interface State {
     height: number;
     zoomRatio: number;
     numberOfSections: number;
+    layoutMode: LayoutMode
 }
 
 export type Action = {
@@ -48,201 +63,9 @@ export const initialState: State = {
     height: typeof window !== 'undefined' ? window.innerHeight : 0,
     zoomRatio: 1,
     numberOfSections: NUMBER_OF_SECTIONS,
+    // layoutMode: DEFAULT_LAYOUT_MODE,
+    layoutMode: DEFAULT_LAYOUT_MODE,
 };
-
-const createElementAdder = (
-    elements: ElementsMap,
-    parentElement: Element,
-    text?: string,
-    options?: { 
-        newElementSelect?: boolean; 
-        tentative?: boolean; 
-        order?: number; 
-        numberOfSections?: number; 
-    }
-): ElementsMap => {
-    const newElement = createNewElement({
-        parentId: parentElement.id,
-        order: options?.order ?? parentElement.children,
-        depth: parentElement.depth + 1,
-        numSections: options?.numberOfSections
-    });
-
-    if (text) {
-        newElement.texts[0] = text;
-    }
-
-    if (options?.newElementSelect !== undefined) {
-        newElement.selected = options.newElementSelect;
-        newElement.editing = options.newElementSelect;
-    }
-
-    if (options?.tentative !== undefined) {
-        newElement.tentative = options.tentative;
-    }
-
-    const updatedParentElement = {
-        ...parentElement,
-        children: parentElement.children + 1,
-        selected: options?.newElementSelect ? false : parentElement.selected
-    };
-
-    return {
-        ...elements,
-        [parentElement.id]: updatedParentElement,
-        [newElement.id]: newElement
-    };
-};
-
-const createSiblingElementAdder = (elements: ElementsMap, selectedElement: Element, numberOfSections?: number): ElementsMap => {
-    const parentId = selectedElement.parentId;
-    const siblings = Object.values(elements).filter(e => e.parentId === parentId);
-    const newOrder = selectedElement.order + 1;
-
-    const updatedElements = { ...elements };
-
-    // 新しいorder以上の兄弟要素のorderを更新
-    siblings.forEach(sibling => {
-        if (sibling.order >= newOrder) {
-            updatedElements[sibling.id] = {
-                ...sibling,
-                order: sibling.order + 1,
-            };
-        }
-    });
-
-    // 新しい要素を作成
-    const newElement = createNewElement({
-        parentId: parentId,
-        order: newOrder,
-        depth: selectedElement.depth,
-        numSections: numberOfSections
-    });
-    updatedElements[selectedElement.id] = { ...selectedElement, selected: false };
-    updatedElements[newElement.id] = newElement;
-
-    // 親要素のchildrenを更新（親が存在する場合）
-    if (parentId !== null) {
-        const parent = updatedElements[parentId];
-        updatedElements[parentId] = {
-            ...parent,
-            children: parent.children + 1,
-        };
-    }
-
-    return updatedElements;
-};
-
-const pasteElements = (elements: ElementsMap, cutElements: ElementsMap, parentElement: Element): ElementsMap => {
-    if (!cutElements) return elements;
-
-    const rootElement = Object.values(cutElements).find(e => e.parentId === null);
-    if (!rootElement) return { ...elements, ...cutElements };
-
-    // ルート要素の元の深さを取得
-    const rootElementDepth = rootElement.depth;
-    // 深さの差分を貼り付け先に基づいて計算
-    const depthDelta = parentElement.depth + 1 - rootElementDepth;
-
-    const idMap = new Map<string, string>();
-    const newElements: ElementsMap = {};
-
-    Object.values(cutElements).forEach(cutElement => {
-        const newId = uuidv4();
-        idMap.set(cutElement.id, newId);
-
-        const newDepth = cutElement.depth + depthDelta;
-
-        newElements[newId] = {
-            ...cutElement,
-            id: newId,
-            depth: newDepth,
-            parentId: cutElement.parentId === null
-                ? parentElement.id
-                : idMap.get(cutElement.parentId)!,
-            order: cutElement.parentId === null
-                ? parentElement.children
-                : cutElement.order
-        };
-    });
-
-    // Set the root element of pasted content as selected, and deselect the parent
-    const pastedRootElementId = idMap.get(rootElement.id)!;
-    newElements[pastedRootElementId].selected = true;
-    const updatedParent = {
-        ...parentElement,
-        children: parentElement.children + 1,
-        selected: false
-    };
-
-    return {
-        ...elements,
-        ...newElements,
-        [parentElement.id]: updatedParent
-    };
-};
-
-const handleZoomIn = (state: State): State => ({
-    ...state,
-    zoomRatio: state.zoomRatio + 0.1
-});
-
-const handleZoomOut = (state: State): State => ({
-    ...state,
-    zoomRatio: Math.max(state.zoomRatio - 0.1, 0.1)
-});
-
-function handleArrowAction(handler: (elements: ElementsMap) => string | undefined): (state: State) => State {
-    return state => {
-        const selectedElements = Object.values(state.elements).filter(e => e.selected);
-        if (selectedElements.length > 1) {
-            const firstId = selectedElements[0].id;
-            const updatedElements = Object.values(state.elements).reduce<ElementsMap>((acc, element) => {
-                acc[element.id] = {
-                    ...element,
-                    selected: element.id === firstId,
-                    editing: element.id === firstId ? element.editing : false,
-                };
-                return acc;
-            }, {});
-            return { ...state, elements: updatedElements };
-        }
-
-        const selectedId = handler(state.elements);
-        return {
-            ...state,
-            elements: Object.values(state.elements).reduce<ElementsMap>((acc, element) => {
-                acc[element.id] = { ...element, selected: element.id === selectedId };
-                return acc;
-            }, {})
-        };
-    };
-}
-
-function handleElementMutation(state: State, mutationFn: (elements: ElementsMap, selectedElement: Element) => { elements: ElementsMap }): State {
-    const selectedElement = Object.values(state.elements).find(element => element.selected);
-    if (!selectedElement) return state;
-
-    saveSnapshot(state.elements);
-    const mutationResult = mutationFn(state.elements, selectedElement);
-
-    if ('elements' in mutationResult) {
-        return {
-            ...state,
-            elements: mutationResult.elements
-        };
-    } else {
-        return {
-            ...state,
-            elements: mutationResult as ElementsMap
-        };
-    }
-}
-
-function handleSelectedElementAction(state: State, actionFn: (selectedElement: Element) => Partial<State>): State {
-    const selectedElement = Object.values(state.elements).find(element => element.selected);
-    return selectedElement ? { ...state, ...actionFn(selectedElement) } : state;
-}
 
 const actionHandlers: { [key: string]: (state: State, action?: any) => State } = {
     ZOOM_IN: handleZoomIn,
@@ -253,20 +76,7 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
     ARROW_RIGHT: handleArrowAction(handleArrowRight),
     ARROW_LEFT: handleArrowAction(handleArrowLeft),
 
-    LOAD_ELEMENTS: (state, action) => {
-        if (Object.keys(action.payload).length === 0) return initialState;
-
-        const updatedElements = Object.values(action.payload).reduce<ElementsMap>((acc, element: unknown) => {
-            const el = element as Element;
-            acc[el.id] = el.parentId === null ? { ...el, visible: true } : el;
-            return acc;
-        }, {});
-
-        return {
-            ...state,
-            elements: adjustElementPositions(updatedElements, () => state.numberOfSections)
-        };
-    },
+    LOAD_ELEMENTS: (state, action) => handleElementsLoad(state, action.payload),
 
     SELECT_ELEMENT: (state, action) => {
         const { id, ctrlKey, shiftKey } = action.payload;
@@ -308,106 +118,71 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
             return elem.parentId === parentId;
         });
 
-        const updatedElements = Object.values(state.elements).reduce<ElementsMap>((acc, element) => {
-            const selected = validSelectedIds.includes(element.id);
-            acc[element.id] = {
-                ...element,
-                selected,
-                editing: selected ? element.editing : false,
-            };
-            return acc;
-        }, {});
-
-        return { ...state, elements: updatedElements };
+        return {
+            ...state,
+            elements: updateElementsByCondition(
+                state.elements,
+                (element) => true,
+                (element) => ({
+                    selected: validSelectedIds.includes(element.id),
+                    editing: validSelectedIds.includes(element.id) ? element.editing : false
+                })
+            )
+        };
     },
 
     DESELECT_ALL: state => ({
         ...state,
-        elements: Object.values(state.elements).reduce<ElementsMap>((acc, element) => {
-            acc[element.id] = { ...element, selected: false, editing: false };
-            return acc;
-        }, {})
+        elements: deselectAllElements(state.elements)
     }),
 
     UPDATE_TEXT: (state, action) => ({
         ...state,
-        elements: {
-            ...state.elements,
-            [action.payload.id]: {
-                ...state.elements[action.payload.id],
-                texts: state.elements[action.payload.id].texts.map((text, idx) =>
-                    idx === action.payload.index ? action.payload.value : text
-                )
-            }
-        }
+        elements: handleTextUpdate(
+            state.elements,
+            action.payload.id,
+            action.payload.index,
+            action.payload.value
+        )
     }),
 
     ADD_ELEMENT: (state, action) => handleElementMutation(state, (elements, selectedElement) => {
         const text = action.payload?.text;
-        const numberOfSections = state.numberOfSections; // Use the tab's numberOfSections
+        const numberOfSections = state.numberOfSections;
         
         const newElements = createElementAdder(elements, selectedElement, text, { 
             newElementSelect: true,
             numberOfSections 
         });
         return {
-            elements: adjustElementPositions(newElements, () => state.numberOfSections)
+            elements: newElements
         };
     }),
-
+    
     ADD_ELEMENTS_SILENT: (state, action) => handleElementMutation(state, (elements, selectedElement) => {
         const texts: string[] = action.payload?.texts || [];
         const add_tentative = action.payload?.tentative || false;
-        const numberOfSections = state.numberOfSections; // Use the tab's numberOfSections
         
-        let newElements = { ...elements };
-        const parent = { ...selectedElement };
-        const initialChildren = parent.children;
-
-        texts.forEach((text, index) => {
-            newElements = createElementAdder(newElements, parent, text, {
-                newElementSelect: false,
+        const newElements = addMultipleElements(
+            elements,
+            selectedElement,
+            texts,
+            {
                 tentative: add_tentative,
-                order: initialChildren + index,
-                numberOfSections
-            });
-        });
-
-        // 親のchildrenを一括更新
-        newElements[parent.id] = {
-            ...parent,
-            children: initialChildren + texts.length
-        };
-
-        // 幅を自動調整
-        Object.values(newElements).forEach(element => {
-            if (element.parentId === parent.id) {
-                const newWidth = calculateElementWidth(element.texts, TEXTAREA_PADDING.HORIZONTAL);
-                const sectionHeights = element.texts.map(text => {
-                    const lines = wrapText(text || '', newWidth, state.zoomRatio).length;
-                    return Math.max(
-                        SIZE.SECTION_HEIGHT * state.zoomRatio,
-                        lines * DEFAULT_FONT_SIZE * LINE_HEIGHT_RATIO + TEXTAREA_PADDING.VERTICAL * state.zoomRatio
-                    );
-                });
-                newElements[element.id] = {
-                    ...element,
-                    width: newWidth,
-                    height: sectionHeights.reduce((sum, h) => sum + h, 0),
-                    sectionHeights
-                };
-            }
-        });
-
+                numberOfSections: state.numberOfSections
+            },
+            state.zoomRatio
+        );
+        
         return {
-            elements: adjustElementPositions(newElements, () => state.numberOfSections)
+            elements: newElements
         };
     }),
 
     ADD_SIBLING_ELEMENT: state => handleElementMutation(state, (elements, selectedElement) => {
-        const numberOfSections = state.numberOfSections; // Use the tab's numberOfSections
+        const numberOfSections = state.numberOfSections;
         const newElements = createSiblingElementAdder(elements, selectedElement, numberOfSections);
-        return { elements: adjustElementPositions(newElements, () => state.numberOfSections) };
+        return { elements: newElements };
     }),
 
     DELETE_ELEMENT: state => {
@@ -466,46 +241,38 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
         });
 
         // 次に選択する要素があれば、その要素のみを選択状態にし、他の要素は非選択状態にする
-        const updatedElements = Object.entries(remainingElements).reduce((acc, [id, element]) => {
-            acc[id] = {
-                ...element,
-                selected: id === nextSelectedId
-            };
-            return acc;
-        }, {} as typeof remainingElements);
+        const updatedElements = updateElementsByCondition(
+            remainingElements,
+            () => true,
+            (element) => ({ selected: element.id === nextSelectedId })
+        );
 
         return {
             ...state,
-            elements: adjustElementPositions(updatedElements, () => state.numberOfSections)
+            elements: updatedElements
         };
     },
 
     EDIT_ELEMENT: state => handleSelectedElementAction(state, selectedElement => ({
-        elements: {
-            ...state.elements,
-            [selectedElement.id]: { ...selectedElement, editing: true }
-        }
+        elements: updateElementProperty(state.elements, selectedElement.id, 'editing', true)
     })),
 
     END_EDITING: state => ({
         ...state,
-        elements: Object.values(state.elements).reduce<ElementsMap>((acc, element) => {
-            acc[element.id] = { ...element, editing: false };
-            return acc;
-        }, {}
+        elements: updateElementsByCondition(
+            state.elements,
+            () => true,
+            () => ({ editing: false })
         )
     }),
 
     CONFIRM_TENTATIVE_ELEMENTS: (state, action) => ({
         ...state,
-        elements: Object.values(state.elements).reduce<ElementsMap>((acc, element) => {
-            if (element.parentId === action.payload && element.tentative) {
-                acc[element.id] = { ...element, tentative: false };
-            } else {
-                acc[element.id] = element;
-            }
-            return acc;
-        }, {})
+        elements: updateElementsByCondition(
+            state.elements,
+            (element) => element.parentId === action.payload && element.tentative,
+            () => ({ tentative: false })
+        )
     }),
 
     CANCEL_TENTATIVE_ELEMENTS: (state, action) => {
@@ -543,131 +310,44 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
 
         return {
             ...state,
-            elements: adjustElementPositions(updatedElements, () => state.numberOfSections)
+            elements: updatedElements
         };
     },
 
     UNDO: state => ({
         ...state,
-        elements: adjustElementPositions(Undo(state.elements), () => state.numberOfSections)
+        elements: Undo(state.elements)
     }),
     REDO: state => ({
         ...state,
-        elements: adjustElementPositions(Redo(state.elements), () => state.numberOfSections)
+        elements: Redo(state.elements)
     }),
     SNAPSHOT: state => { saveSnapshot(state.elements); return state; },
 
     DROP_ELEMENT: (state, action) => {
         const { payload } = action;
         const { id, oldParentId, newParentId, newOrder, depth } = payload;
-
-        if (id === newParentId || isDescendant(state.elements, id, newParentId)) {
-            return state;
-        }
-
-        let updatedElements = { ...state.elements };
-        const element = updatedElements[id];
-        const oldParent = updatedElements[oldParentId];
-        const newParent = updatedElements[newParentId];
-
-        const isSameParent = oldParentId === newParentId;
-
-        // 古い親のchildren更新（異なる親の場合のみ）
-        if (!isSameParent && oldParent) {
-            updatedElements[oldParentId] = {
-                ...oldParent,
-                children: Math.max(0, oldParent.children - 1)
-            };
-
-            // 古い親の子要素のorderを再計算
-            const oldSiblings = Object.values(updatedElements)
-                .filter(e => e.parentId === oldParentId && e.id !== id)
-                .sort((a, b) => a.order - b.order);
-
-            oldSiblings.forEach((sibling, index) => {
-                if (sibling.order !== index) {
-                    updatedElements[sibling.id] = {
-                        ...sibling,
-                        order: index
-                    };
-                }
-            });
-        }
-
-        updatedElements[id] = {
-            ...element,
-            parentId: newParentId,
-            order: newOrder,
-            depth: depth,
-        };
-
-        const siblings = Object.values(updatedElements)
-            .filter(e => e.parentId === newParentId && e.id !== id)
-            .sort((a, b) => a.order - b.order);
-
-        const newSiblings = [
-            ...siblings.slice(0, newOrder),
-            updatedElements[id],
-            ...siblings.slice(newOrder)
-        ];
-
-        newSiblings.forEach((sibling, index) => {
-            if (sibling.order !== index) {
-                updatedElements[sibling.id] = {
-                    ...sibling,
-                    order: index
-                };
-            }
-        });
-
-        if (!isSameParent && newParent) {
-            updatedElements[newParentId] = {
-                ...newParent,
-                children: newParent.children + 1
-            };
-        }
-
-        if (!isSameParent) {
-            updatedElements = setDepthRecursive(updatedElements, updatedElements[id]);
-        }
-
+        
+        const updatedElements = handleElementDrop(
+            state.elements,
+            id,
+            oldParentId,
+            newParentId,
+            newOrder,
+            depth
+        );
+        
         return {
             ...state,
-            elements: adjustElementPositions(updatedElements, () => state.numberOfSections)
+            elements: updatedElements
         };
     },
 
     MOVE_ELEMENT: (state, action) => {
         const { id, x, y } = action.payload;
-        const selectedElements = Object.values(state.elements).filter(e => e.selected);
-
-        // 複数要素移動の場合
-        if (selectedElements.length > 1 && selectedElements.some(e => e.id === id)) {
-            const deltaX = x - state.elements[id].x;
-            const deltaY = y - state.elements[id].y;
-
-            const updatedElements = { ...state.elements };
-            selectedElements.forEach(element => {
-                updatedElements[element.id] = {
-                    ...element,
-                    x: element.x + deltaX,
-                    y: element.y + deltaY,
-                };
-            });
-            return { ...state, elements: updatedElements };
-        }
-
-        // 単一要素移動
         return {
             ...state,
-            elements: {
-                ...state.elements,
-                [id]: {
-                    ...state.elements[id],
-                    x,
-                    y
-                }
-            }
+            elements: handleElementMove(state.elements, id, x, y)
         };
     },
 
@@ -712,92 +392,111 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
         return handleElementMutation(state, (elements, selectedElement) => {
             const pastedElements = pasteElements(elements, globalCutElements, selectedElement);
             return {
-                elements: adjustElementPositions(pastedElements, () => state.numberOfSections)
+                elements: pastedElements
             };
         });
     },
 
     EXPAND_ELEMENT: state => handleElementMutation(state, (elements, selectedElement) => ({
-        elements: adjustElementPositions(setVisibilityRecursive(elements, selectedElement, true), () => state.numberOfSections)
+        elements: setVisibilityRecursive(elements, selectedElement, true)
     })),
 
     COLLAPSE_ELEMENT: state => handleElementMutation(state, (elements, selectedElement) => ({
-        elements: adjustElementPositions(setVisibilityRecursive(elements, selectedElement, false), () => state.numberOfSections)
+        elements: setVisibilityRecursive(elements, selectedElement, false)
     })),
 
-    UPDATE_ELEMENT_SIZE: (state, action) => {
-        const updatedElement = {
-            ...state.elements[action.payload.id],
-            width: action.payload.width,
-            height: action.payload.height,
-            sectionHeights: action.payload.sectionHeights
-        };
+    UPDATE_ELEMENT_SIZE: (state, action) => 
+        handleElementSizeUpdate(
+            state,
+            action.payload.id,
+            action.payload.width,
+            action.payload.height,
+            action.payload.sectionHeights
+        ),
 
-        return {
-            ...state,
-            elements: adjustElementPositions({
-                ...state.elements,
-                [action.payload.id]: updatedElement
-            }, () => state.numberOfSections)
-        };
-    },
-    UPDATE_CONNECTION_PATH_TYPE: (state, action) => {
-        const { id, connectionPathType } = action.payload;
-        const updatedElement = {
-            ...state.elements[id],
-            connectionPathType
-        };
-        return {
-            ...state,
-            elements: {
-                ...state.elements,
-                [id]: updatedElement
-            }
-        };
-    },
-    UPDATE_END_CONNECTION_PATH_TYPE: (state, action) => {
-        const { id, endConnectionPathType } = action.payload;
-        return {
-            ...state,
-            elements: {
-                ...state.elements,
-                [id]: {
-                    ...state.elements[id],
-                    endConnectionPathType
-                }
-            }
-        };
-    },
-    UPDATE_START_MARKER: (state, action) => {
-        const { id, startMarker } = action.payload;
-        const updatedElement = {
-            ...state.elements[id],
-            startMarker
-        };
-        return {
-            ...state,
-            elements: {
-                ...state.elements,
-                [id]: updatedElement
-            }
-        };
-    },
-    UPDATE_END_MARKER: (state, action) => {
-        const { id, endMarker } = action.payload;
-        return {
-            ...state,
-            elements: {
-                ...state.elements,
-                [id]: {
-                    ...state.elements[id],
-                    endMarker
-                }
-            }
-        };
-    },
+    UPDATE_CONNECTION_PATH_TYPE: (state, action) => ({
+        ...state,
+        elements: updateElementProperty(
+            state.elements,
+            action.payload.id,
+            'startMarker',
+            action.payload.connectionPathType
+        )
+    }),
+
+    UPDATE_END_CONNECTION_PATH_TYPE: (state, action) => ({
+        ...state,
+        elements: updateElementProperty(
+            state.elements,
+            action.payload.id,
+            'endMarker',
+            action.payload.endConnectionPathType
+        )
+    }),
+
+    UPDATE_START_MARKER: (state, action) => ({
+        ...state,
+        elements: updateElementProperty(
+            state.elements,
+            action.payload.id,
+            'startMarker',
+            action.payload.startMarker
+        )
+    }),
+
+    UPDATE_END_MARKER: (state, action) => ({
+        ...state,
+        elements: updateElementProperty(
+            state.elements,
+            action.payload.id,
+            'endMarker',
+            action.payload.endMarker
+        )
+    }),
 };
 
 export const reducer = (state: State, action: Action): State => {
     const handler = actionHandlers[action.type];
-    return handler ? handler(state, action) : state;
+    if (!handler) return state;
+    
+    // アクションハンドラを実行
+    const newState = handler(state, action);
+    
+    // 要素の位置を調整する必要があるアクションのみ処理する
+    // 一部のアクションは位置調整が不要なため除外する
+    const skipPositionAdjustment = [
+        'MOVE_ELEMENT',
+        'SNAPSHOT',
+        'EDIT_ELEMENT',
+        'END_EDITING',
+        'SELECT_ELEMENT',
+        'DESELECT_ALL',
+        'COPY_ELEMENT',
+        'UPDATE_START_MARKER',
+        'UPDATE_END_MARKER',
+        'UPDATE_CONNECTION_PATH_TYPE',
+        'UPDATE_END_CONNECTION_PATH_TYPE',
+        'CONFIRM_TENTATIVE_ELEMENTS'
+    ];
+    
+    // 要素の配置調整が必要かどうかを判断する
+    const shouldAdjustPositions = (
+        newState !== state && 
+        newState.elements !== state.elements && 
+        !skipPositionAdjustment.includes(action.type)
+    );
+    
+    // 要素の配置を調整する必要がある場合のみ実行
+    if (shouldAdjustPositions) {
+        return {
+            ...newState,
+            elements: adjustElementPositions(
+                newState.elements, 
+                () => newState.numberOfSections,
+                () => newState.layoutMode
+            )
+        };
+    }
+    
+    return newState;
 };

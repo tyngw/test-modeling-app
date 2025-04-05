@@ -1,6 +1,9 @@
 // src/types.ts
 export type MarkerType = 'arrow' | 'filled_arrow' | 'circle' | 'filled_circle' | 'square' | 'filled_square' | 'diamond' | 'filled_diamond' | 'none';
 
+// 方向を表す型の定義
+export type ElementDirection = 'right' | 'left' | 'none';
+
 export type MarkerConfig = {
     id: string;
     width: number;
@@ -30,6 +33,7 @@ export interface Element {
   tentative: boolean;
   startMarker: MarkerType;
   endMarker: MarkerType;
+  direction: ElementDirection;
 }
   
 export interface CanvasState {
@@ -53,3 +57,5 @@ export type CanvasAction =
   | { type: 'REDO' }
   | { type: 'UPDATE_START_MARKER'; payload: { id: string; startMarker: MarkerType } }
   | { type: 'UPDATE_END_MARKER'; payload: { id: string; endMarker: MarkerType } }
+
+export type LayoutMode = 'default' | 'mindmap';

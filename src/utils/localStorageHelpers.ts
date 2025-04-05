@@ -10,9 +10,11 @@ import {
   DEFAULT_CONNECTION_PATH_STROKE,
   DEFAULT_CANVAS_BACKGROUND_COLOR,
   DEFAULT_TEXT_COLOR,
+  DEFAULT_LAYOUT_MODE
 } from '../constants/elementSettings';
 import { SYSTEM_PROMPT_TEMPLATE } from '../constants/systemPrompt';
 import { VERSION } from '../constants/version';
+import { LayoutMode } from '../types/types';
 
 // Style settings interface to define structure of the "styles" key
 interface StyleSettings {
@@ -26,6 +28,7 @@ interface StyleSettings {
   textColor: string;
   connectionPathStroke: number;
   selectedStrokeColor: string;
+  layoutMode: LayoutMode;
 }
 
 // Default style settings
@@ -40,6 +43,7 @@ const DEFAULT_STYLES: StyleSettings = {
   textColor: DEFAULT_TEXT_COLOR,
   connectionPathStroke: DEFAULT_CONNECTION_PATH_STROKE,
   selectedStrokeColor: ELEM_STYLE.SELECTED.STROKE_COLOR,
+  layoutMode: DEFAULT_LAYOUT_MODE,
 };
 
 const STYLES_KEY = 'styles';
@@ -213,25 +217,17 @@ const migrateLegacyStyles = (): StyleSettings => {
   return migrated;
 };
 
-/**
- * Return the number of sections for the current tab.
- * Note: This function now relies on the TabsContext and the current tab state.
- * It returns the global setting as a fallback if the context is not available.
- */
 export const getNumberOfSections = (): number => {
-  // When used from components, this should get the number from current tab state
-  // Default/fallback to the global setting in settings
-  return getSetting('numberOfSections', NUMBER_OF_SECTIONS);
+  return NUMBER_OF_SECTIONS;
 };
 
 /**
- * Set the number of sections.
- * Note: This function only updates the global setting, which is used as a default
- * for new tabs. For existing tabs, use TabsContext.updateTabState to change the numberOfSections.
+ * この関数は非推奨となります。代わりにTabsContext.updateCurrentTabNumberOfSectionsを使用してください。
+ * @deprecated Use TabsContext.updateCurrentTabNumberOfSections instead
  */
 export const setNumberOfSections = (value: number): void => {
-  const clampedValue = Math.max(1, Math.min(10, value));
-  setSetting('numberOfSections', clampedValue);
+  // タブごとの設定を使用するため、この関数は何もしません
+  console.warn('setNumberOfSections is deprecated. Use TabsContext.updateCurrentTabNumberOfSections instead.');
 };
 
 // Element styling related - updated to use styles object
@@ -295,6 +291,13 @@ export const getSelectedStrokeColor = (): string =>
 
 export const setSelectedStrokeColor = (color: string): void => 
   setStyles({ selectedStrokeColor: color });
+
+// レイアウトモード関連
+export const getLayoutMode = (): string => 
+  getStyles().layoutMode || DEFAULT_LAYOUT_MODE;
+
+export const setLayoutMode = (mode: LayoutMode): void => 
+  setStyles({ layoutMode: mode });
 
 // APIキー関連
 export const getApiKey = async (): Promise<string> => {

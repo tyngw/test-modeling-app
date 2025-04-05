@@ -8,6 +8,7 @@ import { DEFAULT_POSITION, NUMBER_OF_SECTIONS } from '../constants/elementSettin
 import { createNewElement } from '../utils/elementHelpers';
 import { convertLegacyElement } from '../utils/fileHelpers';
 import { getTabsState, setTabsState } from '../utils/localStorageHelpers';
+import { LayoutMode } from '../types/types';
 
 export interface TabState {
   id: string;
@@ -31,11 +32,13 @@ export interface TabsContextValue {
   getCurrentTabState: () => State | undefined;
   getCurrentTabNumberOfSections: () => number;
   updateCurrentTabNumberOfSections: (value: number) => void;
+  getCurrentTabLayoutMode: () => string;
+  updateCurrentTabLayoutMode: (value: LayoutMode) => void;
 }
 
 const TabsContext = createContext<TabsContextValue | undefined>(undefined);
 
-const createInitialTabState = (currentSections?: number): TabState => {
+const createInitialTabState = (currentSections?: number, currentLayoutMode?: LayoutMode): TabState => {
   const newRootId = "1";
   const numSections = currentSections ?? NUMBER_OF_SECTIONS;
   
@@ -45,6 +48,7 @@ const createInitialTabState = (currentSections?: number): TabState => {
     state: {
       ...initialState,
       numberOfSections: numSections,
+      layoutMode: currentLayoutMode ?? initialState.layoutMode,
       elements: {
         [newRootId]: {
           ...createNewElement({
@@ -120,10 +124,11 @@ export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [tabs, currentTabId]);
 
   const addTab = useCallback(() => {
-    // 現在のタブのセクション数を取得して新しいタブに適用
+    // 現在のタブのセクション数とレイアウトモードを取得して新しいタブに適用
     const currentTab = tabs.find(tab => tab.id === currentTabId);
     const currentSections = currentTab?.state.numberOfSections ?? NUMBER_OF_SECTIONS;
-    const newTab = createInitialTabState(currentSections);
+    const currentLayoutMode = currentTab?.state.layoutMode ?? initialState.layoutMode;
+    const newTab = createInitialTabState(currentSections, currentLayoutMode);
     setTabsState(prev => ({
       tabs: [...prev.tabs, newTab],
       currentTabId: newTab.id
@@ -181,6 +186,18 @@ export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }));
   }, [currentTabId, updateTabState]);
 
+  const getCurrentTabLayoutMode = useCallback(() => {
+    const currentTab = tabs.find(tab => tab.id === currentTabId);
+    return currentTab?.state.layoutMode ?? '';
+  }, [tabs, currentTabId]);
+
+  const updateCurrentTabLayoutMode = useCallback((value: LayoutMode) => {
+    updateTabState(currentTabId, prevState => ({
+      ...prevState,
+      layoutMode: value
+    }));
+  }, [currentTabId, updateTabState]);
+
   const contextValue = useMemo(() => ({
     tabs,
     currentTabId,
@@ -192,6 +209,8 @@ export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     getCurrentTabState,
     getCurrentTabNumberOfSections,
     updateCurrentTabNumberOfSections,
+    getCurrentTabLayoutMode,
+    updateCurrentTabLayoutMode,
   }), [
     tabs, 
     currentTabId, 
@@ -202,7 +221,9 @@ export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     updateTabName, 
     getCurrentTabState,
     getCurrentTabNumberOfSections,
-    updateCurrentTabNumberOfSections
+    updateCurrentTabNumberOfSections,
+    getCurrentTabLayoutMode,
+    updateCurrentTabLayoutMode
   ]);
 
   return (
