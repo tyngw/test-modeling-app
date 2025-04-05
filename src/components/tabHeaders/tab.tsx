@@ -1,4 +1,4 @@
-// src/components/TabHeaders/TabHeader.tsx
+// src/components/TabHeaders/tab.tsx
 import React, { useState } from 'react';
 import { TabState } from '../../context/tabsContext';
 import { useIsMounted } from '../../hooks/useIsMounted';
