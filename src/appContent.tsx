@@ -4,11 +4,11 @@
 import { ToastMessages } from './constants/toastMessages';
 import React, { useState, useCallback, useMemo } from 'react';
 import CanvasArea from './components/CanvasArea';
-import QuickMenuBar from './components/quickMenuBar';
+import QuickMenuBar from './components/QuickMenuBar';
 import TabHeaders from './components/tabHeaders/TabHeaders';
-import SettingsModal from './components/settingsModal';
+import SettingsModal from './components/SettingsModal';
 import UnsaveConfirmModal from './components/UnsaveConfiromModal';
-import ModalWindow from './components/modalWindow';
+import ModalWindow from './components/ModalWindow';
 import { helpContent } from './constants/helpContent';
 import { CanvasProvider } from './context/CanvasContext';
 import { Action } from './state/state';
