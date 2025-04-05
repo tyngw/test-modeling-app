@@ -2,7 +2,8 @@
 'use client';
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import IdeaElement, { DebugInfo } from './IdeaElement';
+import IdeaElement from './IdeaElement';
+import DebugInfo from './DebugInfo';
 import InputFields from './InputFields';
 import useResizeEffect from '../hooks/UseResizeEffect';
 import { useCanvas } from '../context/CanvasContext';
@@ -453,7 +454,6 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
             popupY = element.y + totalHeight / 2 - 25;
         } else {
             // 始点マーカーの場合は要素の右側に表示
-            popupX = element.x + element.width + 20;
             popupY = element.y + totalHeight / 2 - 25;
         }
 
