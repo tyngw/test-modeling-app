@@ -5,7 +5,7 @@ import React, { ReactNode, useState, useEffect } from 'react';
 import { getCurrentTheme } from '../utils/colorHelpers';
 import { getCanvasBackgroundColor } from '../utils/localStorageHelpers';
 import { useCanvas } from '../context/CanvasContext';
-import { useIsMounted } from '../hooks/useIsMounted';
+import { useIsMounted } from '../hooks/UseIsMounted';
 
 interface ModalWindowProps {
     isOpen: boolean;
