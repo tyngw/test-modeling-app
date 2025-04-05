@@ -6,7 +6,7 @@ import { ICONBAR_HEIGHT, TABBAR_HEIGHT } from '../../constants/elementSettings';
 import { getCurrentTheme } from '../../utils/colorHelpers';
 import { getCanvasBackgroundColor } from '../../utils/localStorageHelpers';
 import { DEFAULT_CANVAS_BACKGROUND_COLOR } from '../../constants/elementSettings';
-import { useIsMounted } from '../../hooks/UseIsMounted';
+import { useIsMounted } from '../../hooks/useIsMounted';
 
 interface TabHeadersProps {
   tabs: TabState[];

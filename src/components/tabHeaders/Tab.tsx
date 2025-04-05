@@ -1,7 +1,7 @@
 // src/components/TabHeaders/tab.tsx
 import React, { useState } from 'react';
 import { TabState } from '../../context/TabsContext';
-import { useIsMounted } from '../../hooks/UseIsMounted';
+import { useIsMounted } from '../../hooks/useIsMounted';
 
 interface TabHeaderProps {
   tab: TabState;

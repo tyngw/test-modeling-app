@@ -28,7 +28,7 @@ import { Element as CanvasElement } from '../types/types';
 import { isDescendant } from '../utils/elementHelpers';
 import { debugLog, isDevelopment } from '../utils/debugLogHelpers';
 import { useTabs } from '../context/TabsContext';
-import { useIsMounted } from '../hooks/UseIsMounted';
+import { useIsMounted } from '../hooks/useIsMounted';
 
 interface IdeaElementProps {
   element: CanvasElement;
