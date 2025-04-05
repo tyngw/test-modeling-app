@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
-import { useCanvas } from '../context/canvasContext';
+import { useCanvas } from '../context/CanvasContext';
 import TextDisplayArea from './textDisplayArea';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import DoneIcon from '@mui/icons-material/Done';
@@ -27,7 +27,7 @@ import {
 import { Element as CanvasElement } from '../types';
 import { isDescendant } from '../utils/elementHelpers';
 import { debugLog, isDevelopment } from '../utils/debugLogHelpers';
-import { useTabs } from '../context/tabsContext';
+import { useTabs } from '../context/TabsContext';
 import { useIsMounted } from '../hooks/useIsMounted';
 
 interface IdeaElementProps {

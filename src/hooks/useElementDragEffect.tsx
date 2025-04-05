@@ -17,11 +17,11 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Element } from '../types';
-import { useCanvas } from '../context/canvasContext';
+import { useCanvas } from '../context/CanvasContext';
 import { isDescendant } from '../utils/elementHelpers';
 import { ToastMessages } from '../constants/toastMessages';
 import { HEADER_HEIGHT, OFFSET, SIZE, CURVE_CONTROL_OFFSET } from '../constants/elementSettings';
-import { useToast } from '../context/toastContext';
+import { useToast } from '../context/ToastContext';
 import { debugLog } from '../utils/debugLogHelpers';
 
 const isTouchEvent = (event: MouseEvent | TouchEvent): event is TouchEvent => {

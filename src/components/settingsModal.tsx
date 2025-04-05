@@ -42,7 +42,7 @@ import {
   setApiKey,
 } from '../utils/localStorageHelpers';
 import { exportElementSettings, importElementSettings } from '../utils/settingsExportImport';
-import { useTabs } from '../context/tabsContext';
+import { useTabs } from '../context/TabsContext';
 import { getCurrentTheme, isDarkMode } from '../utils/colorHelpers';
 import { useIsMounted } from '../hooks/useIsMounted';
 
