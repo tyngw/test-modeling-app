@@ -1,5 +1,5 @@
 // src/constants/elementSettings.ts
-import { MarkerType } from '../types';
+import { MarkerType } from '../types/types';
 
 export const DEFAULT_ZOOM_RATIO = 0.8;
 export const NUMBER_OF_SECTIONS = 3;

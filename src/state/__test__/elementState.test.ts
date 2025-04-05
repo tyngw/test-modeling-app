@@ -1,7 +1,7 @@
 // src/state/__test__/elementState.test.ts
 import { useStore } from './textUtils';
 import { renderHook, act } from '@testing-library/react';
-import { Element } from '../../types';
+import { Element } from '../../types/types';
 import { initialState } from '../state';
 
 

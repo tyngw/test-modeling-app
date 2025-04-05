@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { useCanvas } from '../context/canvasContext';
+import { useCanvas } from '../context/CanvasContext';
 import { wrapText } from '../utils/textareaHelpers';
 import { useIsMounted } from '../hooks/useIsMounted';
 import {
@@ -15,7 +15,7 @@ import {
     getElementColor,
     getTextColor 
 } from '../utils/localStorageHelpers';
-import { Element } from '../types';
+import { Element } from '../types/types';
 import { inputFieldKeyActionMap } from '../constants/keyActionMap';
 
 interface InputFieldsProps {

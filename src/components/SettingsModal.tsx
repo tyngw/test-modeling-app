@@ -2,8 +2,8 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import ModalWindow from './modalWindow';
-import { SettingField } from './settings/settingField';
+import ModalWindow from './ModalWindow';
+import { SettingField } from './settings/SettingField';
 import { Box, Button, Typography, Tabs, Tab } from '@mui/material';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
@@ -42,7 +42,7 @@ import {
   setApiKey,
 } from '../utils/localStorageHelpers';
 import { exportElementSettings, importElementSettings } from '../utils/settingsExportImport';
-import { useTabs } from '../context/tabsContext';
+import { useTabs } from '../context/TabsContext';
 import { getCurrentTheme, isDarkMode } from '../utils/colorHelpers';
 import { useIsMounted } from '../hooks/useIsMounted';
 

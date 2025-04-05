@@ -1,5 +1,5 @@
 // src/utils/elementSelector.ts
-import { Element } from '../types';
+import { Element } from '../types/types';
 
 export const getElementById = (elements: Record<string, Element>, id: string): Element | undefined => elements[id];
 export const getSelectedElement = (elements: Record<string, Element>): Element | undefined => Object.values(elements).find(element => element.selected);

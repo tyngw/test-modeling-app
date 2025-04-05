@@ -2,8 +2,8 @@
 'use client';
 
 import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
-import { useCanvas } from '../context/canvasContext';
-import TextDisplayArea from './textDisplayArea';
+import { useCanvas } from '../context/CanvasContext';
+import TextDisplayArea from './TextDisplayArea';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import DoneIcon from '@mui/icons-material/Done';
 import ClearIcon from '@mui/icons-material/Clear';
@@ -24,10 +24,10 @@ import {
   getFontFamily,
   getSelectedStrokeColor
 } from '../utils/localStorageHelpers';
-import { Element as CanvasElement } from '../types';
+import { Element as CanvasElement } from '../types/types';
 import { isDescendant } from '../utils/elementHelpers';
 import { debugLog, isDevelopment } from '../utils/debugLogHelpers';
-import { useTabs } from '../context/tabsContext';
+import { useTabs } from '../context/TabsContext';
 import { useIsMounted } from '../hooks/useIsMounted';
 
 interface IdeaElementProps {

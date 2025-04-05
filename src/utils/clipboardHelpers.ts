@@ -1,4 +1,4 @@
-import { Element } from '../types';
+import { Element } from '../types/types';
 import { ElementsMap } from './elementHelpers';
 import { getCutElements, setCutElements } from './localStorageHelpers';
 

@@ -1,5 +1,5 @@
 // src/constants/markerConfigs.ts
-import { MarkerConfigMap } from '../types';
+import { MarkerConfigMap } from '../types/types';
 import { MARKER, EQUILATERAL_MARKER } from './elementSettings';
 
 /**
