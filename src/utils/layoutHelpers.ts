@@ -12,6 +12,19 @@ type DirectionYPositions = {
     [ELEMENT_DIRECTIONS.NONE]: number;
 };
 
+// キャンバスのサイズ情報
+interface CanvasDimensions {
+    width: number;
+    height: number;
+}
+
+// マインドマップモード用のデフォルトキャンバスサイズ
+const DEFAULT_MINDMAP_CANVAS = {
+    width: 1200,
+    height: 800,
+    HEADER_HEIGHT: 80
+};
+
 const layoutNodeByDirection = (
     node: Element,
     elements: ElementsMap,
@@ -19,13 +32,28 @@ const layoutNodeByDirection = (
     depth: number,
     getNumberOfSections: () => number,
     layoutMode: string = 'default',
-    currentYbyDirection: DirectionYPositions
+    currentYbyDirection: DirectionYPositions,
+    canvasDimensions?: CanvasDimensions
 ): { newY: number } => {
     debugLog(`[layoutNodeByDirection]「${node.texts}」 id=${node.id}, depth=${depth}, startY=${startY}, direction=${node.direction}, layoutMode=${layoutMode} ---`);
 
     // X座標の計算
     if (node.parentId === null) {
-        node.x = DEFAULT_POSITION.X;
+        // ルート要素のX座標設定
+        if (layoutMode === 'mindmap') {
+            // マインドマップモードでは、ルート要素をキャンバスの中央に配置（水平方向のみ）
+            const canvasWidth = canvasDimensions ? canvasDimensions.width : DEFAULT_MINDMAP_CANVAS.width;
+            node.x = Math.max((canvasWidth / 2) - (node.width / 2), DEFAULT_POSITION.X);
+            debugLog(`マインドマップ水平中央配置: canvasWidth=${canvasWidth}, calculatedX=${node.x}, elementWidth=${node.width}`);
+        } else {
+            // デフォルトモードでは通常通り左側に配置
+            node.x = DEFAULT_POSITION.X;
+        }
+        
+        // y方向は中央配置せず、デフォルト位置またはstartYを使用
+        if (node.parentId === null) {
+            node.y = startY;
+        }
     } else {
         const parent = elements[node.parentId];
         // direction に応じてXオフセットの符号を決定
@@ -65,7 +93,8 @@ const layoutNodeByDirection = (
                 depth + 1, 
                 getNumberOfSections, 
                 layoutMode,
-                currentYbyDirection
+                currentYbyDirection,
+                canvasDimensions
             );
             currentY = result.newY + OFFSET.Y;
             maxChildBottom = Math.max(maxChildBottom, result.newY);
@@ -80,9 +109,11 @@ const layoutNodeByDirection = (
             // 子要素が1つの場合、親要素は子要素と同じ高さに配置
             const child = children[0];
             node.y = child.y + (child.height - node.height) / 2;
-        } else {
+        } else if (node.parentId !== null) {
+            // ルート要素でない場合かつ子要素がない場合はstartYを使用
             node.y = startY;
         }
+        // ルート要素の場合はすでに上部で設定済みなので何もしない
 
         // Use maxChildBottom to ensure we don't overlap with any children
         currentY = Math.max(maxChildBottom, node.y + node.height);
@@ -105,7 +136,8 @@ const layoutNodeByDirection = (
                     depth + 1, 
                     getNumberOfSections, 
                     layoutMode,
-                    currentYbyDirection
+                    currentYbyDirection,
+                    canvasDimensions
                 );
                 
                 // その方向のY座標を更新
@@ -115,7 +147,12 @@ const layoutNodeByDirection = (
         
         return { newY: currentY };
     } else {
-        node.y = startY;
+        // 非ルート要素で子要素がない場合
+        if (node.parentId !== null) {
+            node.y = startY;
+        }
+        // ルート要素の場合はすでに上部で設定済みなので何もしない
+        
         currentY = startY + node.height;
         debugLog(`[layoutNodeByDirection](子要素なし)「${node.texts}」 id=${node.id}, y=${node.y}, newY=${currentY}`);
         return { newY: currentY };
@@ -125,7 +162,8 @@ const layoutNodeByDirection = (
 export const adjustElementPositions = (
     elements: ElementsMap,
     getNumberOfSections: () => number,
-    getLayoutMode: () => string = () => 'default'
+    getLayoutMode: () => string = () => 'default',
+    canvasSize?: { width: number; height: number }
 ): ElementsMap => {
     debugLog(`adjustElementPositions開始: 要素数=${Object.keys(elements).length}`);
     
@@ -155,7 +193,8 @@ export const adjustElementPositions = (
             0, 
             getNumberOfSections, 
             layoutMode,
-            currentYbyDirection
+            currentYbyDirection,
+            canvasSize
         );
         
         // この方向のY座標を更新
