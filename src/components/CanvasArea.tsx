@@ -22,6 +22,7 @@ import {
     DEFAULT_CONNECTION_PATH_STROKE,
     EQUILATERAL_MARKER,
     OFFSET,
+    ELEMENT_DIRECTIONS
 } from '../constants/elementSettings';
 import { Element as CanvasElement, MarkerType } from '../types/types';
 import { isDescendant } from '../utils/elementHelpers';

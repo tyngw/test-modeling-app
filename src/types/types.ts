@@ -33,7 +33,7 @@ export interface Element {
   tentative: boolean;
   startMarker: MarkerType;
   endMarker: MarkerType;
-  direction: ElementDirection; // 方向プロパティを追加
+  direction: ElementDirection;
 }
   
 export interface CanvasState {
