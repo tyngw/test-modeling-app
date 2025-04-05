@@ -44,7 +44,7 @@ import {
 import { exportElementSettings, importElementSettings } from '../utils/settingsExportImport';
 import { useTabs } from '../context/TabsContext';
 import { getCurrentTheme, isDarkMode } from '../utils/colorHelpers';
-import { useIsMounted } from '../hooks/useIsMounted';
+import { useIsMounted } from '../hooks/UseIsMounted';
 
 interface SettingsModalProps {
   isOpen: boolean;
