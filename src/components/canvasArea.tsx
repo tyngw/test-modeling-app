@@ -2,8 +2,9 @@
 'use client';
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import IdeaElement, { DebugInfo } from './ideaElement';
+import IdeaElement from './ideaElement';
 import InputFields from './inputFields';
+import DebugInfo from './DebugInfo';
 import useResizeEffect from '../hooks/useResizeEffect';
 import { useCanvas } from '../context/canvasContext';
 import { keyActionMap } from '../constants/keyActionMap';
@@ -22,7 +23,7 @@ import {
     EQUILATERAL_MARKER,
     OFFSET,
 } from '../constants/elementSettings';
-import { Element as CanvasElement, MarkerType } from '../types';
+import { Element as CanvasElement, MarkerType } from '../types/types';
 import { isDescendant } from '../utils/elementHelpers';
 import { useToast } from '../context/toastContext';
 import { ToastMessages } from '../constants/toastMessages';
@@ -661,6 +662,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                         isHovered={true}
                         currentDropTarget={currentDropTarget}
                         dropPosition={dropPosition}
+                        siblingInfo={siblingInfo}
                     />
                 );
             })
