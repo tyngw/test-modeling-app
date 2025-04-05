@@ -1,6 +1,6 @@
 // src/components/unsaveConfiromModal.tsx
 import React from 'react';
-import ModalWindow from './modalWindow';
+import ModalWindow from './ModalWindow';
 import { Button } from '@mui/material';
 import { getCurrentTheme } from '../utils/colorHelpers';
 import { getCanvasBackgroundColor } from '../utils/localStorageHelpers';
