@@ -25,7 +25,7 @@ import { tooltipTexts } from '../constants/tooltipTexts';
 import { useTabs } from '../context/TabsContext';
 import { getCurrentTheme } from '../utils/colorHelpers';
 import { getCanvasBackgroundColor } from '../utils/localStorageHelpers';
-import { useIsMounted } from '../hooks/UseIsMounted';
+import { useIsMounted } from '../hooks/useIsMounted';
 import LoadingIndicator from './LoadingIndicator';
 
 interface QuickMenuBarProps {
