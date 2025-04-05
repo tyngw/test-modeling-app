@@ -4,11 +4,11 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import IdeaElement, { DebugInfo } from './IdeaElement';
 import InputFields from './InputFields';
-import useResizeEffect from '../hooks/useResizeEffect';
+import useResizeEffect from '../hooks/UseResizeEffect';
 import { useCanvas } from '../context/CanvasContext';
 import { keyActionMap } from '../constants/keyActionMap';
-import { useClickOutside } from '../hooks/useClickOutside';
-import { useElementDragEffect } from '../hooks/useElementDragEffect';
+import { useClickOutside } from '../hooks/UseClickOutside';
+import { useElementDragEffect } from '../hooks/UseElementDragEffect';
 import {
     ICONBAR_HEIGHT,
     HEADER_HEIGHT,
