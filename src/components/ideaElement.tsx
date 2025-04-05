@@ -24,7 +24,7 @@ import {
   getFontFamily,
   getSelectedStrokeColor
 } from '../utils/localStorageHelpers';
-import { Element as CanvasElement } from '../types';
+import { Element as CanvasElement } from '../types/types';
 import { isDescendant } from '../utils/elementHelpers';
 import { debugLog, isDevelopment } from '../utils/debugLogHelpers';
 import { useTabs } from '../context/TabsContext';

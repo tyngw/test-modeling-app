@@ -1,4 +1,4 @@
-import { Element } from '../types';
+import { Element } from '../types/types';
 import { OFFSET, DEFAULT_POSITION, SIZE } from '../constants/elementSettings';
 import { debugLog } from './debugLogHelpers';
 import { getChildren } from './elementHelpers';

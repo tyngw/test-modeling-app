@@ -1,7 +1,7 @@
 // src/utils/fileHelpers.ts
 import { SIZE } from "../constants/elementSettings";
 import { createNewElement } from "./elementHelpers";
-import { Element } from "../types";
+import { Element } from "../types/types";
 import { v4 as uuidv4 } from 'uuid';
 import { 
     DEFAULT_FONT_FAMILY,

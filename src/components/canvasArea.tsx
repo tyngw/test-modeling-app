@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import IdeaElement, { DebugInfo } from './ideaElement';
+import IdeaElement, { DebugInfo } from './IdeaElement';
 import InputFields from './InputFields';
 import useResizeEffect from '../hooks/useResizeEffect';
 import { useCanvas } from '../context/CanvasContext';
@@ -22,7 +22,7 @@ import {
     EQUILATERAL_MARKER,
     OFFSET,
 } from '../constants/elementSettings';
-import { Element as CanvasElement, MarkerType } from '../types';
+import { Element as CanvasElement, MarkerType } from '../types/types';
 import { isDescendant } from '../utils/elementHelpers';
 import { useToast } from '../context/ToastContext';
 import { ToastMessages } from '../constants/toastMessages';

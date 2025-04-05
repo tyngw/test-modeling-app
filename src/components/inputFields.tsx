@@ -15,7 +15,7 @@ import {
     getElementColor,
     getTextColor 
 } from '../utils/localStorageHelpers';
-import { Element } from '../types';
+import { Element } from '../types/types';
 import { inputFieldKeyActionMap } from '../constants/keyActionMap';
 
 interface InputFieldsProps {

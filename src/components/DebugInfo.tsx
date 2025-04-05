@@ -1,6 +1,6 @@
 // src/components/DebugInfo.tsx
 import React from 'react';
-import { Element as CanvasElement } from '../types';
+import { Element as CanvasElement } from '../types/types';
 import { isDevelopment } from '../utils/debugLogHelpers';
 
 interface DebugInfoProps { 
