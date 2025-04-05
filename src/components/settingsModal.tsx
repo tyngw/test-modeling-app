@@ -2,8 +2,8 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import ModalWindow from './modalWindow';
-import { SettingField } from './settings/settingField';
+import ModalWindow from './ModalWindow';
+import { SettingField } from './settings/SettingField';
 import { Box, Button, Typography, Tabs, Tab } from '@mui/material';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';

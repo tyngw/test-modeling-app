@@ -3,7 +3,7 @@
 
 import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { useCanvas } from '../context/CanvasContext';
-import TextDisplayArea from './textDisplayArea';
+import TextDisplayArea from './TextDisplayArea';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import DoneIcon from '@mui/icons-material/Done';
 import ClearIcon from '@mui/icons-material/Clear';

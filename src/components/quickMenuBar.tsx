@@ -26,7 +26,7 @@ import { useTabs } from '../context/TabsContext';
 import { getCurrentTheme } from '../utils/colorHelpers';
 import { getCanvasBackgroundColor } from '../utils/localStorageHelpers';
 import { useIsMounted } from '../hooks/useIsMounted';
-import LoadingIndicator from './loadingIndicator';
+import LoadingIndicator from './LoadingIndicator';
 
 interface QuickMenuBarProps {
   saveSvg: () => void;
