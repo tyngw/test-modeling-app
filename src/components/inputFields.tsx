@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { useCanvas } from '../context/canvasContext';
+import { useCanvas } from '../context/CanvasContext';
 import { wrapText } from '../utils/textareaHelpers';
 import { useIsMounted } from '../hooks/useIsMounted';
 import {

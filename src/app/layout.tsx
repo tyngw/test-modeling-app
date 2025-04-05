@@ -1,7 +1,7 @@
 // app/layout.tsx
 import React from 'react'
 import type { Metadata } from 'next'
-import { Providers } from '../components/providers'
+import { Providers } from '../components/Providers'
 import { GoogleAnalytics } from '../components/googleAnalytics'
 import '../index.css'
 // import '../src/App.css'

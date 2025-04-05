@@ -3,8 +3,8 @@
 
 import React from 'react'
 import { ReactNode } from 'react'
-import { TabsProvider } from '../context/tabsContext'
-import { ToastProvider } from '../context/toastContext'
+import { TabsProvider } from '../context/TabsContext'
+import { ToastProvider } from '../context/ToastContext'
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
