@@ -1,7 +1,7 @@
 // src/components/TabHeaders/index.tsx
 import React, { useEffect, useState } from 'react';
 import { TabState } from '../../context/tabsContext';
-import Tab from './Tab';
+import Tab from './tab';
 import { ICONBAR_HEIGHT, TABBAR_HEIGHT } from '../../constants/elementSettings';
 import { getCurrentTheme } from '../../utils/colorHelpers';
 import { getCanvasBackgroundColor } from '../../utils/localStorageHelpers';

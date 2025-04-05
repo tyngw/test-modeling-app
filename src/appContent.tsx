@@ -5,7 +5,7 @@ import { ToastMessages } from './constants/toastMessages';
 import React, { useState, useCallback, useMemo } from 'react';
 import CanvasArea from './components/canvasArea';
 import QuickMenuBar from './components/quickMenuBar';
-import TabHeaders from './components/TabHeaders/TabHeaders';
+import TabHeaders from './components/tabHeaders/tabHeaders';
 import SettingsModal from './components/settingsModal';
 import UnsaveConfirmModal from './components/unsaveConfiromModal';
 import ModalWindow from './components/modalWindow';

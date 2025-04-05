@@ -20,11 +20,11 @@ export const OFFSET = {
 }
 export const ELEM_STYLE = {
     NORMAL: {
-        COLOR: "white",
-        STROKE_COLOR: "dimgray",
+        COLOR: "#ffffff",
+        STROKE_COLOR: "#696969",
     },
     SELECTED: {
-        STROKE_COLOR:  "blue",
+        STROKE_COLOR: "#0000ff",
     },
     DRAGGING: {
         COLOR: "rgba(100, 100, 255, 0.3)",

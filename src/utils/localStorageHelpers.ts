@@ -25,6 +25,7 @@ interface StyleSettings {
   strokeWidth: number;
   textColor: string;
   connectionPathStroke: number;
+  selectedStrokeColor: string;
 }
 
 // Default style settings
@@ -38,6 +39,7 @@ const DEFAULT_STYLES: StyleSettings = {
   strokeWidth: ELEM_STYLE.STROKE_WIDTH,
   textColor: DEFAULT_TEXT_COLOR,
   connectionPathStroke: DEFAULT_CONNECTION_PATH_STROKE,
+  selectedStrokeColor: ELEM_STYLE.SELECTED.STROKE_COLOR,
 };
 
 const STYLES_KEY = 'styles';
@@ -143,11 +145,25 @@ export const getStyles = (): StyleSettings => {
   if (!storedStyles) {
     // Migrate old settings to new format if they exist
     const migratedStyles = migrateLegacyStyles();
+    
+    // Force save the default styles to localStorage on first load
+    // This ensures all properties including selectedStrokeColor are properly initialized
+    if (!migratedStyles.selectedStrokeColor) {
+      migratedStyles.selectedStrokeColor = ELEM_STYLE.SELECTED.STROKE_COLOR;
+      safeLocalStorage.setItem(STYLES_KEY, JSON.stringify(migratedStyles));
+    }
+    
     return migratedStyles;
   }
   
   try {
-    return { ...DEFAULT_STYLES, ...JSON.parse(storedStyles) };
+    const parsedStyles = JSON.parse(storedStyles);
+    // Ensure selectedStrokeColor is set if missing in stored settings
+    if (!parsedStyles.selectedStrokeColor) {
+      parsedStyles.selectedStrokeColor = ELEM_STYLE.SELECTED.STROKE_COLOR;
+      safeLocalStorage.setItem(STYLES_KEY, JSON.stringify(parsedStyles));
+    }
+    return { ...DEFAULT_STYLES, ...parsedStyles };
   } catch (e) {
     console.error('Failed to parse styles:', e);
     return DEFAULT_STYLES;
@@ -169,7 +185,7 @@ const migrateLegacyStyles = (): StyleSettings => {
   const keys: (keyof StyleSettings)[] = [
     'canvasBackgroundColor', 'connectionPathColor', 'elementColor', 
     'fontFamily', 'markerType', 'strokeColor', 'strokeWidth',
-    'textColor', 'connectionPathStroke'
+    'textColor', 'connectionPathStroke', 'selectedStrokeColor'
   ];
   
   let hasLegacySettings = false;
@@ -272,6 +288,13 @@ export const getTextColor = (): string =>
 
 export const setTextColor = (color: string): void => 
   setStyles({ textColor: color });
+
+// Selected stroke color functions
+export const getSelectedStrokeColor = (): string => 
+  getStyles().selectedStrokeColor;
+
+export const setSelectedStrokeColor = (color: string): void => 
+  setStyles({ selectedStrokeColor: color });
 
 // APIキー関連
 export const getApiKey = async (): Promise<string> => {

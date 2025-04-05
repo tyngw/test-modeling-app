@@ -42,19 +42,37 @@ export const convertLegacyElement = (element: unknown): Element => {
 
   // 新しい形式の要素をチェック
   if (element.texts && element.sectionHeights) {
-    return {
+    // 古いマーカープロパティ名を新しい名前に変換
+    const converted = {
       ...element,
       texts: element.texts,
       sectionHeights: element.sectionHeights,
       x: element.hasOwnProperty('x') ? element.x : 0,
       y: element.hasOwnProperty('y') ? element.y : 0,
-      tentative: element.hasOwnProperty('tentative') ? element.tentative : false,
-      connectionPathType: element.hasOwnProperty('connectionPathType') ? element.connectionPathType : 'arrow'
-    } as Element
+      tentative: element.hasOwnProperty('tentative') ? element.tentative : false
+    } as any;
+
+    // connectionPathType が存在する場合、startMarker に変換
+    if (element.hasOwnProperty('connectionPathType')) {
+      converted.startMarker = element.connectionPathType;
+      delete converted.connectionPathType;
+    } else if (!converted.hasOwnProperty('startMarker')) {
+      converted.startMarker = 'none';
+    }
+
+    // endConnectionPathType が存在する場合、endMarker に変換
+    if (element.hasOwnProperty('endConnectionPathType')) {
+      converted.endMarker = element.endConnectionPathType;
+      delete converted.endConnectionPathType;
+    } else if (!converted.hasOwnProperty('endMarker')) {
+      converted.endMarker = 'none';
+    }
+
+    return converted as Element;
   }
 
   // 古い形式の変換処理
-  return {
+  const converted = {
     ...element,
     texts: [
       element.text || '',
@@ -75,8 +93,23 @@ export const convertLegacyElement = (element: unknown): Element => {
     section2Height: undefined,
     section3Height: undefined,
     tentative: element.hasOwnProperty('tentative') ? element.tentative : false,
-    connectionPathType: element.hasOwnProperty('connectionPathType') ? element.connectionPathType : 'arrow'
-  } as unknown as Element
+  } as any;
+
+  // connectionPathType が存在する場合、startMarker に変換
+  if (element.hasOwnProperty('connectionPathType')) {
+    converted.startMarker = element.connectionPathType;
+  } else {
+    converted.startMarker = 'none';
+  }
+
+  // endConnectionPathType が存在する場合、endMarker に変換
+  if (element.hasOwnProperty('endConnectionPathType')) {
+    converted.endMarker = element.endConnectionPathType;
+  } else {
+    converted.endMarker = 'none';
+  }
+
+  return converted as Element;
 }
 
 // ファイル読み込み処理を修正

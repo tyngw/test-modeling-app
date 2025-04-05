@@ -21,7 +21,8 @@ import {
   getElementColor,
   getStrokeColor,
   getStrokeWidth,
-  getFontFamily
+  getFontFamily,
+  getSelectedStrokeColor
 } from '../utils/localStorageHelpers';
 import { Element as CanvasElement } from '../types';
 import { isDescendant } from '../utils/elementHelpers';
@@ -153,7 +154,8 @@ export const DebugInfo: React.FC<{
         <div>order: {element.order}</div>
         <div>depth: {element.depth}</div>
         <div>children: {element.children}</div>
-        <div>arrow: {element.connectionPathType}</div>
+        <div>start marker: {element.startMarker}</div>
+        <div>end marker: {element.endMarker}</div>
         <div>editing: {element.editing ? 'true' : 'false'}</div>
         <div>selected: {element.selected ? 'true' : 'false'}</div>
         <div>visible: {element.visible ? 'true' : 'false'}</div>
@@ -196,6 +198,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
   const [strokeColor, setStrokeColor] = useState(ELEM_STYLE.NORMAL.STROKE_COLOR);
   const [strokeWidth, setStrokeWidth] = useState(ELEM_STYLE.STROKE_WIDTH);
   const [fontFamily, setFontFamily] = useState('');
+  const [selectedStrokeColor, setSelectedStrokeColor] = useState(ELEM_STYLE.SELECTED.STROKE_COLOR);
 
   useEffect(() => {
     if (!isMounted) return;
@@ -203,6 +206,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
     setStrokeColor(getStrokeColor());
     setStrokeWidth(getStrokeWidth());
     setFontFamily(getFontFamily());
+    setSelectedStrokeColor(getSelectedStrokeColor());
   }, [isMounted]);
 
   useEffect(() => {
@@ -396,7 +400,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
           stroke={
             element.texts.length > 1
               ? element.selected
-                ? ELEM_STYLE.SELECTED.STROKE_COLOR
+                ? selectedStrokeColor
                 : element.tentative
                   ? '#9E9E9E' // tentativeかつ非選択
                   : strokeColor // 設定された線の色を使用
@@ -428,8 +432,9 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
                 y1={element.y + element.height + 2}
                 x2={element.x + element.width + 1}
                 y2={element.y + element.height + 2}
-                stroke="rgba(0,0,255,0.2)"
-                strokeWidth={strokeWidth}
+                strokeOpacity={0.4}
+                stroke={strokeColor}
+                strokeWidth={element.selected && strokeWidth === 0 ? 2 : strokeWidth}
                 strokeLinecap="round"
                 pointerEvents="none"
               />
@@ -442,12 +447,12 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
               y2={element.y + element.height}
               stroke={
                 element.selected
-                  ? ELEM_STYLE.SELECTED.STROKE_COLOR
+                  ? selectedStrokeColor
                   : element.tentative
                     ? '#9E9E9E' // tentativeかつ非選択
                     : strokeColor // 設定された線の色を使用
               }
-              strokeWidth={strokeWidth}
+              strokeWidth={element.selected && strokeWidth === 0 ? 2 : strokeWidth}
               strokeDasharray={element.tentative ? "4 2" : "none"}
               pointerEvents="none"
             />
