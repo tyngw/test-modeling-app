@@ -10,6 +10,7 @@ import {
   DEFAULT_CONNECTION_PATH_STROKE,
   DEFAULT_CANVAS_BACKGROUND_COLOR,
   DEFAULT_TEXT_COLOR,
+  DEFAULT_LAYOUT_MODE
 } from '../constants/elementSettings';
 import { SYSTEM_PROMPT_TEMPLATE } from '../constants/systemPrompt';
 import { VERSION } from '../constants/version';
@@ -26,6 +27,7 @@ interface StyleSettings {
   textColor: string;
   connectionPathStroke: number;
   selectedStrokeColor: string;
+  layoutMode: string;
 }
 
 // Default style settings
@@ -40,6 +42,7 @@ const DEFAULT_STYLES: StyleSettings = {
   textColor: DEFAULT_TEXT_COLOR,
   connectionPathStroke: DEFAULT_CONNECTION_PATH_STROKE,
   selectedStrokeColor: ELEM_STYLE.SELECTED.STROKE_COLOR,
+  layoutMode: DEFAULT_LAYOUT_MODE,
 };
 
 const STYLES_KEY = 'styles';
@@ -295,6 +298,13 @@ export const getSelectedStrokeColor = (): string =>
 
 export const setSelectedStrokeColor = (color: string): void => 
   setStyles({ selectedStrokeColor: color });
+
+// レイアウトモード関連
+export const getLayoutMode = (): string => 
+  getStyles().layoutMode || DEFAULT_LAYOUT_MODE;
+
+export const setLayoutMode = (mode: string): void => 
+  setStyles({ layoutMode: mode });
 
 // APIキー関連
 export const getApiKey = async (): Promise<string> => {

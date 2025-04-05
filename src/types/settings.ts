@@ -3,7 +3,9 @@ import {
   ELEM_STYLE, 
   DEFAULT_CANVAS_BACKGROUND_COLOR, 
   DEFAULT_TEXT_COLOR,
-  DEFAULT_CONNECTION_PATH_COLOR
+  DEFAULT_CONNECTION_PATH_COLOR,
+  LAYOUT_MODES,
+  DEFAULT_LAYOUT_MODE
 } from '../constants/elementSettings';
 
 export type SettingValue = string | number;
@@ -34,6 +36,17 @@ export const SETTINGS_TABS: SettingTab[] = [
     id: 0,
     label: "Elements Setting",
     fields: [
+      {
+        key: 'layoutMode',
+        label: 'Layout Mode',
+        type: 'radio',
+        helperText: 'レイアウトモードの選択',
+        defaultValue: DEFAULT_LAYOUT_MODE,
+        options: [
+          { value: LAYOUT_MODES.DEFAULT, label: 'Default' },
+          { value: LAYOUT_MODES.MIND_MAP, label: 'Mind Map' }
+        ]
+      },
       {
         key: 'numberOfSections',
         label: 'Number of sections',

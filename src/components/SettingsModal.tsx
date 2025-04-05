@@ -24,6 +24,7 @@ import {
   getCanvasBackgroundColor,
   getTextColor,
   getSelectedStrokeColor,
+  getLayoutMode,
   setSystemPromptTemplate,
   setModelType,
   setPrompt,
@@ -38,6 +39,7 @@ import {
   setCanvasBackgroundColor,
   setTextColor,
   setSelectedStrokeColor,
+  setLayoutMode,
   getApiKey,
   setApiKey,
 } from '../utils/localStorageHelpers';
@@ -90,6 +92,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
         loadedValues['systemPromptTemplate'] = getSystemPromptTemplate();
         loadedValues['modelType'] = getModelType();
         loadedValues['prompt'] = getPrompt();
+        
+        // レイアウトモードの取得
+        loadedValues['layoutMode'] = getLayoutMode();
         
         // Get numberOfSections from the current tab instead of global settings
         loadedValues['numberOfSections'] = getCurrentTabNumberOfSections();
@@ -208,6 +213,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     
     const prompt = values['prompt'];
     if (prompt !== undefined) setPrompt(String(prompt));
+    
+    // レイアウトモードの保存
+    const layoutMode = values['layoutMode'];
+    if (layoutMode !== undefined) setLayoutMode(String(layoutMode));
     
     // Update both global setting and current tab state for numberOfSections
     const numberOfSections = values['numberOfSections'];

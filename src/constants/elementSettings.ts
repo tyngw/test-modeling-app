@@ -80,6 +80,14 @@ export const MARKER_TYPES: Record<string, MarkerType> = {
 
 export const DEFAULT_MARKER_TYPE = MARKER_TYPES.NONE;
 
+// レイアウトモード定義
+export const LAYOUT_MODES = {
+    DEFAULT: 'default',
+    MIND_MAP: 'mind_map',
+};
+
+export const DEFAULT_LAYOUT_MODE = LAYOUT_MODES.DEFAULT;
+
 export const DEFAULT_CONNECTION_PATH_COLOR = 'black';
 export const DEFAULT_CONNECTION_PATH_STROKE = 0.5;
 export const DEFAULT_CANVAS_BACKGROUND_COLOR = '#ffffff';
