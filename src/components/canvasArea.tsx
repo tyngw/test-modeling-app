@@ -315,8 +315,8 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
         
         // ボタン位置の計算（終点マーカーは左側、始点マーカーは右側）
         const buttonX = isEndMarker 
-            ? absolutePosition.x - 10  // 左側（終点）
-            : absolutePosition.x + element.width + 10;  // 右側（始点）
+            ? absolutePosition.x - MARKER.WIDTH /2
+            : absolutePosition.x + element.width + MARKER.WIDTH / 2;
         
         return (
             <g key={`marker-button-${buttonId}`}>
