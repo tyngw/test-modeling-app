@@ -15,11 +15,20 @@ import {
     setVisibilityRecursive, 
     deleteElementRecursive, 
     isDescendant,
-    ElementsMap,
-    NewElementParams
+    ElementsMap
 } from '../utils/elementHelpers';
 import { adjustElementPositions } from '../utils/layoutHelpers';
 import { getSelectedAndChildren, copyToClipboard, getGlobalCutElements } from '../utils/clipboardHelpers';
+import {
+    createElementAdder,
+    createSiblingElementAdder,
+    pasteElements,
+    addElementsWithAdjustment,
+    updateElementProperties,
+    batchUpdateElements,
+    updateElementsWhere,
+    updateSelectedElements
+} from '../utils/stateHelpers';
 
 export interface State {
     elements: ElementsMap;
@@ -29,7 +38,7 @@ export interface State {
     numberOfSections: number;
 }
 
-export type Action = {
+export type Action = {  
     type: string;
     payload?: any;
 };
@@ -48,138 +57,6 @@ export const initialState: State = {
     height: typeof window !== 'undefined' ? window.innerHeight : 0,
     zoomRatio: 1,
     numberOfSections: NUMBER_OF_SECTIONS,
-};
-
-const createElementAdder = (
-    elements: ElementsMap,
-    parentElement: Element,
-    text?: string,
-    options?: { 
-        newElementSelect?: boolean; 
-        tentative?: boolean; 
-        order?: number; 
-        numberOfSections?: number; 
-    }
-): ElementsMap => {
-    const newElement = createNewElement({
-        parentId: parentElement.id,
-        order: options?.order ?? parentElement.children,
-        depth: parentElement.depth + 1,
-        numSections: options?.numberOfSections
-    });
-
-    if (text) {
-        newElement.texts[0] = text;
-    }
-
-    if (options?.newElementSelect !== undefined) {
-        newElement.selected = options.newElementSelect;
-        newElement.editing = options.newElementSelect;
-    }
-
-    if (options?.tentative !== undefined) {
-        newElement.tentative = options.tentative;
-    }
-
-    const updatedParentElement = {
-        ...parentElement,
-        children: parentElement.children + 1,
-        selected: options?.newElementSelect ? false : parentElement.selected
-    };
-
-    return {
-        ...elements,
-        [parentElement.id]: updatedParentElement,
-        [newElement.id]: newElement
-    };
-};
-
-const createSiblingElementAdder = (elements: ElementsMap, selectedElement: Element, numberOfSections?: number): ElementsMap => {
-    const parentId = selectedElement.parentId;
-    const siblings = Object.values(elements).filter(e => e.parentId === parentId);
-    const newOrder = selectedElement.order + 1;
-
-    const updatedElements = { ...elements };
-
-    // 新しいorder以上の兄弟要素のorderを更新
-    siblings.forEach(sibling => {
-        if (sibling.order >= newOrder) {
-            updatedElements[sibling.id] = {
-                ...sibling,
-                order: sibling.order + 1,
-            };
-        }
-    });
-
-    // 新しい要素を作成
-    const newElement = createNewElement({
-        parentId: parentId,
-        order: newOrder,
-        depth: selectedElement.depth,
-        numSections: numberOfSections
-    });
-    updatedElements[selectedElement.id] = { ...selectedElement, selected: false };
-    updatedElements[newElement.id] = newElement;
-
-    // 親要素のchildrenを更新（親が存在する場合）
-    if (parentId !== null) {
-        const parent = updatedElements[parentId];
-        updatedElements[parentId] = {
-            ...parent,
-            children: parent.children + 1,
-        };
-    }
-
-    return updatedElements;
-};
-
-const pasteElements = (elements: ElementsMap, cutElements: ElementsMap, parentElement: Element): ElementsMap => {
-    if (!cutElements) return elements;
-
-    const rootElement = Object.values(cutElements).find(e => e.parentId === null);
-    if (!rootElement) return { ...elements, ...cutElements };
-
-    // ルート要素の元の深さを取得
-    const rootElementDepth = rootElement.depth;
-    // 深さの差分を貼り付け先に基づいて計算
-    const depthDelta = parentElement.depth + 1 - rootElementDepth;
-
-    const idMap = new Map<string, string>();
-    const newElements: ElementsMap = {};
-
-    Object.values(cutElements).forEach(cutElement => {
-        const newId = uuidv4();
-        idMap.set(cutElement.id, newId);
-
-        const newDepth = cutElement.depth + depthDelta;
-
-        newElements[newId] = {
-            ...cutElement,
-            id: newId,
-            depth: newDepth,
-            parentId: cutElement.parentId === null
-                ? parentElement.id
-                : idMap.get(cutElement.parentId)!,
-            order: cutElement.parentId === null
-                ? parentElement.children
-                : cutElement.order
-        };
-    });
-
-    // Set the root element of pasted content as selected, and deselect the parent
-    const pastedRootElementId = idMap.get(rootElement.id)!;
-    newElements[pastedRootElementId].selected = true;
-    const updatedParent = {
-        ...parentElement,
-        children: parentElement.children + 1,
-        selected: false
-    };
-
-    return {
-        ...elements,
-        ...newElements,
-        [parentElement.id]: updatedParent
-    };
 };
 
 const handleZoomIn = (state: State): State => ({
@@ -741,58 +618,32 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
             }, () => state.numberOfSections)
         };
     },
-    UPDATE_CONNECTION_PATH_TYPE: (state, action) => {
-        const { id, connectionPathType } = action.payload;
-        const updatedElement = {
-            ...state.elements[id],
-            connectionPathType
-        };
-        return {
-            ...state,
-            elements: {
-                ...state.elements,
-                [id]: updatedElement
-            }
-        };
-    },
-    UPDATE_END_CONNECTION_PATH_TYPE: (state, action) => {
-        const { id, endConnectionPathType } = action.payload;
-        return {
-            ...state,
-            elements: {
-                ...state.elements,
-                [id]: {
-                    ...state.elements[id],
-                    endConnectionPathType
-                }
-            }
-        };
-    },
+    
     UPDATE_START_MARKER: (state, action) => {
         const { id, startMarker } = action.payload;
-        const updatedElement = {
-            ...state.elements[id],
-            startMarker
-        };
         return {
             ...state,
-            elements: {
-                ...state.elements,
-                [id]: updatedElement
-            }
+            elements: updateElementProperties(state.elements, id, { startMarker })
         };
     },
+    
     UPDATE_END_MARKER: (state, action) => {
         const { id, endMarker } = action.payload;
         return {
             ...state,
-            elements: {
-                ...state.elements,
-                [id]: {
-                    ...state.elements[id],
-                    endMarker
-                }
-            }
+            elements: updateElementProperties(state.elements, id, { endMarker })
+        };
+    },
+    
+    // 後方互換性のために残す
+    UPDATE_CONNECTION_PATH_TYPE: (state, action) => {
+        const { id, connectionPathType } = action.payload;
+        return {
+            ...state,
+            elements: updateElementProperties(state.elements, id, { 
+                startMarker: connectionPathType,
+                connectionPathType 
+            })
         };
     },
 };
