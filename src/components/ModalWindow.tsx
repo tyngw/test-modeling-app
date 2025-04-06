@@ -2,8 +2,8 @@
 'use client';
 
 import React, { ReactNode, useState, useEffect } from 'react';
-import { getCurrentTheme } from '../utils/colorHelpers';
-import { getCanvasBackgroundColor } from '../utils/localStorageHelpers';
+import { getCurrentTheme } from '../utils/style/colorHelpers';
+import { getCanvasBackgroundColor } from '../utils/storage/localStorageHelpers';
 import { useCanvas } from '../context/CanvasContext';
 import { useIsMounted } from '../hooks/UseIsMounted';
 

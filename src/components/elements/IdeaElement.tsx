@@ -1,40 +1,39 @@
-// src/components/ideaElement.tsx
+// src/components/elements/IdeaElement.tsx
 'use client';
 
 import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
-import { useCanvas } from '../context/CanvasContext';
-import TextDisplayArea from './TextDisplayArea';
+import { useCanvas } from '../../context/CanvasContext';
+import TextDisplayArea from '../TextDisplayArea';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import DoneIcon from '@mui/icons-material/Done';
 import ClearIcon from '@mui/icons-material/Clear';
-import { calculateElementWidth, wrapText } from '../utils/textareaHelpers';
+import { calculateElementWidth, wrapText } from '../../utils/textareaHelpers';
 import {
   DEFAULT_FONT_SIZE,
-  OFFSET,
   TEXTAREA_PADDING,
   SHADOW_OFFSET,
   ELEM_STYLE,
   SIZE,
   LINE_HEIGHT_RATIO,
-} from '../constants/elementSettings';
+} from '../../config/elementSettings';
 import {
   getElementColor,
   getStrokeColor,
   getStrokeWidth,
   getFontFamily,
   getSelectedStrokeColor
-} from '../utils/localStorageHelpers';
-import { Element as CanvasElement } from '../types/types';
-import { isDescendant } from '../utils/elementHelpers';
-import { debugLog, isDevelopment } from '../utils/debugLogHelpers';
-import { useTabs } from '../context/TabsContext';
-import { useIsMounted } from '../hooks/UseIsMounted';
-import DebugInfo from './DebugInfo';
+} from '../../utils/storage/localStorageHelpers';
+import { Element as CanvasElement, DropPosition } from '../../types/types';
+import { isDescendant } from '../../utils/element/elementHelpers';
+import { debugLog } from '../../utils/debugLogHelpers';
+import { useTabs } from '../../context/TabsContext';
+import { useIsMounted } from '../../hooks/UseIsMounted';
+import DebugInfo from '../DebugInfo';
 
 interface IdeaElementProps {
   element: CanvasElement;
   currentDropTarget: CanvasElement | null;
-  dropPosition: 'child' | 'sibling' | 'between' | null;
+  dropPosition: DropPosition;
   draggingElement: CanvasElement | null;
   handleMouseDown: (e: React.MouseEvent<SVGElement>, element: CanvasElement) => void;
   handleMouseUp: () => void;

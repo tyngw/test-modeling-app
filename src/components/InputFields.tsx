@@ -9,14 +9,14 @@ import {
     TEXTAREA_PADDING,
     LINE_HEIGHT_RATIO,
     SIZE,
-} from '../constants/elementSettings';
+} from '../config/elementSettings';
 import { 
     getFontFamily, 
     getElementColor,
     getTextColor 
-} from '../utils/localStorageHelpers';
+} from '../utils/storage/localStorageHelpers';
 import { Element } from '../types/types';
-import { inputFieldKeyActionMap } from '../constants/keyActionMap';
+import { inputFieldKeyActionMap } from '../config/keyActionMap';
 
 interface InputFieldsProps {
     element?: Element;

@@ -1,8 +1,7 @@
-// src/utils/fileHelpers.ts
-import { SIZE } from "../constants/elementSettings";
-import { createNewElement } from "./elementHelpers";
-import { Element } from "../types/types";
-import { v4 as uuidv4 } from 'uuid';
+// src/utils/file/fileHelpers.ts
+import { SIZE } from "../../config/elementSettings";
+import { createNewElement } from "../element/elementHelpers";
+import { Element } from "../../types/types";
 import { 
     DEFAULT_FONT_FAMILY,
     DEFAULT_FONT_SIZE,
@@ -10,8 +9,7 @@ import {
     CONNECTION_PATH_STYLE,
     DEFAULT_CANVAS_BACKGROUND_COLOR,
     DEFAULT_TEXT_COLOR
-} from "../constants/elementSettings";
-import { getNumberOfSections } from "../utils/localStorageHelpers";
+} from "../../config/elementSettings";
 
 // 既存のLegacyElement型を拡張
 type LegacyElement = {
@@ -240,22 +238,12 @@ export const saveSvg = (svgElement: SVGSVGElement, name: string) => {
     }
 
     // rect要素（四角形）のスタイルを設定
-    // まず各要素のセクション数をカウント
     const rectElements = svgElementClone.getElementsByTagName('rect');
-    const numberOfSections = getNumberOfSections();
-    
     for (let i = 0; i < rectElements.length; i++) {
         const rectElement = rectElements[i];
-        if (numberOfSections === 1) {
-            // セクション数が1の場合は枠線を透明に
-            rectElement.style.fill = ELEM_STYLE.NORMAL.COLOR;
-            rectElement.style.stroke = 'transparent';
-        } else {
-            // セクション数が2以上の場合は通常の枠線を表示
-            rectElement.style.fill = ELEM_STYLE.NORMAL.COLOR;
-            rectElement.style.stroke = ELEM_STYLE.NORMAL.STROKE_COLOR;
-            rectElement.style.strokeWidth = `${ELEM_STYLE.STROKE_WIDTH}`;
-        }
+        rectElement.style.fill = ELEM_STYLE.NORMAL.COLOR;
+        rectElement.style.stroke = ELEM_STYLE.NORMAL.STROKE_COLOR;
+        rectElement.style.strokeWidth = `${ELEM_STYLE.STROKE_WIDTH}`;
     }
 
     // line要素（下線）のスタイルを設定

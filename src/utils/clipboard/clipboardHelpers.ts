@@ -1,6 +1,7 @@
-import { Element } from '../types/types';
-import { ElementsMap } from './elementHelpers';
-import { getCutElements, setCutElements } from './localStorageHelpers';
+// src/utils/clipboard/clipboardHelpers.ts
+import { Element } from '../../types/types';
+import { ElementsMap } from '../element';
+import { getCutElements, setCutElements } from '../storage/localStorageHelpers';
 
 export const getSelectedAndChildren = (elements: ElementsMap, targetElement: Element): ElementsMap => {
     let cutElements: ElementsMap = {};

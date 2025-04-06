@@ -2,7 +2,7 @@
 import { renderHook, act } from '@testing-library/react';
 import { useStore } from './textUtils';
 import { Element } from '../../types/types';
-import { SIZE } from '../../constants/elementSettings';
+import { SIZE } from '../../config/elementSettings';
 
 describe('基本操作', () => {
     it('初期状態', () => {

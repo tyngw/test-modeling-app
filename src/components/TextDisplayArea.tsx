@@ -2,10 +2,10 @@
 'use client';
 
 import React, { memo, useEffect, useRef, useState } from 'react';
-import { SIZE, DEFAULT_FONT_SIZE, LINE_HEIGHT_RATIO, TEXTAREA_PADDING, DEFAULT_FONT_FAMILY, DEFAULT_TEXT_COLOR } from '../constants/elementSettings';
+import { SIZE, DEFAULT_FONT_SIZE, LINE_HEIGHT_RATIO, TEXTAREA_PADDING, DEFAULT_FONT_FAMILY, DEFAULT_TEXT_COLOR } from '../config/elementSettings';
 import { wrapText } from '../utils/textareaHelpers';
 import { debugLog } from '../utils/debugLogHelpers';
-import { getTextColor } from '../utils/localStorageHelpers';
+import { getTextColor } from '../utils/storage/localStorageHelpers';
 
 interface TextDisplayAreaProps {
   x: number;
