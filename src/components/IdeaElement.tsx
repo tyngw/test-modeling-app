@@ -24,7 +24,7 @@ import {
   getFontFamily,
   getSelectedStrokeColor
 } from '../utils/localStorageHelpers';
-import { Element as CanvasElement } from '../types/types';
+import { Element as CanvasElement, DropPosition } from '../types/types';
 import { isDescendant } from '../utils/elementHelpers';
 import { debugLog, isDevelopment } from '../utils/debugLogHelpers';
 import { useTabs } from '../context/TabsContext';
@@ -34,7 +34,7 @@ import DebugInfo from './DebugInfo';
 interface IdeaElementProps {
   element: CanvasElement;
   currentDropTarget: CanvasElement | null;
-  dropPosition: 'child' | 'sibling' | 'between' | null;
+  dropPosition: DropPosition;
   draggingElement: CanvasElement | null;
   handleMouseDown: (e: React.MouseEvent<SVGElement>, element: CanvasElement) => void;
   handleMouseUp: () => void;
