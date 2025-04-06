@@ -43,6 +43,7 @@ export const MarkerButton: React.FC<MarkerButtonProps> = ({
     <g 
       key={`marker-button-${buttonId}`}
       data-marker-button={`${buttonId}`}
+      data-exclude-from-export="true"
       pointerEvents="all"
     >
       {(hoverId === buttonId) && (

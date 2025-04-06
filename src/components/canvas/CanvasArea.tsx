@@ -154,22 +154,22 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
     const handleElementHover = useCallback((elementId: string, isHovered: boolean) => {
         // ドラッグ中はホバー状態の更新をスキップ
         if (draggingElement) return;
-        
-        setHoveredElements(prev => {
-          // 既に同じ状態の場合は更新をスキップ
-          if (prev[elementId] === isHovered) return prev;
 
-          const newState = { ...prev };
-          if (isHovered) {
-            newState[elementId] = true;
-          } else {
-            if (Object.prototype.hasOwnProperty.call(newState, elementId)) {
-              delete newState[elementId];
+        setHoveredElements(prev => {
+            // 既に同じ状態の場合は更新をスキップ
+            if (prev[elementId] === isHovered) return prev;
+
+            const newState = { ...prev };
+            if (isHovered) {
+                newState[elementId] = true;
+            } else {
+                if (Object.prototype.hasOwnProperty.call(newState, elementId)) {
+                    delete newState[elementId];
+                }
             }
-          }
-          return newState;
+            return newState;
         });
-      }, [draggingElement]);
+    }, [draggingElement]);
 
     // マーカーメニューが表示されているときの外部クリック処理
     useEffect(() => {
@@ -221,7 +221,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                         return groupElements.map(element => {
                             // 始点マーカーボタンを表示するかどうかの条件チェック
                             const hasChildren = Object.values(elements).some(el => el.parentId === element.id && el.visible);
-                            
+
                             return (
                                 <React.Fragment key={element.id}>
                                     <IdeaElement
@@ -322,7 +322,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                 if (draggingElement && (element.id === draggingElement.id || isDescendant(elements, draggingElement.id, element.id))) {
                     return null;
                 }
-                
+
                 return (
                     <React.Fragment key={`connection-group-${element.id}`}>
                         <ConnectionPath
@@ -352,18 +352,35 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
 
     // デバッグ情報の表示
     const renderDebugInfo = () => {
-        return Object.keys(hoveredElements)
+        // 表示対象の要素を選別
+        // 1. マウスオーバー中の要素（hoveredElements）
+        // 2. ドラッグ中のドロップターゲット要素（currentDropTarget）
+        const elementsToShow = new Set<string>();
+
+        // マウスオーバー中の要素を追加
+        Object.keys(hoveredElements).forEach(id => elementsToShow.add(id));
+
+        // ドラッグ中の場合、ドロップターゲットを追加
+        if (draggingElement && currentDropTarget) {
+            elementsToShow.add(currentDropTarget.id);
+        }
+
+        // 表示対象の要素がなければ何も表示しない
+        if (elementsToShow.size === 0) return null;
+
+        return Array.from(elementsToShow)
             .map(elementId => {
                 const element = elements[elementId];
                 if (!element || !element.visible) return null;
 
                 return (
                     <DebugInfo
-                        key={`debug-${elementId}`}
+                        key={`debug-${element.id}`}
                         element={element}
                         isHovered={true}
                         currentDropTarget={currentDropTarget}
                         dropPosition={dropPosition}
+                        siblingInfo={siblingInfo}
                     />
                 );
             })
@@ -387,10 +404,10 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
         if (!coordinates) return null;
 
         // 背景色の設定
-        const bgColor = dropPosition === 'child' 
+        const bgColor = dropPosition === 'child'
             ? 'rgba(103, 208, 113, 0.3)'  // childモードの場合: 緑色
             : 'rgba(157, 172, 244, 0.3)'; // betweenモードの場合: 青色
-        
+
         return (
             <rect
                 x={coordinates.x}
@@ -404,6 +421,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                 rx={4}
                 ry={4}
                 className="drop-preview"
+                data-exclude-from-export="true"
             />
         );
     };
@@ -411,15 +429,15 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
     // ドラッグ中の要素の接続パスプレビューを描画
     const renderDraggingElementConnectionPath = () => {
         if (!currentDropTarget || !draggingElement) return null;
-        
+
         const newParent = dropPosition === 'child'
             ? currentDropTarget
             : currentDropTarget.parentId
                 ? elements[currentDropTarget.parentId]
                 : null;
-        
+
         if (!newParent) return null;
-        
+
         // ドロップ座標を計算（ユーティリティ関数を使用）
         const coordinates = calculateDropCoordinates({
             elements,
@@ -453,24 +471,24 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
     // マーカーメニューのレンダリング
     const renderMarkerMenu = () => {
         if (!showMenuForElement) return null;
-        
+
         // 通常のマーカー設定か、終点マーカー設定かを判断
         const isEndMarkerMenu = showMenuForElement.startsWith('end-');
         let elementId = showMenuForElement;
-        
+
         // 終点マーカーの場合はプレフィックスを削除
         if (isEndMarkerMenu) {
             elementId = showMenuForElement.substring(4);
         }
-        
+
         const element = elements[elementId] as CanvasElement;
         if (!element) return null;
-        
+
         const totalHeight = element.height;
-        
+
         // ポップアップメニューの表示位置を計算
         let popupX, popupY;
-        
+
         if (isEndMarkerMenu) {
             // 終点マーカーの場合は要素の左側に表示
             popupX = element.x - 170; // メニューの幅(150px) + マージン(20px)
@@ -496,7 +514,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
     return (
         <>
             {/* 背景 */}
-            <div 
+            <div
                 style={{
                     ...canvasBackgroundStyle,
                     backgroundColor: canvasBackgroundColor
@@ -530,7 +548,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                         className="svg-element"
                     >
                         <defs>
-                            <MarkerElements 
+                            <MarkerElements
                                 connectionPathColor={connectionPathColor}
                                 connectionPathStroke={connectionPathStroke}
                             />
