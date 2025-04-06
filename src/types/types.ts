@@ -3,6 +3,8 @@ export type MarkerType = 'arrow' | 'filled_arrow' | 'circle' | 'filled_circle' |
 
 export type ConnectionPathType = MarkerType;
 
+export type DropPosition = 'child' | 'sibling' | 'between' | null;
+
 export type MarkerConfig = {
     id: string;
     width: number;

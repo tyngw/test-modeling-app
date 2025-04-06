@@ -10,7 +10,7 @@ interface CalculateDropCoordinatesParams {
   elements: Record<string, CanvasElement>;
   currentDropTarget: CanvasElement;
   draggingElement: CanvasElement;
-  dropPosition: DropPosition | null;
+  dropPosition: DropPosition;
   dropInsertY: number | undefined | null;
   siblingInfo: {
     prevElement?: CanvasElement;

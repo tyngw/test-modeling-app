@@ -16,7 +16,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Element } from '../types/types';
+import { Element, DropPosition } from '../types/types';
 import { useCanvas } from '../context/CanvasContext';
 import { isDescendant } from '../utils/elementHelpers';
 import { ToastMessages } from '../constants/toastMessages';
@@ -37,7 +37,6 @@ interface State {
 type ElementsMap = { [key: string]: Element };
 
 type Position = { x: number; y: number };
-type DropPosition = 'child' | 'sibling' | 'between';
 type DropTargetInfo = { 
   element: Element; 
   position: DropPosition; 
