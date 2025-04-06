@@ -1,20 +1,20 @@
-// src/components/canvasArea.tsx
+// src/components/canvas/CanvasArea.tsx
 'use client';
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import IdeaElement from './IdeaElement';
-import DebugInfo from './DebugInfo';
-import InputFields from './InputFields';
-import { MarkerElements } from './markers/MarkerElements';
-import { MarkerMenu } from './markers/MarkerMenu';
-import { MarkerButton } from './markers/MarkerButton';
-import { ConnectionPath } from './connections/ConnectionPath';
-import useResizeEffect from '../hooks/UseResizeEffect';
-import { useCanvas } from '../context/CanvasContext';
-import { useClickOutside } from '../hooks/UseClickOutside';
-import { useElementDragEffect } from '../hooks/UseElementDragEffect';
-import { useTouchHandlers } from '../hooks/UseTouchHandlers';
-import { useKeyboardHandler } from '../hooks/UseKeyboardHandler';
+import IdeaElement from '../elements/IdeaElement';
+import DebugInfo from '../DebugInfo';
+import InputFields from '../InputFields';
+import { MarkerElements } from '../markers/MarkerElements';
+import { MarkerMenu } from '../markers/MarkerMenu';
+import { MarkerButton } from '../markers/MarkerButton';
+import { ConnectionPath } from '../connections/ConnectionPath';
+import useResizeEffect from '../../hooks/UseResizeEffect';
+import { useCanvas } from '../../context/CanvasContext';
+import { useClickOutside } from '../../hooks/UseClickOutside';
+import { useElementDragEffect } from '../../hooks/UseElementDragEffect';
+import { useTouchHandlers } from '../../hooks/UseTouchHandlers';
+import { useKeyboardHandler } from '../../hooks/UseKeyboardHandler';
 import {
     ICONBAR_HEIGHT,
     HEADER_HEIGHT,
@@ -23,12 +23,12 @@ import {
     DEFAULT_CANVAS_BACKGROUND_COLOR,
     DEFAULT_CONNECTION_PATH_COLOR,
     DEFAULT_CONNECTION_PATH_STROKE,
-} from '../constants/elementSettings';
-import { Element as CanvasElement, MarkerType } from '../types/types';
-import { isDescendant } from '../utils/elementHelpers';
-import { useToast } from '../context/ToastContext';
-import { getConnectionPathColor, getConnectionPathStroke, getCanvasBackgroundColor } from '../utils/localStorageHelpers';
-import { calculateDropCoordinates } from '../utils/dropCoordinateHelpers';
+} from '../../config/elementSettings';
+import { Element as CanvasElement, MarkerType } from '../../types/types';
+import { isDescendant } from '../../utils/element/elementHelpers';
+import { useToast } from '../../context/ToastContext';
+import { getConnectionPathColor, getConnectionPathStroke, getCanvasBackgroundColor } from '../../utils/storage/localStorageHelpers';
+import { calculateDropCoordinates } from '../../utils/dropCoordinateHelpers';
 
 interface CanvasAreaProps {
     isHelpOpen: boolean;

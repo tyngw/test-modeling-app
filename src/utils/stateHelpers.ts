@@ -1,14 +1,10 @@
 // src/utils/stateHelpers.ts
 import { v4 as uuidv4 } from 'uuid';
 import { Element } from '../types/types';
-import { 
-    createNewElement, 
-    ElementsMap, 
-    isDescendant 
-} from './elementHelpers';
+import { createNewElement, ElementsMap } from './element';
 import { adjustElementPositions } from './layoutHelpers';
 import { calculateElementWidth, wrapText } from './textareaHelpers';
-import { SIZE, TEXTAREA_PADDING, DEFAULT_FONT_SIZE, LINE_HEIGHT_RATIO } from '../constants/elementSettings';
+import { SIZE, TEXTAREA_PADDING, DEFAULT_FONT_SIZE, LINE_HEIGHT_RATIO } from '../config/elementSettings';
 
 /**
  * 新しい要素を追加するヘルパー関数

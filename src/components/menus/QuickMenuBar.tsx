@@ -18,18 +18,18 @@ import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import HelpOutlineOutlinedIcon from '@mui/icons-material/HelpOutlineOutlined';
 import SettingsIcon from '@mui/icons-material/Settings';
 
-import { ICONBAR_HEIGHT } from '../constants/elementSettings';
-import { useCanvas } from '../context/CanvasContext';
-import { useTabs } from '../context/TabsContext';
-import { getCurrentTheme } from '../utils/colorHelpers';
-import { getCanvasBackgroundColor } from '../utils/localStorageHelpers';
-import { useIsMounted } from '../hooks/UseIsMounted';
-import LoadingIndicator from './LoadingIndicator';
-import { tooltipTexts } from '../constants/tooltipTexts';
+import { ICONBAR_HEIGHT } from '../../config/elementSettings';
+import { useCanvas } from '../../context/CanvasContext';
+import { useTabs } from '../../context/TabsContext';
+import { getCurrentTheme } from '../../utils/style/colorHelpers';
+import { getCanvasBackgroundColor } from '../../utils/storage/localStorageHelpers';
+import { useIsMounted } from '../../hooks/UseIsMounted';
+import LoadingIndicator from '../LoadingIndicator';
+import { tooltipTexts } from '../../constants/tooltipTexts';
 
 // 基本コンポーネントのインポート
-import IconButton from './menuBar/IconButton';
-import Divider from './menuBar/Divider';
+import IconButton from '../menuBar/IconButton';
+import Divider from '../menuBar/Divider';
 
 interface QuickMenuBarProps {
   saveSvg: () => void;

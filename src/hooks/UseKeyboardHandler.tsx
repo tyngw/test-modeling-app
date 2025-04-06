@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { Element as CanvasElement } from '../types/types';
-import { keyActionMap } from '../constants/keyActionMap';
-import { getGlobalCutElements } from '../utils/clipboardHelpers';
+import { keyActionMap } from '../config/keyActionMap';
+import { getGlobalCutElements } from '../utils/clipboard/clipboardHelpers';
 import { ToastMessages } from '../constants/toastMessages';
 
 interface UseKeyboardHandlerProps {

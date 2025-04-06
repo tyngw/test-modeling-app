@@ -5,7 +5,7 @@ import {
   DEFAULT_CANVAS_BACKGROUND_COLOR, 
   DEFAULT_TEXT_COLOR,
   DEFAULT_CONNECTION_PATH_COLOR
-} from '../constants/elementSettings';
+} from './elementSettings';
 import { SettingTab } from '../types/settingsTypes';
 
 export const SETTINGS_TABS: SettingTab[] = [

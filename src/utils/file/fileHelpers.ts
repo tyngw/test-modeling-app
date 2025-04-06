@@ -1,8 +1,7 @@
-// src/utils/fileHelpers.ts
-import { SIZE } from "../constants/elementSettings";
-import { createNewElement } from "./elementHelpers";
-import { Element } from "../types/types";
-import { v4 as uuidv4 } from 'uuid';
+// src/utils/file/fileHelpers.ts
+import { SIZE } from "../../config/elementSettings";
+import { createNewElement } from "../element/elementHelpers";
+import { Element } from "../../types/types";
 import { 
     DEFAULT_FONT_FAMILY,
     DEFAULT_FONT_SIZE,
@@ -10,7 +9,7 @@ import {
     CONNECTION_PATH_STYLE,
     DEFAULT_CANVAS_BACKGROUND_COLOR,
     DEFAULT_TEXT_COLOR
-} from "../constants/elementSettings";
+} from "../../config/elementSettings";
 
 // 既存のLegacyElement型を拡張
 type LegacyElement = {

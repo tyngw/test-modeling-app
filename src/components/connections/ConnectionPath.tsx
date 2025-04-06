@@ -5,8 +5,8 @@ import {
   CURVE_CONTROL_OFFSET, 
   MARKER, 
   EQUILATERAL_MARKER 
-} from '../../constants/elementSettings';
-import { getMarkerUrlByType } from '../../constants/markerConfigs';
+} from '../../config/elementSettings';
+import { getMarkerUrlByType } from '../../config/markerConfigs';
 
 interface ConnectionPathProps {
   parentElement: CanvasElement;
