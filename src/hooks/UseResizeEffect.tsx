@@ -3,7 +3,7 @@
 
 import { useEffect } from 'react';
 import { calculateCanvasSize } from '../utils/layoutUtilities';
-import { ICONBAR_HEIGHT } from '../constants/elementSettings';
+import { ICONBAR_HEIGHT } from '../config/elementSettings';
 
 interface ElementWithDimensions {
   x: number;

@@ -1,24 +1,21 @@
 // src/state/state.ts
 'use client';
 
-import { v4 as uuidv4 } from 'uuid';
 import { Undo, Redo, saveSnapshot } from './undoredo';
 import { handleArrowUp, handleArrowDown, handleArrowRight, handleArrowLeft } from '../utils/elementSelector';
 import { Element } from '../types/types';
-import { SIZE, TEXTAREA_PADDING, DEFAULT_FONT_SIZE, LINE_HEIGHT_RATIO, DEFAULT_POSITION, NUMBER_OF_SECTIONS } from '../constants/elementSettings';
-import { calculateElementWidth, wrapText } from '../utils/textareaHelpers';
+import { DEFAULT_POSITION, NUMBER_OF_SECTIONS } from '../config/elementSettings';
 import { debugLog } from '../utils/debugLogHelpers';
 import { 
     createNewElement, 
-    getChildren, 
     setDepthRecursive, 
     setVisibilityRecursive, 
     deleteElementRecursive, 
     isDescendant,
     ElementsMap
-} from '../utils/elementHelpers';
+} from '../utils/element/elementHelpers';
 import { adjustElementPositions } from '../utils/layoutHelpers';
-import { getSelectedAndChildren, copyToClipboard, getGlobalCutElements } from '../utils/clipboardHelpers';
+import { getSelectedAndChildren, copyToClipboard, getGlobalCutElements } from '../utils/clipboard/clipboardHelpers';
 import {
     createElementAdder,
     createSiblingElementAdder,
@@ -27,7 +24,6 @@ import {
     updateElementProperties,
     batchUpdateElements,
     updateElementsWhere,
-    updateSelectedElements,
     withPositionAdjustment,
     createElementPropertyHandler,
     createSelectedElementHandler,

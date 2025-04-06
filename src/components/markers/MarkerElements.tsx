@@ -1,5 +1,5 @@
 import React from 'react';
-import { MARKER_CONFIGS } from '../../constants/markerConfigs';
+import { MARKER_CONFIGS } from '../../config/markerConfigs';
 
 interface MarkerElementsProps {
   connectionPathColor: string;

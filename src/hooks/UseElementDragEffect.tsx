@@ -18,9 +18,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Element, DropPosition } from '../types/types';
 import { useCanvas } from '../context/CanvasContext';
-import { isDescendant } from '../utils/elementHelpers';
+import { isDescendant } from '../utils/element/elementHelpers';
 import { ToastMessages } from '../constants/toastMessages';
-import { HEADER_HEIGHT, OFFSET, SIZE, CURVE_CONTROL_OFFSET } from '../constants/elementSettings';
+import { HEADER_HEIGHT, OFFSET, SIZE, CURVE_CONTROL_OFFSET } from '../config/elementSettings';
 import { useToast } from '../context/ToastContext';
 import { debugLog } from '../utils/debugLogHelpers';
 

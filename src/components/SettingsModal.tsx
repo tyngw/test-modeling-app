@@ -38,10 +38,10 @@ import {
   setSelectedStrokeColor,
   getApiKey,
   setApiKey,
-} from '../utils/localStorageHelpers';
+} from '../utils/storage/localStorageHelpers';
 import { exportElementSettings, importElementSettings } from '../utils/settingsExportImport';
 import { useTabs } from '../context/TabsContext';
-import { getCurrentTheme, isDarkMode } from '../utils/colorHelpers';
+import { getCurrentTheme, isDarkMode } from '../utils/style/colorHelpers';
 import { useIsMounted } from '../hooks/UseIsMounted';
 
 interface SettingsModalProps {

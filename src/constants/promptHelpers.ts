@@ -1,5 +1,5 @@
 // src/utils/promptHelpers.ts
-import { getSystemPromptTemplate } from '../utils/localStorageHelpers';
+import { getSystemPromptTemplate } from '../utils/storage/localStorageHelpers';
 
 interface PromptVariables {
   structureText: string;

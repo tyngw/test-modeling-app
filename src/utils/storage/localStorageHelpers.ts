@@ -1,4 +1,4 @@
-// src/utils/localStorageHelpers.ts
+// src/utils/storage/localStorageHelpers.ts
 'use client';
 
 import { 
@@ -9,9 +9,9 @@ import {
   DEFAULT_CONNECTION_PATH_STROKE,
   DEFAULT_CANVAS_BACKGROUND_COLOR,
   DEFAULT_TEXT_COLOR,
-} from '../constants/elementSettings';
-import { SYSTEM_PROMPT_TEMPLATE } from '../constants/systemPrompt';
-import { VERSION } from '../constants/version';
+} from '../../config/elementSettings';
+import { SYSTEM_PROMPT_TEMPLATE } from '../../config/systemPrompt';
+import { VERSION } from '../../constants/version';
 
 // Style settings interface to define structure of the "styles" key
 interface StyleSettings {

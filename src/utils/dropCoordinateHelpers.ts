@@ -1,5 +1,5 @@
 import { Element as CanvasElement, DropPosition } from '../types/types';
-import { OFFSET } from '../constants/elementSettings';
+import { OFFSET } from '../config/elementSettings';
 
 interface DropCoordinates {
   x: number;

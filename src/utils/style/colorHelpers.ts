@@ -1,4 +1,5 @@
-import { THEME_BRIGHTNESS_THRESHOLD, LIGHT_THEME, DARK_THEME } from '../constants/themeSettings';
+// src/utils/style/colorHelpers.ts
+import { THEME_BRIGHTNESS_THRESHOLD, LIGHT_THEME, DARK_THEME } from '../../config/themeSettings';
 
 // 色の明るさを判定し、適切なテキスト色を返す関数
 export const getAppropriateTextColor = (backgroundColor: string): string => {

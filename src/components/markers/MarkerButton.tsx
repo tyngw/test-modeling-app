@@ -1,6 +1,6 @@
 import React from 'react';
 import { Element as CanvasElement } from '../../types/types';
-import { MARKER } from '../../constants/elementSettings';
+import { MARKER } from '../../config/elementSettings';
 
 interface MarkerButtonProps {
   element: CanvasElement;
