@@ -441,6 +441,20 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
                 ...oldParent,
                 children: Math.max(0, oldParent.children - 1)
             };
+            
+            // 元の親の下にある兄弟要素のorderを再計算
+            const oldSiblings = Object.values(updatedElements)
+                .filter(n => n.parentId === oldParentId && n.id !== id)
+                .sort((a, b) => a.order - b.order);
+                
+            oldSiblings.forEach((sibling, index) => {
+                if (sibling.order !== index) {
+                    updatedElements[sibling.id] = {
+                        ...sibling,
+                        order: index
+                    };
+                }
+            });
         }
 
         // 対象要素の更新
