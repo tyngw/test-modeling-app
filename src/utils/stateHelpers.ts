@@ -307,3 +307,102 @@ export const updateSelectedElements = (
     
     return batchUpdateElements(elements, updates);
 };
+
+/**
+ * 要素の操作後に位置調整を行うヘルパー関数
+ * @param state 現在の状態
+ * @param elementsUpdater 要素の更新関数
+ * @returns 更新された状態
+ */
+export const withPositionAdjustment = (
+    state: any,
+    elementsUpdater: (elements: ElementsMap) => ElementsMap
+): any => {
+    const updatedElements = elementsUpdater(state.elements);
+    return {
+        ...state,
+        elements: adjustElementPositions(updatedElements, () => state.numberOfSections)
+    };
+};
+
+/**
+ * ペイロードから要素IDを取得し、その要素を更新するハンドラー
+ * @param updateFn 要素の更新関数
+ * @returns アクションハンドラー
+ */
+export const createElementPropertyHandler = <T extends Record<string, any>>(
+    updateFn: (element: Element, payload: T) => Partial<Element>
+) => {
+    return (state: any, action: { payload: T }) => {
+        const { id } = action.payload;
+        const element = state.elements[id];
+        if (!element) return state;
+
+        return {
+            ...state,
+            elements: updateElementProperties(
+                state.elements,
+                id,
+                updateFn(element, action.payload)
+            )
+        };
+    };
+};
+
+/**
+ * 選択された要素に対して処理を行うアクションハンドラーを作成
+ * @param updateFn 選択された要素に適用する更新関数
+ * @param adjustPosition 位置調整が必要かどうか
+ * @returns アクションハンドラー
+ */
+export const createSelectedElementHandler = (
+    updateFn: (element: Element, payload?: any) => Partial<Element>,
+    adjustPosition: boolean = false
+) => {
+    return (state: any, action?: { payload?: any }) => {
+        const selectedElements = Object.values(state.elements) as Element[];
+        const filteredElements = selectedElements.filter(e => e.selected);
+        
+        if (filteredElements.length === 0) return state;
+
+        const updatesMap = filteredElements.reduce((acc, element) => {
+            acc[element.id] = updateFn(element, action?.payload);
+            return acc;
+        }, {} as Record<string, Partial<Element>>);
+
+        const updatedElements = batchUpdateElements(state.elements, updatesMap);
+        
+        if (adjustPosition) {
+            return {
+                ...state,
+                elements: adjustElementPositions(updatedElements, () => state.numberOfSections)
+            };
+        } else {
+            return {
+                ...state,
+                elements: updatedElements
+            };
+        }
+    };
+};
+
+/**
+ * 要素のシンプルなプロパティ更新を行うハンドラー
+ * @param propertyName 更新するプロパティ名
+ * @returns アクションハンドラー
+ */
+export const createSimplePropertyHandler = <T>(propertyName: string) => {
+    return (state: any, action: { payload: { id: string } & Record<string, T> }) => {
+        const { id } = action.payload;
+        const value = action.payload[propertyName];
+        
+        return {
+            ...state,
+            elements: updateElementProperties(
+                state.elements,
+                id,
+                { [propertyName]: value } as Partial<Element>
+            )
+        };
+    };
+};
