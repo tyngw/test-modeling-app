@@ -192,106 +192,81 @@ export const loadElements = (event: Event): Promise<{ elements: Record<string, E
 }
 
 export const saveSvg = (svgElement: SVGSVGElement, name: string) => {
+    // SVG要素のクローンを作成
     const svgElementClone = svgElement.cloneNode(true) as SVGSVGElement;
+    
+    // SVGの基本属性を設定
     svgElementClone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
     svgElementClone.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink");
-
-    // SVGの背景色を設定
-    svgElementClone.style.backgroundColor = DEFAULT_CANVAS_BACKGROUND_COLOR;
-
-    // foreignObject内のテキストスタイルを調整
-    const foreignObjects = svgElementClone.getElementsByTagName('foreignObject');
-    for (let i = 0; i < foreignObjects.length; i++) {
-        const foreignObject = foreignObjects[i];
-        // テキスト選択を可能にする属性を設定
-        foreignObject.setAttribute("requiredExtensions", "http://www.w3.org/1999/xhtml");
-        
-        // div要素を検索してスタイルを設定
-        const divElements = foreignObject.getElementsByTagName('div');
-        for (let j = 0; j < divElements.length; j++) {
-            const div = divElements[j];
-            div.style.fontFamily = DEFAULT_FONT_FAMILY;
-            div.style.fontSize = `${DEFAULT_FONT_SIZE}px`;
-            div.style.color = DEFAULT_TEXT_COLOR;
-            div.style.whiteSpace = 'pre-wrap'; // 改行と空白を保持
-            div.style.wordBreak = 'break-word'; // 単語の途中でも改行
-            div.style.lineHeight = '1.2em'; // 適切な行間
-            div.style.padding = '0px'; // パディングを削除
-            div.style.margin = '0px'; // マージンを削除
-            div.style.overflow = 'visible'; // オーバーフローを表示
-            div.style.userSelect = 'text'; // テキスト選択を明示的に有効化
-            div.style.cursor = 'text'; // テキストカーソルを表示
-        }
+    
+    // 表示中のビューボックスを保持
+    const viewBox = svgElement.getAttribute("viewBox");
+    if (viewBox) {
+        svgElementClone.setAttribute("viewBox", viewBox);
     }
+    
+    // サイズ属性を設定
+    const width = svgElement.getAttribute("width") || svgElement.clientWidth.toString();
+    const height = svgElement.getAttribute("height") || svgElement.clientHeight.toString();
+    svgElementClone.setAttribute("width", width);
+    svgElementClone.setAttribute("height", height);
+    
+    // 背景色を設定する矩形を追加（最初の要素として）
+    const backgroundRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    backgroundRect.setAttribute("width", "100%");
+    backgroundRect.setAttribute("height", "100%");
+    backgroundRect.setAttribute("fill", DEFAULT_CANVAS_BACKGROUND_COLOR);
+    svgElementClone.insertBefore(backgroundRect, svgElementClone.firstChild);
+    
+    // 出力から除外する要素を削除（data-exclude-from-export属性を持つもの）
+    const excludedElements = svgElementClone.querySelectorAll('[data-exclude-from-export="true"]');
+    excludedElements.forEach(element => element.parentNode?.removeChild(element));
+    
+    // 選択された要素の青い枠線を通常の枠線に変更
+    const selectedRects = svgElementClone.querySelectorAll('rect[stroke="' + ELEM_STYLE.SELECTED.STROKE_COLOR + '"]');
+    selectedRects.forEach(rect => {
+        if (rect.getAttribute('height') === rect.getAttribute('width')) return; // マーカーボタン用の正方形は無視
+        rect.setAttribute('stroke', ELEM_STYLE.NORMAL.STROKE_COLOR);
+        rect.removeAttribute('filter'); // boxShadow効果を削除
+        rect.setAttribute('style', rect.getAttribute('style')?.replace(/filter:[^;]+;?/, '') || '');
+    });
 
-    // テキスト要素の処理
-    const textElements = svgElementClone.getElementsByTagName('text');
-    for (let i = 0; i < textElements.length; i++) {
-        const textElement = textElements[i];
-        textElement.style.fontFamily = DEFAULT_FONT_FAMILY;
-        textElement.style.fontSize = `${DEFAULT_FONT_SIZE}px`;
-        textElement.style.fill = DEFAULT_TEXT_COLOR;
-        // テキスト選択を有効化
-        textElement.setAttribute("xml:space", "preserve");
-        textElement.style.userSelect = 'text';
-        textElement.style.cursor = 'text';
-    }
+    // テキスト要素（foreignObject内）のスタイル調整
+    const textDivs = svgElementClone.querySelectorAll('foreignObject div');
+    textDivs.forEach(div => {
+        // インラインスタイルを設定
+        const existingStyle = div.getAttribute('style') || '';
+        const enhancedStyle = `
+            ${existingStyle}
+            font-family: ${DEFAULT_FONT_FAMILY};
+            font-size: ${DEFAULT_FONT_SIZE}px;
+            color: ${DEFAULT_TEXT_COLOR};
+            white-space: pre-wrap;
+            word-break: break-word;
+            user-select: text;
+        `;
+        div.setAttribute('style', enhancedStyle);
+    });
 
-    // rect要素（四角形）のスタイルを設定
-    const rectElements = svgElementClone.getElementsByTagName('rect');
-    for (let i = 0; i < rectElements.length; i++) {
-        const rectElement = rectElements[i];
-        rectElement.style.fill = ELEM_STYLE.NORMAL.COLOR;
-        rectElement.style.stroke = ELEM_STYLE.NORMAL.STROKE_COLOR;
-        rectElement.style.strokeWidth = `${ELEM_STYLE.STROKE_WIDTH}`;
-    }
+    // 選択状態の影響を受ける線を標準の線に変更
+    const selectedLines = svgElementClone.querySelectorAll('line[stroke="' + ELEM_STYLE.SELECTED.STROKE_COLOR + '"]');
+    selectedLines.forEach(line => {
+        line.setAttribute('stroke', ELEM_STYLE.NORMAL.STROKE_COLOR);
+    });
 
-    // line要素（下線）のスタイルを設定
-    const lineElements = svgElementClone.getElementsByTagName('line');
-    for (let i = 0; i < lineElements.length; i++) {
-        const lineElement = lineElements[i];
-        lineElement.style.stroke = ELEM_STYLE.NORMAL.STROKE_COLOR;
-        lineElement.style.strokeWidth = `${ELEM_STYLE.STROKE_WIDTH}`;
-    }
-
-    // path要素（接続線）のスタイルを設定
-    const pathElements = svgElementClone.getElementsByTagName('path');
-    for (let i = 0; i < pathElements.length; i++) {
-        const pathElement = pathElements[i];
-        pathElement.style.stroke = CONNECTION_PATH_STYLE.COLOR;
-        pathElement.style.strokeWidth = `${CONNECTION_PATH_STYLE.STROKE}`;
-        pathElement.style.fill = 'none';
-    }
-
-    // marker要素のスタイルを設定
-    const markerElements = svgElementClone.getElementsByTagName('marker');
-    for (let i = 0; i < markerElements.length; i++) {
-        const markerElement = markerElements[i];
-        markerElement.style.fill = 'none';
-        markerElement.style.stroke = CONNECTION_PATH_STYLE.COLOR;
-    }
-
-    // polygon要素（マーカーの矢印など）のスタイルを設定
-    const polygonElements = svgElementClone.getElementsByTagName('polygon');
-    for (let i = 0; i < polygonElements.length; i++) {
-        const polygonElement = polygonElements[i];
-        polygonElement.style.fill = 'none';
-        polygonElement.style.stroke = CONNECTION_PATH_STYLE.COLOR;
-    }
-
-    // circle要素のスタイルを設定
-    const circleElements = svgElementClone.getElementsByTagName('circle');
-    for (let i = 0; i < circleElements.length; i++) {
-        const circleElement = circleElements[i];
-        circleElement.style.fill = ELEM_STYLE.NORMAL.COLOR;
-        circleElement.style.stroke = ELEM_STYLE.NORMAL.STROKE_COLOR;
-    }
-
-    // SVG全体のテキスト選択を許可する属性を追加
-    svgElementClone.style.userSelect = 'text';
+    // ダウンロード用のCSSスタイルを追加
+    const styleElement = document.createElementNS("http://www.w3.org/2000/svg", "style");
+    styleElement.textContent = `
+        text { font-family: ${DEFAULT_FONT_FAMILY}; font-size: ${DEFAULT_FONT_SIZE}px; }
+        foreignObject div { font-family: ${DEFAULT_FONT_FAMILY}; font-size: ${DEFAULT_FONT_SIZE}px; }
+    `;
+    svgElementClone.appendChild(styleElement);
+    
+    // SVG全体にテキスト選択可能な属性を設定
+    svgElementClone.setAttribute("style", "user-select: text;");
     svgElementClone.setAttribute("text-rendering", "optimizeLegibility");
-
-    // SVGをデータURLに変換して保存
+    
+    // SVGをデータURLに変換してダウンロード
     const svgData = new XMLSerializer().serializeToString(svgElementClone);
     const preface = '<?xml version="1.0" standalone="no"?>\r\n';
     const svgBlob = new Blob([preface, svgData], { type: "image/svg+xml;charset=utf-8" });

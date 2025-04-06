@@ -40,13 +40,26 @@ export const MarkerMenu: React.FC<MarkerMenuProps> = ({
       height={270}
       className="popup-menu"
     >
-      <div style={{
-        backgroundColor: 'white',
-        border: '2px solid black',
-        borderRadius: '4px',
-        boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)',
-        padding: '8px'
-      }}>
+      <div 
+        className="popup-menu"
+        style={{
+            position: 'absolute',
+            left: `${popupX}px`,
+            top: `${popupY}px`,
+            backgroundColor: 'white',
+            border: '1px solid #ccc',
+            borderRadius: '4px',
+            padding: '10px',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
+            zIndex: 1000,
+            display: 'flex',
+            flexDirection: 'column',
+            width: '150px',
+            maxHeight: '300px',
+            overflowY: 'auto'
+        }}
+        data-exclude-from-export="true"
+      >
         {markerOptions.map(option => (
           <div
             key={option.id}

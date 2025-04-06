@@ -62,6 +62,7 @@ const renderActionButtons = (element: CanvasElement, dispatch: React.Dispatch<an
       transform={`translate(${element.x + element.width * 1.1},${element.y})`}
       onClick={(e) => e.stopPropagation()}
       style={{ cursor: 'pointer', pointerEvents: 'all' }}
+      data-exclude-from-export="true"
     >
       {/* Doneボタン */}
       <g>
@@ -253,7 +254,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
 
     <React.Fragment key={element.id}>
       {/* DebugInfoを別グループとして分離 */}
-      <g>
+      {/* <g>
         <DebugInfo 
           element={element} 
           isHovered={isHovered} 
@@ -262,7 +263,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
           isDraggedOrDescendant={isDraggedOrDescendant}
           siblingInfo={siblingInfo}
         />
-      </g>
+      </g> */}
       
       <g opacity={isDraggedOrDescendant ? 0.3 : 1}>
         {renderActionButtons(element, dispatch, Object.values(tabState.elements))}
@@ -299,6 +300,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
                 dispatch({ type: 'EXPAND_ELEMENT' });
               }}
               style={{ cursor: 'pointer' }}
+              data-exclude-from-export="true"
             >
               <rect
                 x="0"
@@ -377,6 +379,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
                 strokeWidth={element.selected && strokeWidth === 0 ? 2 : strokeWidth}
                 strokeLinecap="round"
                 pointerEvents="none"
+                data-exclude-from-export="true"
               />
             )}
             {/* メインのライン */}
