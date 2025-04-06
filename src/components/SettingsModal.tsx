@@ -13,7 +13,6 @@ import {
   getSystemPromptTemplate,
   getModelType,
   getPrompt,
-  getNumberOfSections,
   getElementColor,
   getStrokeColor,
   getStrokeWidth,
@@ -27,7 +26,6 @@ import {
   setSystemPromptTemplate,
   setModelType,
   setPrompt,
-  setNumberOfSections,
   setElementColor,
   setStrokeColor,
   setStrokeWidth,
@@ -209,13 +207,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     const prompt = values['prompt'];
     if (prompt !== undefined) setPrompt(String(prompt));
     
-    // Update both global setting and current tab state for numberOfSections
+    // Update current tab state for numberOfSections
     const numberOfSections = values['numberOfSections'];
     if (numberOfSections !== undefined) {
       const numValue = Number(numberOfSections);
-      // Update global setting (for new tabs)
-      setNumberOfSections(numValue);
-      // Update current tab state
+      // Update current tab state only
       updateCurrentTabNumberOfSections(numValue);
     }
     
