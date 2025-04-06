@@ -1,32 +1,35 @@
-// src/components/quickMenuBar.tsx
+// src/components/QuickMenuBar.tsx
 'use client';
 
 import React, { useRef, useState, useCallback } from 'react';
-import Button from '@mui/material/Button';
+import FolderOpenOutlinedIcon from '@mui/icons-material/FolderOpenOutlined';
+import SaveAsOutlinedIcon from '@mui/icons-material/SaveAsOutlined';
+import SaveAltIcon from '@mui/icons-material/SaveAlt';
+import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined';
+import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
+import PlaylistRemoveIcon from '@mui/icons-material/PlaylistRemove';
+import AutoFixOffIcon from '@mui/icons-material/AutoFixOff';
+import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
+import UnfoldLessIcon from '@mui/icons-material/UnfoldLess';
 import UndoIcon from '@mui/icons-material/Undo';
 import RedoIcon from '@mui/icons-material/Redo';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
-import FolderOpenOutlinedIcon from '@mui/icons-material/FolderOpenOutlined';
-import SaveAsOutlinedIcon from '@mui/icons-material/SaveAsOutlined';
-import SaveAltIcon from '@mui/icons-material/SaveAlt';
 import HelpOutlineOutlinedIcon from '@mui/icons-material/HelpOutlineOutlined';
-import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined';
-import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
-import PlaylistRemoveIcon from '@mui/icons-material/PlaylistRemove';
-import UnfoldLessIcon from '@mui/icons-material/UnfoldLess';
-import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
 import SettingsIcon from '@mui/icons-material/Settings';
-import AutoFixOffIcon from '@mui/icons-material/AutoFixOff';
-import Tooltip from '@mui/material/Tooltip';
+
 import { ICONBAR_HEIGHT } from '../constants/elementSettings';
 import { useCanvas } from '../context/CanvasContext';
-import { tooltipTexts } from '../constants/tooltipTexts';
 import { useTabs } from '../context/TabsContext';
 import { getCurrentTheme } from '../utils/colorHelpers';
 import { getCanvasBackgroundColor } from '../utils/localStorageHelpers';
 import { useIsMounted } from '../hooks/UseIsMounted';
 import LoadingIndicator from './LoadingIndicator';
+import { tooltipTexts } from '../constants/tooltipTexts';
+
+// 基本コンポーネントのインポート
+import IconButton from './menuBar/IconButton';
+import Divider from './menuBar/Divider';
 
 interface QuickMenuBarProps {
   saveSvg: () => void;
@@ -79,7 +82,7 @@ const QuickMenuBar = ({
     } else {
       dispatch({ type: action });
     }
-  }, [dispatch, setIsZoomLoading]); // 依存配列を正しく設定
+  }, [dispatch]); // 依存配列を簡略化
 
   if (!isMounted) return null;
   
@@ -117,110 +120,120 @@ const QuickMenuBar = ({
         }}>
           <input type="file" ref={fileInput} onChange={loadElements} style={{ display: 'none' }} />
 
-        <Tooltip title={tooltipTexts.NEW}>
-          <Button variant="text" className="iconbar-button" onClick={addTab}>
-            <InsertDriveFileOutlinedIcon sx={{ color: theme.MENU_BAR.ICON_COLOR }} />
-          </Button>
-        </Tooltip>
+          {/* ファイル操作グループ */}
+          <IconButton
+            tooltip={tooltipTexts.NEW}
+            onClick={addTab}
+            icon={InsertDriveFileOutlinedIcon}
+            iconColor={theme.MENU_BAR.ICON_COLOR}
+          />
+          <IconButton
+            tooltip={tooltipTexts.OPEN}
+            onClick={handleFileOpen}
+            icon={FolderOpenOutlinedIcon}
+            iconColor={theme.MENU_BAR.ICON_COLOR}
+          />
+          <IconButton
+            tooltip={tooltipTexts.SAVE}
+            onClick={saveElements}
+            icon={SaveAsOutlinedIcon}
+            iconColor={theme.MENU_BAR.ICON_COLOR}
+          />
+          <IconButton
+            tooltip={tooltipTexts.SAVE_SVG}
+            onClick={saveSvg}
+            icon={SaveAltIcon}
+            iconColor={theme.MENU_BAR.ICON_COLOR}
+          />
+          
+          <Divider color={theme.MENU_BAR.DIVIDER_COLOR} />
 
-        <Tooltip title={tooltipTexts.OPEN}>
-          <Button variant="text" className="iconbar-button" onClick={handleFileOpen}>
-            <FolderOpenOutlinedIcon sx={{ color: theme.MENU_BAR.ICON_COLOR }} />
-          </Button>
-        </Tooltip>
+          {/* 要素操作グループ */}
+          <IconButton
+            tooltip={tooltipTexts.ADD}
+            onClick={handleAction('ADD_ELEMENT')}
+            icon={PlaylistAddIcon}
+            iconColor={theme.MENU_BAR.ICON_COLOR}
+          />
+          <IconButton
+            tooltip={tooltipTexts.DELETE}
+            onClick={handleAction('DELETE_ELEMENT')}
+            icon={PlaylistRemoveIcon}
+            iconColor={theme.MENU_BAR.ICON_COLOR}
+          />
+          <IconButton
+            tooltip={tooltipTexts.AI}
+            onClick={onAIClick}
+            icon={AutoFixOffIcon}
+            iconColor={theme.MENU_BAR.ICON_COLOR}
+          />
+          <IconButton
+            tooltip={tooltipTexts.EXPAND}
+            onClick={handleAction('EXPAND_ELEMENT')}
+            icon={UnfoldMoreIcon}
+            iconColor={theme.MENU_BAR.ICON_COLOR}
+          />
+          <IconButton
+            tooltip={tooltipTexts.COLLAPSE}
+            onClick={handleAction('COLLAPSE_ELEMENT')}
+            icon={UnfoldLessIcon}
+            iconColor={theme.MENU_BAR.ICON_COLOR}
+          />
 
-        <Tooltip title={tooltipTexts.SAVE}>
-          <Button variant="text" className="iconbar-button" onClick={saveElements}>
-            <SaveAsOutlinedIcon sx={{ color: theme.MENU_BAR.ICON_COLOR }} />
-          </Button>
-        </Tooltip>
+          <Divider color={theme.MENU_BAR.DIVIDER_COLOR} />
 
-        <Tooltip title={tooltipTexts.SAVE_SVG}>
-          <Button variant="text" className="iconbar-button" onClick={saveSvg}>
-            <SaveAltIcon sx={{ color: theme.MENU_BAR.ICON_COLOR }} />
-          </Button>
-        </Tooltip>
+          {/* 履歴操作グループ */}
+          <IconButton
+            tooltip={tooltipTexts.UNDO}
+            onClick={handleAction('UNDO')}
+            icon={UndoIcon}
+            iconColor={theme.MENU_BAR.ICON_COLOR}
+          />
+          <IconButton
+            tooltip={tooltipTexts.REDO}
+            onClick={handleAction('REDO')}
+            icon={RedoIcon}
+            iconColor={theme.MENU_BAR.ICON_COLOR}
+          />
 
-        <div style={{ width: '10px', backgroundColor: theme.MENU_BAR.DIVIDER_COLOR, height: '60%', margin: '0 5px', opacity: 0.3 }}></div>
+          <Divider color={theme.MENU_BAR.DIVIDER_COLOR} />
 
-        <Tooltip title={tooltipTexts.ADD}>
-          <Button variant="text" className="iconbar-button" onClick={handleAction('ADD_ELEMENT')}>
-            <PlaylistAddIcon sx={{ color: theme.MENU_BAR.ICON_COLOR }} />
-          </Button>
-        </Tooltip>
+          {/* ズーム操作グループ */}
+          <IconButton
+            tooltip={tooltipTexts.ZOOM_IN}
+            onClick={handleAction('ZOOM_IN')}
+            icon={ZoomInIcon}
+            iconColor={theme.MENU_BAR.ICON_COLOR}
+          />
+          <IconButton
+            tooltip={tooltipTexts.ZOOM_OUT}
+            onClick={handleAction('ZOOM_OUT')}
+            icon={ZoomOutIcon}
+            iconColor={theme.MENU_BAR.ICON_COLOR}
+          />
 
-        <Tooltip title={tooltipTexts.DELETE}>
-          <Button variant="text" className="iconbar-button" onClick={handleAction('DELETE_ELEMENT')}>
-            <PlaylistRemoveIcon sx={{ color: theme.MENU_BAR.ICON_COLOR }} />
-          </Button>
-        </Tooltip>
+          <Divider color={theme.MENU_BAR.DIVIDER_COLOR} />
 
-        <Tooltip title={tooltipTexts.AI}>
-          <Button variant="text" className="iconbar-button" onClick={onAIClick}>
-            <AutoFixOffIcon sx={{ color: theme.MENU_BAR.ICON_COLOR }} />
-          </Button>
-        </Tooltip>
-
-        <Tooltip title={tooltipTexts.EXPAND}>
-          <Button variant="text" className="iconbar-button" onClick={handleAction('EXPAND_ELEMENT')}>
-            <UnfoldMoreIcon sx={{ color: theme.MENU_BAR.ICON_COLOR }} />
-          </Button>
-        </Tooltip>
-
-        <Tooltip title={tooltipTexts.COLLAPSE}>
-          <Button variant="text" className="iconbar-button" onClick={handleAction('COLLAPSE_ELEMENT')}>
-            <UnfoldLessIcon sx={{ color: theme.MENU_BAR.ICON_COLOR }} />
-          </Button>
-        </Tooltip>
-
-        <div style={{ width: '10px', backgroundColor: theme.MENU_BAR.DIVIDER_COLOR, height: '60%', margin: '0 5px', opacity: 0.3 }}></div>
-
-        <Tooltip title={tooltipTexts.UNDO}>
-          <Button variant="text" className="iconbar-button" onClick={handleAction('UNDO')}>
-            <UndoIcon sx={{ color: theme.MENU_BAR.ICON_COLOR }} />
-          </Button>
-        </Tooltip>
-
-        <Tooltip title={tooltipTexts.REDO}>
-          <Button variant="text" className="iconbar-button" onClick={handleAction('REDO')}>
-            <RedoIcon sx={{ color: theme.MENU_BAR.ICON_COLOR }} />
-          </Button>
-        </Tooltip>
-
-        <div style={{ width: '10px', backgroundColor: theme.MENU_BAR.DIVIDER_COLOR, height: '60%', margin: '0 5px', opacity: 0.3 }}></div>
-
-        <Tooltip title={tooltipTexts.ZOOM_IN}>
-          <Button variant="text" className="iconbar-button" onClick={handleAction('ZOOM_IN')}>
-            <ZoomInIcon sx={{ color: theme.MENU_BAR.ICON_COLOR }} />
-          </Button>
-        </Tooltip>
-
-        <Tooltip title={tooltipTexts.ZOOM_OUT}>
-          <Button variant="text" className="iconbar-button" onClick={handleAction('ZOOM_OUT')}>
-            <ZoomOutIcon sx={{ color: theme.MENU_BAR.ICON_COLOR }} />
-          </Button>
-        </Tooltip>
-
-        <div style={{ width: '10px', backgroundColor: theme.MENU_BAR.DIVIDER_COLOR, height: '60%', margin: '0 5px', opacity: 0.3 }}></div>
-
-        <Tooltip title={tooltipTexts.HELP}>
-          <Button variant="text" className="iconbar-button" onClick={toggleHelp}>
-            <HelpOutlineOutlinedIcon sx={{ color: theme.MENU_BAR.ICON_COLOR }} />
-          </Button>
-        </Tooltip>
-
-        <Tooltip title={tooltipTexts.SETTINGS}>
-          <Button variant="text" className="iconbar-button" onClick={toggleSettings}>
-            <SettingsIcon sx={{ color: theme.MENU_BAR.ICON_COLOR }} />
-          </Button>
-        </Tooltip>
+          {/* ユーティリティグループ */}
+          <IconButton
+            tooltip={tooltipTexts.HELP}
+            onClick={toggleHelp}
+            icon={HelpOutlineOutlinedIcon}
+            iconColor={theme.MENU_BAR.ICON_COLOR}
+          />
+          <IconButton
+            tooltip={tooltipTexts.SETTINGS}
+            onClick={toggleSettings}
+            icon={SettingsIcon}
+            iconColor={theme.MENU_BAR.ICON_COLOR}
+          />
+        </div>
       </div>
-    </div >
-    {isZoomLoading && (
-      <div style={{ position: 'fixed', zIndex: 9500, width: '100%', height: '100%', pointerEvents: 'none' }}>
-        <LoadingIndicator isLoading={isZoomLoading} size={32} color="#4B5563" />
-      </div>
-    )}
+      {isZoomLoading && (
+        <div style={{ position: 'fixed', zIndex: 9500, width: '100%', height: '100%', pointerEvents: 'none' }}>
+          <LoadingIndicator isLoading={isZoomLoading} size={32} color="#4B5563" />
+        </div>
+      )}
     </>
   );
 };
