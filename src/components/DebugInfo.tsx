@@ -1,13 +1,13 @@
 // src/components/DebugInfo.tsx
 import React from 'react';
-import { Element as CanvasElement } from '../types/types';
+import { Element as CanvasElement, DropPosition } from '../types/types';
 import { isDevelopment } from '../utils/debugLogHelpers';
 
 interface DebugInfoProps { 
   element: CanvasElement; 
   isHovered: boolean;
   currentDropTarget: CanvasElement | null;
-  dropPosition: 'child' | 'sibling' | 'between' | null;
+  dropPosition: DropPosition;
   isDraggedOrDescendant?: boolean;
   siblingInfo?: { prevElement?: CanvasElement, nextElement?: CanvasElement } | null;
 }
