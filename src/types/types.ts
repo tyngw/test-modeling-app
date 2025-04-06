@@ -1,6 +1,8 @@
 // src/types.ts
 export type MarkerType = 'arrow' | 'filled_arrow' | 'circle' | 'filled_circle' | 'square' | 'filled_square' | 'diamond' | 'filled_diamond' | 'none';
 
+export type ConnectionPathType = MarkerType;
+
 export type MarkerConfig = {
     id: string;
     width: number;
@@ -30,6 +32,8 @@ export interface Element {
   tentative: boolean;
   startMarker: MarkerType;
   endMarker: MarkerType;
+  connectionPathType?: ConnectionPathType; // 後方互換性のために追加
+  endConnectionPathType?: ConnectionPathType; // 後方互換性のために追加
 }
   
 export interface CanvasState {
