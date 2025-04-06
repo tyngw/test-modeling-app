@@ -2,7 +2,6 @@
 'use client';
 
 import { 
-  NUMBER_OF_SECTIONS, 
   DEFAULT_FONT_FAMILY, 
   ELEM_STYLE, 
   DEFAULT_MARKER_TYPE,
@@ -118,6 +117,8 @@ const checkAndUpdateVersion = () => {
     });
     safeLocalStorage.setItem(VERSION_KEY, VERSION);
   }
+  // 非推奨のnumberOfSectionsキーを削除
+  safeLocalStorage.removeItem('numberOfSections');
 };
 
 checkAndUpdateVersion();
@@ -211,27 +212,6 @@ const migrateLegacyStyles = (): StyleSettings => {
   }
   
   return migrated;
-};
-
-/**
- * Return the number of sections for the current tab.
- * Note: This function now relies on the TabsContext and the current tab state.
- * It returns the global setting as a fallback if the context is not available.
- */
-export const getNumberOfSections = (): number => {
-  // When used from components, this should get the number from current tab state
-  // Default/fallback to the global setting in settings
-  return getSetting('numberOfSections', NUMBER_OF_SECTIONS);
-};
-
-/**
- * Set the number of sections.
- * Note: This function only updates the global setting, which is used as a default
- * for new tabs. For existing tabs, use TabsContext.updateTabState to change the numberOfSections.
- */
-export const setNumberOfSections = (value: number): void => {
-  const clampedValue = Math.max(1, Math.min(10, value));
-  setSetting('numberOfSections', clampedValue);
 };
 
 // Element styling related - updated to use styles object
