@@ -2,8 +2,8 @@
 import { renderHook, act } from '@testing-library/react';
 import { Element } from '../../types/types';
 import { useStore } from './textUtils';
-import * as clipboardHelpers from '../../utils/clipboardHelpers';
-import { ElementsMap } from '../../utils/elementHelpers';
+import * as clipboardHelpers from '../../utils/clipboard/clipboardHelpers';
+import { ElementsMap } from '../../utils/element/elementHelpers';
 
 // Get the real implementations before mocking
 const originalGetSelectedAndChildren = clipboardHelpers.getSelectedAndChildren;

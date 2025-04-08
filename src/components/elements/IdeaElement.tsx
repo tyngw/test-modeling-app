@@ -1,39 +1,39 @@
-// src/components/ideaElement.tsx
+// src/components/elements/IdeaElement.tsx
 'use client';
 
 import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
-import { useCanvas } from '../context/CanvasContext';
-import TextDisplayArea from './TextDisplayArea';
+import { useCanvas } from '../../context/CanvasContext';
+import TextDisplayArea from '../TextDisplayArea';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import DoneIcon from '@mui/icons-material/Done';
 import ClearIcon from '@mui/icons-material/Clear';
-import { calculateElementWidth, wrapText } from '../utils/textareaHelpers';
+import { calculateElementWidth, wrapText } from '../../utils/textareaHelpers';
 import {
   DEFAULT_FONT_SIZE,
-  OFFSET,
   TEXTAREA_PADDING,
   SHADOW_OFFSET,
   ELEM_STYLE,
   SIZE,
   LINE_HEIGHT_RATIO,
-} from '../constants/elementSettings';
+} from '../../config/elementSettings';
 import {
   getElementColor,
   getStrokeColor,
   getStrokeWidth,
   getFontFamily,
   getSelectedStrokeColor
-} from '../utils/localStorageHelpers';
-import { Element as CanvasElement } from '../types/types';
-import { isDescendant } from '../utils/elementHelpers';
-import { debugLog, isDevelopment } from '../utils/debugLogHelpers';
-import { useTabs } from '../context/TabsContext';
-import { useIsMounted } from '../hooks/UseIsMounted';
+} from '../../utils/storage/localStorageHelpers';
+import { Element as CanvasElement, DropPosition } from '../../types/types';
+import { isDescendant } from '../../utils/element/elementHelpers';
+import { debugLog } from '../../utils/debugLogHelpers';
+import { useTabs } from '../../context/TabsContext';
+import { useIsMounted } from '../../hooks/UseIsMounted';
+import DebugInfo from '../DebugInfo';
 
 interface IdeaElementProps {
   element: CanvasElement;
   currentDropTarget: CanvasElement | null;
-  dropPosition: 'child' | 'sibling' | 'between' | null;
+  dropPosition: DropPosition;
   draggingElement: CanvasElement | null;
   handleMouseDown: (e: React.MouseEvent<SVGElement>, element: CanvasElement) => void;
   handleMouseUp: () => void;
@@ -62,6 +62,7 @@ const renderActionButtons = (element: CanvasElement, dispatch: React.Dispatch<an
       transform={`translate(${element.x + element.width * 1.1},${element.y})`}
       onClick={(e) => e.stopPropagation()}
       style={{ cursor: 'pointer', pointerEvents: 'all' }}
+      data-exclude-from-export="true"
     >
       {/* Doneボタン */}
       <g>
@@ -113,66 +114,6 @@ const renderActionButtons = (element: CanvasElement, dispatch: React.Dispatch<an
         </foreignObject>
       </g>
     </g>
-  );
-};
-
-// Export DebugInfo component so it can be used by parent components
-export const DebugInfo: React.FC<{ 
-  element: CanvasElement; 
-  isHovered: boolean;
-  currentDropTarget: CanvasElement | null;
-  dropPosition: 'child' | 'sibling' | 'between' | null;
-  isDraggedOrDescendant?: boolean;
-  siblingInfo?: { prevElement?: CanvasElement, nextElement?: CanvasElement } | null;
-}> = ({ element, isHovered, currentDropTarget, dropPosition, isDraggedOrDescendant, siblingInfo }) => {
-  if (!isDevelopment || !isHovered) {
-    return null;
-  }
-
-  // ドラッグ対象の場合は表示位置を右にずらす
-  const xOffset = isDraggedOrDescendant ? element.width + 350 : element.width + 10;
-
-  return (
-    <foreignObject
-      x={element.x + xOffset}
-      y={element.y - 10}
-      width="340"
-      height="400"
-      className="debug-info"
-    >
-      <div style={{
-        fontSize: '12px',
-        color: 'black',
-        backgroundColor: 'white',
-        border: '1px solid black',
-        padding: '5px',
-        borderRadius: '5px',
-        boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)'
-      }}>
-        <div>id: {element.id}</div>
-        <div>parentID: {element.parentId}</div>
-        <div>order: {element.order}</div>
-        <div>depth: {element.depth}</div>
-        <div>children: {element.children}</div>
-        <div>start marker: {element.startMarker}</div>
-        <div>end marker: {element.endMarker}</div>
-        <div>editing: {element.editing ? 'true' : 'false'}</div>
-        <div>selected: {element.selected ? 'true' : 'false'}</div>
-        <div>visible: {element.visible ? 'true' : 'false'}</div>
-        <div>x: {element.x}</div>
-        <div>y: {element.y}</div>
-        <div>width: {element.width}</div>
-        <div>height: {element.height}</div>
-        <div>currentDropTarget: {currentDropTarget ? (currentDropTarget.texts[0] || 'empty') : 'null'}</div>
-        <div>dropPosition: {dropPosition || 'null'}</div>
-        <div>siblingInfo: {
-          siblingInfo ? 
-            `prev=${siblingInfo.prevElement ? (siblingInfo.prevElement.texts[0] || 'empty') : 'null'}, 
-             next=${siblingInfo.nextElement ? (siblingInfo.nextElement.texts[0] || 'empty') : 'null'}` : 
-            'null'
-        }</div>
-      </div>
-    </foreignObject>
   );
 };
 
@@ -307,13 +248,53 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
     };
   }, [element.id, onHoverChange]);
 
+  // URLを検出する正規表現パターン
+  const URL_REGEX = /(https?:\/\/[^\s]+)/g;
+
+  // テキストクリック時の処理
+  const handleTextClick = useCallback((event: React.MouseEvent<HTMLDivElement>, text: string) => {
+    event.stopPropagation();
+    
+    // テキスト内のURLを検出
+    const urls = text.match(URL_REGEX);
+    
+    // Ctrlキー（MacではCommandキー）が押されている場合のみURLを開く
+    if ((event.ctrlKey || event.metaKey) && urls && urls.length > 0) {
+      // クリックされた位置のテキストを特定
+      const selection = window.getSelection();
+      if (selection && selection.toString()) {
+        // 選択されたテキストがURLかどうかを確認
+        const selectedText = selection.toString();
+        const url = urls.find(u => selectedText.includes(u) || u.includes(selectedText));
+        
+        if (url) {
+          // URLが見つかった場合、新しいタブで開く
+          window.open(url, '_blank');
+          return;
+        }
+      } else {
+        // 選択テキストがない場合は、クリック位置に一番近いURLを探す
+        for (const url of urls) {
+          const index = text.indexOf(url);
+          if (index !== -1) {
+            window.open(url, '_blank');
+            return;
+          }
+        }
+      }
+    }
+    
+    // 通常のクリック（Ctrlキーなし、またはURL非含有）は要素選択として処理
+    handleSelect(event);
+  }, []);
+
   if (!isMounted) return null;
 
   return (
 
     <React.Fragment key={element.id}>
       {/* DebugInfoを別グループとして分離 */}
-      <g>
+      {/* <g>
         <DebugInfo 
           element={element} 
           isHovered={isHovered} 
@@ -322,7 +303,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
           isDraggedOrDescendant={isDraggedOrDescendant}
           siblingInfo={siblingInfo}
         />
-      </g>
+      </g> */}
       
       <g opacity={isDraggedOrDescendant ? 0.3 : 1}>
         {renderActionButtons(element, dispatch, Object.values(tabState.elements))}
@@ -359,6 +340,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
                 dispatch({ type: 'EXPAND_ELEMENT' });
               }}
               style={{ cursor: 'pointer' }}
+              data-exclude-from-export="true"
             >
               <rect
                 x="0"
@@ -437,6 +419,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
                 strokeWidth={element.selected && strokeWidth === 0 ? 2 : strokeWidth}
                 strokeLinecap="round"
                 pointerEvents="none"
+                data-exclude-from-export="true"
               />
             )}
             {/* メインのライン */}
@@ -460,7 +443,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
         )}
         
         {/* ここではbetweenモードのプレビューを表示しない - canvasArea.tsxで一元管理する */}
-{element.texts.map((text, index) => (
+        {element.texts.map((text, index) => (
           <React.Fragment key={`${element.id}-section-${index}`}>
             {!element.editing && (
               <TextDisplayArea
@@ -473,6 +456,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
                 zoomRatio={tabState.zoomRatio}
                 fontFamily={fontFamily}
                 onHeightChange={(newHeight) => handleHeightChange(index, newHeight)}
+                onTextClick={handleTextClick}
               />
             )}
             {index < element.texts.length - 1 && (

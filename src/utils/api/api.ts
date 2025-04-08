@@ -1,6 +1,6 @@
-// src/utils/api.ts
+// src/utils/api/api.ts
 import axios from 'axios';
-import { getApiEndpoint } from './localStorageHelpers';
+import { getApiEndpoint } from '../storage/localStorageHelpers';
 
 export const generateWithGemini = async (prompt: string, apiKey: string, modelType: string) => {
     try {

@@ -4,7 +4,7 @@ import {
   SIZE,
   OFFSET,
   NUMBER_OF_SECTIONS,
-} from '../constants/elementSettings';
+} from '../config/elementSettings';
 
 export const useWindowSize = () => {
   const [windowSize, setWindowSize] = useState({

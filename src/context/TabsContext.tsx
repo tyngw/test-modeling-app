@@ -4,10 +4,10 @@
 import React, { createContext, useContext, ReactNode, useState, useCallback, useMemo, useEffect } from 'react';
 import { State, initialState } from '../state/state';
 import { v4 as uuidv4 } from 'uuid';
-import { DEFAULT_POSITION, NUMBER_OF_SECTIONS } from '../constants/elementSettings';
-import { createNewElement } from '../utils/elementHelpers';
-import { convertLegacyElement } from '../utils/fileHelpers';
-import { getTabsState, setTabsState } from '../utils/localStorageHelpers';
+import { DEFAULT_POSITION, NUMBER_OF_SECTIONS } from '../config/elementSettings';
+import { createNewElement } from '../utils/element/elementHelpers';
+import { convertLegacyElement } from '../utils/file/fileHelpers';
+import { getTabsState, setTabsState } from '../utils/storage/localStorageHelpers';
 
 export interface TabState {
   id: string;

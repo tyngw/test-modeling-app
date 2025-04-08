@@ -1,7 +1,7 @@
 import { Element } from '../types/types';
-import { OFFSET, DEFAULT_POSITION, SIZE } from '../constants/elementSettings';
+import { OFFSET, DEFAULT_POSITION, SIZE } from '../config/elementSettings';
 import { debugLog } from './debugLogHelpers';
-import { getChildren } from './elementHelpers';
+import { getChildren } from './element/elementHelpers';
 
 type ElementsMap = { [key: string]: Element };
 

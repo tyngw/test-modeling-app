@@ -2,10 +2,10 @@
 import React, { useEffect, useState } from 'react';
 import { TabState } from '../../context/TabsContext';
 import Tab from './Tab';
-import { ICONBAR_HEIGHT, TABBAR_HEIGHT } from '../../constants/elementSettings';
-import { getCurrentTheme } from '../../utils/colorHelpers';
-import { getCanvasBackgroundColor } from '../../utils/localStorageHelpers';
-import { DEFAULT_CANVAS_BACKGROUND_COLOR } from '../../constants/elementSettings';
+import { ICONBAR_HEIGHT, TABBAR_HEIGHT } from '../../config/elementSettings';
+import { getCurrentTheme } from '../../utils/style/colorHelpers';
+import { getCanvasBackgroundColor } from '../../utils/storage/localStorageHelpers';
+import { DEFAULT_CANVAS_BACKGROUND_COLOR } from '../../config/elementSettings';
 import { useIsMounted } from '../../hooks/UseIsMounted';
 
 interface TabHeadersProps {

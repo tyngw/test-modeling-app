@@ -1,24 +1,23 @@
-// src/appContent.tsx
+// src/AppContent.tsx
 'use client';
 
 import { ToastMessages } from './constants/toastMessages';
 import React, { useState, useCallback, useMemo } from 'react';
-import CanvasArea from './components/CanvasArea';
-import QuickMenuBar from './components/QuickMenuBar';
+import { CanvasArea } from './components/canvas';
+import QuickMenuBar from './components/menus/QuickMenuBar';
 import TabHeaders from './components/tabHeaders/TabHeaders';
 import SettingsModal from './components/SettingsModal';
-import UnsaveConfirmModal from './components/UnsaveConfiromModal';
+import UnsaveConfirmModal from './components/UnsaveConfirmModal';
 import ModalWindow from './components/ModalWindow';
 import { helpContent } from './constants/helpContent';
 import { CanvasProvider } from './context/CanvasContext';
 import { Action } from './state/state';
 import { useTabs } from './context/TabsContext';
 import { reducer } from './state/state';
-import { saveSvg } from './utils/fileHelpers';
-import { loadElements, saveElements } from './utils/fileHelpers';
+import { saveSvg, loadElements, saveElements } from './utils/file';
 import { generateWithGemini } from './utils/api';
-import { getApiKey, getModelType } from './utils/localStorageHelpers';
-import { formatElementsForPrompt } from './utils/elementHelpers';
+import { getApiKey, getModelType } from './utils/storage';
+import { formatElementsForPrompt } from './utils/element';
 import { createSystemPrompt } from './constants/promptHelpers';
 import { useToast } from './context/ToastContext';
 
