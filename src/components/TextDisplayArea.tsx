@@ -17,7 +17,6 @@ interface TextDisplayAreaProps {
   fontSize: number;
   fontFamily?: string;
   onHeightChange: (newHeight: number) => void;
-  onTextClick?: (event: React.MouseEvent<HTMLDivElement>, text: string) => void;
 }
 
 const TextDisplayArea: React.FC<TextDisplayAreaProps> = memo(({
@@ -28,8 +27,7 @@ const TextDisplayArea: React.FC<TextDisplayAreaProps> = memo(({
   text,
   zoomRatio,
   fontFamily,
-  onHeightChange,
-  onTextClick
+  onHeightChange
 }) => {
   const [dimensions, setDimensions] = useState({
     width: 0,
@@ -95,18 +93,6 @@ const TextDisplayArea: React.FC<TextDisplayAreaProps> = memo(({
     };
   }, [text, initialWidth, initialHeight, zoomRatio, isMounted]);
 
-  // クリックイベントハンドラー
-  const handleClick = (event: React.MouseEvent<HTMLDivElement>) => {
-    // クリックイベントを親コンポーネントに委譲
-    if (onTextClick) {
-      onTextClick(event, text);
-    } else {
-      // onTextClickが提供されていない場合はイベントを停止しない
-      // 元のクリックイベントが他のハンドラーで処理されるようにする
-      event.stopPropagation();
-    }
-  };
-
   if (!isMounted) return null;
 
   return (
@@ -115,11 +101,10 @@ const TextDisplayArea: React.FC<TextDisplayAreaProps> = memo(({
       y={y}
       width={dimensions.width}
       height={Math.round(dimensions.height / zoomRatio)}
-      pointerEvents="auto"
+      pointerEvents="none"
     >
       <div 
         ref={textRef}
-        onClick={handleClick}
         style={{
           fontFamily: fontFamily || DEFAULT_FONT_FAMILY,
           color: textColor,
@@ -132,7 +117,6 @@ const TextDisplayArea: React.FC<TextDisplayAreaProps> = memo(({
           whiteSpace: 'pre-wrap',
           wordBreak: 'break-word',
           boxSizing: 'content-box',
-          cursor: 'pointer'
         }}
       >
         {text}
