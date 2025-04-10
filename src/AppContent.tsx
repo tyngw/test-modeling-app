@@ -15,6 +15,7 @@ import { Action } from './state/state';
 import { useTabs } from './context/TabsContext';
 import { reducer } from './state/state';
 import { saveSvg, loadElements, saveElements, extractRootElementTextFromElements } from './utils/file';
+import { determineFileName } from './utils/file/fileHelpers';
 import { generateWithGemini } from './utils/api';
 import { getApiKey, getModelType } from './utils/storage';
 import { formatElementsForPrompt } from './utils/element';
@@ -38,15 +39,13 @@ const AppContent: React.FC = () => {
   const updateTabNameFromRootElement = useCallback(() => {
     if (!currentTab) return;
 
-    // タブ名が「無題」または「Untitled」の場合のみ処理を実行
-    if (currentTab.name === '無題' || currentTab.name === 'Untitled') {
-      const elements = Object.values(currentTab.state.elements);
-      const rootElementText = extractRootElementTextFromElements(elements);
-      
-      if (rootElementText?.trim()) {
-        // ファイル名と同様の処理でテキストを整形
-        const formattedText = rootElementText.trim().substring(0, 30).replace(/[\\/:*?"<>|]/g, '_');
-        updateTabName(currentTabId, formattedText);
+    const elements = Object.values(currentTab.state.elements);
+    const rootElementText = extractRootElementTextFromElements(elements);
+    
+    if (rootElementText) {
+      const newTabName = determineFileName(currentTab.name, rootElementText);
+      if (newTabName !== currentTab.name) {
+        updateTabName(currentTabId, newTabName);
       }
     }
   }, [currentTab, currentTabId, updateTabName]);
@@ -115,34 +114,27 @@ const AppContent: React.FC = () => {
 
       let childNodes: string[] = [];
       
-      // 配列の場合はそのまま使用
-      if (Array.isArray(result)) {
-        childNodes = result;
-      } 
-      // 文字列の場合は処理が必要
-      else if (typeof result === "string") {
-        // コードブロックの先頭と末尾の ```を削除する処理
-        const cleanedResult = result.replace(/^```/g, '').replace(/```$/g, '');
-        
-        // コードブロックが適切に存在する場合 (```で囲まれたもの)
-        const codeBlocks = cleanedResult.match(/```[\s\S]*?```/g);
-        
-        if (codeBlocks && codeBlocks.length > 0) {
-          // コードブロック形式のレスポンスを処理
-          childNodes = codeBlocks.flatMap((block: string) => {
-            return block
-              .replace(/```.*\n?|```/g, '') // 言語指定付きのマークダウンにも対応
-              .split('\n')
-              .map((line: string) => line.trim())
-              .filter((line: string) => line.length > 0 && line !== '```'); // ```だけの行を除外
-          });
-        } else {
-          // コードブロックがない場合は、テキスト全体を行ごとに分割して処理
-          childNodes = cleanedResult
+      // 文字列の処理（generateWithGeminiは常に文字列を返す）
+      const cleanedResult = result.replace(/^```/g, '').replace(/```$/g, '');
+      
+      // コードブロックが適切に存在する場合 (```で囲まれたもの)
+      const codeBlocks = cleanedResult.match(/```[\s\S]*?```/g);
+      
+      if (codeBlocks && codeBlocks.length > 0) {
+        // コードブロック形式のレスポンスを処理
+        childNodes = codeBlocks.flatMap((block: string) => {
+          return block
+            .replace(/```.*\n?|```/g, '') // 言語指定付きのマークダウンにも対応
             .split('\n')
             .map((line: string) => line.trim())
             .filter((line: string) => line.length > 0 && line !== '```'); // ```だけの行を除外
-        }
+        });
+      } else {
+        // コードブロックがない場合は、テキスト全体を行ごとに分割して処理
+        childNodes = cleanedResult
+          .split('\n')
+          .map((line: string) => line.trim())
+          .filter((line: string) => line.length > 0 && line !== '```'); // ```だけの行を除外
       }
 
       // 処理した結果を要素として追加

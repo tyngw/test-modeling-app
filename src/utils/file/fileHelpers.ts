@@ -229,14 +229,12 @@ export const extractRootElementTextFromElements = (elements: any[]): string | un
  * @param rootElementText ルート要素のテキスト（存在する場合）
  * @returns 最終的なファイル名
  */
-const determineFileName = (defaultName: string, rootElementText?: string): string => {
+export const determineFileName = (defaultName: string, rootElementText?: string): string => {
     let name = defaultName || 'Untitled';
     
     if ((name === 'Untitled' || name === '無題') && rootElementText) {
         const trimmedText = rootElementText.trim();
         if (trimmedText) {
-            // テキストの先頭部分（最大30文字）をファイル名として使用
-            // ファイル名に使用できない文字を置換
             name = trimmedText.substring(0, 30).replace(/[\\/:*?"<>|]/g, '_');
         }
     }
