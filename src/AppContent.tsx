@@ -121,8 +121,11 @@ const AppContent: React.FC = () => {
       } 
       // 文字列の場合は処理が必要
       else if (typeof result === "string") {
-        // 1. コードブロックが適切に存在する場合 (```で囲まれたもの)
-        const codeBlocks = result.match(/```[\s\S]*?```/g);
+        // コードブロックの先頭と末尾の ```を削除する処理
+        const cleanedResult = result.replace(/^```/g, '').replace(/```$/g, '');
+        
+        // コードブロックが適切に存在する場合 (```で囲まれたもの)
+        const codeBlocks = cleanedResult.match(/```[\s\S]*?```/g);
         
         if (codeBlocks && codeBlocks.length > 0) {
           // コードブロック形式のレスポンスを処理
@@ -131,30 +134,14 @@ const AppContent: React.FC = () => {
               .replace(/```.*\n?|```/g, '') // 言語指定付きのマークダウンにも対応
               .split('\n')
               .map((line: string) => line.trim())
-              .filter((line: string) => line.length > 0);
+              .filter((line: string) => line.length > 0 && line !== '```'); // ```だけの行を除外
           });
         } else {
-          // 2. コードブロックがない場合は、テキスト全体を行ごとに分割して処理
-          childNodes = result
+          // コードブロックがない場合は、テキスト全体を行ごとに分割して処理
+          childNodes = cleanedResult
             .split('\n')
             .map((line: string) => line.trim())
-            .filter((line: string) => line.length > 0);
-          
-          // 先頭に「以下のような～」などの説明文がある場合に除外するための簡易処理
-          // 最初の数行が明らかに説明文の場合は除外
-          if (childNodes.length > 2) {
-            const firstLine = childNodes[0].toLowerCase();
-            if (
-              firstLine.includes('以下') || 
-              firstLine.includes('下記') || 
-              firstLine.includes('次の') ||
-              firstLine.startsWith('here') ||
-              /^[（\(][a-z0-9]/.test(firstLine) // (1), (a)などのリスト記号で始まる
-            ) {
-              // 最初の行を削除
-              childNodes = childNodes.slice(1);
-            }
-          }
+            .filter((line: string) => line.length > 0 && line !== '```'); // ```だけの行を除外
         }
       }
 
