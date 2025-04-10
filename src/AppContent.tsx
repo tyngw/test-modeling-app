@@ -160,9 +160,17 @@ const AppContent: React.FC = () => {
           saveSvg={() => saveSvg(document.querySelector('.svg-element') as SVGSVGElement, 'download.svg')}
           loadElements={(event) => loadElements(event.nativeEvent)
             .then(({ elements, fileName }) => {
-              dispatch({ type: 'LOAD_ELEMENTS', payload: elements });
+              // 新しいタブを作成して、読み込んだ要素をそのタブに適用
+              const newTabId = addTab();
+              updateTabState(newTabId, prevState => ({
+                ...prevState,
+                elements
+              }));
+              // タブ名を設定
               const newTabName = fileName.replace('.json', '');
-              updateTabName(currentTabId, newTabName);
+              updateTabName(newTabId, newTabName);
+              // 新しいタブに切り替え
+              switchTab(newTabId);
             })
             .catch(error => addToast(error.message))}
           saveElements={() => saveElements(Object.values(currentTab.state.elements), currentTab.name)}
