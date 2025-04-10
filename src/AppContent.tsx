@@ -2,7 +2,7 @@
 'use client';
 
 import { ToastMessages } from './constants/toastMessages';
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { CanvasArea } from './components/canvas';
 import QuickMenuBar from './components/menus/QuickMenuBar';
 import TabHeaders from './components/tabHeaders/TabHeaders';
@@ -14,7 +14,7 @@ import { CanvasProvider } from './context/CanvasContext';
 import { Action } from './state/state';
 import { useTabs } from './context/TabsContext';
 import { reducer } from './state/state';
-import { saveSvg, loadElements, saveElements } from './utils/file';
+import { saveSvg, loadElements, saveElements, extractRootElementTextFromElements } from './utils/file';
 import { generateWithGemini } from './utils/api';
 import { getApiKey, getModelType } from './utils/storage';
 import { formatElementsForPrompt } from './utils/element';
@@ -33,6 +33,30 @@ const AppContent: React.FC = () => {
   const dispatch = useCallback((action: Action) => {
     updateTabState(currentTabId, prevState => reducer(prevState, action));
   }, [currentTabId, updateTabState]);
+
+  // タブ名を更新する機能
+  const updateTabNameFromRootElement = useCallback(() => {
+    if (!currentTab) return;
+
+    // タブ名が「無題」または「Untitled」の場合のみ処理を実行
+    if (currentTab.name === '無題' || currentTab.name === 'Untitled') {
+      const elements = Object.values(currentTab.state.elements);
+      const rootElementText = extractRootElementTextFromElements(elements);
+      
+      if (rootElementText?.trim()) {
+        // ファイル名と同様の処理でテキストを整形
+        const formattedText = rootElementText.trim().substring(0, 30).replace(/[\\/:*?"<>|]/g, '_');
+        updateTabName(currentTabId, formattedText);
+      }
+    }
+  }, [currentTab, currentTabId, updateTabName]);
+
+  // 要素が変更されたときにタブ名を更新
+  useEffect(() => {
+    if (currentTab) {
+      updateTabNameFromRootElement();
+    }
+  }, [currentTab?.state.elements, updateTabNameFromRootElement]);
 
   const toggleHelp = useCallback(() => {
     dispatch({ type: 'END_EDITING' });

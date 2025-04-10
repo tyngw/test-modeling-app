@@ -191,6 +191,59 @@ export const loadElements = (event: Event): Promise<{ elements: Record<string, E
   })
 }
 
+/**
+ * SVG要素からルート要素のテキストを抽出する
+ * @param svgElement SVG要素
+ * @returns ルート要素のテキスト（存在する場合）
+ */
+export const extractRootElementTextFromSvg = (svgElement: SVGSVGElement): string | undefined => {
+  if (!svgElement.querySelector('foreignObject div')) return undefined;
+  
+  const rootElement = svgElement.querySelector('g:not([data-exclude-from-export="true"])');
+  if (rootElement) {
+    return rootElement.querySelector('foreignObject div')?.textContent || undefined;
+  }
+  return undefined;
+};
+
+/**
+ * 要素配列からルート要素のテキストを抽出する
+ * @param elements 要素の配列
+ * @returns ルート要素のテキスト（存在する場合）
+ */
+export const extractRootElementTextFromElements = (elements: any[]): string | undefined => {
+  if (elements.length === 0) return undefined;
+  
+  // ルート要素を探す（parentIdがない最初の要素）
+  const rootElement = elements.find(elem => !elem.parentId);
+  if (rootElement && rootElement.texts && rootElement.texts.length > 0) {
+    const text = rootElement.texts[0];
+    return text && typeof text === 'string' ? text : undefined;
+  }
+  return undefined;
+};
+
+/**
+ * ファイル名が「無題」またはUntitledの場合に、ルート要素のテキストからファイル名を生成する
+ * @param defaultName デフォルトのファイル名
+ * @param rootElementText ルート要素のテキスト（存在する場合）
+ * @returns 最終的なファイル名
+ */
+const determineFileName = (defaultName: string, rootElementText?: string): string => {
+    let name = defaultName || 'Untitled';
+    
+    if ((name === 'Untitled' || name === '無題') && rootElementText) {
+        const trimmedText = rootElementText.trim();
+        if (trimmedText) {
+            // テキストの先頭部分（最大30文字）をファイル名として使用
+            // ファイル名に使用できない文字を置換
+            name = trimmedText.substring(0, 30).replace(/[\\/:*?"<>|]/g, '_');
+        }
+    }
+    
+    return name;
+}
+
 export const saveSvg = (svgElement: SVGSVGElement, name: string) => {
     // SVG要素のクローンを作成
     const svgElementClone = svgElement.cloneNode(true) as SVGSVGElement;
@@ -272,9 +325,15 @@ export const saveSvg = (svgElement: SVGSVGElement, name: string) => {
     const svgBlob = new Blob([preface, svgData], { type: "image/svg+xml;charset=utf-8" });
     const svgUrl = URL.createObjectURL(svgBlob);
     
+    // ルート要素からテキストを取得（存在する場合）
+    const rootElementText = extractRootElementTextFromSvg(svgElement);
+    
+    // ファイル名を決定
+    const fileName = determineFileName(name, rootElementText);
+    
     const downloadLink = document.createElement("a");
     downloadLink.href = svgUrl;
-    downloadLink.download = name;
+    downloadLink.download = fileName;
     document.body.appendChild(downloadLink);
     downloadLink.click();
     document.body.removeChild(downloadLink);
@@ -282,7 +341,11 @@ export const saveSvg = (svgElement: SVGSVGElement, name: string) => {
 }
 
 export const saveElements = (elements: any[], fileName: string) => {
-    const name = fileName || 'Untitled';
+    // ルート要素からテキストを取得（存在する場合）
+    const rootElementText = extractRootElementTextFromElements(elements);
+    
+    // ファイル名を決定
+    const name = determineFileName(fileName, rootElementText);
 
     const elementsToSave = elements.map(element => {
         const { x, y, ...elementWithoutXY } = element;
