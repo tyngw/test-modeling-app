@@ -248,46 +248,6 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
     };
   }, [element.id, onHoverChange]);
 
-  // URLを検出する正規表現パターン
-  const URL_REGEX = /(https?:\/\/[^\s]+)/g;
-
-  // テキストクリック時の処理
-  const handleTextClick = useCallback((event: React.MouseEvent<HTMLDivElement>, text: string) => {
-    event.stopPropagation();
-    
-    // テキスト内のURLを検出
-    const urls = text.match(URL_REGEX);
-    
-    // Ctrlキー（MacではCommandキー）が押されている場合のみURLを開く
-    if ((event.ctrlKey || event.metaKey) && urls && urls.length > 0) {
-      // クリックされた位置のテキストを特定
-      const selection = window.getSelection();
-      if (selection && selection.toString()) {
-        // 選択されたテキストがURLかどうかを確認
-        const selectedText = selection.toString();
-        const url = urls.find(u => selectedText.includes(u) || u.includes(selectedText));
-        
-        if (url) {
-          // URLが見つかった場合、新しいタブで開く
-          window.open(url, '_blank');
-          return;
-        }
-      } else {
-        // 選択テキストがない場合は、クリック位置に一番近いURLを探す
-        for (const url of urls) {
-          const index = text.indexOf(url);
-          if (index !== -1) {
-            window.open(url, '_blank');
-            return;
-          }
-        }
-      }
-    }
-    
-    // 通常のクリック（Ctrlキーなし、またはURL非含有）は要素選択として処理
-    handleSelect(event);
-  }, []);
-
   if (!isMounted) return null;
 
   return (
@@ -443,7 +403,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
         )}
         
         {/* ここではbetweenモードのプレビューを表示しない - canvasArea.tsxで一元管理する */}
-        {element.texts.map((text, index) => (
+{element.texts.map((text, index) => (
           <React.Fragment key={`${element.id}-section-${index}`}>
             {!element.editing && (
               <TextDisplayArea
@@ -456,7 +416,6 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
                 zoomRatio={tabState.zoomRatio}
                 fontFamily={fontFamily}
                 onHeightChange={(newHeight) => handleHeightChange(index, newHeight)}
-                onTextClick={handleTextClick}
               />
             )}
             {index < element.texts.length - 1 && (
