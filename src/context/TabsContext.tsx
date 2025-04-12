@@ -23,7 +23,7 @@ type TabsStorage = {
 export interface TabsContextValue {
   tabs: TabState[];
   currentTabId: string;
-  addTab: () => void;
+  addTab: () => string;  // voidからstringに変更
   closeTab: (tabId: string) => void;
   switchTab: (tabId: string) => void;
   updateTabState: (tabId: string, updater: (prevState: State) => State) => void;
@@ -128,6 +128,7 @@ export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       tabs: [...prev.tabs, newTab],
       currentTabId: newTab.id
     }));
+    return newTab.id;
   }, [tabs, currentTabId]);
 
   const closeTab = useCallback((tabId: string) => {

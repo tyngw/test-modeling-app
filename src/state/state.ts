@@ -246,10 +246,9 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
         false
     ),
 
-    END_EDITING: state => ({
-        ...state,
-        elements: updateElementsWhere(state.elements, () => true, { editing: false })
-    }),
+    END_EDITING: state => withPositionAdjustment(state, () => 
+        updateElementsWhere(state.elements, () => true, { editing: false })
+    ),
 
     MOVE_ELEMENT: (state, action) => {
         const { id, x, y } = action.payload;
@@ -281,13 +280,19 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
         };
     },
 
-    UPDATE_ELEMENT_SIZE: createElementPropertyHandler<{ id: string, width: number, height: number, sectionHeights: number[] }>(
-        (element, { width, height, sectionHeights }) => ({
+    UPDATE_ELEMENT_SIZE: (state, action) => {
+        const { id, width, height, sectionHeights } = action.payload;
+        const element = state.elements[id];
+        if (!element) return state;
+        
+        const updatedElements = updateElementProperties(state.elements, id, {
             width,
             height,
             sectionHeights
-        })
-    ),
+        });
+        
+        return withPositionAdjustment(state, () => updatedElements);
+    },
 
     ADD_ELEMENT: (state, action) => handleElementMutation(state, (elements, selectedElement) => {
         const text = action.payload?.text;
