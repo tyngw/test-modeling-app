@@ -78,25 +78,12 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
     const [hoveredElements, setHoveredElements] = useState<{ [key: string]: boolean }>({});
 
     // カスタムフックの使用
-    useResizeEffect({ setCanvasSize, setDisplayArea, state });
-
-    useEffect(() => {
-        if (typeof window !== 'undefined' && isClient) {
-            const maxHeight = window.innerHeight - ICONBAR_HEIGHT * 2;
-            // zoomRatioを考慮した表示領域を設定
-            const viewWidth = Math.ceil(window.innerWidth / zoomRatio);
-            const viewHeight = Math.ceil(maxHeight / zoomRatio);
-
-            // 実際のキャンバスサイズを設定（拡大率を適用）
-            setCanvasSize(prevSize => ({
-                width: prevSize.width !== 0 ? prevSize.width : window.innerWidth * zoomRatio,
-                height: prevSize.height !== 0 ? prevSize.height : maxHeight * zoomRatio
-            }));
-
-            // 表示領域を設定
-            setDisplayArea(`0 0 ${viewWidth} ${viewHeight}`);
-        }
-    }, [isClient, zoomRatio]);
+    useResizeEffect({ 
+        setCanvasSize, 
+        setDisplayArea, 
+        state,
+        isClient 
+    });
 
     useClickOutside(svgRef, !!editingNode);
 
@@ -143,25 +130,12 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
     useEffect(() => {
         setIsClient(true);
         if (typeof window !== 'undefined') {
-            // 最初からzoomRatioを考慮したキャンバスサイズを設定
-            const maxHeight = window.innerHeight - ICONBAR_HEIGHT * 2;
-            const viewWidth = Math.ceil(window.innerWidth / zoomRatio);
-            const viewHeight = Math.ceil(maxHeight / zoomRatio);
-            
-            // 拡大率を適用したキャンバスサイズを設定
-            setCanvasSize({
-                width: window.innerWidth,
-                height: maxHeight
-            });
-            
-            // 表示領域を設定（拡大率の逆数を適用して、実際の表示範囲を計算）
-            setDisplayArea(`0 0 ${viewWidth} ${viewHeight}`);
-
+            // 色設定の初期化だけをここで行う
             setConnectionPathColor(getConnectionPathColor() || DEFAULT_CONNECTION_PATH_COLOR);
             setConnectionPathStroke(getConnectionPathStroke() || DEFAULT_CONNECTION_PATH_STROKE);
             setCanvasBackgroundColor(getCanvasBackgroundColor() || DEFAULT_CANVAS_BACKGROUND_COLOR);
         }
-    }, [zoomRatio]);
+    }, []);
 
     const handleMarkerSelect = (elementId: string, markerType: MarkerType, isEndMarker: boolean) => {
         if (isEndMarker) {

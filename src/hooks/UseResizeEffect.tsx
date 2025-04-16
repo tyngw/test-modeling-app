@@ -22,15 +22,17 @@ interface ResizeEffectProps {
     elements: { [key: string]: ElementWithDimensions };
     zoomRatio: number;
   };
+  isClient?: boolean;
 }
 
 const useResizeEffect = ({ 
   setCanvasSize, 
   setDisplayArea,
-  state 
+  state,
+  isClient
 }: ResizeEffectProps) => {
     useEffect(() => {
-        if (typeof window === 'undefined') return;
+        if (typeof window === 'undefined' || !isClient) return;
 
         const newCanvasSize = calculateCanvasSize(state.elements);
         const maxHeight = window.innerHeight - ICONBAR_HEIGHT * 2;
@@ -45,7 +47,7 @@ const useResizeEffect = ({
         
         setCanvasSize(newCanvasSize);
         setDisplayArea(`0 0 ${newViewSize.width} ${newViewSize.height}`);
-    }, [state.elements, state.zoomRatio, setCanvasSize, setDisplayArea]);
+    }, [state.elements, state.zoomRatio, setCanvasSize, setDisplayArea, isClient]);
 };
 
 export default useResizeEffect;
