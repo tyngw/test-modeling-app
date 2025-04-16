@@ -16,7 +16,6 @@ import { useElementDragEffect } from '../../hooks/UseElementDragEffect';
 import { useTouchHandlers } from '../../hooks/UseTouchHandlers';
 import { useKeyboardHandler } from '../../hooks/UseKeyboardHandler';
 import {
-    ICONBAR_HEIGHT,
     HEADER_HEIGHT,
     CONNECTION_PATH_STYLE,
     OFFSET,
@@ -44,11 +43,11 @@ const svgStyle = {
 
 // Canvas領域の背景スタイル
 const canvasBackgroundStyle = {
-    position: 'absolute' as const,
+    position: 'fixed' as const, // absoluteからfixedに変更
     top: HEADER_HEIGHT,
     left: 0,
-    width: '100%',
-    height: '100%',
+    width: '100vw', // 100%から100vwに変更
+    height: 'calc(100vh - ' + HEADER_HEIGHT + 'px)', // 100%から計算値に変更
     overflow: 'hidden',
     zIndex: -1,
 };
@@ -58,6 +57,9 @@ const canvasContainerStyle = {
     position: 'absolute' as const,
     top: HEADER_HEIGHT,
     left: 0,
+    right: 0,
+    minWidth: '100%',
+    minHeight: 'calc(100vh - ' + HEADER_HEIGHT + 'px)',
     overflow: 'auto',
 };
 
