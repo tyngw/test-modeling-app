@@ -3,7 +3,7 @@
 
 import { useEffect } from 'react';
 import { calculateCanvasSize } from '../utils/layoutUtilities';
-import { ICONBAR_HEIGHT } from '../config/elementSettings';
+import { HEADER_HEIGHT } from '../config/elementSettings';
 
 interface ElementWithDimensions {
   x: number;
@@ -35,7 +35,7 @@ const useResizeEffect = ({
         if (typeof window === 'undefined' || !isClient) return;
 
         const newCanvasSize = calculateCanvasSize(state.elements);
-        const maxHeight = window.innerHeight - ICONBAR_HEIGHT * 2;
+        const maxHeight = window.innerHeight - HEADER_HEIGHT;
         newCanvasSize.width = Math.max(newCanvasSize.width, window.innerWidth);
         newCanvasSize.height = Math.max(newCanvasSize.height, maxHeight);
         const newViewSize = {
