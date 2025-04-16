@@ -79,25 +79,6 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
 
     // カスタムフックの使用
     useResizeEffect({ setCanvasSize, setDisplayArea, state });
-
-    useEffect(() => {
-        if (typeof window !== 'undefined' && isClient) {
-            const maxHeight = window.innerHeight - ICONBAR_HEIGHT * 2;
-            // zoomRatioを考慮した表示領域を設定
-            const viewWidth = Math.ceil(window.innerWidth / zoomRatio);
-            const viewHeight = Math.ceil(maxHeight / zoomRatio);
-
-            // 実際のキャンバスサイズを設定（拡大率を適用）
-            setCanvasSize(prevSize => ({
-                width: prevSize.width !== 0 ? prevSize.width : window.innerWidth * zoomRatio,
-                height: prevSize.height !== 0 ? prevSize.height : maxHeight * zoomRatio
-            }));
-
-            // 表示領域を設定
-            setDisplayArea(`0 0 ${viewWidth} ${viewHeight}`);
-        }
-    }, [isClient, zoomRatio]);
-
     useClickOutside(svgRef, !!editingNode);
 
     const {
