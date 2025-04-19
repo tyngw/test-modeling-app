@@ -253,18 +253,6 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
   return (
 
     <React.Fragment key={element.id}>
-      {/* DebugInfoを別グループとして分離 */}
-      {/* <g>
-        <DebugInfo 
-          element={element} 
-          isHovered={isHovered} 
-          currentDropTarget={currentDropTarget}
-          dropPosition={dropPosition}
-          isDraggedOrDescendant={isDraggedOrDescendant}
-          siblingInfo={siblingInfo}
-        />
-      </g> */}
-      
       <g opacity={isDraggedOrDescendant ? 0.3 : 1}>
         {renderActionButtons(element, dispatch, Object.values(tabState.elements))}
         {hiddenChildren.length > 0 && (
