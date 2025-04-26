@@ -29,11 +29,11 @@ const UnsaveConfirmModal: React.FC<UnsaveConfirmModalProps> = ({
       onClose={() => setShowCloseConfirm(false)}
       closeOnOverlayClick={false}
       title="確認"
-      icon={<ConfirmIcon bgColor={`${currentTheme.MODAL.TEXT_COLOR}15`} iconColor={currentTheme.MODAL.TEXT_COLOR} />}
+      icon={<ConfirmIcon />}
     >
       <div style={{ 
         padding: '10px 5px 20px',
-        textAlign: 'center' as const,
+        textAlign: 'left' as const,
       }}>
         <p style={{ 
           margin: '0 0 10px',
@@ -47,7 +47,7 @@ const UnsaveConfirmModal: React.FC<UnsaveConfirmModalProps> = ({
         </p>
         <div style={{
           display: 'flex',
-          justifyContent: 'center',
+          justifyContent: 'flex-end',
           gap: '16px',
           marginTop: '30px'
         }}>

@@ -306,7 +306,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
       onClose={onClose}
       closeOnOverlayClick={false}
       title="Preference"
-      icon={<SettingsIcon bgColor={`${currentTheme.MODAL.TEXT_COLOR}15`} iconColor={currentTheme.MODAL.TEXT_COLOR} />}
+      icon={<SettingsIcon />}
     >
       <ThemeProvider theme={theme}>
       <Box sx={{ 
