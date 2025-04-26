@@ -13,6 +13,7 @@ interface ModalWindowProps {
     children: ReactNode;
     closeOnOverlayClick?: boolean; // 追加：領域外クリックでの閉じるを制御
     title?: string; // 追加：モーダルのタイトル
+    icon?: ReactNode; // 追加：タイトル下に表示するアイコン
 }
 
 const ModalWindow: React.FC<ModalWindowProps> = ({ 
@@ -21,6 +22,7 @@ const ModalWindow: React.FC<ModalWindowProps> = ({
     children,
     closeOnOverlayClick = true, // デフォルトでは領域外クリックで閉じる（既存の動作を維持）
     title,
+    icon,
 }) => {
     const isMounted = useIsMounted();
     const [currentTheme, setCurrentTheme] = useState(() => 
@@ -104,19 +106,36 @@ const ModalWindow: React.FC<ModalWindowProps> = ({
                 }}
                 onClick={(e) => e.stopPropagation()}
             >
-                {title && (
+                {(icon || title) && (
                     <div style={{
                         position: 'absolute',
-                        left: 24,
                         top: 16,
-                        height: '32px',
+                        left: 24,
                         display: 'flex',
                         alignItems: 'center',
-                        fontSize: '1.2em',
-                        fontWeight: 'bold',
-                        color: currentTheme.MODAL.TEXT_COLOR,
+                        gap: '8px',
                     }}>
-                        {title}
+                        {icon && (
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                            }}>
+                                {icon}
+                            </div>
+                        )}
+                        {title && (
+                            <div style={{
+                                fontSize: '1.2em',
+                                fontWeight: 'bold',
+                                color: currentTheme.MODAL.TEXT_COLOR,
+                                display: 'flex',
+                                alignItems: 'center',
+                                height: '32px',
+                            }}>
+                                {title}
+                            </div>
+                        )}
                     </div>
                 )}
                 <button 
@@ -154,7 +173,7 @@ const ModalWindow: React.FC<ModalWindowProps> = ({
                     style={{
                         position: 'relative',
                         maxHeight: 'calc(80vh - 56px)', // モーダルの上下パディングを考慮
-                        marginTop: '32px', // closeボタン分の余白
+                        marginTop: icon ? '72px' : (title ? '48px' : '32px'), // タイトル/アイコンの高さを考慮
                         overflowY: 'auto',
                         overflowX: 'hidden',
                         scrollbarWidth: 'thin',
