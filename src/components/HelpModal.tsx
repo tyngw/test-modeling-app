@@ -17,7 +17,7 @@ const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
       isOpen={isOpen}
       onClose={onClose}
       title="Help"
-      icon={<HelpIcon bgColor={`${currentTheme.MODAL.TEXT_COLOR}15`} iconColor={currentTheme.MODAL.TEXT_COLOR} />}
+      icon={<HelpIcon />}
     >
       <div dangerouslySetInnerHTML={{ __html: helpContent }} />
     </ModalWindow>

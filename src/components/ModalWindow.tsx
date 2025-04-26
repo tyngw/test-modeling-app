@@ -173,7 +173,7 @@ const ModalWindow: React.FC<ModalWindowProps> = ({
                     style={{
                         position: 'relative',
                         maxHeight: 'calc(80vh - 56px)', // モーダルの上下パディングを考慮
-                        marginTop: icon ? '72px' : (title ? '48px' : '32px'), // タイトル/アイコンの高さを考慮
+                        marginTop: icon ? '40px' : (title ? '24px' : '16px'),
                         overflowY: 'auto',
                         overflowX: 'hidden',
                         scrollbarWidth: 'thin',
