@@ -1,25 +1,25 @@
 // src/AppContent.tsx
 'use client';
 
-import { ToastMessages } from './constants/toastMessages';
+import { ToastMessages } from '../constants/toastMessages';
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { CanvasArea } from './components/canvas';
-import QuickMenuBar from './components/menus/QuickMenuBar';
-import TabHeaders from './components/tabHeaders/TabHeaders';
-import SettingsModal from './components/SettingsModal';
-import UnsaveConfirmModal from './components/UnsaveConfirmModal';
-import HelpModal from './components/HelpModal';
-import { CanvasProvider } from './context/CanvasContext';
-import { Action } from './state/state';
-import { useTabs } from './context/TabsContext';
-import { reducer } from './state/state';
-import { saveSvg, loadElements, saveElements, extractRootElementTextFromElements } from './utils/file';
-import { determineFileName } from './utils/file/fileHelpers';
-import { generateWithGemini } from './utils/api';
-import { getApiKey, getModelType } from './utils/storage';
-import { formatElementsForPrompt } from './utils/element';
-import { createSystemPrompt } from './constants/promptHelpers';
-import { useToast } from './context/ToastContext';
+import { CanvasArea } from './canvas';
+import QuickMenuBar from './menus/QuickMenuBar';
+import TabHeaders from './tabHeaders/TabHeaders';
+import SettingsModal from './SettingsModal';
+import UnsaveConfirmModal from './UnsaveConfirmModal';
+import HelpModal from './HelpModal';
+import { CanvasProvider } from '../context/CanvasContext';
+import { Action } from '../state/state';
+import { useTabs } from '../context/TabsContext';
+import { reducer } from '../state/state';
+import { saveSvg, loadElements, saveElements, extractRootElementTextFromElements } from '../utils/file';
+import { determineFileName } from '../utils/file/fileHelpers';
+import { generateWithGemini } from '../utils/api';
+import { getApiKey, getModelType } from '../utils/storage';
+import { formatElementsForPrompt } from '../utils/element';
+import { createSystemPrompt } from '../constants/promptHelpers';
+import { useToast } from '../context/ToastContext';
 
 const AppContent: React.FC = () => {
   const { tabs, currentTabId, addTab, closeTab, switchTab, updateTabState, updateTabName } = useTabs();
