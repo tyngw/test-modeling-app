@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import ModalWindow from './ModalWindow';
+import SettingsIcon from './icons/SettingsIcon';
 import { SettingField } from './settings/SettingField';
 import { Box, Button, Tabs, Tab } from '@mui/material';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
@@ -300,7 +301,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   };
 
   return (
-    <ModalWindow isOpen={isOpen} onClose={onClose} closeOnOverlayClick={false} title="Preference">
+    <ModalWindow
+      isOpen={isOpen}
+      onClose={onClose}
+      closeOnOverlayClick={false}
+      title="Preference"
+      icon={<SettingsIcon bgColor={`${currentTheme.MODAL.TEXT_COLOR}15`} iconColor={currentTheme.MODAL.TEXT_COLOR} />}
+    >
       <ThemeProvider theme={theme}>
       <Box sx={{ 
         backgroundColor: currentTheme.MODAL.BACKGROUND, 
