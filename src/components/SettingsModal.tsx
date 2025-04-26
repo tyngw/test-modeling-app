@@ -315,6 +315,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
         <Tabs 
           value={activeTab} 
           onChange={(_, newValue) => setActiveTab(newValue)}
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
           textColor="primary"
           indicatorColor="primary"
         >
@@ -356,10 +359,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
           ))}
         </Box>
         <Box sx={{ 
-          mt: 2, 
+          mt: 2,
           pt: 2,
-          display: 'flex', 
-          justifyContent: 'space-between', 
+          display: 'flex',
+          flexWrap: 'wrap', // ボタンが見切れないよう折り返し
+          gap: 1,
+          justifyContent: 'space-between',
           alignItems: 'center',
           borderTop: `1px solid ${currentTheme.MODAL.TEXT_COLOR}20`,
           backgroundColor: currentTheme.MODAL.BACKGROUND,
