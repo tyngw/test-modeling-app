@@ -8,9 +8,7 @@ import QuickMenuBar from './components/menus/QuickMenuBar';
 import TabHeaders from './components/tabHeaders/TabHeaders';
 import SettingsModal from './components/SettingsModal';
 import UnsaveConfirmModal from './components/UnsaveConfirmModal';
-import ModalWindow from './components/ModalWindow';
-import HelpIcon from './components/icons/HelpIcon';
-import { helpContent } from './constants/helpContent';
+import HelpModal from './components/HelpModal';
 import { CanvasProvider } from './context/CanvasContext';
 import { Action } from './state/state';
 import { useTabs } from './context/TabsContext';
@@ -22,8 +20,6 @@ import { getApiKey, getModelType } from './utils/storage';
 import { formatElementsForPrompt } from './utils/element';
 import { createSystemPrompt } from './constants/promptHelpers';
 import { useToast } from './context/ToastContext';
-import { getCurrentTheme } from './utils/style/colorHelpers';
-import { getCanvasBackgroundColor } from './utils/storage/localStorageHelpers';
 
 const AppContent: React.FC = () => {
   const { tabs, currentTabId, addTab, closeTab, switchTab, updateTabState, updateTabName } = useTabs();
@@ -160,9 +156,6 @@ const AppContent: React.FC = () => {
 
   const memoizedCanvasProvider = useMemo(() => {
     if (!currentTab) return null;
-    // ヘルプモーダル用のテーマ取得
-    const helpBg = getCanvasBackgroundColor();
-    const helpTheme = getCurrentTheme(helpBg);
     return (
       <CanvasProvider state={currentTab.state} dispatch={dispatch}>
         <CanvasArea isHelpOpen={isHelpOpen} toggleHelp={toggleHelp} />
@@ -207,14 +200,10 @@ const AppContent: React.FC = () => {
           isOpen={isSettingsOpen}
           onClose={toggleSettings}
         />
-        <ModalWindow
+        <HelpModal
           isOpen={isHelpOpen}
           onClose={toggleHelp}
-          title="Help"
-          icon={<HelpIcon bgColor={`${helpTheme.MODAL.TEXT_COLOR}15`} iconColor={helpTheme.MODAL.TEXT_COLOR} />}
-        >
-          <div dangerouslySetInnerHTML={{ __html: helpContent }} />
-        </ModalWindow>
+        />
       </CanvasProvider>
     );
   }, [currentTab, dispatch, toggleHelp, isHelpOpen, currentTabId, updateTabName, toggleSettings, addToast, handleAIClick, showCloseConfirm, tabToClose, closeTab, isSettingsOpen]);
