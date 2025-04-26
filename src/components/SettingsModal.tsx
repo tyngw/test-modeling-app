@@ -3,8 +3,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import ModalWindow from './ModalWindow';
+import SettingsIcon from './icons/SettingsIcon';
 import { SettingField } from './settings/SettingField';
-import { Box, Button, Typography, Tabs, Tab } from '@mui/material';
+import { Box, Button, Tabs, Tab } from '@mui/material';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
@@ -300,7 +301,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   };
 
   return (
-    <ModalWindow isOpen={isOpen} onClose={onClose} closeOnOverlayClick={false}>
+    <ModalWindow
+      isOpen={isOpen}
+      onClose={onClose}
+      closeOnOverlayClick={false}
+      title="Preference"
+      icon={<SettingsIcon />}
+    >
       <ThemeProvider theme={theme}>
       <Box sx={{ 
         backgroundColor: currentTheme.MODAL.BACKGROUND, 
@@ -312,12 +319,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
         height: '80vh',
         maxHeight: 600
       }}>
-        <Typography variant="h6" gutterBottom color="textPrimary">
-          Preference
-        </Typography>
         <Tabs 
           value={activeTab} 
           onChange={(_, newValue) => setActiveTab(newValue)}
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
           textColor="primary"
           indicatorColor="primary"
         >
@@ -359,10 +366,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
           ))}
         </Box>
         <Box sx={{ 
-          mt: 2, 
+          mt: 2,
           pt: 2,
-          display: 'flex', 
-          justifyContent: 'space-between', 
+          display: 'flex',
+          flexWrap: 'wrap', // ボタンが見切れないよう折り返し
+          gap: 1,
+          justifyContent: 'space-between',
           alignItems: 'center',
           borderTop: `1px solid ${currentTheme.MODAL.TEXT_COLOR}20`,
           backgroundColor: currentTheme.MODAL.BACKGROUND,
