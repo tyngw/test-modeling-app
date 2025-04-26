@@ -12,13 +12,15 @@ interface ModalWindowProps {
     onClose: () => void;
     children: ReactNode;
     closeOnOverlayClick?: boolean; // 追加：領域外クリックでの閉じるを制御
+    title?: string; // 追加：モーダルのタイトル
 }
 
 const ModalWindow: React.FC<ModalWindowProps> = ({ 
     isOpen, 
     onClose, 
     children,
-    closeOnOverlayClick = true // デフォルトでは領域外クリックで閉じる（既存の動作を維持）
+    closeOnOverlayClick = true, // デフォルトでは領域外クリックで閉じる（既存の動作を維持）
+    title,
 }) => {
     const isMounted = useIsMounted();
     const [currentTheme, setCurrentTheme] = useState(() => 
@@ -102,6 +104,21 @@ const ModalWindow: React.FC<ModalWindowProps> = ({
                 }}
                 onClick={(e) => e.stopPropagation()}
             >
+                {title && (
+                    <div style={{
+                        position: 'absolute',
+                        left: 24,
+                        top: 16,
+                        height: '32px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        fontSize: '1.2em',
+                        fontWeight: 'bold',
+                        color: currentTheme.MODAL.TEXT_COLOR,
+                    }}>
+                        {title}
+                    </div>
+                )}
                 <button 
                     onClick={handleClose} 
                     style={{ 

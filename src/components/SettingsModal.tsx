@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ModalWindow from './ModalWindow';
 import { SettingField } from './settings/SettingField';
-import { Box, Button, Typography, Tabs, Tab } from '@mui/material';
+import { Box, Button, Tabs, Tab } from '@mui/material';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
@@ -300,7 +300,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   };
 
   return (
-    <ModalWindow isOpen={isOpen} onClose={onClose} closeOnOverlayClick={false}>
+    <ModalWindow isOpen={isOpen} onClose={onClose} closeOnOverlayClick={false} title="Preference">
       <ThemeProvider theme={theme}>
       <Box sx={{ 
         backgroundColor: currentTheme.MODAL.BACKGROUND, 
@@ -312,9 +312,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
         height: '80vh',
         maxHeight: 600
       }}>
-        <Typography variant="h6" gutterBottom color="textPrimary">
-          Preference
-        </Typography>
         <Tabs 
           value={activeTab} 
           onChange={(_, newValue) => setActiveTab(newValue)}
