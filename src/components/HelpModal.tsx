@@ -2,8 +2,6 @@ import React from 'react';
 import ModalWindow from './ModalWindow';
 import HelpIcon from './icons/HelpIcon';
 import { helpContent } from '../constants/helpContent';
-import { getCurrentTheme } from '../utils/style/colorHelpers';
-import { getCanvasBackgroundColor } from '../utils/storage/localStorageHelpers';
 
 interface HelpModalProps {
   isOpen: boolean;
@@ -11,7 +9,6 @@ interface HelpModalProps {
 }
 
 const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
-  const currentTheme = getCurrentTheme(getCanvasBackgroundColor());
   return (
     <ModalWindow
       isOpen={isOpen}
