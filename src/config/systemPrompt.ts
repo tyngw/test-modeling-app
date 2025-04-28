@@ -35,6 +35,10 @@ The output must be in Japanese, formatted as follows:
 提案要素2
 提案要素3
 \`\`\`
+`.trim();
+
+// ユーザープロンプトのフォーマット
+export const USER_PROMPT_FORMAT = `
 [Current Structure]
 \`\`\`
 {{structureText}}

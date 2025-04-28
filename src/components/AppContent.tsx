@@ -18,7 +18,7 @@ import { determineFileName } from '../utils/file/fileHelpers';
 import { generateWithGemini } from '../utils/api';
 import { getApiKey, getModelType } from '../utils/storage';
 import { formatElementsForPrompt } from '../utils/element';
-import { createSystemPrompt } from '../constants/promptHelpers';
+import { createUserPrompt } from '../constants/promptHelpers';
 import { useToast } from '../context/ToastContext';
 
 const AppContent: React.FC = () => {
@@ -107,9 +107,16 @@ const AppContent: React.FC = () => {
         currentTab.state.elements,
         selectedElement.id
       );
-      const fullPrompt = createSystemPrompt({ structureText, inputText });
+      
+      // ユーザープロンプトのみを作成
+      const userPrompt = createUserPrompt({ 
+        structureText: structureText,
+        inputText: inputText 
+      });
+      
       const modelType = getModelType();
-      const result = await generateWithGemini(fullPrompt, decryptedApiKey, modelType);
+      // システムプロンプトは generateWithGemini 内部で直接使用されるので渡す必要がない
+      const result = await generateWithGemini(userPrompt, decryptedApiKey, modelType);
 
       let childNodes: string[] = [];
       
