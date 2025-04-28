@@ -15,10 +15,10 @@ import { useTabs } from '../context/TabsContext';
 import { reducer } from '../state/state';
 import { saveSvg, loadElements, saveElements, extractRootElementTextFromElements } from '../utils/file';
 import { determineFileName } from '../utils/file/fileHelpers';
-import { generateWithGemini } from '../utils/api';
+import { generateElementSuggestions } from '../utils/api';
 import { getApiKey, getModelType } from '../utils/storage';
 import { formatElementsForPrompt } from '../utils/element';
-import { createSystemPrompt } from '../constants/promptHelpers';
+import { createUserPrompt } from '../constants/promptHelpers';
 import { useToast } from '../context/ToastContext';
 
 const AppContent: React.FC = () => {
@@ -107,33 +107,25 @@ const AppContent: React.FC = () => {
         currentTab.state.elements,
         selectedElement.id
       );
-      const fullPrompt = createSystemPrompt({ structureText, inputText });
+      
+      // ユーザープロンプトのみを作成
+      const userPrompt = createUserPrompt({ 
+        structureText: structureText,
+        inputText: inputText 
+      });
+      
       const modelType = getModelType();
-      const result = await generateWithGemini(fullPrompt, decryptedApiKey, modelType);
+      
+      // JSON形式でレスポンスを取得
+      const result = await generateElementSuggestions(userPrompt, decryptedApiKey, modelType);
 
-      let childNodes: string[] = [];
+      // suggestions配列から要素を取得
+      let childNodes: string[] = result.suggestions || [];
       
-      // 文字列の処理（generateWithGeminiは常に文字列を返す）
-      const cleanedResult = result.replace(/^```/g, '').replace(/```$/g, '');
-      
-      // コードブロックが適切に存在する場合 (```で囲まれたもの)
-      const codeBlocks = cleanedResult.match(/```[\s\S]*?```/g);
-      
-      if (codeBlocks && codeBlocks.length > 0) {
-        // コードブロック形式のレスポンスを処理
-        childNodes = codeBlocks.flatMap((block: string) => {
-          return block
-            .replace(/```.*\n?|```/g, '') // 言語指定付きのマークダウンにも対応
-            .split('\n')
-            .map((line: string) => line.trim())
-            .filter((line: string) => line.length > 0 && line !== '```'); // ```だけの行を除外
-        });
-      } else {
-        // コードブロックがない場合は、テキスト全体を行ごとに分割して処理
-        childNodes = cleanedResult
-          .split('\n')
-          .map((line: string) => line.trim())
-          .filter((line: string) => line.length > 0 && line !== '```'); // ```だけの行を除外
+      // 空の配列の場合は処理をスキップ
+      if (childNodes.length === 0) {
+        addToast("AIが提案する要素がありませんでした。別のテキストを入力するか、選択した要素を変更してください。");
+        return;
       }
 
       // 処理した結果を要素として追加
