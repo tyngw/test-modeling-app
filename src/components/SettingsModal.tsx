@@ -44,6 +44,8 @@ import { exportElementSettings, importElementSettings } from '../utils/settingsE
 import { useTabs } from '../context/TabsContext';
 import { getCurrentTheme, isDarkMode } from '../utils/style/colorHelpers';
 import { useIsMounted } from '../hooks/UseIsMounted';
+import { sanitizeText, sanitizeFilename } from '../utils/security/sanitization';
+import { validateJsonData, validateFileContent } from '../utils/security/validation';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -266,11 +268,44 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // ファイル名のセキュリティチェック
+    const sanitizedFilename = sanitizeFilename(file.name);
+    if (!sanitizedFilename || !sanitizedFilename.endsWith('.json')) {
+      alert('Invalid file name or format. Please select a valid JSON file.');
+      if (event.target) event.target.value = '';
+      return;
+    }
+
+    // ファイルサイズチェック（1MB制限）
+    const maxSize = 1024 * 1024; // 1MB
+    if (file.size > maxSize) {
+      alert('File size too large. Please select a file smaller than 1MB.');
+      if (event.target) event.target.value = '';
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
         const content = e.target?.result as string;
-        const importedSettings = JSON.parse(content);
+        
+        // ファイル内容のセキュリティ検証
+        if (!validateFileContent(content)) {
+          alert('File content contains potentially dangerous data. Import cancelled.');
+          if (event.target) event.target.value = '';
+          return;
+        }
+
+        // JSONデータの検証
+        if (!validateJsonData(content)) {
+          alert('Invalid JSON format. Please check the file contents.');
+          if (event.target) event.target.value = '';
+          return;
+        }
+
+        // 基本的なHTMLエスケープ処理
+        const sanitizedContent = sanitizeText(content);
+        const importedSettings = JSON.parse(sanitizedContent);
 
         // Use the utility function to import and validate settings
         const { newValues, newErrors, hasError } = importElementSettings(
@@ -295,6 +330,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
       } catch (error) {
         console.error('Failed to parse imported settings:', error);
         alert('Failed to parse imported settings. Please check the file format.');
+        // Reset file input on error
+        if (event.target) event.target.value = '';
       }
     };
 
