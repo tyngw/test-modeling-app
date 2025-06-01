@@ -5,6 +5,7 @@ import { Undo, Redo, saveSnapshot } from './undoredo';
 import { handleArrowUp, handleArrowDown, handleArrowRight, handleArrowLeft } from '../utils/elementSelector';
 import { Element } from '../types/types';
 import { DEFAULT_POSITION, NUMBER_OF_SECTIONS } from '../config/elementSettings';
+import { Action } from '../types/actionTypes';
 import { debugLog } from '../utils/debugLogHelpers';
 import { 
     createNewElement, 
@@ -45,8 +46,6 @@ export interface State {
     /** セクション数 */
     numberOfSections: number;
 }
-
-import { Action } from '../types/actionTypes';
 
 export const initialState: State = {
     elements: {
