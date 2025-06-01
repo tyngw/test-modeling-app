@@ -12,7 +12,7 @@ import { ConnectionPath } from '../connections/ConnectionPath';
 import useResizeEffect from '../../hooks/UseResizeEffect';
 import { useCanvas } from '../../context/CanvasContext';
 import { useClickOutside } from '../../hooks/UseClickOutside';
-import { useElementDragEffect } from '../../hooks/UseElementDragEffect';
+import { useElementDragEffect, ElementDragEffectResult } from '../../hooks/UseElementDragEffect';
 import { useTouchHandlers } from '../../hooks/UseTouchHandlers';
 import { useKeyboardHandler } from '../../hooks/UseKeyboardHandler';
 import {
@@ -232,7 +232,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                                         currentDropTarget={currentDropTarget as CanvasElement | null}
                                         dropPosition={dropPosition}
                                         draggingElement={draggingElement}
-                                        handleMouseDown={handleMouseDown as unknown as (e: React.MouseEvent<SVGElement>, element: CanvasElement) => void}
+                                        handleMouseDown={handleMouseDown}
                                         handleMouseUp={handleMouseUp}
                                         onHoverChange={handleElementHover}
                                         dropInsertY={dropInsertY}
@@ -289,7 +289,8 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
                                         dropPosition={dropPosition}
                                         draggingElement={draggingElement}
                                         handleMouseDown={(e) => {
-                                            handleMouseDown(e as unknown as React.MouseEvent<HTMLElement>, element);
+                                            // 型キャストなしで直接ハンドラを呼び出す
+                                            handleMouseDown(e, element);
                                         }}
                                         handleMouseUp={handleMouseUp}
                                         onHoverChange={handleElementHover}
@@ -392,12 +393,15 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
 
     // ドラッグドロップの視覚的なプレビューを描画
     const renderDropPreview = () => {
-        if (!draggingElement || !currentDropTarget) return null;
+        if (!draggingElement || !currentDropTarget || !dropPosition) return null;
+
+        // 型ガード: currentDropTarget がCanvasElement であることを確認
+        const target = currentDropTarget as CanvasElement;
 
         // ドロップ座標を計算（ユーティリティ関数を使用）
         const coordinates = calculateDropCoordinates({
             elements,
-            currentDropTarget,
+            currentDropTarget: target,
             draggingElement,
             dropPosition,
             dropInsertY,
@@ -431,12 +435,15 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
 
     // ドラッグ中の要素の接続パスプレビューを描画
     const renderDraggingElementConnectionPath = () => {
-        if (!currentDropTarget || !draggingElement) return null;
+        if (!currentDropTarget || !draggingElement || !dropPosition) return null;
+
+        // 型ガード: currentDropTarget がCanvasElement であることを確認
+        const target = currentDropTarget as CanvasElement;
 
         const newParent = dropPosition === 'child'
-            ? currentDropTarget
-            : currentDropTarget.parentId
-                ? elements[currentDropTarget.parentId]
+            ? target
+            : target.parentId
+                ? elements[target.parentId]
                 : null;
 
         if (!newParent) return null;
@@ -444,7 +451,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
         // ドロップ座標を計算（ユーティリティ関数を使用）
         const coordinates = calculateDropCoordinates({
             elements,
-            currentDropTarget,
+            currentDropTarget: target,
             draggingElement,
             dropPosition,
             dropInsertY,

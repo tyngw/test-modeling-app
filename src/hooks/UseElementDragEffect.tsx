@@ -37,14 +37,14 @@ interface State {
 type ElementsMap = { [key: string]: Element };
 
 type Position = { x: number; y: number };
-type DropTargetInfo = { 
+export type DropTargetInfo = { 
   element: Element; 
   position: DropPosition; 
   insertY?: number; 
   insertX?: number;
   angle?: number; // 親要素からの角度（放射状レイアウト用）
   distance?: number; // 親要素からの距離
-  siblingInfo?: { prevElement?: Element, nextElement?: Element } 
+  siblingInfo?: { prevElement?: Element, nextElement?: Element }
 } | null;
 
 // 要素の子要素を取得するヘルパー関数
@@ -68,7 +68,18 @@ const isXInElementRange = (element: Element, mouseX: number, draggingElementWidt
   );
 };
 
-export const useElementDragEffect = () => {
+// フックの戻り値の型を定義
+export interface ElementDragEffectResult {
+  handleMouseDown: (e: React.MouseEvent<HTMLElement | SVGElement> | React.TouchEvent<HTMLElement | SVGElement>, element: Element) => void;
+  handleMouseUp: () => void;
+  currentDropTarget: Element | null;
+  dropPosition: DropPosition;
+  draggingElement: Element | null;
+  dropInsertY: number | undefined;
+  siblingInfo: { prevElement?: Element, nextElement?: Element } | null;
+}
+
+export const useElementDragEffect = (): ElementDragEffectResult => {
   const { state, dispatch } = useCanvas() as { state: State; dispatch: React.Dispatch<any> };
   const { addToast } = useToast();
   const [draggingElement, setDraggingElement] = useState<Element | null>(null);
@@ -482,7 +493,7 @@ export const useElementDragEffect = () => {
   }, [draggingElement, convertToZoomCoordinates, calculatePositionAndDistance]);
 
   const handleMouseDown = useCallback(
-    (e: React.MouseEvent<HTMLElement> | React.TouchEvent<HTMLElement>, element: Element) => {
+    (e: React.MouseEvent<HTMLElement | SVGElement> | React.TouchEvent<HTMLElement | SVGElement>, element: Element) => {
       // 要素が選択状態でない場合はドラッグを開始しない
       if (!element.selected || !element.parentId) return;
       
@@ -943,7 +954,7 @@ export const useElementDragEffect = () => {
     currentDropTarget: currentDropTarget?.element || null,
     dropPosition: currentDropTarget?.position || null,
     draggingElement,
-    dropInsertY: currentDropTarget?.insertY,
+    dropInsertY: currentDropTarget?.insertY || undefined,
     siblingInfo: currentDropTarget?.siblingInfo || null
   };
 };
