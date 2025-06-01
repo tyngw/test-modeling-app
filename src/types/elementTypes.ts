@@ -1,0 +1,81 @@
+// src/types/elementTypes.ts
+import { Element, MarkerType, ConnectionPathType, DropPosition } from './types';
+
+/**
+ * 要素のマップ型（ID をキーとする要素のコレクション）
+ */
+export type ElementsMap = Record<string, Element>;
+
+/**
+ * 新規要素作成時のオプション
+ */
+export interface NewElementOptions {
+  /** セクション数 */
+  numSections?: number;
+  /** 親要素ID */
+  parentId?: string | null;
+  /** 要素の深さ */
+  depth?: number;
+  /** 要素の順序 */
+  order?: number;
+  /** 選択状態 */
+  selected?: boolean;
+  /** 編集状態 */
+  editing?: boolean;
+  /** 表示状態 */
+  visible?: boolean;
+  /** 仮置き状態 */
+  tentative?: boolean;
+  /** 開始マーカー */
+  startMarker?: MarkerType;
+  /** 終了マーカー */
+  endMarker?: MarkerType;
+  /** 接続パス種類（後方互換用） */
+  connectionPathType?: ConnectionPathType;
+  /** 終端接続パス種類（後方互換用） */
+  endConnectionPathType?: ConnectionPathType;
+}
+
+/**
+ * 要素作成時の追加オプション
+ */
+export interface ElementAdderOptions {
+  /** 新要素を選択状態にするか */
+  newElementSelect?: boolean;
+  /** セクション数 */
+  numberOfSections?: number;
+  /** 仮置き状態かどうか */
+  tentative?: boolean;
+  /** 要素の順序 */
+  order?: number;
+}
+
+/**
+ * 要素位置調整オプション
+ */
+export interface PositionAdjustmentOptions {
+  /** 仮置き状態かどうか */
+  tentative?: boolean;
+  /** セクション数 */
+  numberOfSections?: number;
+  /** ズーム比率 */
+  zoomRatio?: number;
+}
+
+/**
+ * ドロップ処理情報
+ */
+export interface DropInfo {
+  /** ドロップ対象の要素ID */
+  id: string;
+  /** ドロップ前の親要素ID */
+  oldParentId: string;
+  /** ドロップ先の親要素ID */
+  newParentId: string;
+  /** ドロップ後の順序 */
+  newOrder?: number;
+  /** ドロップ後の深さ */
+  depth?: number;
+  /** ドロップ位置の種類 */
+  position?: DropPosition;
+}
