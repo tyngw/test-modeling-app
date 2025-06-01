@@ -13,7 +13,7 @@ export const MARKER_CONFIGS: MarkerConfigMap = {
     height: MARKER.HEIGHT,
     isFilled: false,
     shape: 'polygon',
-    pointsOrAttributes: `${MARKER.WIDTH} 0, ${MARKER.WIDTH} ${MARKER.HEIGHT}, 0 ${MARKER.HEIGHT / 2}`
+    pointsOrAttributes: `${MARKER.WIDTH} 0, ${MARKER.WIDTH} ${MARKER.HEIGHT}, 0 ${MARKER.HEIGHT / 2}`,
   },
   filledArrow: {
     id: 'filledarrowhead',
@@ -21,7 +21,7 @@ export const MARKER_CONFIGS: MarkerConfigMap = {
     height: MARKER.HEIGHT,
     isFilled: true,
     shape: 'polygon',
-    pointsOrAttributes: `${MARKER.WIDTH} 0, ${MARKER.WIDTH} ${MARKER.HEIGHT}, 0 ${MARKER.HEIGHT / 2}`
+    pointsOrAttributes: `${MARKER.WIDTH} 0, ${MARKER.WIDTH} ${MARKER.HEIGHT}, 0 ${MARKER.HEIGHT / 2}`,
   },
   // 終点用の反転した矢印（通常）
   arrowEnd: {
@@ -30,7 +30,7 @@ export const MARKER_CONFIGS: MarkerConfigMap = {
     height: MARKER.HEIGHT,
     isFilled: false,
     shape: 'polygon',
-    pointsOrAttributes: `0 0, 0 ${MARKER.HEIGHT}, ${MARKER.WIDTH} ${MARKER.HEIGHT / 2}`
+    pointsOrAttributes: `0 0, 0 ${MARKER.HEIGHT}, ${MARKER.WIDTH} ${MARKER.HEIGHT / 2}`,
   },
   // 終点用の反転した矢印（塗りつぶし）
   filledArrowEnd: {
@@ -39,7 +39,7 @@ export const MARKER_CONFIGS: MarkerConfigMap = {
     height: MARKER.HEIGHT,
     isFilled: true,
     shape: 'polygon',
-    pointsOrAttributes: `0 0, 0 ${MARKER.HEIGHT}, ${MARKER.WIDTH} ${MARKER.HEIGHT / 2}`
+    pointsOrAttributes: `0 0, 0 ${MARKER.HEIGHT}, ${MARKER.WIDTH} ${MARKER.HEIGHT / 2}`,
   },
   circle: {
     id: 'circlemarker',
@@ -50,8 +50,8 @@ export const MARKER_CONFIGS: MarkerConfigMap = {
     pointsOrAttributes: {
       cx: EQUILATERAL_MARKER.SIZE / 2,
       cy: EQUILATERAL_MARKER.SIZE / 2,
-      r: EQUILATERAL_MARKER.SIZE / 2 - 1
-    }
+      r: EQUILATERAL_MARKER.SIZE / 2 - 1,
+    },
   },
   filledCircle: {
     id: 'filledcirclemarker',
@@ -62,8 +62,8 @@ export const MARKER_CONFIGS: MarkerConfigMap = {
     pointsOrAttributes: {
       cx: EQUILATERAL_MARKER.SIZE / 2,
       cy: EQUILATERAL_MARKER.SIZE / 2,
-      r: EQUILATERAL_MARKER.SIZE / 2 - 1
-    }
+      r: EQUILATERAL_MARKER.SIZE / 2 - 1,
+    },
   },
   // 円形マーカーは対称なので、終点用は同じ
   circleEnd: {
@@ -75,8 +75,8 @@ export const MARKER_CONFIGS: MarkerConfigMap = {
     pointsOrAttributes: {
       cx: EQUILATERAL_MARKER.SIZE / 2,
       cy: EQUILATERAL_MARKER.SIZE / 2,
-      r: EQUILATERAL_MARKER.SIZE / 2 - 1
-    }
+      r: EQUILATERAL_MARKER.SIZE / 2 - 1,
+    },
   },
   filledCircleEnd: {
     id: 'filledcirclemarker-end',
@@ -87,8 +87,8 @@ export const MARKER_CONFIGS: MarkerConfigMap = {
     pointsOrAttributes: {
       cx: EQUILATERAL_MARKER.SIZE / 2,
       cy: EQUILATERAL_MARKER.SIZE / 2,
-      r: EQUILATERAL_MARKER.SIZE / 2 - 1
-    }
+      r: EQUILATERAL_MARKER.SIZE / 2 - 1,
+    },
   },
   square: {
     id: 'squaremarker',
@@ -100,8 +100,8 @@ export const MARKER_CONFIGS: MarkerConfigMap = {
       x: 1,
       y: 1,
       width: EQUILATERAL_MARKER.SIZE - 2,
-      height: EQUILATERAL_MARKER.SIZE - 2
-    }
+      height: EQUILATERAL_MARKER.SIZE - 2,
+    },
   },
   filledSquare: {
     id: 'filledsquaremarker',
@@ -113,8 +113,8 @@ export const MARKER_CONFIGS: MarkerConfigMap = {
       x: 1,
       y: 1,
       width: EQUILATERAL_MARKER.SIZE - 2,
-      height: EQUILATERAL_MARKER.SIZE - 2
-    }
+      height: EQUILATERAL_MARKER.SIZE - 2,
+    },
   },
   // 四角形マーカーは対称なので、終点用は同じ
   squareEnd: {
@@ -127,8 +127,8 @@ export const MARKER_CONFIGS: MarkerConfigMap = {
       x: 1,
       y: 1,
       width: EQUILATERAL_MARKER.SIZE - 2,
-      height: EQUILATERAL_MARKER.SIZE - 2
-    }
+      height: EQUILATERAL_MARKER.SIZE - 2,
+    },
   },
   filledSquareEnd: {
     id: 'filledsquaremarker-end',
@@ -140,8 +140,8 @@ export const MARKER_CONFIGS: MarkerConfigMap = {
       x: 1,
       y: 1,
       width: EQUILATERAL_MARKER.SIZE - 2,
-      height: EQUILATERAL_MARKER.SIZE - 2
-    }
+      height: EQUILATERAL_MARKER.SIZE - 2,
+    },
   },
   diamond: {
     id: 'diamondmarker',
@@ -149,7 +149,7 @@ export const MARKER_CONFIGS: MarkerConfigMap = {
     height: MARKER.HEIGHT,
     isFilled: false,
     shape: 'polygon',
-    pointsOrAttributes: `${MARKER.WIDTH / 2},1 ${MARKER.WIDTH - 1},${MARKER.HEIGHT / 2} ${MARKER.WIDTH / 2},${MARKER.HEIGHT - 1} 1,${MARKER.HEIGHT / 2}`
+    pointsOrAttributes: `${MARKER.WIDTH / 2},1 ${MARKER.WIDTH - 1},${MARKER.HEIGHT / 2} ${MARKER.WIDTH / 2},${MARKER.HEIGHT - 1} 1,${MARKER.HEIGHT / 2}`,
   },
   filledDiamond: {
     id: 'filleddiamondmarker',
@@ -157,7 +157,7 @@ export const MARKER_CONFIGS: MarkerConfigMap = {
     height: MARKER.HEIGHT,
     isFilled: true,
     shape: 'polygon',
-    pointsOrAttributes: `${MARKER.WIDTH / 2},1 ${MARKER.WIDTH - 1},${MARKER.HEIGHT / 2} ${MARKER.WIDTH / 2},${MARKER.HEIGHT - 1} 1,${MARKER.HEIGHT / 2}`
+    pointsOrAttributes: `${MARKER.WIDTH / 2},1 ${MARKER.WIDTH - 1},${MARKER.HEIGHT / 2} ${MARKER.WIDTH / 2},${MARKER.HEIGHT - 1} 1,${MARKER.HEIGHT / 2}`,
   },
   // ダイヤモンドマーカーは対称なので、終点用は同じ
   diamondEnd: {
@@ -166,7 +166,7 @@ export const MARKER_CONFIGS: MarkerConfigMap = {
     height: MARKER.HEIGHT,
     isFilled: false,
     shape: 'polygon',
-    pointsOrAttributes: `${MARKER.WIDTH / 2},1 ${MARKER.WIDTH - 1},${MARKER.HEIGHT / 2} ${MARKER.WIDTH / 2},${MARKER.HEIGHT - 1} 1,${MARKER.HEIGHT / 2}`
+    pointsOrAttributes: `${MARKER.WIDTH / 2},1 ${MARKER.WIDTH - 1},${MARKER.HEIGHT / 2} ${MARKER.WIDTH / 2},${MARKER.HEIGHT - 1} 1,${MARKER.HEIGHT / 2}`,
   },
   filledDiamondEnd: {
     id: 'filleddiamondmarker-end',
@@ -174,15 +174,15 @@ export const MARKER_CONFIGS: MarkerConfigMap = {
     height: MARKER.HEIGHT,
     isFilled: true,
     shape: 'polygon',
-    pointsOrAttributes: `${MARKER.WIDTH / 2},1 ${MARKER.WIDTH - 1},${MARKER.HEIGHT / 2} ${MARKER.WIDTH / 2},${MARKER.HEIGHT - 1} 1,${MARKER.HEIGHT / 2}`
-  }
+    pointsOrAttributes: `${MARKER.WIDTH / 2},1 ${MARKER.WIDTH - 1},${MARKER.HEIGHT / 2} ${MARKER.WIDTH / 2},${MARKER.HEIGHT - 1} 1,${MARKER.HEIGHT / 2}`,
+  },
 };
 
 /**
  * マーカーIDから対応するマーカー設定を取得する関数
  */
 export const getMarkerUrlById = (markerId: string): string | undefined => {
-  const config = Object.values(MARKER_CONFIGS).find(config => config.id === markerId);
+  const config = Object.values(MARKER_CONFIGS).find((config) => config.id === markerId);
   return config ? `url(#${config.id})` : undefined;
 };
 
@@ -191,7 +191,7 @@ export const getMarkerUrlById = (markerId: string): string | undefined => {
  */
 export const getMarkerUrlByType = (type: string, isEnd: boolean = false): string | undefined => {
   const suffix = isEnd ? '-end' : '';
-  
+
   switch (type) {
     case 'arrow':
       return `url(#arrowhead${suffix})`;
@@ -203,7 +203,7 @@ export const getMarkerUrlByType = (type: string, isEnd: boolean = false): string
       return `url(#filledcirclemarker${suffix})`;
     case 'square':
       return `url(#squaremarker${suffix})`;
-    case 'filled_square': 
+    case 'filled_square':
       return `url(#filledsquaremarker${suffix})`;
     case 'diamond':
       return `url(#diamondmarker${suffix})`;

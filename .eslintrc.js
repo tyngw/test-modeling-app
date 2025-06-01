@@ -24,10 +24,10 @@ module.exports = {
   rules: {
     'prettier/prettier': 'error',
     'react/react-in-jsx-scope': 'off',
-    '@typescript-eslint/no-unused-vars': ['error', { 'argsIgnorePattern': '^_' }],
+    '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
     'react/prop-types': 'off',
     'no-console': 'warn',
-    'camelcase': 'error',
+    camelcase: 'error',
     'no-var': 'error',
     'prefer-const': 'error',
   },

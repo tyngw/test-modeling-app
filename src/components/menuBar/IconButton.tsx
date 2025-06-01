@@ -11,12 +11,7 @@ interface IconButtonProps {
   iconColor: string;
 }
 
-const IconButton: React.FC<IconButtonProps> = ({ 
-  tooltip, 
-  onClick, 
-  icon: Icon, 
-  iconColor 
-}) => {
+const IconButton: React.FC<IconButtonProps> = ({ tooltip, onClick, icon: Icon, iconColor }) => {
   return (
     <Tooltip title={tooltip}>
       <Button variant="text" className="iconbar-button" onClick={onClick}>

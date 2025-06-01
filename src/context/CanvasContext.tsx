@@ -18,11 +18,7 @@ export const CanvasProvider: React.FC<{
   dispatch: React.Dispatch<Action>;
 }> = ({ children, state, dispatch }) => {
   const value = useMemo(() => ({ state, dispatch }), [state, dispatch]);
-  return (
-    <CanvasContext.Provider value={value}>
-      {children}
-    </CanvasContext.Provider>
-  );
+  return <CanvasContext.Provider value={value}>{children}</CanvasContext.Provider>;
 };
 
 export const useCanvas = () => {

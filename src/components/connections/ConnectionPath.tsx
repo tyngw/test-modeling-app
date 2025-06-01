@@ -1,10 +1,10 @@
 import React from 'react';
 import { Element as CanvasElement } from '../../types/types';
-import { 
-  CONNECTION_PATH_STYLE, 
-  CURVE_CONTROL_OFFSET, 
-  MARKER, 
-  EQUILATERAL_MARKER 
+import {
+  CONNECTION_PATH_STYLE,
+  CURVE_CONTROL_OFFSET,
+  MARKER,
+  EQUILATERAL_MARKER,
 } from '../../config/elementSettings';
 import { getMarkerUrlByType } from '../../config/markerConfigs';
 
@@ -24,7 +24,7 @@ export const ConnectionPath: React.FC<ConnectionPathProps> = ({
   element,
   absolutePositions,
   strokeColor = CONNECTION_PATH_STYLE.COLOR,
-  strokeWidth = CONNECTION_PATH_STYLE.STROKE
+  strokeWidth = CONNECTION_PATH_STYLE.STROKE,
 }) => {
   let startOffset = 0;
   switch (parentElement.startMarker) {
@@ -74,7 +74,7 @@ export const ConnectionPath: React.FC<ConnectionPathProps> = ({
     `M ${parentPos.x + parentElement.width + startOffset},${parentPos.y + parentElement.height / 2}`,
     `C ${parentPos.x + parentElement.width + CURVE_CONTROL_OFFSET},${parentPos.y + parentElement.height / 2}`,
     `${elementPos.x - CURVE_CONTROL_OFFSET},${elementPos.y + totalHeight / 2}`,
-    `${elementPos.x - endOffset},${elementPos.y + totalHeight / 2}`
+    `${elementPos.x - endOffset},${elementPos.y + totalHeight / 2}`,
   ].join(' ');
 
   const markerStart = getMarkerUrlByType(parentElement.startMarker);

@@ -7,7 +7,7 @@ import type { MutableRefObject } from 'react';
 
 export const useClickOutside = (
   svgRef: MutableRefObject<SVGSVGElement | null>,
-  editingElement: boolean
+  editingElement: boolean,
 ) => {
   const { dispatch } = useCanvas();
   useEffect(() => {

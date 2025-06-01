@@ -26,8 +26,9 @@ export function useAIGeneration({ currentTab, dispatch }: UseAIGenerationParams)
   const handleAIClick = useCallback(async () => {
     if (!currentTab) return;
 
-    const selectedElement = Object.values(currentTab.state.elements)
-      .find(el => el.selected) as Element | undefined;
+    const selectedElement = Object.values(currentTab.state.elements).find((el) => el.selected) as
+      | Element
+      | undefined;
 
     if (!selectedElement) {
       addToast(ToastMessages.noSelect);
@@ -37,7 +38,7 @@ export function useAIGeneration({ currentTab, dispatch }: UseAIGenerationParams)
     const decryptedApiKey = await getApiKey();
 
     if (!decryptedApiKey) {
-      addToast(ToastMessages.noApiKey, "warn");
+      addToast(ToastMessages.noApiKey, 'warn');
       return;
     }
 
@@ -49,22 +50,19 @@ export function useAIGeneration({ currentTab, dispatch }: UseAIGenerationParams)
     }
 
     try {
-      const structureText = formatElementsForPrompt(
-        currentTab.state.elements,
-        selectedElement.id
-      );
+      const structureText = formatElementsForPrompt(currentTab.state.elements, selectedElement.id);
       const fullPrompt = createSystemPrompt({ structureText, inputText });
       const modelType = getModelType();
       const result = await generateWithGemini(fullPrompt, decryptedApiKey, modelType);
 
       let childNodes: string[] = [];
-      
+
       // 文字列の処理（generateWithGeminiは常に文字列を返す）
       const cleanedResult = result.replace(/^```/g, '').replace(/```$/g, '');
-      
+
       // コードブロックが適切に存在する場合 (```で囲まれたもの)
       const codeBlocks = cleanedResult.match(/```[\s\S]*?```/g);
-      
+
       if (codeBlocks && codeBlocks.length > 0) {
         // コードブロック形式のレスポンスを処理
         childNodes = codeBlocks.flatMap((block: string) => {
@@ -89,13 +87,13 @@ export function useAIGeneration({ currentTab, dispatch }: UseAIGenerationParams)
           parentId: selectedElement.id,
           texts: childNodes,
           tentative: true,
-        }
+        },
       });
-
     } catch (error: unknown) {
-      const message = error instanceof Error ?
-        `${ToastMessages.aiError}: ${error.message}` :
-        ToastMessages.aiError;
+      const message =
+        error instanceof Error
+          ? `${ToastMessages.aiError}: ${error.message}`
+          : ToastMessages.aiError;
       addToast(message);
     }
   }, [currentTab, dispatch, addToast]);

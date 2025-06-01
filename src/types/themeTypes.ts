@@ -25,7 +25,7 @@ export interface Theme {
     /** タブ追加ボタンのテキスト色 */
     ADD_BUTTON_TEXT: string;
   };
-  
+
   /** キャンバス関連の色設定 */
   CANVAS: {
     /** キャンバス背景色 */
@@ -33,7 +33,7 @@ export interface Theme {
     /** 選択時の色 */
     SELECTION: string;
   };
-  
+
   /** 要素関連の色設定 */
   ELEMENTS: {
     /** 通常時の背景色 */

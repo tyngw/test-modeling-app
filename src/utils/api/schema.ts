@@ -5,15 +5,15 @@ export interface SuggestionResponse {
 
 // Gemini APIに渡すレスポンススキーマの定義
 export const suggestionResponseSchema = {
-  type: "object",
+  type: 'object',
   properties: {
     suggestions: {
-      type: "array",
+      type: 'array',
       items: {
-        type: "string"
+        type: 'string',
       },
-      description: "提案された要素の配列。各要素は1行のテキスト。"
-    }
+      description: '提案された要素の配列。各要素は1行のテキスト。',
+    },
   },
-  required: ["suggestions"]
+  required: ['suggestions'],
 };

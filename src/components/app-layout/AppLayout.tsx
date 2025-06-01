@@ -20,7 +20,7 @@ interface AppLayoutProps {
   closeTab: (tabId: string) => void;
   switchTab: (tabId: string) => void;
   dispatch: (action: Action) => void;
-  
+
   // モーダル関連
   isHelpOpen: boolean;
   isSettingsOpen: boolean;
@@ -28,14 +28,14 @@ interface AppLayoutProps {
   tabToClose: string | null;
   toggleHelp: () => void;
   toggleSettings: () => void;
-  handleCloseTabRequest: (tabId: string) => { needsConfirmation: boolean, tabId?: string };
+  handleCloseTabRequest: (tabId: string) => { needsConfirmation: boolean; tabId?: string };
   setShowCloseConfirm: (value: boolean) => void; // 追加
-  
+
   // ファイル操作関連
   handleSaveSvg: () => void;
   handleSaveElements: () => void;
   handleLoadElements: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  
+
   // AI機能
   handleAIClick: () => void;
 }
@@ -53,7 +53,7 @@ export function AppLayout({
   closeTab,
   switchTab,
   dispatch,
-  
+
   // モーダル関連
   isHelpOpen,
   isSettingsOpen,
@@ -63,23 +63,22 @@ export function AppLayout({
   toggleSettings,
   handleCloseTabRequest,
   setShowCloseConfirm, // プロパティを追加
-  
+
   // ファイル操作関連
   handleSaveSvg,
   handleSaveElements,
   handleLoadElements,
-  
+
   // AI機能
-  handleAIClick
+  handleAIClick,
 }: AppLayoutProps) {
-  
   const memoizedCanvasProvider = useMemo(() => {
     if (!currentTab) return null;
-    
+
     return (
       <CanvasProvider state={currentTab.state} dispatch={dispatch}>
         <CanvasArea isHelpOpen={isHelpOpen} toggleHelp={toggleHelp} />
-        
+
         <TabHeaders
           tabs={tabs}
           currentTabId={currentTabId}
@@ -87,7 +86,7 @@ export function AppLayout({
           closeTab={handleCloseTabRequest}
           switchTab={switchTab}
         />
-        
+
         <QuickMenuBar
           saveSvg={handleSaveSvg}
           loadElements={handleLoadElements}
@@ -104,23 +103,31 @@ export function AppLayout({
           closeTab={closeTab}
         />
 
-        <SettingsModal
-          isOpen={isSettingsOpen}
-          onClose={toggleSettings}
-        />
-        
-        <HelpModal
-          isOpen={isHelpOpen}
-          onClose={toggleHelp}
-        />
+        <SettingsModal isOpen={isSettingsOpen} onClose={toggleSettings} />
+
+        <HelpModal isOpen={isHelpOpen} onClose={toggleHelp} />
       </CanvasProvider>
     );
   }, [
-    currentTab, dispatch, 
-    isHelpOpen, isSettingsOpen, showCloseConfirm, tabToClose,
-    tabs, currentTabId, addTab, closeTab, switchTab,
-    toggleHelp, toggleSettings, handleCloseTabRequest, setShowCloseConfirm,
-    handleSaveSvg, handleSaveElements, handleLoadElements, handleAIClick
+    currentTab,
+    dispatch,
+    isHelpOpen,
+    isSettingsOpen,
+    showCloseConfirm,
+    tabToClose,
+    tabs,
+    currentTabId,
+    addTab,
+    closeTab,
+    switchTab,
+    toggleHelp,
+    toggleSettings,
+    handleCloseTabRequest,
+    setShowCloseConfirm,
+    handleSaveSvg,
+    handleSaveElements,
+    handleLoadElements,
+    handleAIClick,
   ]);
 
   return <div>{memoizedCanvasProvider}</div>;
