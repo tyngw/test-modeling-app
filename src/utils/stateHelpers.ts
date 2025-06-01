@@ -1,24 +1,31 @@
 // src/utils/stateHelpers.ts
 import { v4 as uuidv4 } from 'uuid';
 import { Element } from '../types/types';
-import { createNewElement, ElementsMap } from './element';
+import { createNewElement } from './element';
 import { adjustElementPositions } from './layoutHelpers';
 import { calculateElementWidth, wrapText } from './textareaHelpers';
 import { SIZE, TEXTAREA_PADDING, DEFAULT_FONT_SIZE, LINE_HEIGHT_RATIO } from '../config/elementSettings';
+import { ElementsMap, ElementAdderOptions } from '../types/elementTypes';
+import { 
+    ElementUpdaterFunction, 
+    ElementFilterFunction,
+    ElementPropertyUpdater,
+    ElementUpdatesMap
+} from '../types/stateHelpers';
 
 /**
  * 新しい要素を追加するヘルパー関数
+ * @param elements 既存の要素マップ
+ * @param parentElement 親要素
+ * @param text 初期テキスト（省略可）
+ * @param options 追加オプション
+ * @returns 更新された要素マップ
  */
 export const createElementAdder = (
     elements: ElementsMap,
     parentElement: Element,
     text?: string,
-    options?: { 
-        newElementSelect?: boolean; 
-        tentative?: boolean; 
-        order?: number; 
-        numberOfSections?: number; 
-    }
+    options?: ElementAdderOptions
 ): ElementsMap => {
     const newElement = createNewElement({
         parentId: parentElement.id,

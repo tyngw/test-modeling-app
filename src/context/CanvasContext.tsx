@@ -2,7 +2,8 @@
 'use client';
 
 import React, { createContext, useContext, ReactNode, useMemo } from 'react';
-import { State, Action } from '../state/state';
+import { State } from '../state/state';
+import { Action } from '../types/actionTypes';
 
 type CanvasContextValue = {
   state: State;

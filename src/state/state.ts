@@ -11,9 +11,9 @@ import {
     setDepthRecursive, 
     setVisibilityRecursive, 
     deleteElementRecursive, 
-    isDescendant,
-    ElementsMap
+    isDescendant
 } from '../utils/element/elementHelpers';
+import { ElementsMap } from '../types/elementTypes';
 import { adjustElementPositions } from '../utils/layoutHelpers';
 import { getSelectedAndChildren, copyToClipboard, getGlobalCutElements } from '../utils/clipboard/clipboardHelpers';
 import {
@@ -30,18 +30,23 @@ import {
     createSimplePropertyHandler
 } from '../utils/stateHelpers';
 
+/**
+ * アプリケーションの状態を表す型
+ */
 export interface State {
+    /** 要素のマップ - IDをキーとする */
     elements: ElementsMap;
+    /** キャンバス幅 */
     width: number;
+    /** キャンバス高さ */
     height: number;
+    /** ズーム比率 */
     zoomRatio: number;
+    /** セクション数 */
     numberOfSections: number;
 }
 
-export type Action = {  
-    type: string;
-    payload?: any;
-};
+import { Action } from '../types/actionTypes';
 
 export const initialState: State = {
     elements: {
@@ -121,7 +126,16 @@ function handleSelectedElementAction(state: State, actionFn: (selectedElement: E
     return selectedElement ? { ...state, ...actionFn(selectedElement) } : state;
 }
 
-const actionHandlers: { [key: string]: (state: State, action?: any) => State } = {
+/**
+ * アクションハンドラーの型定義
+ * 各アクションタイプに対応する状態更新関数のマップ
+ */
+type ActionHandler = (state: State, action?: any) => State;
+
+/**
+ * すべてのアクションハンドラーのマップ
+ */
+const actionHandlers: Record<string, ActionHandler> = {
     ZOOM_IN: handleZoomIn,
     ZOOM_OUT: handleZoomOut,
 
@@ -507,10 +521,16 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
         let updatedElements = { ...state.elements };
 
         selectedElements.forEach(selectedElement => {
+            // 選択された要素とその子要素を取得
             const elementsToCut = getSelectedAndChildren(updatedElements, selectedElement);
-            Object.values(elementsToCut).forEach(e => {
-                elementsToCut[e.id] = { ...e, selected: false };
+            
+            // 選択状態をリセット
+            Object.keys(elementsToCut).forEach(id => {
+                if (elementsToCut[id]) {
+                    elementsToCut[id] = { ...elementsToCut[id], selected: false };
+                }
             });
+            
             cutElements = { ...cutElements, ...elementsToCut };
             updatedElements = deleteElementRecursive(updatedElements, selectedElement);
         });
@@ -525,8 +545,15 @@ const actionHandlers: { [key: string]: (state: State, action?: any) => State } =
 
     COPY_ELEMENT: state => handleSelectedElementAction(state, selectedElement => {
         const currentState = state;  // 現在のstateをローカル変数として保存
-        const cutElements = getSelectedAndChildren(currentState.elements, selectedElement);
-        copyToClipboard(cutElements);
+        const elementsToCopy = getSelectedAndChildren(currentState.elements, selectedElement);
+        
+        // 選択状態をリセット（コピー時には選択状態をfalseに）
+        const copyElements: ElementsMap = {};
+        Object.keys(elementsToCopy).forEach(id => {
+            copyElements[id] = { ...elementsToCopy[id], selected: false };
+        });
+        
+        copyToClipboard(copyElements);
         return {};
     }),
 
