@@ -52,6 +52,21 @@ The application is deployed at [https://tyngw.github.io/test-modeling-app/](http
 - `Save as`: Save the diagram data in JSON format
 - `Export`: Export the diagram in SVG format
 
+## Security
+
+This application implements comprehensive XSS (Cross-Site Scripting) protection measures:
+
+### Implemented Security Features
+
+- **Input Sanitization**: All user inputs are sanitized to remove dangerous HTML tags, JavaScript protocols, and event handlers
+- **Input Validation**: Real-time validation of user input with dangerous content rejection
+- **File Upload Security**: Multi-layer validation for file uploads including filename sanitization, size limits, and content verification
+- **API Response Sanitization**: All AI API responses are sanitized before processing
+- **Storage Security**: localStorage operations include size limits and validation with encrypted API key storage
+- **CSP Headers**: Content Security Policy and other security headers to prevent various attack vectors
+
+For detailed security information, please see [SECURITY.md](./SECURITY.md).
+
 ## License
 
 This project is licensed under the MIT license. See [LICENSE](./LICENSE) for details.

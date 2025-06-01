@@ -3,6 +3,8 @@ import axios from 'axios';
 import { getApiEndpoint } from '../storage/localStorageHelpers';
 import { getSystemPrompt } from '../../constants/promptHelpers';
 import { SuggestionResponse, suggestionResponseSchema } from './schema';
+import { sanitizeApiResponse, sanitizeText } from '../security/sanitization';
+import { validateJsonData } from '../security/validation';
 
 // 複数メッセージ対応のための型定義
 interface MessagePart {
@@ -68,11 +70,14 @@ export const generateWithGemini = async (
       },
     );
 
-    // テキストレスポンスの取得
-    const textResponse = response.data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-    console.log(textResponse);
-    return textResponse;
+    // テキストレスポンスの取得とサニタイゼーション
+    const rawTextResponse = response.data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    
+    // AIレスポンスのセキュリティチェックとサニタイゼーション
+    const sanitizedResponse = sanitizeApiResponse(rawTextResponse);
+    
+    console.log('Sanitized response:', sanitizedResponse);
+    return sanitizedResponse;
   } catch (error) {
     console.error('Gemini API Error:', error);
     throw new Error('API呼び出しに失敗しました');
@@ -119,18 +124,29 @@ export const generateElementSuggestions = async (
       },
     );
 
-    // JSONレスポンスの取得
-    const jsonText =
+    // JSONレスポンスの取得とサニタイゼーション
+    const rawJsonText =
       response.data.candidates?.[0]?.content?.parts?.[0]?.text || '{"suggestions":[]}';
+    
+    // JSONデータの検証
+    if (!validateJsonData(rawJsonText)) {
+      console.warn('Invalid JSON response from API, using empty suggestions');
+      return { suggestions: [] };
+    }
+    
     let jsonResponse: SuggestionResponse;
 
     try {
       // 文字列形式の場合、JSONに変換
-      if (typeof jsonText === 'string') {
-        jsonResponse = JSON.parse(jsonText) as SuggestionResponse;
+      if (typeof rawJsonText === 'string') {
+        const parsedJson = JSON.parse(rawJsonText);
+        // APIレスポンスのサニタイゼーション
+        const sanitizedData = sanitizeApiResponse(parsedJson);
+        jsonResponse = sanitizedData as SuggestionResponse;
       } else {
-        // 既にオブジェクトの場合はそのまま使用
-        jsonResponse = jsonText as SuggestionResponse;
+        // 既にオブジェクトの場合はサニタイゼーションを適用
+        const sanitizedData = sanitizeApiResponse(rawJsonText);
+        jsonResponse = sanitizedData as SuggestionResponse;
       }
 
       // responseにsuggestions配列が含まれていない場合は空配列を設定
@@ -188,18 +204,26 @@ export const generateWithGeminiJson = async <T>(
       },
     );
 
-    // JSONレスポンスの取得と解析
+    // JSONレスポンスの取得とサニタイゼーション
     const jsonResponse = response.data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
 
     // JSONをパースして返す
     try {
       // レスポンスが既にJSONオブジェクトの場合もある
       if (typeof jsonResponse === 'object') {
-        return jsonResponse as T;
+        const sanitizedResponse = sanitizeApiResponse(jsonResponse);
+        return sanitizedResponse as T;
       }
 
-      // 文字列の場合はパースする
-      return JSON.parse(jsonResponse) as T;
+      // JSONデータの検証
+      if (!validateJsonData(jsonResponse)) {
+        throw new Error('Invalid JSON response from API');
+      }
+
+      // 文字列の場合はパースしてサニタイズ
+      const parsedResponse = JSON.parse(jsonResponse);
+      const sanitizedResponse = sanitizeApiResponse(parsedResponse);
+      return sanitizedResponse as T;
     } catch (parseError) {
       console.error('JSON parse error:', parseError);
       throw new Error('JSONの解析に失敗しました');
@@ -257,11 +281,14 @@ export const generateWithGeminiMultipleMessages = async (
       },
     );
 
-    // レスポンスデータの取得
-    const textResponse = response.data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    // レスポンスデータの取得とサニタイゼーション
+    const rawTextResponse = response.data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    
+    // AIレスポンスのセキュリティチェックとサニタイゼーション
+    const sanitizedResponse = sanitizeApiResponse(rawTextResponse);
 
-    console.log(textResponse);
-    return textResponse;
+    console.log('Sanitized multiple messages response:', sanitizedResponse);
+    return sanitizedResponse;
   } catch (error) {
     console.error('Gemini API Error:', error);
     throw new Error('API呼び出しに失敗しました');
@@ -307,16 +334,24 @@ export const generateWithGeminiMultipleMessagesJson = async <T>(
     );
 
     // JSONレスポンスの取得と解析
-    const jsonResponse = response.data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+    const rawJsonResponse = response.data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
 
     try {
       // レスポンスが既にJSONオブジェクトの場合もある
-      if (typeof jsonResponse === 'object') {
-        return jsonResponse as T;
+      if (typeof rawJsonResponse === 'object') {
+        const sanitizedResponse = sanitizeApiResponse(rawJsonResponse);
+        return sanitizedResponse as T;
       }
 
-      // 文字列の場合はパースする
-      return JSON.parse(jsonResponse) as T;
+      // JSONデータの検証
+      if (!validateJsonData(rawJsonResponse)) {
+        throw new Error('Invalid JSON response from API');
+      }
+
+      // 文字列の場合はパースしてサニタイズ
+      const parsedResponse = JSON.parse(rawJsonResponse);
+      const sanitizedResponse = sanitizeApiResponse(parsedResponse);
+      return sanitizedResponse as T;
     } catch (parseError) {
       console.error('JSON parse error:', parseError);
       throw new Error('JSONの解析に失敗しました');

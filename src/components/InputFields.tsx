@@ -13,6 +13,8 @@ import {
 import { getFontFamily, getElementColor, getTextColor } from '../utils/storage/localStorageHelpers';
 import { Element } from '../types/types';
 import { inputFieldKeyActionMap } from '../config/keyActionMap';
+import { sanitizeText } from '../utils/security/sanitization';
+import { validateTextInput } from '../utils/security/validation';
 
 interface InputFieldsProps {
   element?: Element;
@@ -77,7 +79,22 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>, index: number) => {
-      const newValue = e.target.value;
+      const rawValue = e.target.value;
+      
+      // 入力値のセキュリティ検証とサニタイゼーション
+      if (!validateTextInput(rawValue)) {
+        console.warn('無効なテキスト入力が検出されました。安全でない内容が含まれている可能性があります。');
+        return; // 危険な入力は拒否
+      }
+
+      // 基本的なサニタイゼーション（過度に制限しないように調整）
+      const newValue = rawValue
+        // HTMLタグのうち、危険なもののみを除去
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+        .replace(/javascript:/gi, '')
+        .replace(/data:/gi, '')
+        .replace(/on\w+\s*=/gi, '');
+
       const height = calculateDynamicHeight(newValue);
 
       setLocalHeights((prev) => {
