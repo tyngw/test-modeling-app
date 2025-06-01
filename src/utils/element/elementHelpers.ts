@@ -1,13 +1,15 @@
 // src/utils/element/elementHelpers.ts
-import { Element } from '../../types/types';
+import { Element, MarkerType } from '../../types/types';
 import { v4 as uuidv4 } from 'uuid';
 import { getMarkerType } from '../storage/localStorageHelpers';
 import { SIZE, NUMBER_OF_SECTIONS } from '../../config/elementSettings';
 import { debugLog } from '../debugLogHelpers';
-import { MarkerType } from '../../types/types';
+import { ElementsMap, NewElementOptions } from '../../types/elementTypes';
 
-export type ElementsMap = { [key: string]: Element };
-
+/**
+ * 新規要素作成のパラメータ
+ * @deprecated 代わりに NewElementOptions を使用してください
+ */
 export interface NewElementParams {
     parentId?: string | null;
     order?: number;

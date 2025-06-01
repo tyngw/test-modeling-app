@@ -10,9 +10,9 @@ import SettingsModal from './SettingsModal';
 import UnsaveConfirmModal from './UnsaveConfirmModal';
 import HelpModal from './HelpModal';
 import { CanvasProvider } from '../context/CanvasContext';
-import { Action } from '../state/state';
 import { useTabs } from '../context/TabsContext';
 import { reducer } from '../state/state';
+import { Action } from '../types/actionTypes';
 import { saveSvg, loadElements, saveElements, extractRootElementTextFromElements } from '../utils/file';
 import { determineFileName } from '../utils/file/fileHelpers';
 import { generateElementSuggestions } from '../utils/api';
@@ -66,7 +66,13 @@ const AppContent: React.FC = () => {
     setIsSettingsOpen(prev => !prev);
   }, [dispatch]);
 
-  const handleCloseTabRequest = (tabId: string) => {
+  /**
+   * タブを閉じるリクエストを処理する関数
+   * 
+   * @param tabId - 閉じるタブのID
+   */
+  const handleCloseTabRequest = (tabId: string): void => {
+    // TODO: 実際に変更があるかどうかをチェックする実装に置き換えるべき
     const hasUnsavedChanges = true;
 
     if (hasUnsavedChanges) {
@@ -77,7 +83,12 @@ const AppContent: React.FC = () => {
     }
   };
 
-  const handleAIClick = useCallback(async () => {
+  /**
+   * AI機能を使って選択された要素に子要素の提案を追加する
+   * 
+   * @returns {Promise<void>}
+   */
+  const handleAIClick = useCallback(async (): Promise<void> => {
     if (!currentTab) return;
 
     const selectedElement = Object.values(currentTab.state.elements)

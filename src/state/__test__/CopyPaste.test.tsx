@@ -3,7 +3,7 @@ import { renderHook, act } from '@testing-library/react';
 import { Element } from '../../types/types';
 import { useStore } from './textUtils';
 import * as clipboardHelpers from '../../utils/clipboard/clipboardHelpers';
-import { ElementsMap } from '../../utils/element/elementHelpers';
+import { ElementsMap } from '../../types/elementTypes';
 
 // Get the real implementations before mocking
 const originalGetSelectedAndChildren = clipboardHelpers.getSelectedAndChildren;
@@ -110,8 +110,8 @@ describe('切り取り、コピー、貼り付け操作', () => {
         expect(Object.keys(mockStorage!).length).toBeGreaterThan(0);
         // 切り取られた要素がモックストレージに存在するか確認
         const cutElement = Object.values(mockStorage!).find(
-            (elm: Element) => elm.id === childElement.id
-        );
+            (elm) => elm && elm.id === childElement.id
+        ) as Element;
         expect(cutElement).toBeDefined();
     });
     

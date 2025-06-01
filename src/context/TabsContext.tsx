@@ -8,30 +8,7 @@ import { DEFAULT_POSITION, NUMBER_OF_SECTIONS } from '../config/elementSettings'
 import { createNewElement } from '../utils/element/elementHelpers';
 import { convertLegacyElement } from '../utils/file/fileHelpers';
 import { getTabsState, setTabsState } from '../utils/storage/localStorageHelpers';
-
-export interface TabState {
-  id: string;
-  name: string;
-  state: State;
-}
-
-type TabsStorage = {
-  tabs: TabState[];
-  currentTabId: string;
-};
-
-export interface TabsContextValue {
-  tabs: TabState[];
-  currentTabId: string;
-  addTab: () => string;  // voidからstringに変更
-  closeTab: (tabId: string) => void;
-  switchTab: (tabId: string) => void;
-  updateTabState: (tabId: string, updater: (prevState: State) => State) => void;
-  updateTabName: (tabId: string, newName: string) => void;
-  getCurrentTabState: () => State | undefined;
-  getCurrentTabNumberOfSections: () => number;
-  updateCurrentTabNumberOfSections: (value: number) => void;
-}
+import { TabState, TabsStorage, TabsContextValue } from '../types/tabTypes';
 
 const TabsContext = createContext<TabsContextValue | undefined>(undefined);
 

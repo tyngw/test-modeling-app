@@ -1,20 +1,12 @@
 // src/components/TabHeaders/index.tsx
 import React, { useEffect, useState } from 'react';
-import { TabState } from '../../context/TabsContext';
 import Tab from './Tab';
 import { ICONBAR_HEIGHT, TABBAR_HEIGHT } from '../../config/elementSettings';
 import { getCurrentTheme } from '../../utils/style/colorHelpers';
 import { getCanvasBackgroundColor } from '../../utils/storage/localStorageHelpers';
 import { DEFAULT_CANVAS_BACKGROUND_COLOR } from '../../config/elementSettings';
 import { useIsMounted } from '../../hooks/UseIsMounted';
-
-interface TabHeadersProps {
-  tabs: TabState[];
-  currentTabId: string;
-  addTab: () => void;
-  closeTab: (id: string) => void;
-  switchTab: (id: string) => void;
-}
+import { TabHeadersProps } from '../../types/tabTypes';
 
 const TabHeaders: React.FC<TabHeadersProps> = React.memo(({
   tabs,
