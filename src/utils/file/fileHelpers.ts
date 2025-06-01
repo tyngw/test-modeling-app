@@ -1,7 +1,7 @@
 // src/utils/file/fileHelpers.ts
 import { SIZE } from "../../config/elementSettings";
 import { createNewElement } from "../element/elementHelpers";
-import { Element } from "../../types/types";
+import { Element, MarkerType } from "../../types/types";
 import { 
     DEFAULT_FONT_FAMILY,
     DEFAULT_FONT_SIZE,
@@ -11,8 +11,12 @@ import {
     DEFAULT_TEXT_COLOR
 } from "../../config/elementSettings";
 
-// 既存のLegacyElement型を拡張
+/**
+ * 古いバージョンの要素データ形式を表す型
+ * 古いバージョンとの互換性のために使用
+ */
 type LegacyElement = {
+  id?: string
   text?: string
   text2?: string
   text3?: string
@@ -21,7 +25,22 @@ type LegacyElement = {
   section3Height?: number
   texts?: string[]  // 新しい形式との互換性のため追加
   sectionHeights?: number[]  // 新しい形式との互換性のため追加
-  [key: string]: any
+  x?: number
+  y?: number
+  width?: number
+  height?: number
+  parentId?: string | null
+  order?: number
+  depth?: number
+  children?: number
+  editing?: boolean
+  selected?: boolean
+  visible?: boolean
+  tentative?: boolean
+  connectionPathType?: MarkerType // 旧マーカータイプ
+  endConnectionPathType?: MarkerType // 旧エンドマーカータイプ
+  startMarker?: MarkerType
+  endMarker?: MarkerType
 }
 
 // 型ガード関数を改善
@@ -40,38 +59,54 @@ export const convertLegacyElement = (element: unknown): Element => {
 
   // 新しい形式の要素をチェック
   if (element.texts && element.sectionHeights) {
+    // 基本的な新しい要素を作成
+    const base = createNewElement();
+    
     // 古いマーカープロパティ名を新しい名前に変換
-    const converted = {
-      ...element,
+    const converted: Element = {
+      ...base,
+      // 共通プロパティをコピー
+      id: element.id || base.id,
       texts: element.texts,
       sectionHeights: element.sectionHeights,
-      x: element.hasOwnProperty('x') ? element.x : 0,
-      y: element.hasOwnProperty('y') ? element.y : 0,
-      tentative: element.hasOwnProperty('tentative') ? element.tentative : false
-    } as any;
+      x: element.x !== undefined ? Number(element.x) : base.x,
+      y: element.y !== undefined ? Number(element.y) : base.y,
+      width: element.width !== undefined ? Number(element.width) : base.width,
+      height: element.height !== undefined ? Number(element.height) : base.height,
+      parentId: element.parentId !== undefined ? element.parentId : base.parentId,
+      order: element.order !== undefined ? Number(element.order) : base.order,
+      depth: element.depth !== undefined ? Number(element.depth) : base.depth,
+      children: element.children !== undefined ? Number(element.children) : base.children,
+      editing: element.editing !== undefined ? Boolean(element.editing) : base.editing,
+      selected: element.selected !== undefined ? Boolean(element.selected) : base.selected,
+      visible: element.visible !== undefined ? Boolean(element.visible) : base.visible,
+      tentative: element.tentative !== undefined ? Boolean(element.tentative) : base.tentative,
+      startMarker: base.startMarker,
+      endMarker: base.endMarker
+    };
 
     // connectionPathType が存在する場合、startMarker に変換
-    if (element.hasOwnProperty('connectionPathType')) {
+    if (element.connectionPathType) {
       converted.startMarker = element.connectionPathType;
-      delete converted.connectionPathType;
-    } else if (!converted.hasOwnProperty('startMarker')) {
-      converted.startMarker = 'none';
+    } else if (element.startMarker) {
+      converted.startMarker = element.startMarker;
     }
 
     // endConnectionPathType が存在する場合、endMarker に変換
-    if (element.hasOwnProperty('endConnectionPathType')) {
+    if (element.endConnectionPathType) {
       converted.endMarker = element.endConnectionPathType;
-      delete converted.endConnectionPathType;
-    } else if (!converted.hasOwnProperty('endMarker')) {
-      converted.endMarker = 'none';
+    } else if (element.endMarker) {
+      converted.endMarker = element.endMarker;
     }
 
-    return converted as Element;
+    return converted;
   }
 
   // 古い形式の変換処理
-  const converted = {
-    ...element,
+  const base = createNewElement();
+  const converted: Element = {
+    ...base,
+    id: element.id || base.id,
     texts: [
       element.text || '',
       element.text2 || '',
@@ -82,32 +117,37 @@ export const convertLegacyElement = (element: unknown): Element => {
       element.section2Height || SIZE.SECTION_HEIGHT,
       element.section3Height || SIZE.SECTION_HEIGHT
     ],
-    x: element.hasOwnProperty('x') ? element.x : 0,
-    y: element.hasOwnProperty('y') ? element.y : 0,
-    text: undefined,
-    text2: undefined,
-    text3: undefined,
-    section1Height: undefined,
-    section2Height: undefined,
-    section3Height: undefined,
-    tentative: element.hasOwnProperty('tentative') ? element.tentative : false,
-  } as any;
+    x: element.x !== undefined ? Number(element.x) : 0,
+    y: element.y !== undefined ? Number(element.y) : 0,
+    width: element.width !== undefined ? Number(element.width) : base.width,
+    height: element.height !== undefined ? Number(element.height) : base.height,
+    parentId: element.parentId !== undefined ? element.parentId : base.parentId,
+    order: element.order !== undefined ? Number(element.order) : base.order,
+    depth: element.depth !== undefined ? Number(element.depth) : base.depth,
+    children: element.children !== undefined ? Number(element.children) : base.children,
+    editing: element.editing !== undefined ? Boolean(element.editing) : base.editing,
+    selected: element.selected !== undefined ? Boolean(element.selected) : base.selected,
+    visible: element.visible !== undefined ? Boolean(element.visible) : base.visible,
+    tentative: element.tentative !== undefined ? Boolean(element.tentative) : base.tentative,
+    startMarker: base.startMarker,
+    endMarker: base.endMarker
+  };
 
   // connectionPathType が存在する場合、startMarker に変換
-  if (element.hasOwnProperty('connectionPathType')) {
+  if (element.connectionPathType) {
     converted.startMarker = element.connectionPathType;
-  } else {
-    converted.startMarker = 'none';
+  } else if (element.startMarker) {
+    converted.startMarker = element.startMarker;
   }
 
   // endConnectionPathType が存在する場合、endMarker に変換
-  if (element.hasOwnProperty('endConnectionPathType')) {
+  if (element.endConnectionPathType) {
     converted.endMarker = element.endConnectionPathType;
-  } else {
-    converted.endMarker = 'none';
+  } else if (element.endMarker) {
+    converted.endMarker = element.endMarker;
   }
 
-  return converted as Element;
+  return converted;
 }
 
 // ファイル読み込み処理を修正
@@ -211,7 +251,7 @@ export const extractRootElementTextFromSvg = (svgElement: SVGSVGElement): string
  * @param elements 要素の配列
  * @returns ルート要素のテキスト（存在する場合）
  */
-export const extractRootElementTextFromElements = (elements: any[]): string | undefined => {
+export const extractRootElementTextFromElements = (elements: Element[]): string | undefined => {
   if (elements.length === 0) return undefined;
   
   // ルート要素を探す（parentIdがない最初の要素）
@@ -338,7 +378,7 @@ export const saveSvg = (svgElement: SVGSVGElement, name: string) => {
     URL.revokeObjectURL(svgUrl);
 }
 
-export const saveElements = (elements: any[], fileName: string) => {
+export const saveElements = (elements: Element[], fileName: string) => {
     // ルート要素からテキストを取得（存在する場合）
     const rootElementText = extractRootElementTextFromElements(elements);
     
