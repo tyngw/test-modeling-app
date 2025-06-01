@@ -1,15 +1,7 @@
 // src/components/TabHeaders/tab.tsx
 import React, { useState } from 'react';
-import { TabState } from '../../context/TabsContext';
+import { TabHeaderProps } from '../../types/tabTypes';
 import { useIsMounted } from '../../hooks/UseIsMounted';
-
-interface TabHeaderProps {
-  tab: TabState;
-  isCurrent: boolean;
-  closeTab: (id: string) => void;
-  switchTab: (id: string) => void;
-  theme: any; // Using any type for simplicity, should ideally use a proper Theme type
-}
 
 const Tab: React.FC<TabHeaderProps> = React.memo(({ 
   tab, 

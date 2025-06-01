@@ -1,10 +1,17 @@
 // src/utils/clipboard/clipboardHelpers.ts
 import { Element } from '../../types/types';
-import { ElementsMap } from '../element';
+import { ElementsMap } from '../../types/elementTypes';
 import { getCutElements, setCutElements } from '../storage/localStorageHelpers';
 
+/**
+ * 指定された要素とその子要素をすべて含む新しい要素マップを作成する
+ * 
+ * @param elements 元の要素マップ
+ * @param targetElement 選択された要素
+ * @returns 選択された要素とその子要素を含むマップ
+ */
 export const getSelectedAndChildren = (elements: ElementsMap, targetElement: Element): ElementsMap => {
-    let cutElements: ElementsMap = {};
+    const cutElements: ElementsMap = {};
     const elementList = Object.values(elements);
     const rootCopy = { ...targetElement, parentId: null };
     cutElements[rootCopy.id] = rootCopy;
@@ -21,7 +28,13 @@ export const getSelectedAndChildren = (elements: ElementsMap, targetElement: Ele
     return cutElements;
 };
 
-export const copyToClipboard = (elements: ElementsMap) => {
+/**
+ * 要素をクリップボードにコピーする
+ * LocalStorageに保存し、テキスト形式でもクリップボードに格納
+ * 
+ * @param elements コピーする要素のマップ
+ */
+export const copyToClipboard = (elements: ElementsMap): void => {
     // Store elements in localStorage for cross-tab usage
     setCutElements(JSON.stringify(elements));
 
@@ -60,6 +73,11 @@ ${childTexts.join('')}`;
     }
 };
 
+/**
+ * LocalStorageからクリップボードに保存された要素を取得する
+ * 
+ * @returns 保存された要素マップ、存在しない場合はnull
+ */
 export const getGlobalCutElements = (): ElementsMap | null => {
     const stored = getCutElements();
     if (!stored) return null;
