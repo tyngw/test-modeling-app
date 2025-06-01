@@ -15,6 +15,8 @@ import {
   SelectChangeEvent,
 } from '@mui/material';
 import { SettingField as SettingFieldType } from '../../types/settings';
+import { sanitizeText } from '../../utils/security/sanitization';
+import { validateSettingValue } from '../../utils/security/validation';
 
 interface SettingFieldProps {
   field: SettingFieldType;
@@ -33,13 +35,31 @@ export const SettingField: React.FC<SettingFieldProps> = ({
     onChange(event.target.value);
   };
 
+  /**
+   * 安全なテキスト入力ハンドラー
+   * 設定値のサニタイゼーションと検証を行う
+   */
+  const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value;
+    
+    // 設定値の検証
+    if (!validateSettingValue(field.key, rawValue)) {
+      console.warn(`設定値が無効です: ${field.key}`);
+      return;
+    }
+
+    // APIキー以外はサニタイズ（APIキーは元の値を保持）
+    const safeValue = field.key === 'apiKey' ? rawValue : sanitizeText(rawValue);
+    onChange(safeValue);
+  };
+
   switch (field.type) {
     case 'text':
       return (
         <TextField
           label={field.label}
           value={value}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
+          onChange={handleTextChange}
           fullWidth
           margin="normal"
           multiline={field.key === 'prompt' || field.key === 'systemPromptTemplate'}

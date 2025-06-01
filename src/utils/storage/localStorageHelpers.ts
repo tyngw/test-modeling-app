@@ -12,6 +12,8 @@ import {
 } from '../../config/elementSettings';
 import { SYSTEM_PROMPT_TEMPLATE } from '../../config/systemPrompt';
 import { VERSION } from '../../constants/version';
+import { sanitizeObject, sanitizeText } from '../security/sanitization';
+import { validateJsonData, validateSettingValue } from '../security/validation';
 
 // Style settings interface to define structure of the "styles" key
 interface StyleSettings {
@@ -84,7 +86,16 @@ export const safeLocalStorage = {
   getItem: (key: string): string | null => {
     if (typeof window === 'undefined') return null;
     try {
-      return localStorage.getItem(key);
+      const value = localStorage.getItem(key);
+      if (value === null) return null;
+      
+      // 取得したデータの基本的な安全性チェック
+      if (value.length > 1024 * 1024) { // 1MB制限
+        console.warn(`LocalStorage値が大きすぎます: ${key}`);
+        return null;
+      }
+      
+      return value;
     } catch (e) {
       console.error('localStorage access failed:', e);
       return null;
@@ -92,6 +103,25 @@ export const safeLocalStorage = {
   },
   setItem: (key: string, value: string): void => {
     if (typeof window === 'undefined') return;
+    
+    // キーの検証
+    if (!key || typeof key !== 'string' || key.trim().length === 0) {
+      console.error('無効なlocalStorageキー:', key);
+      return;
+    }
+    
+    // 値の検証とサニタイズ
+    if (typeof value !== 'string') {
+      console.error('localStorageの値は文字列である必要があります');
+      return;
+    }
+    
+    // サイズ制限チェック（1MB）
+    if (value.length > 1024 * 1024) {
+      console.error('localStorageの値が大きすぎます');
+      return;
+    }
+    
     try {
       localStorage.setItem(key, value);
     } catch (e) {
@@ -132,16 +162,35 @@ const getSetting = <T>(key: string, defaultValue: T): T => {
   const stored = safeLocalStorage.getItem(key);
   if (!stored) return defaultValue;
 
+  // 取得したデータのサニタイゼーション
+  if (typeof defaultValue === 'string') {
+    return sanitizeText(stored) as T;
+  }
+
   if (typeof defaultValue === 'number') {
     const num = Number(stored);
     return (isNaN(num) ? defaultValue : num) as T;
   }
+  
   return stored as T;
 };
 
 const setSetting = <T>(key: string, value: T): void => {
   if (value === undefined || value === null) return;
-  safeLocalStorage.setItem(key, String(value));
+  
+  // 設定値の検証
+  if (!validateSettingValue(key, value)) {
+    console.warn(`設定値が無効です: ${key} = ${value}`);
+    return;
+  }
+  
+  // 文字列の場合はサニタイズ（APIキーは例外）
+  let safeValue = value;
+  if (typeof value === 'string' && key !== APIKEY_KEY) {
+    safeValue = sanitizeText(value) as T;
+  }
+  
+  safeLocalStorage.setItem(key, String(safeValue));
 };
 
 // Get all style settings

@@ -10,6 +10,8 @@ import {
   DEFAULT_CANVAS_BACKGROUND_COLOR,
   DEFAULT_TEXT_COLOR,
 } from '../../config/elementSettings';
+import { sanitizeObject, sanitizeFilename } from '../security/sanitization';
+import { validateJsonData, validateFileContent } from '../security/validation';
 
 /**
  * 古いバージョンの要素データ形式を表す型
@@ -163,6 +165,13 @@ export const loadElements = (
       return;
     }
 
+    // ファイル名のセキュリティチェック
+    const safeFileName = sanitizeFilename(file.name);
+    if (!safeFileName || safeFileName === 'untitled') {
+      reject(new Error('Error: 安全でないファイル名が検出されました'));
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
@@ -171,19 +180,33 @@ export const loadElements = (
           throw new Error('Invalid file content');
         }
 
+        // ファイル内容のセキュリティ検証
+        if (!validateFileContent(contents)) {
+          throw new Error('ファイル内容が安全でない可能性があります');
+        }
+
         const parsedData = JSON.parse(contents);
+        
+        // JSONデータの検証
+        if (!validateJsonData(parsedData)) {
+          throw new Error('JSONデータが安全でない可能性があります');
+        }
+
+        // データをサニタイズ
+        const sanitizedData = sanitizeObject(parsedData);
+        
         let rawElements: any[] = [];
 
         // データ形式の判定
-        if (Array.isArray(parsedData)) {
+        if (Array.isArray(sanitizedData)) {
           // 配列形式（新形式）
-          rawElements = parsedData;
-        } else if (typeof parsedData === 'object' && parsedData !== null) {
+          rawElements = sanitizedData;
+        } else if (typeof sanitizedData === 'object' && sanitizedData !== null) {
           // オブジェクト形式（旧形式または状態全体）
           rawElements =
-            'elements' in parsedData
-              ? Object.values(parsedData.elements) // 状態全体が保存されていた場合
-              : Object.values(parsedData); // 要素だけが保存されていた場合
+            'elements' in sanitizedData
+              ? Object.values(sanitizedData.elements) // 状態全体が保存されていた場合
+              : Object.values(sanitizedData); // 要素だけが保存されていた場合
         } else {
           throw new Error('Invalid data format');
         }
