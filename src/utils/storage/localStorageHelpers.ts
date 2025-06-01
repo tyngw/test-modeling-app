@@ -1,9 +1,9 @@
 // src/utils/storage/localStorageHelpers.ts
 'use client';
 
-import { 
-  DEFAULT_FONT_FAMILY, 
-  ELEM_STYLE, 
+import {
+  DEFAULT_FONT_FAMILY,
+  ELEM_STYLE,
   DEFAULT_MARKER_TYPE,
   DEFAULT_CONNECTION_PATH_COLOR,
   DEFAULT_CONNECTION_PATH_STROKE,
@@ -52,8 +52,10 @@ const MODEL_TYPE_KEY = 'modelType';
 const CUT_ELEMENTS_KEY = 'cutElements';
 
 const MODEL_ENDPOINTS: { [key: string]: string } = {
-  'gemini-1.5-flash': 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
-  'gemini-2.0-flash': 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+  'gemini-1.5-flash':
+    'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
+  'gemini-2.0-flash':
+    'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
 };
 
 // CryptoJS動的ローダー
@@ -65,7 +67,9 @@ const loadCryptoJS = async () => {
 };
 
 // 暗号化処理ラッパー
-const withCryptoJS = async <T,>(callback: (crypto: typeof import('crypto-js')) => T): Promise<T | null> => {
+const withCryptoJS = async <T>(
+  callback: (crypto: typeof import('crypto-js')) => T,
+): Promise<T | null> => {
   try {
     const crypto = await loadCryptoJS();
     if (!crypto) return null;
@@ -101,7 +105,7 @@ export const safeLocalStorage = {
     } catch (e) {
       console.error('localStorage access failed:', e);
     }
-  }
+  },
 };
 
 // バージョンチェックと初期化
@@ -127,7 +131,7 @@ checkAndUpdateVersion();
 const getSetting = <T>(key: string, defaultValue: T): T => {
   const stored = safeLocalStorage.getItem(key);
   if (!stored) return defaultValue;
-  
+
   if (typeof defaultValue === 'number') {
     const num = Number(stored);
     return (isNaN(num) ? defaultValue : num) as T;
@@ -146,17 +150,17 @@ export const getStyles = (): StyleSettings => {
   if (!storedStyles) {
     // Migrate old settings to new format if they exist
     const migratedStyles = migrateLegacyStyles();
-    
+
     // Force save the default styles to localStorage on first load
     // This ensures all properties including selectedStrokeColor are properly initialized
     if (!migratedStyles.selectedStrokeColor) {
       migratedStyles.selectedStrokeColor = ELEM_STYLE.SELECTED.STROKE_COLOR;
       safeLocalStorage.setItem(STYLES_KEY, JSON.stringify(migratedStyles));
     }
-    
+
     return migratedStyles;
   }
-  
+
   try {
     const parsedStyles = JSON.parse(storedStyles);
     // Ensure selectedStrokeColor is set if missing in stored settings
@@ -181,17 +185,24 @@ export const setStyles = (styles: Partial<StyleSettings>): void => {
 // Migrate legacy style settings to the new format
 const migrateLegacyStyles = (): StyleSettings => {
   const migrated: StyleSettings = { ...DEFAULT_STYLES };
-  
+
   // Get old individual settings if they exist
   const keys: (keyof StyleSettings)[] = [
-    'canvasBackgroundColor', 'connectionPathColor', 'elementColor', 
-    'fontFamily', 'markerType', 'strokeColor', 'strokeWidth',
-    'textColor', 'connectionPathStroke', 'selectedStrokeColor'
+    'canvasBackgroundColor',
+    'connectionPathColor',
+    'elementColor',
+    'fontFamily',
+    'markerType',
+    'strokeColor',
+    'strokeWidth',
+    'textColor',
+    'connectionPathStroke',
+    'selectedStrokeColor',
   ];
-  
+
   let hasLegacySettings = false;
-  
-  keys.forEach(key => {
+
+  keys.forEach((key) => {
     const oldValue = safeLocalStorage.getItem(key);
     if (oldValue !== null) {
       hasLegacySettings = true;
@@ -201,80 +212,64 @@ const migrateLegacyStyles = (): StyleSettings => {
         // 型安全に値を設定
         migrated[key] = oldValue as StyleSettings[typeof key];
       }
-      
+
       // Remove old individual settings
       safeLocalStorage.removeItem(key);
     }
   });
-  
+
   // Save migrated settings if any legacy settings were found
   if (hasLegacySettings) {
     safeLocalStorage.setItem(STYLES_KEY, JSON.stringify(migrated));
   }
-  
+
   return migrated;
 };
 
 // Element styling related - updated to use styles object
-export const getElementColor = (): string => 
-  getStyles().elementColor;
+export const getElementColor = (): string => getStyles().elementColor;
 
-export const setElementColor = (color: string): void => 
-  setStyles({ elementColor: color });
+export const setElementColor = (color: string): void => setStyles({ elementColor: color });
 
-export const getStrokeColor = (): string => 
-  getStyles().strokeColor;
+export const getStrokeColor = (): string => getStyles().strokeColor;
 
-export const setStrokeColor = (color: string): void => 
-  setStyles({ strokeColor: color });
+export const setStrokeColor = (color: string): void => setStyles({ strokeColor: color });
 
-export const getStrokeWidth = (): number => 
-  getStyles().strokeWidth;
+export const getStrokeWidth = (): number => getStyles().strokeWidth;
 
-export const setStrokeWidth = (width: number): void => 
-  setStyles({ strokeWidth: width });
+export const setStrokeWidth = (width: number): void => setStyles({ strokeWidth: width });
 
-export const getFontFamily = (): string => 
-  getStyles().fontFamily;
+export const getFontFamily = (): string => getStyles().fontFamily;
 
-export const setFontFamily = (fontFamily: string): void => 
-  setStyles({ fontFamily: fontFamily });
+export const setFontFamily = (fontFamily: string): void => setStyles({ fontFamily: fontFamily });
 
-export const getMarkerType = (): string => 
-  getStyles().markerType;
+export const getMarkerType = (): string => getStyles().markerType;
 
-export const setMarkerType = (markerType: string): void => 
-  setStyles({ markerType: markerType });
+export const setMarkerType = (markerType: string): void => setStyles({ markerType: markerType });
 
-export const getConnectionPathColor = (): string => 
-  getStyles().connectionPathColor;
+export const getConnectionPathColor = (): string => getStyles().connectionPathColor;
 
-export const setConnectionPathColor = (color: string): void => 
+export const setConnectionPathColor = (color: string): void =>
   setStyles({ connectionPathColor: color });
 
-export const getConnectionPathStroke = (): number => 
-  getStyles().connectionPathStroke;
+export const getConnectionPathStroke = (): number => getStyles().connectionPathStroke;
 
-export const setConnectionPathStroke = (stroke: number): void => 
+export const setConnectionPathStroke = (stroke: number): void =>
   setStyles({ connectionPathStroke: stroke });
 
-export const getCanvasBackgroundColor = (): string => 
-  getStyles().canvasBackgroundColor;
+export const getCanvasBackgroundColor = (): string => getStyles().canvasBackgroundColor;
 
-export const setCanvasBackgroundColor = (color: string): void => 
+export const setCanvasBackgroundColor = (color: string): void =>
   setStyles({ canvasBackgroundColor: color });
 
-export const getTextColor = (): string => 
-  getStyles().textColor;
+export const getTextColor = (): string => getStyles().textColor;
 
-export const setTextColor = (color: string): void => 
-  setStyles({ textColor: color });
+export const setTextColor = (color: string): void => setStyles({ textColor: color });
 
 // Selected stroke color functions
-export const getSelectedStrokeColor = (): string => 
-  getStyles().selectedStrokeColor;
+export const getSelectedStrokeColor = (): string => getStyles().selectedStrokeColor;
 
-export const setSelectedStrokeColor = (color: string): void => 
+export const setSelectedStrokeColor = (color: string): void =>
   setStyles({ selectedStrokeColor: color });
 
 // APIキー関連
@@ -305,24 +300,21 @@ export const setApiKey = async (value: string): Promise<void> => {
 };
 
 // プロンプト関連
-export const getPrompt = (): string => 
-  getSetting(PROMPT_KEY, '');
+export const getPrompt = (): string => getSetting(PROMPT_KEY, '');
 
-export const setPrompt = (prompt: string): void => 
-  setSetting(PROMPT_KEY, prompt);
+export const setPrompt = (prompt: string): void => setSetting(PROMPT_KEY, prompt);
 
-export const getSystemPromptTemplate = (): string => 
+export const getSystemPromptTemplate = (): string =>
   getSetting(SYSTEM_PROMPT_KEY, SYSTEM_PROMPT_TEMPLATE);
 
-export const setSystemPromptTemplate = (value: string): void => 
+export const setSystemPromptTemplate = (value: string): void =>
   setSetting(SYSTEM_PROMPT_KEY, value);
 
 // モデルタイプ関連
-export const getModelType = (): string => 
+export const getModelType = (): string =>
   getSetting(MODEL_TYPE_KEY, Object.keys(MODEL_ENDPOINTS)[0]);
 
-export const setModelType = (value: string): void => 
-  setSetting(MODEL_TYPE_KEY, value);
+export const setModelType = (value: string): void => setSetting(MODEL_TYPE_KEY, value);
 
 // エンドポイント取得
 export const getApiEndpoint = (): string => {
@@ -331,15 +323,13 @@ export const getApiEndpoint = (): string => {
 };
 
 // Cut Elements 関連
-export const getCutElements = (): string | null => 
-  safeLocalStorage.getItem(CUT_ELEMENTS_KEY);
+export const getCutElements = (): string | null => safeLocalStorage.getItem(CUT_ELEMENTS_KEY);
 
-export const setCutElements = (value: string): void => 
+export const setCutElements = (value: string): void =>
   safeLocalStorage.setItem(CUT_ELEMENTS_KEY, value);
 
 // タブの状態関連
-export const getTabsState = (): string | null => 
-  safeLocalStorage.getItem(TABS_STORAGE_KEY);
+export const getTabsState = (): string | null => safeLocalStorage.getItem(TABS_STORAGE_KEY);
 
-export const setTabsState = (value: string): void => 
+export const setTabsState = (value: string): void =>
   safeLocalStorage.setItem(TABS_STORAGE_KEY, value);

@@ -5,7 +5,14 @@ import { Element as CanvasElement } from './types';
  * これにより、handleMouseDownのような関数で複数のタイプのイベントを処理できます
  */
 export interface MouseEventHandler {
-  (e: React.MouseEvent<HTMLElement> | React.MouseEvent<SVGElement> | React.TouchEvent<HTMLElement> | React.TouchEvent<SVGElement>, element: CanvasElement): void;
+  (
+    e:
+      | React.MouseEvent<HTMLElement>
+      | React.MouseEvent<SVGElement>
+      | React.TouchEvent<HTMLElement>
+      | React.TouchEvent<SVGElement>,
+    element: CanvasElement,
+  ): void;
 }
 
 /**

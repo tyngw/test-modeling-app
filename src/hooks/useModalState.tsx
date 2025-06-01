@@ -30,12 +30,12 @@ export function useModalState(onEditingEnd: () => void): [ModalStates, ModalActi
 
   const toggleHelp = useCallback(() => {
     onEditingEnd();
-    setHelpOpen(prev => !prev);
+    setHelpOpen((prev) => !prev);
   }, [onEditingEnd]);
 
   const toggleSettings = useCallback(() => {
     onEditingEnd();
-    setIsSettingsOpen(prev => !prev);
+    setIsSettingsOpen((prev) => !prev);
   }, [onEditingEnd]);
 
   const openCloseConfirm = useCallback((tabId: string) => {
@@ -50,13 +50,13 @@ export function useModalState(onEditingEnd: () => void): [ModalStates, ModalActi
 
   return [
     { isHelpOpen, isSettingsOpen, showCloseConfirm, tabToClose },
-    { 
-      toggleHelp, 
-      toggleSettings, 
-      openCloseConfirm, 
+    {
+      toggleHelp,
+      toggleSettings,
+      openCloseConfirm,
       closeConfirmModal,
-      setShowCloseConfirm,  // セッターを追加
-      setTabToClose        // セッターを追加
-    }
+      setShowCloseConfirm, // セッターを追加
+      setTabToClose, // セッターを追加
+    },
   ];
 }

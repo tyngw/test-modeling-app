@@ -12,14 +12,18 @@ import { reducer } from '../state/state';
  * タブの状態更新や名前変更、タブ閉じる前の確認などの機能を提供します
  */
 export function useTabManagement() {
-  const { tabs, currentTabId, addTab, closeTab, switchTab, updateTabState, updateTabName } = useTabs();
-  const currentTab = tabs.find(tab => tab.id === currentTabId);
+  const { tabs, currentTabId, addTab, closeTab, switchTab, updateTabState, updateTabName } =
+    useTabs();
+  const currentTab = tabs.find((tab) => tab.id === currentTabId);
 
   // タブ状態の更新用のdispatch関数
-  const dispatch = useCallback((action: Action) => {
-    if (!currentTabId) return;
-    updateTabState(currentTabId, prevState => reducer(prevState, action));
-  }, [currentTabId, updateTabState]);
+  const dispatch = useCallback(
+    (action: Action) => {
+      if (!currentTabId) return;
+      updateTabState(currentTabId, (prevState) => reducer(prevState, action));
+    },
+    [currentTabId, updateTabState],
+  );
 
   // タブ名を更新する機能
   const updateTabNameFromRootElement = useCallback(() => {
@@ -27,7 +31,7 @@ export function useTabManagement() {
 
     const elements = Object.values(currentTab.state.elements);
     const rootElementText = extractRootElementTextFromElements(elements);
-    
+
     if (rootElementText) {
       const newTabName = determineFileName(currentTab.name, rootElementText);
       if (newTabName !== currentTab.name) {
@@ -44,17 +48,20 @@ export function useTabManagement() {
   }, [currentTab?.state.elements, updateTabNameFromRootElement]);
 
   // タブを閉じる前の確認処理
-  const handleCloseTabRequest = useCallback((tabId: string) => {
-    // ここは実際の未保存変更の検出ロジックに置き換えるべき
-    const hasUnsavedChanges = true;
-    
-    if (hasUnsavedChanges) {
-      return { needsConfirmation: true, tabId };
-    } else {
-      closeTab(tabId);
-      return { needsConfirmation: false };
-    }
-  }, [closeTab]);
+  const handleCloseTabRequest = useCallback(
+    (tabId: string) => {
+      // ここは実際の未保存変更の検出ロジックに置き換えるべき
+      const hasUnsavedChanges = true;
+
+      if (hasUnsavedChanges) {
+        return { needsConfirmation: true, tabId };
+      } else {
+        closeTab(tabId);
+        return { needsConfirmation: false };
+      }
+    },
+    [closeTab],
+  );
 
   return {
     tabs,
@@ -67,6 +74,6 @@ export function useTabManagement() {
     updateTabName, // updateTabNameを追加
     dispatch,
     updateTabNameFromRootElement,
-    handleCloseTabRequest
+    handleCloseTabRequest,
   };
 }

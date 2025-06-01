@@ -1,5 +1,10 @@
 // src/utils/textareaHelpers.ts
-import { DEFAULT_ZOOM_RATIO, DEFAULT_FONT_SIZE, SIZE, DEFAULT_FONT_FAMILY } from '../config/elementSettings';
+import {
+  DEFAULT_ZOOM_RATIO,
+  DEFAULT_FONT_SIZE,
+  SIZE,
+  DEFAULT_FONT_FAMILY,
+} from '../config/elementSettings';
 
 // 文字幅計算用キャンバスを生成する関数
 const createTextMeasurementContext = (): CanvasRenderingContext2D => {
@@ -16,12 +21,12 @@ export const calculateTextWidth = (text: string, padding: number = 0): number =>
     text.split('\n').reduce((maxWidth: number, line: string) => {
       const lineWidth = context.measureText(line).width;
       return Math.max(maxWidth, lineWidth + padding * 2);
-    }, 0)
+    }, 0),
   );
 };
 
 // 要素の幅を計算する関数
-export const calculateElementWidth = (texts: string[], padding: number = 0 ): number => {
+export const calculateElementWidth = (texts: string[], padding: number = 0): number => {
   const maxTextWidth = texts.reduce((max: number, text: string) => {
     return Math.max(max, calculateTextWidth(text || '', padding));
   }, 0);
@@ -33,23 +38,23 @@ export const calculateElementWidth = (texts: string[], padding: number = 0 ): nu
 export const wrapText = (
   text: string,
   maxWidth: number,
-  zoomRatio: number = DEFAULT_ZOOM_RATIO
+  zoomRatio: number = DEFAULT_ZOOM_RATIO,
 ): string[] => {
   const context = createTextMeasurementContext();
   const paragraphs = text.split('\n');
   const wrappedLines: string[] = [];
 
-  paragraphs.forEach(paragraph => {
+  paragraphs.forEach((paragraph) => {
     if (paragraph.trim() === '') {
       wrappedLines.push('');
       return;
     }
-    
+
     let currentLine = '';
     let currentWidth = 0;
 
     // 単語単位分割（英語対応）
-    const words = paragraph.split(/(\s+)/).filter(w => w !== '');
+    const words = paragraph.split(/(\s+)/).filter((w) => w !== '');
 
     for (const word of words) {
       const wordWidth = context.measureText(word).width;

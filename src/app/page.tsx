@@ -1,7 +1,7 @@
 // app/page.tsx
-import React from 'react'
-import AppContent from '../components/AppContent'
+import React from 'react';
+import AppContent from '../components/AppContent';
 
 export default function Home() {
-  return <AppContent />
+  return <AppContent />;
 }

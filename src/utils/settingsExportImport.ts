@@ -8,32 +8,32 @@ import { SettingField } from '../types/settings';
  */
 export const exportElementSettings = (
   settingsData: Record<string, string | number>,
-  fields: SettingField[]
+  fields: SettingField[],
 ): void => {
   // Get element settings from values state
   const elementSettings: Record<string, string | number> = {};
-  
+
   // Only include fields from the provided fields array
-  fields.forEach(field => {
+  fields.forEach((field) => {
     if (settingsData[field.key] !== undefined) {
       elementSettings[field.key] = settingsData[field.key];
     }
   });
-  
+
   // Convert to JSON string
   const jsonString = JSON.stringify(elementSettings, null, 2);
-  
+
   // Create a blob and trigger download
   const blob = new Blob([jsonString], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
-  
+
   // Create an anchor element and trigger download
   const a = document.createElement('a');
   a.href = url;
   a.download = `theme-settings-${new Date().toISOString().split('T')[0]}.json`;
   document.body.appendChild(a);
   a.click();
-  
+
   // Clean up
   setTimeout(() => {
     document.body.removeChild(a);
@@ -71,7 +71,7 @@ export const importElementSettings = (
   jsonData: Record<string, string | number>,
   currentValues: Record<string, string | number>,
   currentErrors: Record<string, boolean>,
-  fields: SettingField[]
+  fields: SettingField[],
 ): {
   newValues: Record<string, string | number>;
   newErrors: Record<string, boolean>;
@@ -80,9 +80,9 @@ export const importElementSettings = (
   const newValues = { ...currentValues };
   const newErrors = { ...currentErrors };
   let hasError = false;
-  
+
   // Process each field from the provided fields array
-  fields.forEach(field => {
+  fields.forEach((field) => {
     if (jsonData[field.key] !== undefined) {
       // Validate the field value
       if (!validateSettingField(field, jsonData[field.key])) {
@@ -94,6 +94,6 @@ export const importElementSettings = (
       }
     }
   });
-  
+
   return { newValues, newErrors, hasError };
 };

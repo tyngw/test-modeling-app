@@ -33,7 +33,7 @@ export const LIGHT_THEME = {
     BUTTON_BORDER: '#cccccc',
     BUTTON_PRIMARY_BACKGROUND: '#1976d2',
     BUTTON_PRIMARY_TEXT: '#ffffff',
-  }
+  },
 };
 
 // Dark theme colors
@@ -65,5 +65,5 @@ export const DARK_THEME = {
     BUTTON_BORDER: '#666666',
     BUTTON_PRIMARY_BACKGROUND: '#1976d2',
     BUTTON_PRIMARY_TEXT: '#ffffff',
-  }
+  },
 };

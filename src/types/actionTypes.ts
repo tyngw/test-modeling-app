@@ -24,17 +24,21 @@ export type UpdateTextAction = {
 };
 
 /** マーカー更新アクション */
-export type UpdateMarkerAction = 
+export type UpdateMarkerAction =
   | { type: 'UPDATE_START_MARKER'; payload: { id: string; startMarker: MarkerType } }
   | { type: 'UPDATE_END_MARKER'; payload: { id: string; endMarker: MarkerType } }
   // 後方互換性のために残すアクション
-  | { type: 'UPDATE_CONNECTION_PATH_TYPE'; payload: { id: string; connectionPathType: ConnectionPathType } }
-  | { type: 'UPDATE_END_CONNECTION_PATH_TYPE'; payload: { id: string; endConnectionPathType: ConnectionPathType } };
+  | {
+      type: 'UPDATE_CONNECTION_PATH_TYPE';
+      payload: { id: string; connectionPathType: ConnectionPathType };
+    }
+  | {
+      type: 'UPDATE_END_CONNECTION_PATH_TYPE';
+      payload: { id: string; endConnectionPathType: ConnectionPathType };
+    };
 
 /** 編集状態のアクション */
-export type EditingAction =
-  | { type: 'EDIT_ELEMENT' }
-  | { type: 'END_EDITING' };
+export type EditingAction = { type: 'EDIT_ELEMENT' } | { type: 'END_EDITING' };
 
 /** 要素のサイズ更新アクション */
 export type SizeUpdateAction = {
@@ -49,10 +53,13 @@ export type MoveElementAction = {
 };
 
 /** 要素の追加アクション */
-export type AddElementAction = 
+export type AddElementAction =
   | { type: 'ADD_ELEMENT'; payload?: { text?: string } }
   | { type: 'ADD_SIBLING_ELEMENT' }
-  | { type: 'ADD_ELEMENTS_SILENT'; payload: { parentId?: string; texts: string[]; tentative: boolean } };
+  | {
+      type: 'ADD_ELEMENTS_SILENT';
+      payload: { parentId?: string; texts: string[]; tentative: boolean };
+    };
 
 /** 要素の削除アクション */
 export type DeleteElementAction = { type: 'DELETE_ELEMENT' };
@@ -60,12 +67,10 @@ export type DeleteElementAction = { type: 'DELETE_ELEMENT' };
 /** 仮置き要素の確認・キャンセルアクション */
 export type TentativeElementsAction =
   | { type: 'CONFIRM_TENTATIVE_ELEMENTS'; payload: string } // parentId
-  | { type: 'CANCEL_TENTATIVE_ELEMENTS'; payload: string };  // parentId
+  | { type: 'CANCEL_TENTATIVE_ELEMENTS'; payload: string }; // parentId
 
 /** 要素の折りたたみアクション */
-export type CollapseExpandAction =
-  | { type: 'COLLAPSE_ELEMENT' }
-  | { type: 'EXPAND_ELEMENT' };
+export type CollapseExpandAction = { type: 'COLLAPSE_ELEMENT' } | { type: 'EXPAND_ELEMENT' };
 
 /** クリップボード関連アクション */
 export type ClipboardAction =
@@ -93,15 +98,10 @@ export type ArrowAction =
   | { type: 'ARROW_RIGHT' };
 
 /** ズームアクション */
-export type ZoomAction =
-  | { type: 'ZOOM_IN' }
-  | { type: 'ZOOM_OUT' };
+export type ZoomAction = { type: 'ZOOM_IN' } | { type: 'ZOOM_OUT' };
 
 /** 履歴操作アクション */
-export type HistoryAction =
-  | { type: 'UNDO' }
-  | { type: 'REDO' }
-  | { type: 'SNAPSHOT' };
+export type HistoryAction = { type: 'UNDO' } | { type: 'REDO' } | { type: 'SNAPSHOT' };
 
 /** 要素の読み込みアクション */
 export type LoadElementsAction = {

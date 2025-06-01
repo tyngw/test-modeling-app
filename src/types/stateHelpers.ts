@@ -1,7 +1,7 @@
 // src/types/stateHelpers.ts
-import { State } from "../state/state";
-import { Element } from "./types";
-import { ElementsMap } from "./elementTypes";
+import { State } from '../state/state';
+import { Element } from './types';
+import { ElementsMap } from './elementTypes';
 
 /**
  * 状態を取得するためのコールバック関数の型
