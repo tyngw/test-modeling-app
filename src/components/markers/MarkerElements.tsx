@@ -8,11 +8,11 @@ interface MarkerElementsProps {
 
 export const MarkerElements: React.FC<MarkerElementsProps> = ({
   connectionPathColor,
-  connectionPathStroke
+  connectionPathStroke,
 }) => {
   return (
     <>
-      {Object.values(MARKER_CONFIGS).map(config => {
+      {Object.values(MARKER_CONFIGS).map((config) => {
         const { id, width, height, isFilled, shape, pointsOrAttributes } = config;
         const fillColor = isFilled ? connectionPathColor : 'none';
 
@@ -27,7 +27,7 @@ export const MarkerElements: React.FC<MarkerElementsProps> = ({
           viewBox: `0 0 ${width} ${height}`,
           strokeWidth: connectionPathStroke,
           fill: fillColor,
-          stroke: connectionPathColor
+          stroke: connectionPathColor,
         };
 
         let shapeElement;

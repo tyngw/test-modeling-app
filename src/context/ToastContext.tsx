@@ -24,7 +24,7 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     const id = new Date().getTime().toString() + Math.random().toString();
     const newToast: Toast = { id, message, type };
 
-    setToasts(prevToasts => {
+    setToasts((prevToasts) => {
       const updatedToasts = [...prevToasts, newToast];
       if (updatedToasts.length > 5) {
         updatedToasts.shift();
@@ -33,7 +33,7 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     });
 
     setTimeout(() => {
-      setToasts(prevToasts => prevToasts.filter(toast => toast.id !== id));
+      setToasts((prevToasts) => prevToasts.filter((toast) => toast.id !== id));
     }, 3000);
   }, []);
 
@@ -65,15 +65,17 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   return (
     <ToastContext.Provider value={{ addToast }}>
       {children}
-      <div style={{
-        position: 'fixed',
-        bottom: '20px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 1000,
-        pointerEvents: 'none',
-      }}>
-        {toasts.map(toast => (
+      <div
+        style={{
+          position: 'fixed',
+          bottom: '20px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 1000,
+          pointerEvents: 'none',
+        }}
+      >
+        {toasts.map((toast) => (
           <div
             key={toast.id}
             style={{

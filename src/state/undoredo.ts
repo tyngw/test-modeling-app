@@ -13,13 +13,13 @@ let snapshotIndex = 0;
  * @returns 前回の状態
  */
 export const Undo = (elements: Record<string, Element>): Record<string, Element> => {
-    if (snapshotIndex > 0) {
-        snapshots[snapshotIndex] = elements;
-        snapshotIndex--;
-        return snapshots[snapshotIndex];
-    } else {
-        return elements;
-    }
+  if (snapshotIndex > 0) {
+    snapshots[snapshotIndex] = elements;
+    snapshotIndex--;
+    return snapshots[snapshotIndex];
+  } else {
+    return elements;
+  }
 };
 
 /**
@@ -28,12 +28,12 @@ export const Undo = (elements: Record<string, Element>): Record<string, Element>
  * @returns 次の状態
  */
 export const Redo = (elements: Record<string, Element>): Record<string, Element> => {
-    if (snapshotIndex < snapshots.length - 1) {
-        snapshotIndex++;
-        return snapshots[snapshotIndex];
-    } else {
-        return elements;
-    }
+  if (snapshotIndex < snapshots.length - 1) {
+    snapshotIndex++;
+    return snapshots[snapshotIndex];
+  } else {
+    return elements;
+  }
 };
 
 /**
@@ -41,10 +41,10 @@ export const Redo = (elements: Record<string, Element>): Record<string, Element>
  * @param elements 現在の要素の状態
  */
 export const saveSnapshot = (elements: Record<string, Element>): void => {
-    const newSnapshots: Record<string, Element>[] = snapshots.slice(0, snapshotIndex + 1);
+  const newSnapshots: Record<string, Element>[] = snapshots.slice(0, snapshotIndex + 1);
 
-    newSnapshots.push(elements);
-    // saveToLocalStorage(elements);
-    snapshots = newSnapshots;
-    snapshotIndex++;
+  newSnapshots.push(elements);
+  // saveToLocalStorage(elements);
+  snapshots = newSnapshots;
+  snapshotIndex++;
 };

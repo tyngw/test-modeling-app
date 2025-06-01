@@ -10,7 +10,7 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
 import { SETTINGS_TABS, SettingField as SettingFieldType } from '../types/settings';
-import { 
+import {
   getSystemPromptTemplate,
   getModelType,
   getPrompt,
@@ -56,11 +56,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const [values, setValues] = useState<Record<string, string | number>>({});
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [themeMode, setThemeMode] = useState<'light' | 'dark'>('light');
-  const [currentTheme, setCurrentTheme] = useState(() => 
-    getCurrentTheme(getCanvasBackgroundColor())
+  const [currentTheme, setCurrentTheme] = useState(() =>
+    getCurrentTheme(getCanvasBackgroundColor()),
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   // Get the tabs context for updating tab-specific state
   const { getCurrentTabNumberOfSections, updateCurrentTabNumberOfSections } = useTabs();
 
@@ -79,20 +79,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     // 即時実行関数を使用して非同期処理を正しく実行
     (async () => {
       const loadedValues: Record<string, string | number> = {};
-      
+
       try {
         // APIキーは非同期で取得
         const apiKey = await getApiKey();
         loadedValues['apiKey'] = apiKey;
-        
+
         // 他の設定項目は同期的に取得
         loadedValues['systemPromptTemplate'] = getSystemPromptTemplate();
         loadedValues['modelType'] = getModelType();
         loadedValues['prompt'] = getPrompt();
-        
+
         // Get numberOfSections from the current tab instead of global settings
         loadedValues['numberOfSections'] = getCurrentTabNumberOfSections();
-        
+
         loadedValues['elementColor'] = getElementColor();
         loadedValues['strokeColor'] = getStrokeColor();
         loadedValues['strokeWidth'] = getStrokeWidth();
@@ -103,7 +103,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
         loadedValues['canvasBackgroundColor'] = getCanvasBackgroundColor();
         loadedValues['textColor'] = getTextColor();
         loadedValues['selectedStrokeColor'] = getSelectedStrokeColor();
-        
+
         setValues(loadedValues);
       } catch (error) {
         console.error('Failed to load settings:', error);
@@ -118,7 +118,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
 
   // Create Material-UI theme based on canvas background color
   const theme = createTheme({
-    palette: { 
+    palette: {
       mode: themeMode,
       background: {
         default: currentTheme.MODAL.BACKGROUND,
@@ -169,10 +169,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   };
 
   const handleValueChange = (field: SettingFieldType, value: string) => {
-    setValues(prev => ({ ...prev, [field.key]: value }));
-    setErrors(prev => ({ 
-      ...prev, 
-      [field.key]: !validateField(field, value)
+    setValues((prev) => ({ ...prev, [field.key]: value }));
+    setErrors((prev) => ({
+      ...prev,
+      [field.key]: !validateField(field, value),
     }));
   };
 
@@ -180,12 +180,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     let hasError = false;
 
     // 全フィールドの検証
-    SETTINGS_TABS.forEach(tab => {
-      tab.fields.forEach(field => {
+    SETTINGS_TABS.forEach((tab) => {
+      tab.fields.forEach((field) => {
         const value = values[field.key];
         if (!validateField(field, value)) {
           hasError = true;
-          setErrors(prev => ({ ...prev, [field.key]: true }));
+          setErrors((prev) => ({ ...prev, [field.key]: true }));
         }
       });
     });
@@ -201,13 +201,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     // 他の設定は同期的に保存
     const value = values['systemPromptTemplate'];
     if (value !== undefined) setSystemPromptTemplate(String(value));
-    
+
     const modelType = values['modelType'];
     if (modelType !== undefined) setModelType(String(modelType));
-    
+
     const prompt = values['prompt'];
     if (prompt !== undefined) setPrompt(String(prompt));
-    
+
     // Update current tab state for numberOfSections
     const numberOfSections = values['numberOfSections'];
     if (numberOfSections !== undefined) {
@@ -215,34 +215,35 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
       // Update current tab state only
       updateCurrentTabNumberOfSections(numValue);
     }
-    
+
     const elementColor = values['elementColor'];
     if (elementColor !== undefined) setElementColor(String(elementColor));
-    
+
     const strokeColor = values['strokeColor'];
     if (strokeColor !== undefined) setStrokeColor(String(strokeColor));
-    
+
     const strokeWidth = values['strokeWidth'];
     if (strokeWidth !== undefined) setStrokeWidth(Number(strokeWidth));
-    
+
     const fontFamily = values['fontFamily'];
     if (fontFamily !== undefined) setFontFamily(String(fontFamily));
-    
+
     const markerType = values['markerType'];
     if (markerType !== undefined) setMarkerType(String(markerType));
-    
+
     const connectionPathColor = values['connectionPathColor'];
     if (connectionPathColor !== undefined) setConnectionPathColor(String(connectionPathColor));
-    
+
     const connectionPathStroke = values['connectionPathStroke'];
     if (connectionPathStroke !== undefined) setConnectionPathStroke(Number(connectionPathStroke));
-    
+
     const canvasBackgroundColor = values['canvasBackgroundColor'];
-    if (canvasBackgroundColor !== undefined) setCanvasBackgroundColor(String(canvasBackgroundColor));
-    
+    if (canvasBackgroundColor !== undefined)
+      setCanvasBackgroundColor(String(canvasBackgroundColor));
+
     const textColor = values['textColor'];
     if (textColor !== undefined) setTextColor(String(textColor));
-    
+
     const selectedStrokeColor = values['selectedStrokeColor'];
     if (selectedStrokeColor !== undefined) setSelectedStrokeColor(String(selectedStrokeColor));
 
@@ -270,23 +271,23 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
       try {
         const content = e.target?.result as string;
         const importedSettings = JSON.parse(content);
-        
+
         // Use the utility function to import and validate settings
         const { newValues, newErrors, hasError } = importElementSettings(
           importedSettings,
           values,
           errors,
-          SETTINGS_TABS[0].fields
+          SETTINGS_TABS[0].fields,
         );
-        
+
         if (hasError) {
           alert('Some imported settings are invalid and will be ignored.');
         }
-        
+
         // Update state with imported values
         setValues(newValues);
         setErrors(newErrors);
-        
+
         // Reset file input
         if (event.target) {
           event.target.value = '';
@@ -296,7 +297,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
         alert('Failed to parse imported settings. Please check the file format.');
       }
     };
-    
+
     reader.readAsText(file);
   };
 
@@ -309,119 +310,126 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
       icon={<SettingsIcon />}
     >
       <ThemeProvider theme={theme}>
-      <Box sx={{ 
-        backgroundColor: currentTheme.MODAL.BACKGROUND, 
-        color: currentTheme.MODAL.TEXT_COLOR,
-        padding: 2,
-        borderRadius: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        height: '80vh',
-        maxHeight: 600
-      }}>
-        <Tabs 
-          value={activeTab} 
-          onChange={(_, newValue) => setActiveTab(newValue)}
-          variant="scrollable"
-          scrollButtons="auto"
-          allowScrollButtonsMobile
-          textColor="primary"
-          indicatorColor="primary"
+        <Box
+          sx={{
+            backgroundColor: currentTheme.MODAL.BACKGROUND,
+            color: currentTheme.MODAL.TEXT_COLOR,
+            padding: 2,
+            borderRadius: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            height: '80vh',
+            maxHeight: 600,
+          }}
         >
-          {SETTINGS_TABS.map(tab => (
-            <Tab key={tab.id} label={tab.label} />
-          ))}
-        </Tabs>
-        <Box sx={{ 
-          mt: 2, 
-          flex: 1,
-          overflowY: 'auto',
-          // スクロールバーのスタイリング
-          '&::-webkit-scrollbar': {
-            width: '8px',
-          },
-          '&::-webkit-scrollbar-track': {
-            background: 'transparent',
-          },
-          '&::-webkit-scrollbar-thumb': {
-            background: currentTheme.MODAL.TEXT_COLOR,
-            opacity: 0.2,
-            borderRadius: '4px',
-          },
-        }}>
-          {SETTINGS_TABS.map(tab => (
-            activeTab === tab.id && (
-              <Box key={tab.id}>
-                {tab.fields.map(field => (
-                  <SettingField
-                    key={field.key}
-                    field={field}
-                    value={values[field.key] ?? field.defaultValue}
-                    error={errors[field.key]}
-                    onChange={(value) => handleValueChange(field, value)}
-                  />
-                ))}
-              </Box>
-            )
-          ))}
-        </Box>
-        <Box sx={{ 
-          mt: 2,
-          pt: 2,
-          display: 'flex',
-          flexWrap: 'wrap', // ボタンが見切れないよう折り返し
-          gap: 1,
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          borderTop: `1px solid ${currentTheme.MODAL.TEXT_COLOR}20`,
-          backgroundColor: currentTheme.MODAL.BACKGROUND,
-        }}>
-          {/* Hidden file input for importing settings */}
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            onChange={handleFileUpload} 
-            accept=".json" 
-            style={{ display: 'none' }} 
-          />
-          
-          {/* Export/Import buttons with text labels */}
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            {activeTab === 0 && (
-              <>
-                <Button 
-                  variant="outlined" 
-                  startIcon={<FileDownloadIcon />} 
-                  onClick={handleExportSettings}
-                >
-                  Export
-                </Button>
-                <Button 
-                  variant="outlined" 
-                  startIcon={<FileUploadIcon />} 
-                  onClick={handleImportSettings}
-                >
-                  Import
-                </Button>
-              </>
+          <Tabs
+            value={activeTab}
+            onChange={(_, newValue) => setActiveTab(newValue)}
+            variant="scrollable"
+            scrollButtons="auto"
+            allowScrollButtonsMobile
+            textColor="primary"
+            indicatorColor="primary"
+          >
+            {SETTINGS_TABS.map((tab) => (
+              <Tab key={tab.id} label={tab.label} />
+            ))}
+          </Tabs>
+          <Box
+            sx={{
+              mt: 2,
+              flex: 1,
+              overflowY: 'auto',
+              // スクロールバーのスタイリング
+              '&::-webkit-scrollbar': {
+                width: '8px',
+              },
+              '&::-webkit-scrollbar-track': {
+                background: 'transparent',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                background: currentTheme.MODAL.TEXT_COLOR,
+                opacity: 0.2,
+                borderRadius: '4px',
+              },
+            }}
+          >
+            {SETTINGS_TABS.map(
+              (tab) =>
+                activeTab === tab.id && (
+                  <Box key={tab.id}>
+                    {tab.fields.map((field) => (
+                      <SettingField
+                        key={field.key}
+                        field={field}
+                        value={values[field.key] ?? field.defaultValue}
+                        error={errors[field.key]}
+                        onChange={(value) => handleValueChange(field, value)}
+                      />
+                    ))}
+                  </Box>
+                ),
             )}
           </Box>
-          
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button variant="outlined" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button 
-              variant="contained" 
-              onClick={handleSave} 
-              color="primary"
-              disabled={Object.values(errors).some(Boolean)} 
-            >
-              OK
-            </Button>
+          <Box
+            sx={{
+              mt: 2,
+              pt: 2,
+              display: 'flex',
+              flexWrap: 'wrap', // ボタンが見切れないよう折り返し
+              gap: 1,
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              borderTop: `1px solid ${currentTheme.MODAL.TEXT_COLOR}20`,
+              backgroundColor: currentTheme.MODAL.BACKGROUND,
+            }}
+          >
+            {/* Hidden file input for importing settings */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+              accept=".json"
+              style={{ display: 'none' }}
+            />
+
+            {/* Export/Import buttons with text labels */}
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              {activeTab === 0 && (
+                <>
+                  <Button
+                    variant="outlined"
+                    startIcon={<FileDownloadIcon />}
+                    onClick={handleExportSettings}
+                  >
+                    Export
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<FileUploadIcon />}
+                    onClick={handleImportSettings}
+                  >
+                    Import
+                  </Button>
+                </>
+              )}
+            </Box>
+
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button variant="outlined" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button
+                variant="contained"
+                onClick={handleSave}
+                color="primary"
+                disabled={Object.values(errors).some(Boolean)}
+              >
+                OK
+              </Button>
+            </Box>
           </Box>
         </Box>
-      </Box>
       </ThemeProvider>
     </ModalWindow>
   );

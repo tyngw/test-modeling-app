@@ -23,7 +23,7 @@ export function useFileOperations({
   addTab,
   updateTabState,
   updateTabName,
-  switchTab
+  switchTab,
 }: UseFileOperationsParams) {
   const { addToast } = useToast();
 
@@ -36,35 +36,38 @@ export function useFileOperations({
 
   const handleSaveElements = useCallback(() => {
     if (!currentTab) return;
-    
+
     saveElements(Object.values(currentTab.state.elements), currentTab.name);
   }, [currentTab]);
 
-  const handleLoadElements = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
-    try {
-      const result = await loadElements(event.nativeEvent);
-      
-      // 新しいタブを作成して、読み込んだ要素をそのタブに適用
-      const newTabId = addTab();
-      updateTabState(newTabId, prevState => ({
-        ...prevState,
-        elements: result.elements
-      }));
-      
-      // タブ名を設定
-      const newTabName = result.fileName.replace('.json', '');
-      updateTabName(newTabId, newTabName);
-      
-      // 新しいタブに切り替え
-      switchTab(newTabId);
-    } catch (error: any) {
-      addToast(error.message);
-    }
-  }, [addTab, updateTabState, updateTabName, switchTab, addToast]);
+  const handleLoadElements = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      try {
+        const result = await loadElements(event.nativeEvent);
+
+        // 新しいタブを作成して、読み込んだ要素をそのタブに適用
+        const newTabId = addTab();
+        updateTabState(newTabId, (prevState) => ({
+          ...prevState,
+          elements: result.elements,
+        }));
+
+        // タブ名を設定
+        const newTabName = result.fileName.replace('.json', '');
+        updateTabName(newTabId, newTabName);
+
+        // 新しいタブに切り替え
+        switchTab(newTabId);
+      } catch (error: any) {
+        addToast(error.message);
+      }
+    },
+    [addTab, updateTabState, updateTabName, switchTab, addToast],
+  );
 
   return {
     handleSaveSvg,
     handleSaveElements,
-    handleLoadElements
+    handleLoadElements,
   };
 }

@@ -10,12 +10,7 @@ interface HelpModalProps {
 
 const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
   return (
-    <ModalWindow
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Help"
-      icon={<HelpIcon />}
-    >
+    <ModalWindow isOpen={isOpen} onClose={onClose} title="Help" icon={<HelpIcon />}>
       <div dangerouslySetInnerHTML={{ __html: helpContent }} />
     </ModalWindow>
   );

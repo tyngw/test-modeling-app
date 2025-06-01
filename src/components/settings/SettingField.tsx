@@ -1,6 +1,6 @@
 import React from 'react';
-import { 
-  TextField, 
+import {
+  TextField,
   FormControl,
   InputLabel,
   Select,
@@ -12,7 +12,7 @@ import {
   FormControlLabel,
   FormGroup,
   FormLabel,
-  SelectChangeEvent
+  SelectChangeEvent,
 } from '@mui/material';
 import { SettingField as SettingFieldType } from '../../types/settings';
 
@@ -23,11 +23,11 @@ interface SettingFieldProps {
   onChange: (value: string) => void;
 }
 
-export const SettingField: React.FC<SettingFieldProps> = ({ 
-  field, 
-  value, 
+export const SettingField: React.FC<SettingFieldProps> = ({
+  field,
+  value,
   error = false,
-  onChange 
+  onChange,
 }) => {
   const handleSelectChange = (event: SelectChangeEvent) => {
     onChange(event.target.value);
@@ -46,7 +46,9 @@ export const SettingField: React.FC<SettingFieldProps> = ({
           rows={field.key === 'prompt' || field.key === 'systemPromptTemplate' ? 6 : 1}
           type={field.key === 'apiKey' ? 'password' : 'text'}
           helperText={field.helperText}
-          variant={field.key === 'prompt' || field.key === 'systemPromptTemplate' ? "outlined" : "standard"}
+          variant={
+            field.key === 'prompt' || field.key === 'systemPromptTemplate' ? 'outlined' : 'standard'
+          }
         />
       );
 
@@ -59,22 +61,23 @@ export const SettingField: React.FC<SettingFieldProps> = ({
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
           fullWidth
           margin="normal"
-          inputProps={{ 
+          inputProps={{
             min: field.validation?.min,
             max: field.validation?.max,
-            step: field.validation?.step
+            step: field.validation?.step,
           }}
           error={error}
-          helperText={error ? `${field.validation?.min}から${field.validation?.max}の数値を入力してください` : field.helperText}
+          helperText={
+            error
+              ? `${field.validation?.min}から${field.validation?.max}の数値を入力してください`
+              : field.helperText
+          }
         />
       );
 
     case 'select':
       return (
-        <FormControl 
-          fullWidth 
-          margin="normal"
-        >
+        <FormControl fullWidth margin="normal">
           <InputLabel>{field.label}</InputLabel>
           <Select
             value={String(value)}
@@ -82,8 +85,8 @@ export const SettingField: React.FC<SettingFieldProps> = ({
             onChange={handleSelectChange}
             MenuProps={{
               sx: {
-                zIndex: 9999
-              }
+                zIndex: 9999,
+              },
             }}
           >
             {field.options?.map((option) => (
@@ -121,8 +124,8 @@ export const SettingField: React.FC<SettingFieldProps> = ({
                 key={option.value}
                 value={option.value}
                 control={
-                  <Radio 
-                    checked={value === option.value} 
+                  <Radio
+                    checked={value === option.value}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
                   />
                 }

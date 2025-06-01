@@ -24,7 +24,7 @@ const AppContent: React.FC = () => {
     updateTabState,
     updateTabName,
     dispatch,
-    handleCloseTabRequest
+    handleCloseTabRequest,
   } = useTabManagement();
 
   // 編集終了のハンドラ
@@ -35,17 +35,27 @@ const AppContent: React.FC = () => {
   // モーダル状態管理
   const [
     { isHelpOpen, isSettingsOpen, showCloseConfirm, tabToClose },
-    { toggleHelp, toggleSettings, openCloseConfirm, setShowCloseConfirm, setTabToClose, closeConfirmModal }
+    {
+      toggleHelp,
+      toggleSettings,
+      openCloseConfirm,
+      setShowCloseConfirm,
+      setTabToClose,
+      closeConfirmModal,
+    },
   ] = useModalState(handleEndEditing);
 
   // タブ閉じる要求時のハンドラー
-  const handleTabCloseRequest = useCallback((tabId: string) => {
-    const result = handleCloseTabRequest(tabId);
-    if (result.needsConfirmation && result.tabId) {
-      openCloseConfirm(result.tabId);
-    }
-    return result;
-  }, [handleCloseTabRequest, openCloseConfirm]);
+  const handleTabCloseRequest = useCallback(
+    (tabId: string) => {
+      const result = handleCloseTabRequest(tabId);
+      if (result.needsConfirmation && result.tabId) {
+        openCloseConfirm(result.tabId);
+      }
+      return result;
+    },
+    [handleCloseTabRequest, openCloseConfirm],
+  );
 
   // AI生成機能
   const { handleAIClick } = useAIGeneration({ currentTab, dispatch });
@@ -56,7 +66,7 @@ const AppContent: React.FC = () => {
     addTab,
     updateTabState,
     updateTabName,
-    switchTab
+    switchTab,
   });
 
   return (
@@ -69,7 +79,6 @@ const AppContent: React.FC = () => {
       closeTab={closeTab}
       switchTab={switchTab}
       dispatch={dispatch}
-      
       // モーダル関連
       isHelpOpen={isHelpOpen}
       isSettingsOpen={isSettingsOpen}
@@ -79,12 +88,10 @@ const AppContent: React.FC = () => {
       toggleSettings={toggleSettings}
       handleCloseTabRequest={handleTabCloseRequest}
       setShowCloseConfirm={setShowCloseConfirm}
-      
       // ファイル操作関連
       handleSaveSvg={handleSaveSvg}
-      handleSaveElements={handleSaveElements} 
+      handleSaveElements={handleSaveElements}
       handleLoadElements={handleLoadElements}
-      
       // AI機能
       handleAIClick={handleAIClick}
     />

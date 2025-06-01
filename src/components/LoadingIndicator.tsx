@@ -8,10 +8,10 @@ interface LoadingIndicatorProps {
   color?: string;
 }
 
-const LoadingIndicator: React.FC<LoadingIndicatorProps> = ({ 
-  isLoading, 
-  size = 24, 
-  color = '#4B5563' 
+const LoadingIndicator: React.FC<LoadingIndicatorProps> = ({
+  isLoading,
+  size = 24,
+  color = '#4B5563',
 }) => {
   if (!isLoading) return null;
 
@@ -37,8 +37,12 @@ const LoadingIndicator: React.FC<LoadingIndicatorProps> = ({
       />
       <style jsx>{`
         @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
+          0% {
+            transform: rotate(0deg);
+          }
+          100% {
+            transform: rotate(360deg);
+          }
         }
       `}</style>
     </div>
