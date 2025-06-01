@@ -1,7 +1,15 @@
 // src/context/tabsContext.tsx
 'use client';
 
-import React, { createContext, useContext, ReactNode, useState, useCallback, useMemo, useEffect } from 'react';
+import React, {
+  createContext,
+  useContext,
+  ReactNode,
+  useState,
+  useCallback,
+  useMemo,
+  useEffect,
+} from 'react';
 import { State, initialState } from '../state/state';
 import { v4 as uuidv4 } from 'uuid';
 import { DEFAULT_POSITION, NUMBER_OF_SECTIONS } from '../config/elementSettings';
@@ -13,19 +21,19 @@ import { TabState, TabsStorage, TabsContextValue } from '../types/tabTypes';
 const TabsContext = createContext<TabsContextValue | undefined>(undefined);
 
 const createInitialTabState = (currentSections?: number): TabState => {
-  const newRootId = "1";
+  const newRootId = '1';
   const numSections = currentSections ?? NUMBER_OF_SECTIONS;
-  
+
   return {
     id: uuidv4(),
-    name: "無題",
+    name: '無題',
     state: {
       ...initialState,
       numberOfSections: numSections,
       elements: {
         [newRootId]: {
           ...createNewElement({
-            numSections: numSections
+            numSections: numSections,
           }),
           id: newRootId,
           x: DEFAULT_POSITION.X,
@@ -46,17 +54,17 @@ const loadTabsState = (): TabsStorage => {
       // データ整合性チェック
       if (Array.isArray(parsed?.tabs) && typeof parsed?.currentTabId === 'string') {
         // タブデータを変換
-        const convertedTabs = parsed.tabs.map(tab => ({
+        const convertedTabs = parsed.tabs.map((tab) => ({
           ...tab,
           state: {
             ...tab.state,
             elements: Object.fromEntries(
               Object.entries(tab.state.elements).map(([id, element]) => [
                 id,
-                convertLegacyElement(element)
-              ])
-            )
-          }
+                convertLegacyElement(element),
+              ]),
+            ),
+          },
         }));
 
         // 現在のタブIDが存在しない場合は最初のタブを選択
@@ -66,9 +74,8 @@ const loadTabsState = (): TabsStorage => {
 
         return {
           tabs: convertedTabs,
-          currentTabId: validCurrentTabId
+          currentTabId: validCurrentTabId,
         };
-
       }
     }
   } catch (e) {
@@ -79,7 +86,7 @@ const loadTabsState = (): TabsStorage => {
   const initialTab = createInitialTabState();
   return {
     tabs: [initialTab],
-    currentTabId: initialTab.id
+    currentTabId: initialTab.id,
   };
 };
 
@@ -98,96 +105,95 @@ export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const addTab = useCallback(() => {
     // 現在のタブのセクション数を取得して新しいタブに適用
-    const currentTab = tabs.find(tab => tab.id === currentTabId);
+    const currentTab = tabs.find((tab) => tab.id === currentTabId);
     const currentSections = currentTab?.state.numberOfSections ?? NUMBER_OF_SECTIONS;
     const newTab = createInitialTabState(currentSections);
-    setTabsState(prev => ({
+    setTabsState((prev) => ({
       tabs: [...prev.tabs, newTab],
-      currentTabId: newTab.id
+      currentTabId: newTab.id,
     }));
     return newTab.id;
   }, [tabs, currentTabId]);
 
   const closeTab = useCallback((tabId: string) => {
-    setTabsState(prev => {
+    setTabsState((prev) => {
       if (prev.tabs.length === 1) return prev;
-      const newTabs = prev.tabs.filter(tab => tab.id !== tabId);
-      const newCurrentTabId = tabId === prev.currentTabId
-        ? newTabs[0]?.id || ''
-        : prev.currentTabId;
+      const newTabs = prev.tabs.filter((tab) => tab.id !== tabId);
+      const newCurrentTabId =
+        tabId === prev.currentTabId ? newTabs[0]?.id || '' : prev.currentTabId;
       return { tabs: newTabs, currentTabId: newCurrentTabId };
     });
   }, []);
 
   const switchTab = useCallback((tabId: string) => {
-    setTabsState(prev => ({ ...prev, currentTabId: tabId }));
+    setTabsState((prev) => ({ ...prev, currentTabId: tabId }));
   }, []);
 
   const updateTabState = useCallback((tabId: string, updater: (prevState: State) => State) => {
-    setTabsState(prev => ({
+    setTabsState((prev) => ({
       ...prev,
-      tabs: prev.tabs.map(tab =>
-        tab.id === tabId ? { ...tab, state: updater(tab.state) } : tab
-      )
+      tabs: prev.tabs.map((tab) =>
+        tab.id === tabId ? { ...tab, state: updater(tab.state) } : tab,
+      ),
     }));
   }, []);
 
   const updateTabName = useCallback((tabId: string, newName: string) => {
-    setTabsState(prev => ({
+    setTabsState((prev) => ({
       ...prev,
-      tabs: prev.tabs.map(tab =>
-        tab.id === tabId ? { ...tab, name: newName } : tab
-      )
+      tabs: prev.tabs.map((tab) => (tab.id === tabId ? { ...tab, name: newName } : tab)),
     }));
   }, []);
 
   const getCurrentTabState = useCallback(() => {
-    const currentTab = tabs.find(tab => tab.id === currentTabId);
+    const currentTab = tabs.find((tab) => tab.id === currentTabId);
     return currentTab?.state;
   }, [tabs, currentTabId]);
 
   const getCurrentTabNumberOfSections = useCallback(() => {
-    const currentTab = tabs.find(tab => tab.id === currentTabId);
+    const currentTab = tabs.find((tab) => tab.id === currentTabId);
     return currentTab?.state.numberOfSections ?? NUMBER_OF_SECTIONS;
   }, [tabs, currentTabId]);
 
-  const updateCurrentTabNumberOfSections = useCallback((value: number) => {
-    const clampedValue = Math.max(1, Math.min(10, value));
-    updateTabState(currentTabId, prevState => ({
-      ...prevState,
-      numberOfSections: clampedValue
-    }));
-  }, [currentTabId, updateTabState]);
-
-  const contextValue = useMemo(() => ({
-    tabs,
-    currentTabId,
-    addTab,
-    closeTab,
-    switchTab,
-    updateTabState,
-    updateTabName,
-    getCurrentTabState,
-    getCurrentTabNumberOfSections,
-    updateCurrentTabNumberOfSections,
-  }), [
-    tabs, 
-    currentTabId, 
-    addTab, 
-    closeTab, 
-    switchTab, 
-    updateTabState, 
-    updateTabName, 
-    getCurrentTabState,
-    getCurrentTabNumberOfSections,
-    updateCurrentTabNumberOfSections
-  ]);
-
-  return (
-    <TabsContext.Provider value={contextValue}>
-      {children}
-    </TabsContext.Provider>
+  const updateCurrentTabNumberOfSections = useCallback(
+    (value: number) => {
+      const clampedValue = Math.max(1, Math.min(10, value));
+      updateTabState(currentTabId, (prevState) => ({
+        ...prevState,
+        numberOfSections: clampedValue,
+      }));
+    },
+    [currentTabId, updateTabState],
   );
+
+  const contextValue = useMemo(
+    () => ({
+      tabs,
+      currentTabId,
+      addTab,
+      closeTab,
+      switchTab,
+      updateTabState,
+      updateTabName,
+      getCurrentTabState,
+      getCurrentTabNumberOfSections,
+      updateCurrentTabNumberOfSections,
+    }),
+    [
+      tabs,
+      currentTabId,
+      addTab,
+      closeTab,
+      switchTab,
+      updateTabState,
+      updateTabName,
+      getCurrentTabState,
+      getCurrentTabNumberOfSections,
+      updateCurrentTabNumberOfSections,
+    ],
+  );
+
+  return <TabsContext.Provider value={contextValue}>{children}</TabsContext.Provider>;
 };
 
 export const useTabs = () => {

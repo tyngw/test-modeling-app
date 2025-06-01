@@ -66,26 +66,29 @@ const QuickMenuBar = ({
   const [isZoomLoading, setIsZoomLoading] = useState(false);
 
   // handleActionをuseCallbackで包み、依存配列を正しく設定
-  const handleAction = useCallback((action: CanvasActionType) => () => {
-    if (action === 'ZOOM_IN' || action === 'ZOOM_OUT') {
-      setIsZoomLoading(true);
-      
-      // 処理を非同期にして、UIがブロックされるのを防ぐ
-      setTimeout(() => {
-        dispatch({ type: action });
-        
-        // ズーム処理完了後、少し遅延させてからローディング表示を終了
+  const handleAction = useCallback(
+    (action: CanvasActionType) => () => {
+      if (action === 'ZOOM_IN' || action === 'ZOOM_OUT') {
+        setIsZoomLoading(true);
+
+        // 処理を非同期にして、UIがブロックされるのを防ぐ
         setTimeout(() => {
-          setIsZoomLoading(false);
-        }, 300);
-      }, 50);
-    } else {
-      dispatch({ type: action });
-    }
-  }, [dispatch]); // 依存配列を簡略化
+          dispatch({ type: action });
+
+          // ズーム処理完了後、少し遅延させてからローディング表示を終了
+          setTimeout(() => {
+            setIsZoomLoading(false);
+          }, 300);
+        }, 50);
+      } else {
+        dispatch({ type: action });
+      }
+    },
+    [dispatch],
+  ); // 依存配列を簡略化
 
   if (!isMounted) return null;
-  
+
   // localStorage から背景色を取得する
   const backgroundColor = getCanvasBackgroundColor();
   // 取得した背景色をもとにテーマを決定
@@ -97,27 +100,29 @@ const QuickMenuBar = ({
 
   return (
     <>
-      <div 
-        style={{ 
+      <div
+        style={{
           position: 'fixed',
           width: '100%',
           height: ICONBAR_HEIGHT,
           overflowX: 'auto',
           WebkitOverflowScrolling: 'touch',
-          msOverflowStyle: 'none',  // IEとEdge用
-          scrollbarWidth: 'none',   // Firefox用
+          msOverflowStyle: 'none', // IEとEdge用
+          scrollbarWidth: 'none', // Firefox用
         }}
         ref={containerRef}
       >
-        <div style={{
-          display: 'flex',
-          justifyContent: 'left',
-          alignItems: 'center',
-          height: '100%',
-          backgroundColor: theme.MENU_BAR.BACKGROUND,
-          padding: '0 20px',
-          minWidth: 'max-content', // コンテンツ幅を維持
-        }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'left',
+            alignItems: 'center',
+            height: '100%',
+            backgroundColor: theme.MENU_BAR.BACKGROUND,
+            padding: '0 20px',
+            minWidth: 'max-content', // コンテンツ幅を維持
+          }}
+        >
           <input type="file" ref={fileInput} onChange={loadElements} style={{ display: 'none' }} />
 
           {/* ファイル操作グループ */}
@@ -145,7 +150,7 @@ const QuickMenuBar = ({
             icon={SaveAltIcon}
             iconColor={theme.MENU_BAR.ICON_COLOR}
           />
-          
+
           <Divider color={theme.MENU_BAR.DIVIDER_COLOR} />
 
           {/* 要素操作グループ */}
@@ -230,7 +235,15 @@ const QuickMenuBar = ({
         </div>
       </div>
       {isZoomLoading && (
-        <div style={{ position: 'fixed', zIndex: 9500, width: '100%', height: '100%', pointerEvents: 'none' }}>
+        <div
+          style={{
+            position: 'fixed',
+            zIndex: 9500,
+            width: '100%',
+            height: '100%',
+            pointerEvents: 'none',
+          }}
+        >
           <LoadingIndicator isLoading={isZoomLoading} size={32} color="#4B5563" />
         </div>
       )}

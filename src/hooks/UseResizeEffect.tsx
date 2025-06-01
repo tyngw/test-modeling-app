@@ -13,10 +13,12 @@ interface ElementWithDimensions {
 }
 
 interface ResizeEffectProps {
-  setCanvasSize: React.Dispatch<React.SetStateAction<{
-    width: number;
-    height: number;
-  }>>;
+  setCanvasSize: React.Dispatch<
+    React.SetStateAction<{
+      width: number;
+      height: number;
+    }>
+  >;
   setDisplayArea: React.Dispatch<React.SetStateAction<string>>;
   state: {
     elements: { [key: string]: ElementWithDimensions };
@@ -25,29 +27,24 @@ interface ResizeEffectProps {
   isClient?: boolean;
 }
 
-const useResizeEffect = ({ 
-  setCanvasSize, 
-  setDisplayArea,
-  state,
-  isClient
-}: ResizeEffectProps) => {
-    useEffect(() => {
-        if (typeof window === 'undefined' || !isClient) return;
+const useResizeEffect = ({ setCanvasSize, setDisplayArea, state, isClient }: ResizeEffectProps) => {
+  useEffect(() => {
+    if (typeof window === 'undefined' || !isClient) return;
 
-        const newCanvasSize = calculateCanvasSize(state.elements);
-        const maxHeight = window.innerHeight - HEADER_HEIGHT;
-        newCanvasSize.width = Math.max(newCanvasSize.width, window.innerWidth);
-        newCanvasSize.height = Math.max(newCanvasSize.height, maxHeight);
-        const newViewSize = {
-            width: newCanvasSize.width,
-            height: newCanvasSize.height,
-        }
-        newCanvasSize.width *= state.zoomRatio;
-        newCanvasSize.height *= state.zoomRatio;
-        
-        setCanvasSize(newCanvasSize);
-        setDisplayArea(`0 0 ${newViewSize.width} ${newViewSize.height}`);
-    }, [state.elements, state.zoomRatio, setCanvasSize, setDisplayArea, isClient]);
+    const newCanvasSize = calculateCanvasSize(state.elements);
+    const maxHeight = window.innerHeight - HEADER_HEIGHT;
+    newCanvasSize.width = Math.max(newCanvasSize.width, window.innerWidth);
+    newCanvasSize.height = Math.max(newCanvasSize.height, maxHeight);
+    const newViewSize = {
+      width: newCanvasSize.width,
+      height: newCanvasSize.height,
+    };
+    newCanvasSize.width *= state.zoomRatio;
+    newCanvasSize.height *= state.zoomRatio;
+
+    setCanvasSize(newCanvasSize);
+    setDisplayArea(`0 0 ${newViewSize.width} ${newViewSize.height}`);
+  }, [state.elements, state.zoomRatio, setCanvasSize, setDisplayArea, isClient]);
 };
 
 export default useResizeEffect;

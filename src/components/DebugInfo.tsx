@@ -3,13 +3,13 @@ import React from 'react';
 import { Element as CanvasElement, DropPosition } from '../types/types';
 import { isDevelopment } from '../utils/debugLogHelpers';
 
-interface DebugInfoProps { 
+interface DebugInfoProps {
   element: CanvasElement;
   isHovered: boolean;
   currentDropTarget?: CanvasElement | null;
   dropPosition?: DropPosition;
   isDraggedOrDescendant?: boolean;
-  siblingInfo?: { prevElement?: CanvasElement, nextElement?: CanvasElement } | null;
+  siblingInfo?: { prevElement?: CanvasElement; nextElement?: CanvasElement } | null;
 }
 
 const DebugInfo: React.FC<DebugInfoProps> = ({
@@ -18,7 +18,7 @@ const DebugInfo: React.FC<DebugInfoProps> = ({
   currentDropTarget,
   dropPosition,
   isDraggedOrDescendant,
-  siblingInfo
+  siblingInfo,
 }) => {
   if (!isDevelopment || !isHovered) {
     return null;
@@ -33,41 +33,55 @@ const DebugInfo: React.FC<DebugInfoProps> = ({
       className="debug-info"
       data-exclude-from-export="true"
     >
-      <div style={{
-        fontSize: '11px',
-        color: 'black',
-        backgroundColor: 'white',
-        border: '1px solid #ccc',
-        padding: '5px',
-        borderRadius: '4px',
-        boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
-      }}>
+      <div
+        style={{
+          fontSize: '11px',
+          color: 'black',
+          backgroundColor: 'white',
+          border: '1px solid #ccc',
+          padding: '5px',
+          borderRadius: '4px',
+          boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
+        }}
+      >
         <h3 style={{ margin: '0 0 5px 0' }}>id: {element.id}</h3>
         <table style={{ borderCollapse: 'collapse', width: '100%' }}>
           <tbody>
             <tr>
               <td>position</td>
               <td>:</td>
-              <td>x: {element.x}, y: {element.y}</td>
+              <td>
+                x: {element.x}, y: {element.y}
+              </td>
             </tr>
             <tr>
               <td>size</td>
               <td>:</td>
-              <td>width: {element.width}, height: {element.height}</td>
+              <td>
+                width: {element.width}, height: {element.height}
+              </td>
             </tr>
             <tr>
               <td>texts</td>
               <td>:</td>
-              <td>{element.texts.map((text, idx) => 
-                <div key={idx}>{idx}: {text ? `"${text}"` : '(empty)'}</div>
-              )}</td>
+              <td>
+                {element.texts.map((text, idx) => (
+                  <div key={idx}>
+                    {idx}: {text ? `"${text}"` : '(empty)'}
+                  </div>
+                ))}
+              </td>
             </tr>
             <tr>
               <td>sectionHeights</td>
               <td>:</td>
-              <td>{element.sectionHeights.map((height, idx) => 
-                <div key={idx}>{idx}: {height}</div>
-              )}</td>
+              <td>
+                {element.sectionHeights.map((height, idx) => (
+                  <div key={idx}>
+                    {idx}: {height}
+                  </div>
+                ))}
+              </td>
             </tr>
             <tr>
               <td>parent</td>
@@ -136,20 +150,26 @@ const DebugInfo: React.FC<DebugInfoProps> = ({
             {siblingInfo && (
               <>
                 <tr>
-                  <td colSpan={3} style={{ fontWeight: 'bold' }}>sibling info:</td>
+                  <td colSpan={3} style={{ fontWeight: 'bold' }}>
+                    sibling info:
+                  </td>
                 </tr>
                 {siblingInfo.prevElement && (
                   <tr>
                     <td>prev</td>
                     <td>:</td>
-                    <td>{siblingInfo.prevElement.id} (order: {siblingInfo.prevElement.order})</td>
+                    <td>
+                      {siblingInfo.prevElement.id} (order: {siblingInfo.prevElement.order})
+                    </td>
                   </tr>
                 )}
                 {siblingInfo.nextElement && (
                   <tr>
                     <td>next</td>
                     <td>:</td>
-                    <td>{siblingInfo.nextElement.id} (order: {siblingInfo.nextElement.order})</td>
+                    <td>
+                      {siblingInfo.nextElement.id} (order: {siblingInfo.nextElement.order})
+                    </td>
                   </tr>
                 )}
               </>

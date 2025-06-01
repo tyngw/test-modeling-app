@@ -19,7 +19,7 @@ export const MarkerButton: React.FC<MarkerButtonProps> = ({
   hoverId,
   onHover,
   onShowMenu,
-  isInGroup = false
+  isInGroup = false,
 }) => {
   // ボタン表示条件のチェック
   if (isEndMarker) {
@@ -30,23 +30,23 @@ export const MarkerButton: React.FC<MarkerButtonProps> = ({
     // 注意: この条件チェックは外部でおこなう必要があるため、
     // このコンポーネントを使用する側で条件チェックを行ってください
   }
-  
+
   const totalHeight = element.height;
   const buttonId = isEndMarker ? `end-${element.id}` : element.id;
-  
+
   // ボタン位置の計算（終点マーカーは左側、始点マーカーは右側）
-  const buttonX = isEndMarker 
+  const buttonX = isEndMarker
     ? absolutePosition.x - MARKER.WIDTH / 2
     : absolutePosition.x + element.width + MARKER.WIDTH / 2;
-  
+
   return (
-    <g 
+    <g
       key={`marker-button-${buttonId}`}
       data-marker-button={`${buttonId}`}
       data-exclude-from-export="true"
       pointerEvents="all"
     >
-      {(hoverId === buttonId) && (
+      {hoverId === buttonId && (
         <circle
           cx={buttonX}
           cy={absolutePosition.y + totalHeight / 2}

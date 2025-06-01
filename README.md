@@ -1,23 +1,30 @@
 # Test Modeling App
+
 ## What is this?
+
 This is an application for describing test architecture in a notation similar to UML class diagrams.
 
 ## Usage
+
 ### Local execution
+
 1. Clone the repository
 2. Run `npm install` to install the dependencies
 3. Run `npm start` to start the application
 4. Open a web browser and navigate to `http://localhost:3000`
 
 ### Deployment to GitHub Pages
+
 If you push to the main branch, the application will be automatically deployed.
 
 ### Deployed application
+
 The application is deployed at [https://tyngw.github.io/test-modeling-app/](https://tyngw.github.io/test-modeling-app/)
 
-
 ### Application usage
+
 #### Keyboard shortcuts
+
 - `Tab`: Add a child element to the selected element
 - `Delete`: Remove the selected element
 - `Enter`: Edit the selected element
@@ -32,16 +39,19 @@ The application is deployed at [https://tyngw.github.io/test-modeling-app/](http
 - `Ctrl + ArrowRight`: Expand the children of the selected element
 
 #### Mouse operations
+
 - `Click`: Select an element
 - `Double click`: Edit the selected element
   - Clicking outside the element will end the editing mode
 - `Drag`: Move the selected element
 
 #### Menu operations
+
 - `New`: Create a new diagram. Unsaved changes will be discarded.
 - `Open`: Load saved data. The current data will be discarded.
 - `Save as`: Save the diagram data in JSON format
 - `Export`: Export the diagram in SVG format
 
 ## License
+
 This project is licensed under the MIT license. See [LICENSE](./LICENSE) for details.

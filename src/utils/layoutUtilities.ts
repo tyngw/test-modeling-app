@@ -1,15 +1,11 @@
 // src/utils/layoutUtilities.ts
 import { useState, useEffect } from 'react';
-import {
-  SIZE,
-  OFFSET,
-  NUMBER_OF_SECTIONS,
-} from '../config/elementSettings';
+import { SIZE, OFFSET, NUMBER_OF_SECTIONS } from '../config/elementSettings';
 
 export const useWindowSize = () => {
   const [windowSize, setWindowSize] = useState({
     width: window.innerWidth,
-    height: window.innerHeight
+    height: window.innerHeight,
   });
 
   useEffect(() => {
@@ -34,10 +30,12 @@ interface Element {
 export const calculateCanvasSize = (elements: { [key: string]: Element }) => {
   const elementList: Element[] = Object.values(elements);
   const maxElementX = Math.max(...elementList.map((element: Element) => element.x + element.width));
-  const maxElementY = Math.max(...elementList.map((element: Element) => element.y + element.height));
+  const maxElementY = Math.max(
+    ...elementList.map((element: Element) => element.y + element.height),
+  );
 
   return {
     width: maxElementX + OFFSET.X,
-    height: maxElementY + (SIZE.SECTION_HEIGHT * NUMBER_OF_SECTIONS),
+    height: maxElementY + SIZE.SECTION_HEIGHT * NUMBER_OF_SECTIONS,
   };
 };

@@ -31,26 +31,32 @@ const UnsaveConfirmModal: React.FC<UnsaveConfirmModalProps> = ({
       title="確認"
       icon={<ConfirmIcon />}
     >
-      <div style={{ 
-        padding: '10px 5px 20px',
-        textAlign: 'left' as const,
-      }}>
-        <p style={{ 
-          margin: '0 0 10px',
-          fontSize: '15px',
-          opacity: 0.8,
-          lineHeight: 1.5,
-          maxWidth: '350px',
-          marginTop: '10px',
-        }}>
+      <div
+        style={{
+          padding: '10px 5px 20px',
+          textAlign: 'left' as const,
+        }}
+      >
+        <p
+          style={{
+            margin: '0 0 10px',
+            fontSize: '15px',
+            opacity: 0.8,
+            lineHeight: 1.5,
+            maxWidth: '350px',
+            marginTop: '10px',
+          }}
+        >
           タブを閉じてよろしいですか？
         </p>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'flex-end',
-          gap: '16px',
-          marginTop: '30px'
-        }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            gap: '16px',
+            marginTop: '30px',
+          }}
+        >
           <Button
             variant="outlined"
             onClick={() => setShowCloseConfirm(false)}
@@ -68,7 +74,7 @@ const UnsaveConfirmModal: React.FC<UnsaveConfirmModalProps> = ({
               '&:hover': {
                 backgroundColor: currentTheme.MODAL.BUTTON_BACKGROUND,
                 opacity: 0.9,
-              }
+              },
             }}
           >
             いいえ
@@ -92,7 +98,7 @@ const UnsaveConfirmModal: React.FC<UnsaveConfirmModalProps> = ({
               '&:hover': {
                 backgroundColor: currentTheme.MODAL.BUTTON_PRIMARY_BACKGROUND,
                 opacity: 0.9,
-              }
+              },
             }}
           >
             はい
