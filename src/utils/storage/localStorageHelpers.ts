@@ -198,7 +198,8 @@ const migrateLegacyStyles = (): StyleSettings => {
       if (key === 'strokeWidth' || key === 'connectionPathStroke') {
         migrated[key] = parseFloat(oldValue);
       } else {
-        (migrated as any)[key] = oldValue;
+        // 型安全に値を設定
+        migrated[key] = oldValue as StyleSettings[typeof key];
       }
       
       // Remove old individual settings
