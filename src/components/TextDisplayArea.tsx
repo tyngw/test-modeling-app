@@ -13,6 +13,7 @@ import {
 import { wrapText } from '../utils/textareaHelpers';
 import { debugLog } from '../utils/debugLogHelpers';
 import { getTextColor } from '../utils/storage/localStorageHelpers';
+import { sanitizeText } from '../utils/security/sanitization';
 
 interface TextDisplayAreaProps {
   x: number;
@@ -109,6 +110,9 @@ const TextDisplayArea: React.FC<TextDisplayAreaProps> = memo(
 
     if (!isMounted) return null;
 
+    // テキストを安全にサニタイズして表示
+    const safeText = sanitizeText(text || '');
+
     return (
       <foreignObject
         x={x}
@@ -133,7 +137,7 @@ const TextDisplayArea: React.FC<TextDisplayAreaProps> = memo(
             boxSizing: 'content-box',
           }}
         >
-          {text}
+          {safeText}
         </div>
       </foreignObject>
     );
