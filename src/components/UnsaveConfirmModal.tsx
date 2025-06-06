@@ -47,6 +47,8 @@ const UnsaveConfirmModal: React.FC<UnsaveConfirmModalProps> = ({
             marginTop: '10px',
           }}
         >
+          保存していない変更があります。
+          <br />
           タブを閉じてよろしいですか？
         </p>
         <div
