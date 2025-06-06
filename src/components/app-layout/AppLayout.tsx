@@ -18,6 +18,7 @@ interface AppLayoutProps {
   currentTab: TabState | undefined;
   addTab: () => string;
   closeTab: (tabId: string) => void;
+  forceCloseTab: (tabId: string) => void;
   switchTab: (tabId: string) => void;
   dispatch: (action: Action) => void;
 
@@ -51,6 +52,7 @@ export function AppLayout({
   currentTab,
   addTab,
   closeTab,
+  forceCloseTab,
   switchTab,
   dispatch,
 
@@ -100,7 +102,7 @@ export function AppLayout({
           showCloseConfirm={showCloseConfirm}
           setShowCloseConfirm={setShowCloseConfirm}
           tabToClose={tabToClose}
-          closeTab={closeTab}
+          closeTab={forceCloseTab}
         />
 
         <SettingsModal isOpen={isSettingsOpen} onClose={toggleSettings} />

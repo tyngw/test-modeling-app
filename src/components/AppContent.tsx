@@ -25,26 +25,73 @@ import { getApiKey, getModelType } from '../utils/storage';
 import { formatElementsForPrompt } from '../utils/element';
 import { createUserPrompt } from '../constants/promptHelpers';
 import { useToast } from '../context/ToastContext';
+import { useFileOperations } from '../hooks/useFileOperations';
+import { useAIGeneration } from '../hooks/useAIGeneration';
+import { useTabManagement } from '../hooks/useTabManagement';
+import { useModalState } from '../hooks/useModalState';
 
 const AppContent: React.FC = () => {
-  const { tabs, currentTabId, addTab, closeTab, switchTab, updateTabState, updateTabName } =
-    useTabs();
-  const currentTab = useMemo(
-    () => tabs.find((tab) => tab.id === currentTabId),
-    [tabs, currentTabId],
-  );
-  const [isHelpOpen, setHelpOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [tabToClose, setTabToClose] = useState<string | null>(null);
-  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+  // タブ管理に関する機能
+  const {
+    tabs,
+    currentTabId,
+    currentTab,
+    addTab,
+    closeTab,
+    switchTab,
+    updateTabState,
+    updateTabName,
+    updateTabSaveStatus,
+    forceCloseTab,
+    dispatch,
+    handleCloseTabRequest,
+  } = useTabManagement();
+
+  // 編集終了のハンドラ
+  const handleEndEditing = useCallback(() => {
+    dispatch({ type: 'END_EDITING' });
+  }, [dispatch]);
+
+  // モーダル状態管理
+  const [
+    { isHelpOpen, isSettingsOpen, showCloseConfirm, tabToClose },
+    {
+      toggleHelp,
+      toggleSettings,
+      openCloseConfirm,
+      setShowCloseConfirm,
+      setTabToClose,
+      closeConfirmModal,
+    },
+  ] = useModalState(handleEndEditing);
+
   const { addToast } = useToast();
 
-  const dispatch = useCallback(
-    (action: Action) => {
-      updateTabState(currentTabId, (prevState) => reducer(prevState, action));
+  // タブ閉じる要求時のハンドラー
+  const handleTabCloseRequest = useCallback(
+    (tabId: string) => {
+      const result = handleCloseTabRequest(tabId);
+      if (result.needsConfirmation && result.tabId) {
+        setTabToClose(result.tabId);
+        setShowCloseConfirm(true);
+      }
+      return result;
     },
-    [currentTabId, updateTabState],
+    [handleCloseTabRequest, setTabToClose, setShowCloseConfirm],
   );
+
+  // AI生成機能
+  const { handleAIClick } = useAIGeneration({ currentTab, dispatch });
+
+  // ファイル操作関連機能
+  const { handleSaveSvg, handleSaveElements, handleLoadElements } = useFileOperations({
+    currentTab,
+    addTab,
+    updateTabState,
+    updateTabName,
+    switchTab,
+    updateTabSaveStatus,
+  });
 
   // タブ名を更新する機能
   const updateTabNameFromRootElement = useCallback(() => {
@@ -68,105 +115,6 @@ const AppContent: React.FC = () => {
     }
   }, [currentTab?.state.elements, updateTabNameFromRootElement]);
 
-  const toggleHelp = useCallback(() => {
-    dispatch({ type: 'END_EDITING' });
-    setHelpOpen((prev) => !prev);
-  }, [dispatch]);
-
-  const toggleSettings = useCallback(() => {
-    dispatch({ type: 'END_EDITING' });
-    setIsSettingsOpen((prev) => !prev);
-  }, [dispatch]);
-
-  /**
-   * タブを閉じるリクエストを処理する関数
-   *
-   * @param tabId - 閉じるタブのID
-   */
-  const handleCloseTabRequest = (tabId: string): void => {
-    // TODO: 実際に変更があるかどうかをチェックする実装に置き換えるべき
-    const hasUnsavedChanges = true;
-
-    if (hasUnsavedChanges) {
-      setTabToClose(tabId);
-      setShowCloseConfirm(true);
-    } else {
-      closeTab(tabId);
-    }
-  };
-
-  /**
-   * AI機能を使って選択された要素に子要素の提案を追加する
-   *
-   * @returns {Promise<void>}
-   */
-  const handleAIClick = useCallback(async (): Promise<void> => {
-    if (!currentTab) return;
-
-    const selectedElement = Object.values(currentTab.state.elements).find((el) => el.selected);
-
-    if (!selectedElement) {
-      addToast(ToastMessages.noSelect);
-      return;
-    }
-
-    const decryptedApiKey = await getApiKey();
-
-    if (!decryptedApiKey) {
-      addToast(ToastMessages.noApiKey, 'warn');
-      return;
-    }
-
-    const inputText = localStorage.getItem('prompt') || '';
-
-    if (!inputText) {
-      addToast(ToastMessages.noPrompt);
-      return;
-    }
-
-    try {
-      const structureText = formatElementsForPrompt(currentTab.state.elements, selectedElement.id);
-
-      // ユーザープロンプトのみを作成
-      const userPrompt = createUserPrompt({
-        structureText: structureText,
-        inputText: inputText,
-      });
-
-      const modelType = getModelType();
-
-      // JSON形式でレスポンスを取得
-      const result = await generateElementSuggestions(userPrompt, decryptedApiKey, modelType);
-
-      // suggestions配列から要素を取得
-      let childNodes: string[] = result.suggestions || [];
-
-      // 空の配列の場合は処理をスキップ
-      if (childNodes.length === 0) {
-        addToast(
-          'AIが提案する要素がありませんでした。別のテキストを入力するか、選択した要素を変更してください。',
-        );
-        return;
-      }
-
-      // 処理した結果を要素として追加
-      dispatch({
-        type: 'ADD_ELEMENTS_SILENT',
-        payload: {
-          parentId: selectedElement.id,
-          texts: childNodes,
-          tentative: true,
-        },
-      });
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error
-          ? `${ToastMessages.aiError}: ${error.message}`
-          : ToastMessages.aiError;
-      addToast(message);
-    }
-  }, [currentTab, dispatch, addToast]);
-
   const memoizedCanvasProvider = useMemo(() => {
     if (!currentTab) return null;
     return (
@@ -176,33 +124,15 @@ const AppContent: React.FC = () => {
           tabs={tabs}
           currentTabId={currentTabId}
           addTab={addTab}
-          closeTab={handleCloseTabRequest}
+          closeTab={handleTabCloseRequest}
           switchTab={switchTab}
         />
         <QuickMenuBar
           saveSvg={() =>
             saveSvg(document.querySelector('.svg-element') as SVGSVGElement, 'download.svg')
           }
-          loadElements={(event) =>
-            loadElements(event.nativeEvent)
-              .then(({ elements, fileName }) => {
-                // 新しいタブを作成して、読み込んだ要素をそのタブに適用
-                const newTabId = addTab();
-                updateTabState(newTabId, (prevState) => ({
-                  ...prevState,
-                  elements,
-                }));
-                // タブ名を設定
-                const newTabName = fileName.replace('.json', '');
-                updateTabName(newTabId, newTabName);
-                // 新しいタブに切り替え
-                switchTab(newTabId);
-              })
-              .catch((error) => addToast(error.message))
-          }
-          saveElements={() =>
-            saveElements(Object.values(currentTab.state.elements), currentTab.name)
-          }
+          loadElements={handleLoadElements}
+          saveElements={handleSaveElements}
           toggleHelp={toggleHelp}
           toggleSettings={toggleSettings}
           onAIClick={handleAIClick}
@@ -233,6 +163,8 @@ const AppContent: React.FC = () => {
     tabToClose,
     closeTab,
     isSettingsOpen,
+    handleLoadElements,
+    handleSaveElements,
   ]);
 
   return <div>{memoizedCanvasProvider}</div>;

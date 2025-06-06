@@ -24,23 +24,27 @@ const createInitialTabState = (currentSections?: number): TabState => {
   const newRootId = '1';
   const numSections = currentSections ?? NUMBER_OF_SECTIONS;
 
+  const initialElements = {
+    [newRootId]: {
+      ...createNewElement({
+        numSections: numSections,
+      }),
+      id: newRootId,
+      x: DEFAULT_POSITION.X,
+      y: DEFAULT_POSITION.Y,
+      editing: false,
+    },
+  };
+
   return {
     id: uuidv4(),
     name: '無題',
+    isSaved: false,
+    lastSavedElements: JSON.stringify(initialElements),
     state: {
       ...initialState,
       numberOfSections: numSections,
-      elements: {
-        [newRootId]: {
-          ...createNewElement({
-            numSections: numSections,
-          }),
-          id: newRootId,
-          x: DEFAULT_POSITION.X,
-          y: DEFAULT_POSITION.Y,
-          editing: false,
-        },
-      },
+      elements: initialElements,
     },
   };
 };
@@ -130,12 +134,37 @@ export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const updateTabState = useCallback((tabId: string, updater: (prevState: State) => State) => {
-    setTabsState((prev) => ({
-      ...prev,
-      tabs: prev.tabs.map((tab) =>
-        tab.id === tabId ? { ...tab, state: updater(tab.state) } : tab,
-      ),
-    }));
+    setTabsState((prev) => {
+      const updatedTabs = prev.tabs.map((tab) => {
+        if (tab.id === tabId) {
+          const updatedState = updater(tab.state);
+          
+          // 現在の要素の状態をJSON文字列に変換（整形して比較）
+          const normalizedElements = JSON.parse(JSON.stringify(updatedState.elements));
+          const currentElementsJson = JSON.stringify(normalizedElements);
+          
+          // 最後に保存された要素の状態と比較して、変更があるかどうかを判断
+          const hasChanges = tab.lastSavedElements !== currentElementsJson;
+          
+          console.log('updateTabState: タブID', tabId);
+          console.log('updateTabState: 要素に変更があるか', hasChanges);
+          console.log('updateTabState: 保存済みフラグを設定', !hasChanges);
+          
+          return { 
+            ...tab, 
+            state: updatedState,
+            // 変更がある場合は未保存状態に設定
+            isSaved: !hasChanges
+          };
+        }
+        return tab;
+      });
+      
+      return {
+        ...prev,
+        tabs: updatedTabs,
+      };
+    });
   }, []);
 
   const updateTabName = useCallback((tabId: string, newName: string) => {
@@ -143,6 +172,32 @@ export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       ...prev,
       tabs: prev.tabs.map((tab) => (tab.id === tabId ? { ...tab, name: newName } : tab)),
     }));
+  }, []);
+
+  const updateTabSaveStatus = useCallback((tabId: string, isSaved: boolean, lastSavedElements?: string) => {
+    console.log('updateTabSaveStatus: タブID', tabId);
+    console.log('updateTabSaveStatus: 保存済みフラグ', isSaved);
+    console.log('updateTabSaveStatus: 最後に保存された要素の状態', lastSavedElements ? lastSavedElements.substring(0, 50) + '...' : 'なし');
+    
+    setTabsState((prev) => {
+      const updatedTabs = prev.tabs.map((tab) => {
+        if (tab.id === tabId) {
+          console.log('updateTabSaveStatus: タブを更新', tab.id);
+          return { 
+            ...tab, 
+            isSaved,
+            // lastSavedElements が指定されている場合は更新
+            lastSavedElements: lastSavedElements || tab.lastSavedElements
+          };
+        }
+        return tab;
+      });
+      
+      return {
+        ...prev,
+        tabs: updatedTabs,
+      };
+    });
   }, []);
 
   const getCurrentTabState = useCallback(() => {
@@ -175,6 +230,7 @@ export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       switchTab,
       updateTabState,
       updateTabName,
+      updateTabSaveStatus,
       getCurrentTabState,
       getCurrentTabNumberOfSections,
       updateCurrentTabNumberOfSections,
@@ -187,6 +243,7 @@ export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       switchTab,
       updateTabState,
       updateTabName,
+      updateTabSaveStatus,
       getCurrentTabState,
       getCurrentTabNumberOfSections,
       updateCurrentTabNumberOfSections,

@@ -23,6 +23,8 @@ const AppContent: React.FC = () => {
     switchTab,
     updateTabState,
     updateTabName,
+    updateTabSaveStatus,
+    forceCloseTab,
     dispatch,
     handleCloseTabRequest,
   } = useTabManagement();
@@ -67,6 +69,7 @@ const AppContent: React.FC = () => {
     updateTabState,
     updateTabName,
     switchTab,
+    updateTabSaveStatus,
   });
 
   return (
@@ -77,6 +80,7 @@ const AppContent: React.FC = () => {
       currentTab={currentTab}
       addTab={addTab}
       closeTab={closeTab}
+      forceCloseTab={forceCloseTab}
       switchTab={switchTab}
       dispatch={dispatch}
       // モーダル関連
