@@ -175,7 +175,7 @@ const getSetting = <T>(key: string, defaultValue: T): T => {
   return stored as T;
 };
 
-const setSetting = <T>(key: string, value: T): void => {
+const setSetting = <T extends {}>(key: string, value: T): void => {
   if (value === undefined || value === null) return;
   
   // 設定値の検証
@@ -187,7 +187,7 @@ const setSetting = <T>(key: string, value: T): void => {
   // 文字列の場合はサニタイズ（APIキーは例外）
   let safeValue = value;
   if (typeof value === 'string' && key !== APIKEY_KEY) {
-    safeValue = sanitizeText(value) as T;
+    safeValue = sanitizeText(value) as unknown as T;
   }
   
   safeLocalStorage.setItem(key, String(safeValue));
