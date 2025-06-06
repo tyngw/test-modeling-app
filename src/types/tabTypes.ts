@@ -30,6 +30,10 @@ export interface TabState {
   name: string;
   /** タブが保持する状態 */
   state: State;
+  /** タブがJSON形式で保存済みかどうか */
+  isSaved: boolean;
+  /** 最後に保存された要素の状態（JSON文字列） */
+  lastSavedElements?: string;
 }
 
 /**
@@ -92,6 +96,8 @@ export interface TabsContextValue {
   updateTabState: (tabId: string, updater: (prevState: State) => State) => void;
   /** タブ名更新コールバック */
   updateTabName: (tabId: string, newName: string) => void;
+  /** タブの保存状態更新コールバック */
+  updateTabSaveStatus: (tabId: string, isSaved: boolean, lastSavedElements?: string) => void;
   /** 現在のタブ状態取得関数 */
   getCurrentTabState: () => State | undefined;
   /** 現在のタブのセクション数取得関数 */
