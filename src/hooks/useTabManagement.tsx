@@ -12,7 +12,7 @@ import { reducer } from '../state/state';
  * タブの状態更新や名前変更、タブ閉じる前の確認などの機能を提供します
  */
 export function useTabManagement() {
-  const { tabs, currentTabId, addTab, closeTab, switchTab, updateTabState, updateTabName } =
+  const { tabs, currentTabId, addTab, closeTab, switchTab, updateTabState, updateTabName, updateTabSaveStatus } =
     useTabs();
   const currentTab = tabs.find((tab) => tab.id === currentTabId);
 
@@ -50,15 +50,29 @@ export function useTabManagement() {
   // タブを閉じる前の確認処理
   const handleCloseTabRequest = useCallback(
     (tabId: string) => {
-      // ここは実際の未保存変更の検出ロジックに置き換えるべき
-      const hasUnsavedChanges = true;
-
-      if (hasUnsavedChanges) {
-        return { needsConfirmation: true, tabId };
-      } else {
+      // タブを取得
+      const tab = tabs.find(t => t.id === tabId);
+      if (!tab) {
         closeTab(tabId);
         return { needsConfirmation: false };
       }
+
+      // JSON形式で保存されている場合は確認なしで閉じる
+      if (tab.isSaved) {
+        closeTab(tabId);
+        return { needsConfirmation: false };
+      } else {
+        // 保存されていない場合は確認ダイアログを表示
+        return { needsConfirmation: true, tabId };
+      }
+    },
+    [tabs, closeTab],
+  );
+
+  // タブを強制的に閉じる関数
+  const forceCloseTab = useCallback(
+    (tabId: string) => {
+      closeTab(tabId);
     },
     [closeTab],
   );
@@ -71,7 +85,9 @@ export function useTabManagement() {
     closeTab,
     switchTab,
     updateTabState,
-    updateTabName, // updateTabNameを追加
+    updateTabName,
+    updateTabSaveStatus,
+    forceCloseTab,
     dispatch,
     updateTabNameFromRootElement,
     handleCloseTabRequest,
