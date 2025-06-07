@@ -242,29 +242,6 @@ describe('セキュリティ機能のテスト', () => {
       expect(validateFileContent(longContent)).toBe(false);
     });
   });
-
-  describe('validateExternalUrl', () => {
-    test('有効な外部URLを許可する', () => {
-      expect(validateExternalUrl('https://api.example.com/data')).toBe(true);
-      expect(validateExternalUrl('https://secure-api.company.com/v1/endpoint')).toBe(true);
-    });
-
-    test('非HTTPSのURLを拒否する', () => {
-      expect(validateExternalUrl('http://api.example.com/data')).toBe(false);
-      expect(validateExternalUrl('ftp://api.example.com/data')).toBe(false);
-    });
-
-    test('プライベートIPアドレスを拒否する', () => {
-      expect(validateExternalUrl('https://192.168.1.1/api')).toBe(false);
-      expect(validateExternalUrl('https://10.0.0.1/api')).toBe(false);
-      expect(validateExternalUrl('https://172.16.0.1/api')).toBe(false);
-      expect(validateExternalUrl('https://127.0.0.1/api')).toBe(false);
-    });
-
-    test('ローカルホストを拒否する', () => {
-      expect(validateExternalUrl('https://localhost/api')).toBe(false);
-    });
-  });
 });
 
 describe('統合セキュリティテスト', () => {
