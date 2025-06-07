@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect } from 'react';
+import { useCallback } from 'react';
 import { useTabs } from '../context/TabsContext';
 import { extractRootElementTextFromElements } from '../utils/file';
 import { determineFileName } from '../utils/file/fileHelpers';
@@ -12,20 +12,45 @@ import { reducer } from '../state/state';
  * タブの状態更新や名前変更、タブ閉じる前の確認などの機能を提供します
  */
 export function useTabManagement() {
-  const { tabs, currentTabId, addTab, closeTab, switchTab, updateTabState, updateTabName, updateTabSaveStatus } =
-    useTabs();
+  const {
+    tabs,
+    currentTabId,
+    addTab,
+    closeTab,
+    switchTab,
+    updateTabState,
+    updateTabName,
+    updateTabSaveStatus,
+  } = useTabs();
   const currentTab = tabs.find((tab) => tab.id === currentTabId);
 
   // タブ状態の更新用のdispatch関数
   const dispatch = useCallback(
     (action: Action) => {
       if (!currentTabId) return;
-      updateTabState(currentTabId, (prevState) => reducer(prevState, action));
+      updateTabState(currentTabId, (prevState) => {
+        const newState = reducer(prevState, action);
+
+        // 編集終了時にタブ名を更新
+        if (action.type === 'END_EDITING') {
+          const elements = Object.values(newState.elements);
+          const rootElementText = extractRootElementTextFromElements(elements);
+
+          if (rootElementText) {
+            const newTabName = determineFileName(currentTab?.name || '無題', rootElementText);
+            if (newTabName !== currentTab?.name) {
+              updateTabName(currentTabId, newTabName);
+            }
+          }
+        }
+
+        return newState;
+      });
     },
-    [currentTabId, updateTabState],
+    [currentTabId, updateTabState, currentTab, updateTabName],
   );
 
-  // タブ名を更新する機能
+  // タブ名を更新する機能（編集完了時のみ使用）
   const updateTabNameFromRootElement = useCallback(() => {
     if (!currentTab || !currentTabId) return;
 
@@ -40,18 +65,11 @@ export function useTabManagement() {
     }
   }, [currentTab, currentTabId, updateTabName]);
 
-  // 要素が変更されたときにタブ名を自動更新
-  useEffect(() => {
-    if (currentTab) {
-      updateTabNameFromRootElement();
-    }
-  }, [currentTab?.state.elements, updateTabNameFromRootElement]);
-
   // タブを閉じる前の確認処理
   const handleCloseTabRequest = useCallback(
     (tabId: string) => {
       // タブを取得
-      const tab = tabs.find(t => t.id === tabId);
+      const tab = tabs.find((t) => t.id === tabId);
       if (!tab) {
         closeTab(tabId);
         return { needsConfirmation: false };
