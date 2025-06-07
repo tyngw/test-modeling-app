@@ -33,32 +33,38 @@ const Tab: React.FC<TabHeaderProps> = React.memo(
         }}
         onClick={() => switchTab(tab.id)}
       >
-        <span
+        <div
           style={{
-            flex: '1 1 auto',
+            display: 'flex',
+            alignItems: 'center',
+            flex: '1',
             overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            minWidth: '0',
           }}
         >
-          {tab.name}
-        </span>
-
-        {/* アスタリスクを閉じるボタンとファイル名の間に配置 */}
-        {!tab.isSaved && (
           <span
             style={{
-              flex: '0 0 auto',
-              marginRight: '2px',
-              marginLeft: '2px',
-              fontSize: '12px',
+              flex: '0 1 auto',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              minWidth: '0',
             }}
           >
-            {' *'}
+            {tab.name}
           </span>
-        )}
-
+          {!tab.isSaved && (
+            <span
+              style={{
+                flex: '0 0 auto',
+                marginRight: '0px',
+                marginLeft: '2px',
+                fontSize: '12px',
+              }}
+            >
+              {'*'}
+            </span>
+          )}
+        </div>
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -70,6 +76,7 @@ const Tab: React.FC<TabHeaderProps> = React.memo(
             flex: '0 0 auto',
             padding: '0px',
             marginLeft: '0px',
+            marginRight: '2px',
             border: '0',
             backgroundColor: 'transparent',
             fontSize: '16px',
