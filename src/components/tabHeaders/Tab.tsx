@@ -1,5 +1,5 @@
 // src/components/TabHeaders/tab.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { TabHeaderProps } from '../../types/tabTypes';
 import { useIsMounted } from '../../hooks/UseIsMounted';
 
@@ -7,14 +7,6 @@ const Tab: React.FC<TabHeaderProps> = React.memo(
   ({ tab, isCurrent, closeTab, switchTab, theme }) => {
     const isMounted = useIsMounted();
     const [isHovered, setIsHovered] = useState(false);
-
-    // タブの保存状態をコンソールに出力
-    useEffect(() => {
-      console.log('Tab: タブID', tab.id);
-      console.log('Tab: タブ名', tab.name);
-      console.log('Tab: 保存済みフラグ', tab.isSaved);
-      console.log('Tab: アスタリスク表示', !tab.isSaved ? ' *' : '');
-    }, [tab.id, tab.name, tab.isSaved]);
 
     if (!isMounted) return null;
 
@@ -52,7 +44,7 @@ const Tab: React.FC<TabHeaderProps> = React.memo(
         >
           {tab.name}
         </span>
-        
+
         {/* アスタリスクを閉じるボタンとファイル名の間に配置 */}
         {!tab.isSaved && (
           <span
@@ -66,7 +58,7 @@ const Tab: React.FC<TabHeaderProps> = React.memo(
             {' *'}
           </span>
         )}
-        
+
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -76,7 +68,8 @@ const Tab: React.FC<TabHeaderProps> = React.memo(
           onMouseLeave={() => setIsHovered(false)}
           style={{
             flex: '0 0 auto',
-            marginLeft: '2px',
+            padding: '0px',
+            marginLeft: '0px',
             border: '0',
             backgroundColor: 'transparent',
             fontSize: '16px',
@@ -94,5 +87,7 @@ const Tab: React.FC<TabHeaderProps> = React.memo(
     );
   },
 );
+
+Tab.displayName = 'Tab';
 
 export default Tab;
