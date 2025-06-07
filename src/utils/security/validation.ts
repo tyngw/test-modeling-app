@@ -48,14 +48,25 @@ export function validateTextInput(text: string, maxLength: number = 10000): bool
     return false
   }
 
+  // 危険なパターンのチェック
+  const dangerousPatterns = [
+    /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/i,  // スクリプトタグ
+    /javascript:.*$/i,                                       // JavaScriptプロトコル
+    /data:.*$/i,                                            // データURL
+    /eval\s*\([^)]*\)/i,                                    // eval関数
+    /on\w+\s*=/i,                                           // イベントハンドラー
+    /expression\s*\([^)]*\)/i                               // CSS expression
+  ]
+
+  for (const pattern of dangerousPatterns) {
+    if (pattern.test(text)) {
+      return false
+    }
+  }
+
   // 極端に多くのHTMLタグが含まれていないかチェック
   const htmlTagCount = (text.match(/<[^>]*>/g) || []).length
   if (htmlTagCount > 10) {
-    return false
-  }
-
-  // スクリプトタグが含まれていないかチェック
-  if (/<script/i.test(text)) {
     return false
   }
 
@@ -68,50 +79,60 @@ export function validateTextInput(text: string, maxLength: number = 10000): bool
  * @returns データが安全な場合はtrue
  */
 export function validateJsonData(data: any): boolean {
-  try {
-    // null、undefined、プリミティブ型は安全
-    if (data === null || data === undefined || typeof data !== 'object') {
-      return true
+  // 文字列の場合はJSONとしてパースを試みる
+  if (typeof data === 'string') {
+    if (data.trim().length === 0) {
+      return false
     }
-
-    // 循環参照のチェック
     try {
-      JSON.stringify(data)
+      data = JSON.parse(data)
     } catch {
       return false
     }
+  }
 
-    // 深すぎるネストを防ぐ
-    const maxDepth = 10
-    function checkDepth(obj: any, depth: number = 0): boolean {
-      if (depth > maxDepth) {
-        return false
-      }
-
-      if (obj && typeof obj === 'object') {
-        for (const value of Object.values(obj)) {
-          if (!checkDepth(value, depth + 1)) {
-            return false
-          }
-        }
-      }
-
-      return true
-    }
-
-    if (!checkDepth(data)) {
-      return false
-    }
-
-    // プロトタイプ汚染を防ぐ
-    if (data.hasOwnProperty('__proto__') || data.hasOwnProperty('constructor') || data.hasOwnProperty('prototype')) {
-      return false
-    }
-
+  // null、undefined、プリミティブ型は安全
+  if (data === null || data === undefined || typeof data !== 'object') {
     return true
+  }
+
+  // 循環参照のチェック
+  try {
+    JSON.stringify(data)
   } catch {
     return false
   }
+
+  // 深すぎるネストを防ぐ
+  const maxDepth = 10
+  function checkDepth(obj: any, depth: number = 0): boolean {
+    if (depth > maxDepth) {
+      return false
+    }
+
+    if (obj && typeof obj === 'object') {
+      for (const value of Object.values(obj)) {
+        if (!checkDepth(value, depth + 1)) {
+          return false
+        }
+      }
+    }
+
+    return true
+  }
+
+  if (!checkDepth(data)) {
+    return false
+  }
+
+  // プロトタイプ汚染を防ぐ
+  if (data.hasOwnProperty('__proto__') || 
+      data.hasOwnProperty('constructor') || 
+      data.hasOwnProperty('prototype')) {
+    return false
+  }
+
+  return true
 }
 
 /**
