@@ -1,8 +1,7 @@
 // src/AppContent.tsx
 'use client';
 
-import { ToastMessages } from '../constants/toastMessages';
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { CanvasArea } from './canvas';
 import QuickMenuBar from './menus/QuickMenuBar';
 import TabHeaders from './tabHeaders/TabHeaders';
@@ -10,20 +9,6 @@ import SettingsModal from './SettingsModal';
 import UnsaveConfirmModal from './UnsaveConfirmModal';
 import HelpModal from './HelpModal';
 import { CanvasProvider } from '../context/CanvasContext';
-import { useTabs } from '../context/TabsContext';
-import { reducer } from '../state/state';
-import { Action } from '../types/actionTypes';
-import {
-  saveSvg,
-  loadElements,
-  saveElements,
-  extractRootElementTextFromElements,
-} from '../utils/file';
-import { determineFileName } from '../utils/file/fileHelpers';
-import { generateElementSuggestions } from '../utils/api';
-import { getApiKey, getModelType } from '../utils/storage';
-import { formatElementsForPrompt } from '../utils/element';
-import { createUserPrompt } from '../constants/promptHelpers';
 import { useToast } from '../context/ToastContext';
 import { useFileOperations } from '../hooks/useFileOperations';
 import { useAIGeneration } from '../hooks/useAIGeneration';
@@ -42,27 +27,21 @@ const AppContent: React.FC = () => {
     updateTabState,
     updateTabName,
     updateTabSaveStatus,
-    forceCloseTab,
     dispatch,
     handleCloseTabRequest,
+    updateTabNameFromRootElement,
   } = useTabManagement();
 
   // 編集終了のハンドラ
   const handleEndEditing = useCallback(() => {
     dispatch({ type: 'END_EDITING' });
-  }, [dispatch]);
+    updateTabNameFromRootElement();
+  }, [dispatch, updateTabNameFromRootElement]);
 
   // モーダル状態管理
   const [
     { isHelpOpen, isSettingsOpen, showCloseConfirm, tabToClose },
-    {
-      toggleHelp,
-      toggleSettings,
-      openCloseConfirm,
-      setShowCloseConfirm,
-      setTabToClose,
-      closeConfirmModal,
-    },
+    { toggleHelp, toggleSettings, setShowCloseConfirm, setTabToClose },
   ] = useModalState(handleEndEditing);
 
   const { addToast } = useToast();
@@ -93,28 +72,6 @@ const AppContent: React.FC = () => {
     updateTabSaveStatus,
   });
 
-  // タブ名を更新する機能
-  const updateTabNameFromRootElement = useCallback(() => {
-    if (!currentTab) return;
-
-    const elements = Object.values(currentTab.state.elements);
-    const rootElementText = extractRootElementTextFromElements(elements);
-
-    if (rootElementText) {
-      const newTabName = determineFileName(currentTab.name, rootElementText);
-      if (newTabName !== currentTab.name) {
-        updateTabName(currentTabId, newTabName);
-      }
-    }
-  }, [currentTab, currentTabId, updateTabName]);
-
-  // 要素が変更されたときにタブ名を更新
-  useEffect(() => {
-    if (currentTab) {
-      updateTabNameFromRootElement();
-    }
-  }, [currentTab?.state.elements, updateTabNameFromRootElement]);
-
   const memoizedCanvasProvider = useMemo(() => {
     if (!currentTab) return null;
     return (
@@ -128,9 +85,7 @@ const AppContent: React.FC = () => {
           switchTab={switchTab}
         />
         <QuickMenuBar
-          saveSvg={() =>
-            saveSvg(document.querySelector('.svg-element') as SVGSVGElement, 'download.svg')
-          }
+          saveSvg={handleSaveSvg}
           loadElements={handleLoadElements}
           saveElements={handleSaveElements}
           toggleHelp={toggleHelp}
@@ -165,6 +120,12 @@ const AppContent: React.FC = () => {
     isSettingsOpen,
     handleLoadElements,
     handleSaveElements,
+    addTab,
+    handleTabCloseRequest,
+    setShowCloseConfirm,
+    switchTab,
+    tabs,
+    handleSaveSvg,
   ]);
 
   return <div>{memoizedCanvasProvider}</div>;
