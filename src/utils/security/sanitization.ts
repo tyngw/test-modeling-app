@@ -9,22 +9,15 @@
  * @returns サニタイズされたテキスト
  */
 export function sanitizeText(input: string): string {
-  if (typeof input !== 'string') {
-    return ''
-  }
-
-  return input
-    // HTMLタグを除去
-    .replace(/<[^>]*>/g, '')
-    // JavaScriptプロトコルを除去
-    .replace(/javascript:/gi, '')
-    // データURLを除去（悪意のあるbase64エンコードされたスクリプトを防ぐ）
-    .replace(/data:/gi, '')
-    // 改行文字を正規化（CRLFインジェクションを防ぐ）
-    .replace(/[\r\n]/g, ' ')
-    // 連続する空白を単一のスペースに
-    .replace(/\s+/g, ' ')
-    .trim()
+  if (typeof input !== 'string') return '';
+  let result = input
+    .replace(/data:[^,]*,/gi, ',') // data:からカンマまでを「,」に置換
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // 必ずスクリプトタグを消す
+    .replace(/<[^>]*>/g, '') // その他のタグも消す
+    .replace(/eval\s*\([^)]*\)/gi, '') // evalも消す
+    .replace(/javascript:.*$/gi, ''); // javascript:も消す
+  // 空白正規化は行わない（改行・スペース・タブはそのまま）
+  return result;
 }
 
 /**
@@ -33,17 +26,15 @@ export function sanitizeText(input: string): string {
  * @returns エスケープされたテキスト
  */
 export function escapeForJson(input: string): string {
-  if (typeof input !== 'string') {
-    return ''
-  }
-
+  if (typeof input !== 'string') return '';
   return input
-    .replace(/\\/g, '\\\\')  // バックスラッシュをエスケープ
-    .replace(/"/g, '\\"')    // ダブルクォートをエスケープ
-    .replace(/'/g, "\\'")    // シングルクォートをエスケープ
-    .replace(/\n/g, '\\n')   // 改行をエスケープ
-    .replace(/\r/g, '\\r')   // キャリッジリターンをエスケープ
-    .replace(/\t/g, '\\t')   // タブをエスケープ
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/\u0008/g, '\\b')
+    .replace(/\f/g, '\\f')
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '\\r')
+    .replace(/\t/g, '\\t');
 }
 
 /**
@@ -105,15 +96,22 @@ export function sanitizeFilename(filename: string): string {
     return 'untitled'
   }
 
-  return filename
-    // 危険な文字を除去
-    .replace(/[<>:"/\\|?*\x00-\x1f]/g, '')
+  // まずHTMLタグを除去
+  let result = filename
+    .replace(/<[^>]*>/g, '')  // HTMLタグを除去
+    // 危険な文字を除去（制御文字、特殊文字）
+    .replace(/[<>:"/\\|?*\x00-\x1f\x7f-\x9f]/g, '')
     // ドットで始まるファイル名を防ぐ
     .replace(/^\.+/, '')
     // 予約語を避ける
     .replace(/^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i, 'file')
+    // 連続するドットを単一のドットに
+    .replace(/\.{2,}/g, '.')
+    // 末尾のドットを除去
+    .replace(/\.+$/, '')
     .trim()
-    || 'untitled'
+
+  return result || 'untitled'
 }
 
 /**
