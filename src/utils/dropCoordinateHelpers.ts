@@ -1,4 +1,4 @@
-import { Element as CanvasElement, DropPosition } from '../types/types';
+import { Element as CanvasElement, DropPosition, DirectionType } from '../types/types';
 import { OFFSET } from '../config/elementSettings';
 
 interface DropCoordinates {
@@ -31,9 +31,35 @@ export const calculateDropCoordinates = ({
 }: CalculateDropCoordinatesParams): DropCoordinates | null => {
   let x, y;
 
+  // 要素の方向を取得
+  const direction = currentDropTarget.direction || 'right';
+  const isRootInMindmap =
+    currentDropTarget.direction === 'none' && currentDropTarget.parentId === null;
+
+  // ドロップする方向を決定
+  // マインドマップのルート要素の場合は、ドロップする側によって子要素の方向が決まる
+  // このロジックはdropPositionとsiblingInfoから決定する必要がある
+  let childDirection: DirectionType = direction;
+
+  // siblingInfoがある場合、先行または後続要素から方向を推測
+  if (isRootInMindmap && dropPosition === 'child' && siblingInfo) {
+    if (siblingInfo.prevElement) {
+      childDirection = siblingInfo.prevElement.direction;
+    } else if (siblingInfo.nextElement) {
+      childDirection = siblingInfo.nextElement.direction;
+    }
+    // どちらもない場合はデフォルトでright
+  }
+
   if (dropPosition === 'child') {
     // 子要素として追加する場合
-    x = currentDropTarget.x + currentDropTarget.width + OFFSET.X;
+    if (direction === 'left' || (isRootInMindmap && childDirection === 'left')) {
+      // 左方向の場合
+      x = currentDropTarget.x - OFFSET.X - draggingElement.width;
+    } else {
+      // 右方向の場合
+      x = currentDropTarget.x + currentDropTarget.width + OFFSET.X;
+    }
 
     // Y座標の計算
     y = dropInsertY
@@ -44,8 +70,20 @@ export const calculateDropCoordinates = ({
     const parentElement = currentDropTarget.parentId ? elements[currentDropTarget.parentId] : null;
 
     if (parentElement) {
-      // 親要素がある場合は、親要素の右側に配置
-      x = parentElement.x + parentElement.width + OFFSET.X;
+      // 親要素がある場合は、親の方向に応じて配置
+      const parentDirection = parentElement.direction || 'right';
+      const isParentRoot = parentElement.direction === 'none';
+
+      // 子要素の方向を継承
+      childDirection = isParentRoot ? currentDropTarget.direction || 'right' : parentDirection;
+
+      if (childDirection === 'left') {
+        // 左方向の場合
+        x = parentElement.x - OFFSET.X - draggingElement.width;
+      } else {
+        // 右方向の場合
+        x = parentElement.x + parentElement.width + OFFSET.X;
+      }
 
       // siblingInfo情報に基づいてY座標を決定
       if (siblingInfo) {

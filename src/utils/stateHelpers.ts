@@ -1,6 +1,6 @@
 // src/utils/stateHelpers.ts
 import { v4 as uuidv4 } from 'uuid';
-import { Element } from '../types/types';
+import { Element, DirectionType } from '../types/types';
 import { createNewElement } from './element';
 import { adjustElementPositions } from './layoutHelpers';
 import { calculateElementWidth, wrapText } from './textareaHelpers';
@@ -32,11 +32,16 @@ export const createElementAdder = (
   text?: string,
   options?: ElementAdderOptions,
 ): ElementsMap => {
+  // 親要素の方向を継承するか、オプションで指定された方向を使用
+  const direction =
+    options?.direction || (parentElement.direction === 'none' ? 'right' : parentElement.direction);
+
   const newElement = createNewElement({
     parentId: parentElement.id,
     order: options?.order ?? parentElement.children,
     depth: parentElement.depth + 1,
     numSections: options?.numberOfSections,
+    direction,
   });
 
   if (text) {
@@ -89,12 +94,16 @@ export const createSiblingElementAdder = (
     }
   });
 
+  // 選択された要素の方向を継承
+  const direction = selectedElement.direction;
+
   // 新しい要素を作成
   const newElement = createNewElement({
     parentId: parentId,
     order: newOrder,
     depth: selectedElement.depth,
     numSections: numberOfSections,
+    direction,
   });
   updatedElements[selectedElement.id] = { ...selectedElement, selected: false };
   updatedElements[newElement.id] = newElement;
@@ -174,11 +183,17 @@ export const addElementsWithAdjustment = (
     tentative?: boolean;
     numberOfSections: number;
     zoomRatio: number;
+    layoutMode?: string;
+    direction?: DirectionType;
   },
 ) => {
   let newElements = { ...elements };
   const parent = { ...parentElement };
   const initialChildren = parent.children;
+
+  // 親要素の方向を継承するか、オプションで指定された方向を使用
+  const direction =
+    options?.direction || (parent.direction === 'none' ? 'right' : parent.direction);
 
   texts.forEach((text, index) => {
     newElements = createElementAdder(newElements, parent, text, {
@@ -186,6 +201,7 @@ export const addElementsWithAdjustment = (
       tentative: options.tentative ?? false,
       order: initialChildren + index,
       numberOfSections: options.numberOfSections,
+      direction,
     });
   });
 
@@ -216,7 +232,14 @@ export const addElementsWithAdjustment = (
     }
   });
 
-  return adjustElementPositions(newElements, () => options.numberOfSections);
+  // レイアウトモードとキャンバスサイズを渡す（デフォルト値は0のため、自動計算される）
+  return adjustElementPositions(
+    newElements,
+    () => options.numberOfSections,
+    options.layoutMode as any,
+    0,
+    0,
+  );
 };
 
 /**
@@ -327,9 +350,23 @@ export const withPositionAdjustment = (
   elementsUpdater: (elements: ElementsMap) => ElementsMap,
 ): any => {
   const updatedElements = elementsUpdater(state.elements);
+
+  // layoutModeが存在する場合は使用、存在しない場合はdefault
+  const layoutMode = state.layoutMode || 'default';
+
+  // キャンバスサイズを取得（存在する場合）
+  const canvasWidth = state.width || 0;
+  const canvasHeight = state.height || 0;
+
   return {
     ...state,
-    elements: adjustElementPositions(updatedElements, () => state.numberOfSections),
+    elements: adjustElementPositions(
+      updatedElements,
+      () => state.numberOfSections,
+      layoutMode,
+      canvasWidth,
+      canvasHeight,
+    ),
   };
 };
 
@@ -380,9 +417,22 @@ export const createSelectedElementHandler = (
     const updatedElements = batchUpdateElements(state.elements, updatesMap);
 
     if (adjustPosition) {
+      // layoutModeが存在する場合は使用、存在しない場合はdefault
+      const layoutMode = state.layoutMode || 'default';
+
+      // キャンバスサイズを取得（存在する場合）
+      const canvasWidth = state.width || 0;
+      const canvasHeight = state.height || 0;
+
       return {
         ...state,
-        elements: adjustElementPositions(updatedElements, () => state.numberOfSections),
+        elements: adjustElementPositions(
+          updatedElements,
+          () => state.numberOfSections,
+          layoutMode,
+          canvasWidth,
+          canvasHeight,
+        ),
       };
     } else {
       return {

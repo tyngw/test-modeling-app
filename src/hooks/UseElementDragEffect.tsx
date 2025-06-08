@@ -15,14 +15,15 @@
  * - ドラッグ中の位置プレビューとハイライト効果
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { Element, DropPosition } from '../types/types';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Element, DropPosition, DirectionType } from '../types/types';
 import { useCanvas } from '../context/CanvasContext';
 import { isDescendant } from '../utils/element/elementHelpers';
 import { ToastMessages } from '../constants/toastMessages';
-import { HEADER_HEIGHT, OFFSET, SIZE, CURVE_CONTROL_OFFSET } from '../config/elementSettings';
+import { HEADER_HEIGHT, OFFSET } from '../config/elementSettings';
 import { useToast } from '../context/ToastContext';
 import { debugLog } from '../utils/debugLogHelpers';
+import { ElementsMap } from '../types/elementTypes';
 
 const isTouchEvent = (event: MouseEvent | TouchEvent): event is TouchEvent => {
   return 'touches' in event;
@@ -32,9 +33,6 @@ interface State {
   zoomRatio: number;
   elements: { [key: string]: Element };
 }
-
-// ElementsMap型の定義を追加
-type ElementsMap = { [key: string]: Element };
 
 type Position = { x: number; y: number };
 export type DropTargetInfo = {
@@ -55,22 +53,6 @@ const getChildren = (element: Element, elements: ElementsMap): Element[] => {
 };
 
 // X座標が要素の範囲内かどうかを判定
-const isXInElementRange = (
-  element: Element,
-  mouseX: number,
-  draggingElementWidth: number,
-): boolean => {
-  // ドラッグ中の要素の幅を使用して右側のドロップ可能領域を計算
-  const rightSidePadding = OFFSET.X + draggingElementWidth;
-  const rightSideCoordinate = element.x + element.width;
-
-  return (
-    // 要素上のドロップ
-    (mouseX > element.x && mouseX < rightSideCoordinate) ||
-    // 要素の右側領域でのドロップ（一律の判定幅を使用）
-    (mouseX >= rightSideCoordinate && mouseX < rightSideCoordinate + rightSidePadding)
-  );
-};
 
 // フックの戻り値の型を定義
 export interface ElementDragEffectResult {
@@ -125,9 +107,27 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
       const elemTop = element.y;
       const children = getChildren(element, elements);
 
-      // childモードでもbetweenモードと同じx座標を使用する
-      // 要素の右側に配置するようにする
-      const insertX = element.x + element.width + OFFSET.X;
+      // 要素の方向（ルート要素は特別扱い）
+      const direction = element.direction || 'right';
+      const isRootInMindmap = element.direction === 'none' && element.parentId === null;
+
+      // マウス位置から子要素の方向を決定（ルート要素の場合）
+      let childDirection: DirectionType = direction;
+      if (isRootInMindmap) {
+        // マウスがルート要素中心より左にある場合は左方向、右にある場合は右方向
+        // （ただし、ここではマウス位置は使わないので、関数の呼び出し元でセットする必要がある）
+        childDirection = 'right'; // デフォルト値
+      }
+
+      // 方向に応じてX座標を計算
+      let insertX;
+      if (direction === 'left' || (isRootInMindmap && childDirection === 'left')) {
+        // 左方向の場合
+        insertX = element.x - OFFSET.X;
+      } else {
+        // 右方向の場合
+        insertX = element.x + element.width + OFFSET.X;
+      }
 
       // 子要素が存在しない場合は、要素の中央に配置
       if (children.length === 0) {
@@ -164,18 +164,34 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
     } => {
       const elemTop = element.y;
       const elemBottom = element.y + element.height;
+      const elemLeft = element.x;
       const elemRight = element.x + element.width;
       const rightSidePadding = OFFSET.X + (draggingElement?.width ?? 0);
+      const leftSidePadding = OFFSET.X + (draggingElement?.width ?? 0);
 
-      // 要素の右側かどうかを判定
+      // 要素の方向を取得
+      const direction = element.direction || 'right';
+
+      // マインドマップのルート要素（direction: none）の場合は特別扱い
+      const isRootInMindmap = element.direction === 'none' && element.parentId === null;
+
+      // 要素の右側/左側にあるかどうかを判定
       const isOnRightSide = mouseX >= elemRight && mouseX < elemRight + rightSidePadding;
+      const isOnLeftSide = mouseX <= elemLeft && mouseX > elemLeft - leftSidePadding;
 
       // 要素の内側にあるかどうかを判定
       const isInsideElement =
         mouseX >= element.x && mouseX < elemRight && mouseY >= elemTop && mouseY <= elemBottom;
 
-      // 要素の右側かつY座標が要素の範囲内かどうかを判定
+      // 要素の右側/左側かつY座標が要素の範囲内かどうかを判定
       const isOnRightSideInYRange = isOnRightSide && mouseY >= elemTop && mouseY <= elemBottom;
+      const isOnLeftSideInYRange = isOnLeftSide && mouseY >= elemTop && mouseY <= elemBottom;
+
+      // ルート要素の場合、左右どちらにもドロップ可能
+      const isOnValidSide =
+        (isRootInMindmap && (isOnRightSideInYRange || isOnLeftSideInYRange)) ||
+        (direction === 'right' && isOnRightSideInYRange) ||
+        (direction === 'left' && isOnLeftSideInYRange);
 
       let result: {
         position: DropPosition;
@@ -187,45 +203,60 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
       if (isInsideElement) {
         result = calculateChildPosition(element, mouseY, elements);
         debugLog('Drop position mode (inside element):', 'child');
-      } else if (isOnRightSideInYRange) {
-        // 要素の右側かつY座標範囲内の場合 (between mode)
+      } else if (isOnValidSide) {
+        // 要素の適切な側（方向に応じた）かつY座標範囲内の場合 (between mode)
         const children = getChildren(element, elements);
+
+        // ルート要素（direction: none）の場合、ドロップ位置に応じて子要素の方向を決定
+        let childDirection: DirectionType = direction;
+        if (isRootInMindmap) {
+          childDirection = isOnLeftSideInYRange ? 'left' : 'right';
+        }
 
         if (children.length === 0) {
           // 子要素がない場合は、要素の子として追加 (childモード同様の挙動)
-          // 位置は子要素モードと同じく、要素の右側に表示
-          const insertX = element.x + element.width + OFFSET.X;
+          // 位置は子要素モードと同じく、要素の側に表示
           result = {
             position: 'child', // betweenからchildに変更: 子要素として追加するため
             insertY: element.y + element.height / 2,
             siblingInfo: {}, // siblingInfoは保持
           };
-          debugLog('Drop position mode (right side, no children):', 'child');
+          debugLog(`Drop position mode (${childDirection} side, no children):`, 'child');
         } else {
           // 子要素がある場合は、子要素の間に挿入
           let prevElement: Element | undefined;
           let nextElement: Element | undefined;
 
+          // 同じ方向の子要素のみをフィルタリング（ルート要素の場合）
+          const directionFilteredChildren = isRootInMindmap
+            ? children.filter((child) => child.direction === childDirection)
+            : children;
+
           // マウス位置に最も近い子要素を見つける
-          for (let i = 0; i < children.length; i++) {
-            const child = children[i];
+          for (let i = 0; i < directionFilteredChildren.length; i++) {
+            const child = directionFilteredChildren[i];
             if (mouseY < child.y) {
               nextElement = child;
-              if (i > 0) prevElement = children[i - 1];
+              if (i > 0) prevElement = directionFilteredChildren[i - 1];
               break;
             } else if (mouseY < child.y + child.height) {
               const midpoint = child.y + child.height / 2;
               if (mouseY < midpoint) {
                 nextElement = child;
-                if (i > 0) prevElement = children[i - 1];
+                if (i > 0) prevElement = directionFilteredChildren[i - 1];
               } else {
                 prevElement = child;
-                if (i < children.length - 1) nextElement = children[i + 1];
+                if (i < directionFilteredChildren.length - 1)
+                  nextElement = directionFilteredChildren[i + 1];
               }
               break;
-            } else if (i === children.length - 1 || mouseY < children[i + 1].y) {
+            } else if (
+              i === directionFilteredChildren.length - 1 ||
+              mouseY < directionFilteredChildren[i + 1].y
+            ) {
               prevElement = child;
-              if (i < children.length - 1) nextElement = children[i + 1];
+              if (i < directionFilteredChildren.length - 1)
+                nextElement = directionFilteredChildren[i + 1];
               break;
             }
           }
@@ -261,7 +292,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
             };
           }
 
-          debugLog('Drop position mode (right side, with children):', 'between');
+          debugLog(`Drop position mode (${childDirection} side, with children):`, 'between');
         }
       } else {
         // 同じ親を持つ要素（兄弟要素）を取得
@@ -417,7 +448,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
         }
 
         // 各グループ内で要素間の空間を検出
-        for (const [parentId, groupElements] of Object.entries(elementsByParent)) {
+        for (const [, groupElements] of Object.entries(elementsByParent)) {
           if (groupElements.length < 2) continue; // 少なくとも2つの要素が必要
 
           // 順序付けされたグループ内の要素間を検出
@@ -466,7 +497,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
         }
 
         // グループの最後の要素の下部領域の検出
-        for (const [parentId, groupElements] of Object.entries(elementsByParent)) {
+        for (const [parentKey, groupElements] of Object.entries(elementsByParent)) {
           if (groupElements.length === 0) continue;
 
           // グループ内で最も下にある要素を探す
@@ -475,7 +506,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
           }, groupElements[0]);
 
           // マウスがこのグループの水平範囲内で、最後の要素よりも下にあるかチェック
-          const parentElement = parentId !== 'root' ? elements[parentId] : null;
+          const parentElement = parentKey !== 'root' ? elements[parentKey] : null;
           let groupLeft, groupRight;
 
           if (parentElement) {
@@ -839,7 +870,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
 
   // 同じ親内での要素移動時にorder値を調整する関数
   const moveElementsWithinSameParent = useCallback(
-    (draggedElements: Element[], targetBaseOrder: number, parentId: string | null) => {
+    (draggedElements: Element[], targetBaseOrder: number, elementParentId: string | null) => {
       if (draggedElements.length === 0) return;
 
       // ドラッグしている要素のorder値
@@ -852,7 +883,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
         // 移動元と移動先の間にある要素のorderを減らす
         const affectedElements = Object.values(state.elements).filter(
           (el) =>
-            el.parentId === parentId &&
+            el.parentId === elementParentId &&
             el.order > maxDraggedOrder &&
             el.order < targetBaseOrder + draggedElements.length &&
             !draggedElements.some((dragged) => dragged.id === el.id),
@@ -873,7 +904,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
         // 移動先と移動元の間にある要素のorderを増やす
         const affectedElements = Object.values(state.elements).filter(
           (el) =>
-            el.parentId === parentId &&
+            el.parentId === elementParentId &&
             el.order >= targetBaseOrder &&
             el.order < minDraggedOrder &&
             !draggedElements.some((dragged) => dragged.id === el.id),
@@ -896,10 +927,10 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
 
   // 新しい要素追加時にorder値を調整する関数
   const adjustOrdersForNewElements = useCallback(
-    (baseOrder: number, count: number, parentId: string | null) => {
+    (baseOrder: number, count: number, elementParentId: string | null) => {
       // baseOrder以上のorderを持つ既存要素のorderを調整
       const affectedElements = Object.values(state.elements).filter(
-        (el) => el.parentId === parentId && el.order >= baseOrder,
+        (el) => el.parentId === elementParentId && el.order >= baseOrder,
       );
 
       affectedElements.forEach((element) => {
@@ -952,7 +983,8 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
         resetElementsPosition();
       }
     } catch (error) {
-      console.error('Drag error:', error);
+      // エラーが発生した場合はログを記録
+      debugLog('Drag error:', error);
       addToast(ToastMessages.dragError, 'warn');
       resetElementsPosition();
     } finally {

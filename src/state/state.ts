@@ -39,6 +39,7 @@ import {
   createSelectedElementHandler,
   createSimplePropertyHandler,
 } from '../utils/stateHelpers';
+import { LayoutMode } from '../types/tabTypes';
 
 /**
  * アプリケーションの状態を表す型
@@ -54,6 +55,8 @@ export interface State {
   zoomRatio: number;
   /** セクション数 */
   numberOfSections: number;
+  /** レイアウトモード */
+  layoutMode?: LayoutMode;
 }
 
 export const initialState: State = {
@@ -364,8 +367,16 @@ const actionHandlers: Record<string, ActionHandler> = {
     handleElementMutation(state, (elements, selectedElement) => {
       const numberOfSections = state.numberOfSections;
       const newElements = createSiblingElementAdder(elements, selectedElement, numberOfSections);
+
+      // layoutModeとキャンバスサイズを渡す
       return {
-        elements: adjustElementPositions(newElements, () => state.numberOfSections),
+        elements: adjustElementPositions(
+          newElements,
+          () => state.numberOfSections,
+          (state.layoutMode || 'default') as LayoutMode,
+          state.width || 0,
+          state.height || 0,
+        ),
       };
     }),
 
@@ -595,7 +606,13 @@ const actionHandlers: Record<string, ActionHandler> = {
     return handleElementMutation(state, (elements, selectedElement) => {
       const pastedElements = pasteElements(elements, globalCutElements, selectedElement);
       return {
-        elements: adjustElementPositions(pastedElements, () => state.numberOfSections),
+        elements: adjustElementPositions(
+          pastedElements,
+          () => state.numberOfSections,
+          (state.layoutMode || 'default') as LayoutMode,
+          state.width || 0,
+          state.height || 0,
+        ),
       };
     });
   },
@@ -605,6 +622,9 @@ const actionHandlers: Record<string, ActionHandler> = {
       elements: adjustElementPositions(
         setVisibilityRecursive(elements, selectedElement, true),
         () => state.numberOfSections,
+        (state.layoutMode || 'default') as LayoutMode,
+        state.width || 0,
+        state.height || 0,
       ),
     })),
 
@@ -613,6 +633,9 @@ const actionHandlers: Record<string, ActionHandler> = {
       elements: adjustElementPositions(
         setVisibilityRecursive(elements, selectedElement, false),
         () => state.numberOfSections,
+        (state.layoutMode || 'default') as LayoutMode,
+        state.width || 0,
+        state.height || 0,
       ),
     })),
 };
