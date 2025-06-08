@@ -1,5 +1,5 @@
 import React from 'react';
-import { Element as CanvasElement } from '../../types/types';
+import { Element as CanvasElement, DirectionType } from '../../types/types';
 import {
   CONNECTION_PATH_STYLE,
   CURVE_CONTROL_OFFSET,
@@ -70,12 +70,46 @@ export const ConnectionPath: React.FC<ConnectionPathProps> = ({
   const elementPos = absolutePositions.element;
   const totalHeight = element.height;
 
-  const pathCommands = [
-    `M ${parentPos.x + parentElement.width + startOffset},${parentPos.y + parentElement.height / 2}`,
-    `C ${parentPos.x + parentElement.width + CURVE_CONTROL_OFFSET},${parentPos.y + parentElement.height / 2}`,
-    `${elementPos.x - CURVE_CONTROL_OFFSET},${elementPos.y + totalHeight / 2}`,
-    `${elementPos.x - endOffset},${elementPos.y + totalHeight / 2}`,
-  ].join(' ');
+  // 要素の方向に応じてパスを計算
+  const direction = element.direction || 'right';
+
+  let pathCommands = '';
+
+  // マインドマップモードでルート要素（direction: none）の場合の特別処理
+  if (parentElement.direction === 'none') {
+    // 子要素の方向に応じて接続パスを計算
+    if (direction === 'left') {
+      pathCommands = [
+        `M ${parentPos.x},${parentPos.y + parentElement.height / 2}`,
+        `C ${parentPos.x - CURVE_CONTROL_OFFSET},${parentPos.y + parentElement.height / 2}`,
+        `${elementPos.x + element.width + CURVE_CONTROL_OFFSET},${elementPos.y + totalHeight / 2}`,
+        `${elementPos.x + element.width + endOffset},${elementPos.y + totalHeight / 2}`,
+      ].join(' ');
+    } else {
+      pathCommands = [
+        `M ${parentPos.x + parentElement.width},${parentPos.y + parentElement.height / 2}`,
+        `C ${parentPos.x + parentElement.width + CURVE_CONTROL_OFFSET},${parentPos.y + parentElement.height / 2}`,
+        `${elementPos.x - CURVE_CONTROL_OFFSET},${elementPos.y + totalHeight / 2}`,
+        `${elementPos.x - endOffset},${elementPos.y + totalHeight / 2}`,
+      ].join(' ');
+    }
+  } else if (direction === 'left') {
+    // 左方向の場合
+    pathCommands = [
+      `M ${parentPos.x},${parentPos.y + parentElement.height / 2}`,
+      `C ${parentPos.x - CURVE_CONTROL_OFFSET},${parentPos.y + parentElement.height / 2}`,
+      `${elementPos.x + element.width + CURVE_CONTROL_OFFSET},${elementPos.y + totalHeight / 2}`,
+      `${elementPos.x + element.width + endOffset},${elementPos.y + totalHeight / 2}`,
+    ].join(' ');
+  } else {
+    // 右方向の場合（デフォルト）
+    pathCommands = [
+      `M ${parentPos.x + parentElement.width + startOffset},${parentPos.y + parentElement.height / 2}`,
+      `C ${parentPos.x + parentElement.width + CURVE_CONTROL_OFFSET},${parentPos.y + parentElement.height / 2}`,
+      `${elementPos.x - CURVE_CONTROL_OFFSET},${elementPos.y + totalHeight / 2}`,
+      `${elementPos.x - endOffset},${elementPos.y + totalHeight / 2}`,
+    ].join(' ');
+  }
 
   const markerStart = getMarkerUrlByType(parentElement.startMarker);
   const markerEnd = getMarkerUrlByType(element.endMarker, true);

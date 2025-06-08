@@ -1,5 +1,5 @@
 // src/types/elementTypes.ts
-import { Element, MarkerType, ConnectionPathType, DropPosition } from './types';
+import { Element, MarkerType, ConnectionPathType, DropPosition, DirectionType } from './types';
 
 /**
  * 要素のマップ型（ID をキーとする要素のコレクション）
@@ -34,6 +34,8 @@ export interface NewElementOptions {
   connectionPathType?: ConnectionPathType;
   /** 終端接続パス種類（後方互換用） */
   endConnectionPathType?: ConnectionPathType;
+  /** 要素の方向 */
+  direction?: DirectionType;
 }
 
 /**
@@ -48,6 +50,8 @@ export interface ElementAdderOptions {
   tentative?: boolean;
   /** 要素の順序 */
   order?: number;
+  /** 要素の方向 */
+  direction?: DirectionType;
 }
 
 /**
