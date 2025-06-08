@@ -5,12 +5,16 @@ import { Button } from '@mui/material';
 import { getCurrentTheme } from '../utils/style/colorHelpers';
 import { getCanvasBackgroundColor } from '../utils/storage/localStorageHelpers';
 import ConfirmIcon from './icons/ConfirmIcon';
+import { Action } from '../types/actionTypes';
 
 interface UnsaveConfirmModalProps {
   showCloseConfirm: boolean;
   setShowCloseConfirm: (value: boolean) => void;
   tabToClose: string | null;
   closeTab: (id: string) => void;
+  dispatch: React.Dispatch<Action>;
+  modalId?: string;
+  onOpen?: () => void;
 }
 
 const UnsaveConfirmModal: React.FC<UnsaveConfirmModalProps> = ({
@@ -18,6 +22,9 @@ const UnsaveConfirmModal: React.FC<UnsaveConfirmModalProps> = ({
   setShowCloseConfirm,
   tabToClose,
   closeTab,
+  dispatch,
+  modalId,
+  onOpen,
 }) => {
   if (!showCloseConfirm) return null;
 
@@ -30,6 +37,9 @@ const UnsaveConfirmModal: React.FC<UnsaveConfirmModalProps> = ({
       closeOnOverlayClick={false}
       title="確認"
       icon={<ConfirmIcon />}
+      dispatch={dispatch}
+      modalId={modalId}
+      onOpen={onOpen}
     >
       <div
         style={{

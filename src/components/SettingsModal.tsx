@@ -46,13 +46,17 @@ import { getCurrentTheme, isDarkMode } from '../utils/style/colorHelpers';
 import { useIsMounted } from '../hooks/UseIsMounted';
 import { sanitizeText, sanitizeFilename } from '../utils/security/sanitization';
 import { validateJsonData, validateFileContent } from '../utils/security/validation';
+import { Action } from '../types/actionTypes';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  dispatch: React.Dispatch<Action>;
+  modalId?: string;
+  onOpen?: () => void;
 }
 
-const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
+const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, dispatch, modalId, onOpen }) => {
   const isMounted = useIsMounted();
   const [activeTab, setActiveTab] = useState(0);
   const [values, setValues] = useState<Record<string, string | number>>({});
@@ -345,6 +349,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
       closeOnOverlayClick={false}
       title="Preference"
       icon={<SettingsIcon />}
+      dispatch={dispatch}
+      modalId={modalId}
+      onOpen={onOpen}
     >
       <ThemeProvider theme={theme}>
         <Box

@@ -1,7 +1,7 @@
 // src/AppContent.tsx
 'use client';
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useEffect, useRef } from 'react';
 import { CanvasArea } from './canvas';
 import QuickMenuBar from './menus/QuickMenuBar';
 import TabHeaders from './tabHeaders/TabHeaders';
@@ -16,6 +16,14 @@ import { useTabManagement } from '../hooks/useTabManagement';
 import { useModalState } from '../hooks/useModalState';
 
 const AppContent: React.FC = () => {
+  const renderCount = useRef(0);
+
+  // レンダリングの追跡
+  useEffect(() => {
+    renderCount.current += 1;
+    console.log(`[DEBUG] AppContent rendered #${renderCount.current}`);
+  });
+
   // タブ管理に関する機能
   const {
     tabs,
@@ -92,16 +100,6 @@ const AppContent: React.FC = () => {
           toggleSettings={toggleSettings}
           onAIClick={handleAIClick}
         />
-
-        <UnsaveConfirmModal
-          showCloseConfirm={showCloseConfirm}
-          setShowCloseConfirm={setShowCloseConfirm}
-          tabToClose={tabToClose}
-          closeTab={closeTab}
-        />
-
-        <SettingsModal isOpen={isSettingsOpen} onClose={toggleSettings} />
-        <HelpModal isOpen={isHelpOpen} onClose={toggleHelp} />
       </CanvasProvider>
     );
   }, [
@@ -114,21 +112,46 @@ const AppContent: React.FC = () => {
     toggleSettings,
     addToast,
     handleAIClick,
-    showCloseConfirm,
-    tabToClose,
-    closeTab,
-    isSettingsOpen,
     handleLoadElements,
     handleSaveElements,
     addTab,
     handleTabCloseRequest,
-    setShowCloseConfirm,
     switchTab,
     tabs,
     handleSaveSvg,
   ]);
 
-  return <div>{memoizedCanvasProvider}</div>;
+  return (
+    <div>
+      {memoizedCanvasProvider}
+      
+      <UnsaveConfirmModal
+        showCloseConfirm={showCloseConfirm}
+        setShowCloseConfirm={setShowCloseConfirm}
+        tabToClose={tabToClose}
+        closeTab={closeTab}
+        dispatch={dispatch}
+        modalId="confirm-modal"
+        onOpen={() => dispatch({ type: 'END_EDITING' })}
+      />
+
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={toggleSettings}
+        dispatch={dispatch}
+        modalId="settings-modal"
+        onOpen={() => dispatch({ type: 'END_EDITING' })}
+      />
+      
+      <HelpModal
+        isOpen={isHelpOpen}
+        onClose={toggleHelp}
+        dispatch={dispatch}
+        modalId="help-modal"
+        onOpen={() => dispatch({ type: 'END_EDITING' })}
+      />
+    </div>
+  );
 };
 
 export default AppContent;
