@@ -56,7 +56,13 @@ interface SettingsModalProps {
   onOpen?: () => void;
 }
 
-const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, dispatch, modalId, onOpen }) => {
+const SettingsModal: React.FC<SettingsModalProps> = ({
+  isOpen,
+  onClose,
+  dispatch,
+  modalId,
+  onOpen,
+}) => {
   const isMounted = useIsMounted();
   const [activeTab, setActiveTab] = useState(0);
   const [values, setValues] = useState<Record<string, string | number>>({});
@@ -68,7 +74,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, dispatch
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Get the tabs context for updating tab-specific state
-  const { getCurrentTabNumberOfSections, updateCurrentTabNumberOfSections } = useTabs();
+  const {
+    getCurrentTabNumberOfSections,
+    updateCurrentTabNumberOfSections,
+    getCurrentTabLayoutMode,
+    updateCurrentTabLayoutMode,
+  } = useTabs();
 
   // Set the theme mode based on canvas background color
   useEffect(() => {
@@ -96,8 +107,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, dispatch
         loadedValues['modelType'] = getModelType();
         loadedValues['prompt'] = getPrompt();
 
-        // Get numberOfSections from the current tab instead of global settings
+        // Get numberOfSections and layoutMode from the current tab
         loadedValues['numberOfSections'] = getCurrentTabNumberOfSections();
+        loadedValues['layoutMode'] = getCurrentTabLayoutMode();
 
         loadedValues['elementColor'] = getElementColor();
         loadedValues['strokeColor'] = getStrokeColor();
@@ -112,10 +124,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, dispatch
 
         setValues(loadedValues);
       } catch (error) {
-        console.error('Failed to load settings:', error);
+        // console.error('Failed to load settings:', error);
       }
     })();
-  }, [isMounted, isOpen, getCurrentTabNumberOfSections]);
+  }, [isMounted, isOpen, getCurrentTabNumberOfSections, getCurrentTabLayoutMode]);
 
   // 設定が読み込まれる前はレンダリングしない
   if (!isMounted) {
@@ -222,6 +234,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, dispatch
       updateCurrentTabNumberOfSections(numValue);
     }
 
+    // Update current tab state for layoutMode
+    const layoutMode = values['layoutMode'];
+    if (layoutMode !== undefined) {
+      updateCurrentTabLayoutMode(layoutMode as 'default' | 'mindmap');
+    }
+
     const elementColor = values['elementColor'];
     if (elementColor !== undefined) setElementColor(String(elementColor));
 
@@ -292,7 +310,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, dispatch
     reader.onload = (e) => {
       try {
         const content = e.target?.result as string;
-        
+
         // ファイル内容のセキュリティ検証
         if (!validateFileContent(content)) {
           alert('File content contains potentially dangerous data. Import cancelled.');
@@ -332,7 +350,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, dispatch
           event.target.value = '';
         }
       } catch (error) {
-        console.error('Failed to parse imported settings:', error);
+        // console.error('Failed to parse imported settings:', error);
         alert('Failed to parse imported settings. Please check the file format.');
         // Reset file input on error
         if (event.target) event.target.value = '';

@@ -21,7 +21,7 @@ const AppContent: React.FC = () => {
   // レンダリングの追跡
   useEffect(() => {
     renderCount.current += 1;
-    console.log(`[DEBUG] AppContent rendered #${renderCount.current}`);
+    // console.log(`[DEBUG] AppContent rendered #${renderCount.current}`);
   });
 
   // タブ管理に関する機能
@@ -124,7 +124,7 @@ const AppContent: React.FC = () => {
   return (
     <div>
       {memoizedCanvasProvider}
-      
+
       <UnsaveConfirmModal
         showCloseConfirm={showCloseConfirm}
         setShowCloseConfirm={setShowCloseConfirm}
@@ -142,7 +142,7 @@ const AppContent: React.FC = () => {
         modalId="settings-modal"
         onOpen={() => dispatch({ type: 'END_EDITING' })}
       />
-      
+
       <HelpModal
         isOpen={isHelpOpen}
         onClose={toggleHelp}

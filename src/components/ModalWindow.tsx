@@ -41,37 +41,37 @@ const ModalWindow: React.FC<ModalWindowProps> = ({
   // レンダリングの追跡
   useEffect(() => {
     renderCount.current += 1;
-    console.log(`[DEBUG] ModalWindow(${modalId}) rendered #${renderCount.current}, isOpen=${isOpen}`);
+    // console.log(`[DEBUG] ModalWindow(${modalId}) rendered #${renderCount.current}, isOpen=${isOpen}`);
   });
 
   useEffect(() => {
     if (!isMounted) return;
     const backgroundColor = getCanvasBackgroundColor();
     setCurrentTheme(getCurrentTheme(backgroundColor));
-    console.log(`[DEBUG] ModalWindow(${modalId}) theme updated`);
+    // console.log(`[DEBUG] ModalWindow(${modalId}) theme updated`);
   }, [isMounted, modalId]);
 
   // モーダルが開かれたときに一度だけonOpenを呼び出す
   useEffect(() => {
     // isOpenがfalseからtrueに変わった時のみ実行
     if (isOpen && !wasOpenRef.current) {
-      console.log(`[DEBUG] ModalWindow(${modalId}) first opened`);
+      // console.log(`[DEBUG] ModalWindow(${modalId}) first opened`);
       if (onOpen) {
         onOpen();
       }
     }
-    
+
     // 現在のisOpenの状態を保存
     wasOpenRef.current = isOpen;
-    
+
     if (isOpen) {
-      console.log(`[DEBUG] ModalWindow(${modalId}) opened (animation)`);
+      // console.log(`[DEBUG] ModalWindow(${modalId}) opened (animation)`);
       setIsAnimating(true);
     }
-    
+
     return () => {
       if (isOpen) {
-        console.log(`[DEBUG] ModalWindow(${modalId}) cleanup while open`);
+        // console.log(`[DEBUG] ModalWindow(${modalId}) cleanup while open`);
       }
     };
   }, [isOpen, modalId, onOpen]);

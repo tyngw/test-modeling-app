@@ -150,10 +150,6 @@ export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           // 最後に保存された要素の状態と比較して、変更があるかどうかを判断
           const hasChanges = tab.lastSavedElements !== currentElementsJson;
 
-          console.log('updateTabState: タブID', tabId);
-          console.log('updateTabState: 要素に変更があるか', hasChanges);
-          console.log('updateTabState: 保存済みフラグを設定', !hasChanges);
-
           return {
             ...tab,
             state: updatedState,
@@ -180,17 +176,9 @@ export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const updateTabSaveStatus = useCallback(
     (tabId: string, isSaved: boolean, lastSavedElements?: string) => {
-      console.log('updateTabSaveStatus: タブID', tabId);
-      console.log('updateTabSaveStatus: 保存済みフラグ', isSaved);
-      console.log(
-        'updateTabSaveStatus: 最後に保存された要素の状態',
-        lastSavedElements ? lastSavedElements.substring(0, 50) + '...' : 'なし',
-      );
-
       setTabsState((prev) => {
         const updatedTabs = prev.tabs.map((tab) => {
           if (tab.id === tabId) {
-            console.log('updateTabSaveStatus: タブを更新', tab.id);
             return {
               ...tab,
               isSaved,
