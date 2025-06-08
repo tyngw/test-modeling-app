@@ -26,6 +26,11 @@ export type MarkerConfig = {
 export type MarkerConfigMap = Record<string, MarkerConfig>;
 
 /**
+ * 要素の方向タイプ
+ */
+export type DirectionType = 'right' | 'left' | 'none';
+
+/**
  * モデリング要素のインターフェース
  */
 export interface Element {
@@ -67,6 +72,8 @@ export interface Element {
   connectionPathType?: ConnectionPathType;
   /** 終端接続パスタイプ (後方互換性のために追加) */
   endConnectionPathType?: ConnectionPathType;
+  /** 要素の方向 (右、左、なし) */
+  direction: DirectionType;
 }
 
 export interface CanvasState {
