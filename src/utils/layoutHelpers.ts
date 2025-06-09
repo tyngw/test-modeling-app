@@ -17,12 +17,22 @@ const layoutNode = (
 
   // X座標の計算
   if (node.parentId === null) {
-    node.x = DEFAULT_POSITION.X;
+    // ルート要素の場合は既に配置済み
+    debugLog(`Root element: ${node.id}`);
   } else {
     const parent = elements[node.parentId];
 
     // 親の方向に基づいて子要素の方向を継承
-    if (node.direction !== parent.direction && parent.direction !== 'none') {
+    if (parent.direction === 'none') {
+      // マインドマップモード：親がルート要素の場合
+      // 明示的な方向指定がない場合は右側に配置
+      if (!node.direction || node.direction === 'none') {
+        node.direction = 'right';
+      }
+      // 明示的に方向が指定されている場合はその方向を維持
+      debugLog(`Mindmap mode: direction=${node.direction} (explicit or default right)`);
+    } else if (node.direction !== parent.direction) {
+      // 通常モード：親の方向を継承
       node.direction = parent.direction;
     }
 
@@ -75,8 +85,8 @@ export const adjustElementPositions = (
   elements: ElementsMap,
   getNumberOfSections: () => number,
   layoutMode: LayoutMode = 'default',
-  canvasWidth: number = 0,
-  canvasHeight: number = 0,
+  canvasWidth = 0,
+  canvasHeight = 0,
 ): ElementsMap => {
   debugLog(
     `adjustElementPositions開始: 要素数=${Object.keys(elements).length}, モード=${layoutMode}`,
@@ -98,7 +108,8 @@ export const adjustElementPositions = (
     const centerY =
       canvasHeight > 0 ? canvasHeight / 2 - rootElement.height / 2 : DEFAULT_POSITION.Y;
 
-    rootElement.x = centerX;
+    // マインドマップモードでは、ルート要素を右にオフセット
+    rootElement.x = centerX + OFFSET.X;
     rootElement.y = centerY;
 
     // 子要素をレイアウト
