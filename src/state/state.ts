@@ -149,7 +149,7 @@ function handleSelectedElementAction(
  * アクションハンドラーの型定義
  * 各アクションタイプに対応する状態更新関数のマップ
  */
-type ActionHandler = (state: State, action?: any) => State;
+type ActionHandler = (state: State, action?: { type: string; payload?: unknown }) => State;
 
 /**
  * すべてのアクションハンドラーのマップ
@@ -280,7 +280,7 @@ const actionHandlers: Record<string, ActionHandler> = {
     };
   },
 
-  EDIT_ELEMENT: createSelectedElementHandler((element) => ({ editing: true }), false),
+  EDIT_ELEMENT: createSelectedElementHandler((_element) => ({ editing: true }), false),
 
   END_EDITING: (state) =>
     withPositionAdjustment(state, () =>
@@ -344,7 +344,13 @@ const actionHandlers: Record<string, ActionHandler> = {
         numberOfSections,
       });
       return {
-        elements: adjustElementPositions(newElements, () => state.numberOfSections),
+        elements: adjustElementPositions(
+          newElements,
+          () => state.numberOfSections,
+          state.layoutMode,
+          state.width || 0,
+          state.height || 0,
+        ),
       };
     }),
 
@@ -355,11 +361,20 @@ const actionHandlers: Record<string, ActionHandler> = {
       const numberOfSections = state.numberOfSections;
 
       return {
-        elements: addElementsWithAdjustment(elements, selectedElement, texts, {
-          tentative,
-          numberOfSections,
-          zoomRatio: state.zoomRatio,
-        }),
+        elements: addElementsWithAdjustment(
+          elements,
+          selectedElement,
+          texts,
+          {
+            tentative,
+            numberOfSections,
+            zoomRatio: state.zoomRatio,
+            layoutMode: state.layoutMode,
+            // directionは既存通り
+          },
+          state.width || 0,
+          state.height || 0,
+        ),
       };
     }),
 
