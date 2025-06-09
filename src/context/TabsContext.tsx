@@ -23,6 +23,7 @@ const TabsContext = createContext<TabsContextValue | undefined>(undefined);
 const createInitialTabState = (currentSections?: number): TabState => {
   const newRootId = '1';
   const numSections = currentSections ?? NUMBER_OF_SECTIONS;
+  const defaultLayoutMode: LayoutMode = 'default';
 
   const initialElements = {
     [newRootId]: {
@@ -45,8 +46,9 @@ const createInitialTabState = (currentSections?: number): TabState => {
       ...initialState,
       numberOfSections: numSections,
       elements: initialElements,
+      layoutMode: defaultLayoutMode, // state.layoutModeも同じ値を設定
     },
-    layoutMode: 'default',
+    layoutMode: defaultLayoutMode, // tab.layoutModeも同じ値を設定
   };
 };
 
@@ -86,7 +88,7 @@ const loadTabsState = (): TabsStorage => {
       }
     }
   } catch (e) {
-    console.error('Failed to load tabs state:', e);
+    // エラーが発生した場合は新規作成
   }
 
   // 新規作成
@@ -134,7 +136,30 @@ export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const switchTab = useCallback((tabId: string) => {
-    setTabsState((prev) => ({ ...prev, currentTabId: tabId }));
+    setTabsState((prev) => {
+      const targetTab = prev.tabs.find((tab) => tab.id === tabId);
+      if (!targetTab) return prev;
+
+      // 切り替え先のタブのlayoutModeでstateを更新
+      const updatedTabs = prev.tabs.map((tab) => {
+        if (tab.id === tabId) {
+          return {
+            ...tab,
+            state: {
+              ...tab.state,
+              layoutMode: tab.layoutMode,
+            },
+          };
+        }
+        return tab;
+      });
+
+      return {
+        ...prev,
+        currentTabId: tabId,
+        tabs: updatedTabs,
+      };
+    });
   }, []);
 
   const updateTabState = useCallback((tabId: string, updater: (prevState: State) => State) => {
@@ -229,7 +254,16 @@ export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setTabsState((prev) => ({
         ...prev,
         tabs: prev.tabs.map((tab) =>
-          tab.id === currentTabId ? { ...tab, layoutMode: mode } : tab,
+          tab.id === currentTabId
+            ? {
+                ...tab,
+                layoutMode: mode,
+                state: {
+                  ...tab.state,
+                  layoutMode: mode,
+                },
+              }
+            : tab,
         ),
       }));
     },

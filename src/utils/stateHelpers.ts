@@ -11,12 +11,7 @@ import {
   LINE_HEIGHT_RATIO,
 } from '../config/elementSettings';
 import { ElementsMap, ElementAdderOptions } from '../types/elementTypes';
-import {
-  ElementUpdaterFunction,
-  ElementFilterFunction,
-  ElementPropertyUpdater,
-  ElementUpdatesMap,
-} from '../types/stateHelpers';
+// 型定義は直接使用している場所に移動しました
 
 /**
  * 新しい要素を追加するヘルパー関数
@@ -157,8 +152,10 @@ export const pasteElements = (
   });
 
   // Set the root element of pasted content as selected, and deselect the parent
-  const pastedRootElementId = idMap.get(rootElement.id)!;
-  newElements[pastedRootElementId].selected = true;
+  const pastedRootElementId = idMap.get(rootElement.id) || rootElement.id;
+  if (newElements[pastedRootElementId]) {
+    newElements[pastedRootElementId].selected = true;
+  }
   const updatedParent = {
     ...parentElement,
     children: parentElement.children + 1,
@@ -186,6 +183,8 @@ export const addElementsWithAdjustment = (
     layoutMode?: string;
     direction?: DirectionType;
   },
+  canvasWidth = 0,
+  canvasHeight = 0,
 ) => {
   let newElements = { ...elements };
   const parent = { ...parentElement };
@@ -232,13 +231,13 @@ export const addElementsWithAdjustment = (
     }
   });
 
-  // レイアウトモードとキャンバスサイズを渡す（デフォルト値は0のため、自動計算される）
+  // レイアウトモードとキャンバスサイズを渡す
   return adjustElementPositions(
     newElements,
     () => options.numberOfSections,
-    options.layoutMode as any,
-    0,
-    0,
+    options.layoutMode || 'mindmap',
+    canvasWidth,
+    canvasHeight,
   );
 };
 
@@ -346,13 +345,19 @@ export const updateSelectedElements = (
  * @returns 更新された状態
  */
 export const withPositionAdjustment = (
-  state: any,
+  state: {
+    elements: ElementsMap;
+    numberOfSections: number;
+    layoutMode?: string;
+    width?: number;
+    height?: number;
+  },
   elementsUpdater: (elements: ElementsMap) => ElementsMap,
-): any => {
+): typeof state => {
   const updatedElements = elementsUpdater(state.elements);
 
-  // layoutModeが存在する場合は使用、存在しない場合はdefault
-  const layoutMode = state.layoutMode || 'default';
+  // layoutModeが存在する場合は使用、存在しない場合はmindmap
+  const layoutMode = state.layoutMode || 'mindmap';
 
   // キャンバスサイズを取得（存在する場合）
   const canvasWidth = state.width || 0;
@@ -375,10 +380,10 @@ export const withPositionAdjustment = (
  * @param updateFn 要素の更新関数
  * @returns アクションハンドラー
  */
-export const createElementPropertyHandler = <T extends Record<string, any>>(
+export const createElementPropertyHandler = <T extends { id: string } & Record<string, unknown>>(
   updateFn: (element: Element, payload: T) => Partial<Element>,
 ) => {
-  return (state: any, action: { payload: T }) => {
+  return (state: { elements: ElementsMap }, action: { payload: T }) => {
     const { id } = action.payload;
     const element = state.elements[id];
     if (!element) return state;
@@ -397,8 +402,8 @@ export const createElementPropertyHandler = <T extends Record<string, any>>(
  * @returns アクションハンドラー
  */
 export const createSelectedElementHandler = (
-  updateFn: (element: Element, payload?: any) => Partial<Element>,
-  adjustPosition: boolean = false,
+  updateFn: (element: Element, payload?: unknown) => Partial<Element>,
+  adjustPosition = false,
 ) => {
   return (state: any, action?: { payload?: any }) => {
     const selectedElements = Object.values(state.elements) as Element[];
@@ -448,8 +453,11 @@ export const createSelectedElementHandler = (
  * @param propertyName 更新するプロパティ名
  * @returns アクションハンドラー
  */
-export const createSimplePropertyHandler = <T>(propertyName: string) => {
-  return (state: any, action: { payload: { id: string } & Record<string, T> }) => {
+export const createSimplePropertyHandler = (propertyName: string) => {
+  return (
+    state: { elements: ElementsMap },
+    action: { payload: { id: string } & Record<string, unknown> },
+  ) => {
     const { id } = action.payload;
     const value = action.payload[propertyName];
 
