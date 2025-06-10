@@ -27,9 +27,19 @@ export const createElementAdder = (
   text?: string,
   options?: ElementAdderOptions,
 ): ElementsMap => {
-  // 親要素の方向を継承するか、オプションで指定された方向を使用
-  const direction =
-    options?.direction || (parentElement.direction === 'none' ? 'right' : parentElement.direction);
+  // directionの設定ロジック
+  let direction: DirectionType;
+
+  if (options?.direction) {
+    // 明示的な方向指定がある場合はそれを使用
+    direction = options.direction;
+  } else if (parentElement.direction === 'none') {
+    // ルート要素の子の場合は必ずright
+    direction = 'right';
+  } else {
+    // それ以外は親の方向を継承
+    direction = parentElement.direction;
+  }
 
   const newElement = createNewElement({
     parentId: parentElement.id,
@@ -190,9 +200,8 @@ export const addElementsWithAdjustment = (
   const parent = { ...parentElement };
   const initialChildren = parent.children;
 
-  // 親要素の方向を継承するか、オプションで指定された方向を使用
-  const direction =
-    options?.direction || (parent.direction === 'none' ? 'right' : parent.direction);
+  // directionの設定：マインドマップモードでも明示的な指定がない限り'right'
+  const direction = options?.direction || 'right';
 
   texts.forEach((text, index) => {
     newElements = createElementAdder(newElements, parent, text, {

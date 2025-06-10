@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { getMarkerType } from '../storage/localStorageHelpers';
 import { SIZE, NUMBER_OF_SECTIONS } from '../../config/elementSettings';
 import { debugLog } from '../debugLogHelpers';
-import { ElementsMap, NewElementOptions } from '../../types/elementTypes';
+import { ElementsMap } from '../../types/elementTypes';
 
 /**
  * 新規要素作成のパラメータ
@@ -23,7 +23,7 @@ export const createNewElement = ({
   order = 0,
   depth = 1,
   numSections = NUMBER_OF_SECTIONS,
-  direction = 'right',
+  direction = parentId === null ? 'none' : 'right',
 }: NewElementParams = {}): Element => {
   const markerType = getMarkerType();
 
@@ -45,7 +45,7 @@ export const createNewElement = ({
     tentative: false,
     startMarker: markerType as MarkerType,
     endMarker: 'none' as MarkerType,
-    direction: parentId === null ? 'none' : direction,
+    direction, // 必須プロパティとして追加
   };
 };
 
