@@ -104,6 +104,11 @@ const DebugInfo: React.FC<DebugInfoProps> = ({
               <td>{element.children}</td>
             </tr>
             <tr>
+              <td>direction</td>
+              <td>:</td>
+              <td>{element.direction || 'none'}</td>
+            </tr>
+            <tr>
               <td>startMarker</td>
               <td>:</td>
               <td>{element.startMarker}</td>
