@@ -42,6 +42,146 @@ import {
 } from '../utils/stateHelpers';
 import { LayoutMode } from '../types/tabTypes';
 
+// 具体的なペイロード型の定義
+interface SelectElementPayload {
+  id: string;
+  ctrlKey?: boolean;
+  shiftKey?: boolean;
+}
+
+interface MoveElementPayload {
+  id: string;
+  x: number;
+  y: number;
+}
+
+interface UpdateElementSizePayload {
+  id: string;
+  width: number;
+  height: number;
+  sectionHeights: number[];
+}
+
+interface UpdateMarkerPayload {
+  id: string;
+  connectionPathType?: any;
+  endConnectionPathType?: any;
+  [key: string]: unknown;
+}
+
+interface DropElementPayload {
+  id: string;
+  oldParentId: string | null;
+  newParentId: string | null;
+  newOrder: number;
+  depth: number;
+  direction?: DirectionType;
+}
+
+interface AddElementPayload {
+  text?: string;
+}
+
+interface AddElementsSilentPayload {
+  texts?: string[];
+  tentative?: boolean;
+}
+
+// 型ガード関数
+const isSelectElementPayload = (payload: unknown): payload is SelectElementPayload => {
+  return (
+    typeof payload === 'object' &&
+    payload !== null &&
+    'id' in payload &&
+    typeof (payload as any).id === 'string'
+  );
+};
+
+const isMoveElementPayload = (payload: unknown): payload is MoveElementPayload => {
+  return (
+    typeof payload === 'object' &&
+    payload !== null &&
+    'id' in payload &&
+    'x' in payload &&
+    'y' in payload &&
+    typeof (payload as any).id === 'string' &&
+    typeof (payload as any).x === 'number' &&
+    typeof (payload as any).y === 'number'
+  );
+};
+
+const isUpdateElementSizePayload = (payload: unknown): payload is UpdateElementSizePayload => {
+  return (
+    typeof payload === 'object' &&
+    payload !== null &&
+    'id' in payload &&
+    'width' in payload &&
+    'height' in payload &&
+    'sectionHeights' in payload &&
+    typeof (payload as any).id === 'string' &&
+    typeof (payload as any).width === 'number' &&
+    typeof (payload as any).height === 'number' &&
+    Array.isArray((payload as any).sectionHeights)
+  );
+};
+
+const isUpdateMarkerPayload = (payload: unknown): payload is UpdateMarkerPayload => {
+  return (
+    typeof payload === 'object' &&
+    payload !== null &&
+    'id' in payload &&
+    typeof (payload as any).id === 'string'
+  );
+};
+
+const isDropElementPayload = (payload: unknown): payload is DropElementPayload => {
+  return (
+    typeof payload === 'object' &&
+    payload !== null &&
+    'id' in payload &&
+    'newOrder' in payload &&
+    'depth' in payload &&
+    typeof (payload as any).id === 'string' &&
+    typeof (payload as any).newOrder === 'number' &&
+    typeof (payload as any).depth === 'number'
+  );
+};
+
+const isElementsMapPayload = (payload: unknown): payload is ElementsMap => {
+  return (
+    typeof payload === 'object' &&
+    payload !== null &&
+    Object.values(payload as Record<string, unknown>).every(
+      (item) =>
+        typeof item === 'object' &&
+        item !== null &&
+        'id' in item &&
+        typeof (item as any).id === 'string',
+    )
+  );
+};
+
+const isAddElementPayload = (payload: unknown): payload is AddElementPayload => {
+  return (
+    payload === null ||
+    payload === undefined ||
+    (typeof payload === 'object' &&
+      payload !== null &&
+      (!('text' in payload) || typeof (payload as any).text === 'string'))
+  );
+};
+
+const isAddElementsSilentPayload = (payload: unknown): payload is AddElementsSilentPayload => {
+  return (
+    payload === null ||
+    payload === undefined ||
+    (typeof payload === 'object' &&
+      payload !== null &&
+      (!('texts' in payload) || Array.isArray((payload as any).texts)) &&
+      (!('tentative' in payload) || typeof (payload as any).tentative === 'boolean'))
+  );
+};
+
 /**
  * アプリケーションの状態を表す型
  */
@@ -150,103 +290,137 @@ function handleSelectedElementAction(
  * アクションハンドラーの型定義
  * 各アクションタイプに対応する状態更新関数のマップ
  */
-type ActionHandler = (state: State, action: { type: string; payload?: any }) => State;
+type ActionHandler<T = unknown> = (state: State, action: { type: string; payload?: T }) => State;
+
+/**
+ * 安全なアクションハンドラーのラッパー
+ * 型ガードを使用してペイロードの型安全性を保証
+ */
+const createSafeHandler = <T>(
+  typeGuard: (payload: unknown) => payload is T,
+  handler: (state: State, payload: T) => State,
+): ActionHandler => {
+  return (state: State, action: { type: string; payload?: unknown }) => {
+    if (!action.payload || !typeGuard(action.payload)) {
+      debugLog(`Invalid payload for action ${action.type}:`, action.payload);
+      return state;
+    }
+    return handler(state, action.payload);
+  };
+};
+
+/**
+ * ペイロードなしのアクションハンドラー
+ */
+const createNoPayloadHandler = (handler: (state: State) => State): ActionHandler => {
+  return (state: State) => handler(state);
+};
 
 /**
  * すべてのアクションハンドラーのマップ
  */
 const actionHandlers: Record<string, ActionHandler> = {
-  ZOOM_IN: handleZoomIn,
-  ZOOM_OUT: handleZoomOut,
+  ZOOM_IN: createNoPayloadHandler(handleZoomIn),
+  ZOOM_OUT: createNoPayloadHandler(handleZoomOut),
 
-  ARROW_UP: handleArrowAction(handleArrowUp),
-  ARROW_DOWN: handleArrowAction(handleArrowDown),
-  ARROW_RIGHT: handleArrowAction(handleArrowRight),
-  ARROW_LEFT: handleArrowAction(handleArrowLeft),
+  ARROW_UP: createNoPayloadHandler(handleArrowAction(handleArrowUp)),
+  ARROW_DOWN: createNoPayloadHandler(handleArrowAction(handleArrowDown)),
+  ARROW_RIGHT: createNoPayloadHandler(handleArrowAction(handleArrowRight)),
+  ARROW_LEFT: createNoPayloadHandler(handleArrowAction(handleArrowLeft)),
 
-  LOAD_ELEMENTS: (state, action) => {
-    if (!action.payload || Object.keys(action.payload).length === 0) return initialState;
+  LOAD_ELEMENTS: createSafeHandler(isElementsMapPayload, (state: State, payload: ElementsMap) => {
+    if (Object.keys(payload).length === 0) {
+      debugLog('Loading empty elements map, returning initial state');
+      return initialState;
+    }
 
-    const updatedElements = Object.values(action.payload).reduce<ElementsMap>(
-      (acc, element: unknown) => {
-        const el = element as Element;
-        acc[el.id] = el.parentId === null ? { ...el, visible: true } : el;
+    const updatedElements = Object.values(payload).reduce<ElementsMap>((acc, element) => {
+      // 要素の妥当性チェック
+      if (!element.id) {
+        debugLog('Skipping invalid element without id:', element);
         return acc;
-      },
-      {},
-    );
+      }
+
+      acc[element.id] = element.parentId === null ? { ...element, visible: true } : element;
+      return acc;
+    }, {});
 
     return withPositionAdjustment(state, () => updatedElements);
-  },
+  }),
 
-  SELECT_ELEMENT: (state, action) => {
-    if (!action.payload) return state;
-    const { id, ctrlKey, shiftKey } = action.payload;
-    const selectedElement = state.elements[id];
-    if (!selectedElement) return state;
+  SELECT_ELEMENT: createSafeHandler(
+    isSelectElementPayload,
+    (state: State, payload: SelectElementPayload) => {
+      const { id, ctrlKey = false, shiftKey = false } = payload;
+      const selectedElement = state.elements[id];
+      if (!selectedElement) {
+        debugLog(`Element with id ${id} not found`);
+        return state;
+      }
 
-    const currentSelected = Object.values(state.elements).filter((e) => e.selected);
-    const firstSelected = currentSelected[0];
+      const currentSelected = Object.values(state.elements).filter((e) => e.selected);
+      const firstSelected = currentSelected[0];
 
-    // 異なるparentIdの要素が含まれる場合は何もしない
-    if (
-      (shiftKey || ctrlKey) &&
-      currentSelected.length > 0 &&
-      currentSelected.some((e) => e.parentId !== selectedElement.parentId)
-    ) {
-      return state;
-    }
+      // 異なるparentIdの要素が含まれる場合は何もしない
+      if (
+        (shiftKey || ctrlKey) &&
+        currentSelected.length > 0 &&
+        currentSelected.some((e) => e.parentId !== selectedElement.parentId)
+      ) {
+        return state;
+      }
 
-    let newSelectedIds: string[] = [];
+      let newSelectedIds: string[] = [];
 
-    if (shiftKey && currentSelected.length > 0) {
-      const parentId = firstSelected.parentId;
-      const siblings = Object.values(state.elements)
-        .filter((e) => e.parentId === parentId)
-        .sort((a, b) => a.order - b.order);
+      if (shiftKey && currentSelected.length > 0) {
+        const parentId = firstSelected.parentId;
+        const siblings = Object.values(state.elements)
+          .filter((e) => e.parentId === parentId)
+          .sort((a, b) => a.order - b.order);
 
-      const startIndex = siblings.findIndex((e) => e.id === firstSelected.id);
-      const endIndex = siblings.findIndex((e) => e.id === id);
-      const [start, end] = [Math.min(startIndex, endIndex), Math.max(startIndex, endIndex)];
-      newSelectedIds = siblings.slice(start, end + 1).map((e) => e.id);
-    } else if (ctrlKey) {
-      const isAlreadySelected = currentSelected.some((e) => e.id === id);
-      newSelectedIds = isAlreadySelected
-        ? currentSelected.filter((e) => e.id !== id).map((e) => e.id)
-        : [...currentSelected.map((e) => e.id), id];
-    } else {
-      newSelectedIds = [id];
-    }
+        const startIndex = siblings.findIndex((e) => e.id === firstSelected.id);
+        const endIndex = siblings.findIndex((e) => e.id === id);
+        const [start, end] = [Math.min(startIndex, endIndex), Math.max(startIndex, endIndex)];
+        newSelectedIds = siblings.slice(start, end + 1).map((e) => e.id);
+      } else if (ctrlKey) {
+        const isAlreadySelected = currentSelected.some((e) => e.id === id);
+        newSelectedIds = isAlreadySelected
+          ? currentSelected.filter((e) => e.id !== id).map((e) => e.id)
+          : [...currentSelected.map((e) => e.id), id];
+      } else {
+        newSelectedIds = [id];
+      }
 
-    const parentId = selectedElement.parentId;
-    const validSelectedIds = newSelectedIds.filter((id) => {
-      const elem = state.elements[id];
-      return elem.parentId === parentId;
-    });
+      const parentId = selectedElement.parentId;
+      const validSelectedIds = newSelectedIds.filter((id) => {
+        const elem = state.elements[id];
+        return elem && elem.parentId === parentId;
+      });
 
-    // まず全ての要素を非選択状態に
-    let updatedElements = updateElementsWhere(state.elements, () => true, {
-      selected: false,
-      editing: false,
-    });
+      // まず全ての要素を非選択状態に
+      let updatedElements = updateElementsWhere(state.elements, () => true, {
+        selected: false,
+        editing: false,
+      });
 
-    // 次に対象の要素を選択状態に
-    updatedElements = updateElementsWhere(
-      updatedElements,
-      (element) => validSelectedIds.includes(element.id),
-      { selected: true },
-    );
+      // 次に対象の要素を選択状態に
+      updatedElements = updateElementsWhere(
+        updatedElements,
+        (element) => validSelectedIds.includes(element.id),
+        { selected: true },
+      );
 
-    return {
-      ...state,
-      elements: updatedElements,
-    };
-  },
+      return {
+        ...state,
+        elements: updatedElements,
+      };
+    },
+  ),
 
-  DESELECT_ALL: (state) => ({
+  DESELECT_ALL: createNoPayloadHandler((state) => ({
     ...state,
     elements: updateElementsWhere(state.elements, () => true, { selected: false, editing: false }),
-  }),
+  })),
 
   UPDATE_TEXT: createElementPropertyHandler<{ id: string; index: number; value: string }>(
     (element, { index, value }) => ({
@@ -259,30 +433,42 @@ const actionHandlers: Record<string, ActionHandler> = {
   UPDATE_END_MARKER: createSimplePropertyHandler('endMarker'),
 
   // 後方互換性のために残す
-  UPDATE_CONNECTION_PATH_TYPE: (state, action) => {
-    if (!action.payload) return state;
-    const { id, connectionPathType } = action.payload;
-    return {
-      ...state,
-      elements: updateElementProperties(state.elements, id, {
-        startMarker: connectionPathType,
-        connectionPathType,
-      }),
-    };
-  },
+  UPDATE_CONNECTION_PATH_TYPE: createSafeHandler(
+    isUpdateMarkerPayload,
+    (state: State, payload: UpdateMarkerPayload) => {
+      const { id, connectionPathType } = payload;
+      if (!connectionPathType) {
+        debugLog('connectionPathType is missing in payload');
+        return state;
+      }
+      return {
+        ...state,
+        elements: updateElementProperties(state.elements, id, {
+          startMarker: connectionPathType as any,
+          connectionPathType: connectionPathType as any,
+        }),
+      };
+    },
+  ),
 
   // 後方互換性のために残す
-  UPDATE_END_CONNECTION_PATH_TYPE: (state, action) => {
-    if (!action.payload) return state;
-    const { id, endConnectionPathType } = action.payload;
-    return {
-      ...state,
-      elements: updateElementProperties(state.elements, id, {
-        endMarker: endConnectionPathType,
-        endConnectionPathType,
-      }),
-    };
-  },
+  UPDATE_END_CONNECTION_PATH_TYPE: createSafeHandler(
+    isUpdateMarkerPayload,
+    (state: State, payload: UpdateMarkerPayload) => {
+      const { id, endConnectionPathType } = payload;
+      if (!endConnectionPathType) {
+        debugLog('endConnectionPathType is missing in payload');
+        return state;
+      }
+      return {
+        ...state,
+        elements: updateElementProperties(state.elements, id, {
+          endMarker: endConnectionPathType as any,
+          endConnectionPathType: endConnectionPathType as any,
+        }),
+      };
+    },
+  ),
 
   EDIT_ELEMENT: createSelectedElementHandler((_element) => ({ editing: true }), false),
 
@@ -291,58 +477,77 @@ const actionHandlers: Record<string, ActionHandler> = {
       updateElementsWhere(state.elements, () => true, { editing: false }),
     ),
 
-  MOVE_ELEMENT: (state, action) => {
-    if (!action.payload) return state;
-    const { id, x, y } = action.payload;
-    const selectedElements = Object.values(state.elements).filter((e) => e.selected);
+  MOVE_ELEMENT: createSafeHandler(
+    isMoveElementPayload,
+    (state: State, payload: MoveElementPayload) => {
+      const { id, x, y } = payload;
+      const selectedElements = Object.values(state.elements).filter((e) => e.selected);
 
-    // 複数要素移動の場合
-    if (selectedElements.length > 1 && selectedElements.some((e) => e.id === id)) {
-      const deltaX = x - state.elements[id].x;
-      const deltaY = y - state.elements[id].y;
+      // 要素が存在するかチェック
+      if (!state.elements[id]) {
+        debugLog(`Element with id ${id} not found for move operation`);
+        return state;
+      }
 
-      const updateMap = selectedElements.reduce(
-        (acc, element) => {
-          acc[element.id] = {
-            x: element.x + deltaX,
-            y: element.y + deltaY,
-          };
-          return acc;
-        },
-        {} as Record<string, Partial<Element>>,
-      );
+      // 複数要素移動の場合
+      if (selectedElements.length > 1 && selectedElements.some((e) => e.id === id)) {
+        const deltaX = x - state.elements[id].x;
+        const deltaY = y - state.elements[id].y;
 
+        const updateMap = selectedElements.reduce(
+          (acc, element) => {
+            acc[element.id] = {
+              x: element.x + deltaX,
+              y: element.y + deltaY,
+            };
+            return acc;
+          },
+          {} as Record<string, Partial<Element>>,
+        );
+
+        return {
+          ...state,
+          elements: batchUpdateElements(state.elements, updateMap),
+        };
+      }
+
+      // 単一要素移動
       return {
         ...state,
-        elements: batchUpdateElements(state.elements, updateMap),
+        elements: updateElementProperties(state.elements, id, { x, y }),
       };
-    }
+    },
+  ),
 
-    // 単一要素移動
-    return {
-      ...state,
-      elements: updateElementProperties(state.elements, id, { x, y }),
-    };
-  },
+  UPDATE_ELEMENT_SIZE: createSafeHandler(
+    isUpdateElementSizePayload,
+    (state: State, payload: UpdateElementSizePayload) => {
+      const { id, width, height, sectionHeights } = payload;
+      const element = state.elements[id];
+      if (!element) {
+        debugLog(`Element with id ${id} not found for size update`);
+        return state;
+      }
 
-  UPDATE_ELEMENT_SIZE: (state, action) => {
-    if (!action.payload) return state;
-    const { id, width, height, sectionHeights } = action.payload;
-    const element = state.elements[id];
-    if (!element) return state;
+      // 値の妥当性チェック
+      if (width <= 0 || height <= 0) {
+        debugLog(`Invalid size values: width=${width}, height=${height}`);
+        return state;
+      }
 
-    const updatedElements = updateElementProperties(state.elements, id, {
-      width,
-      height,
-      sectionHeights,
-    });
+      const updatedElements = updateElementProperties(state.elements, id, {
+        width,
+        height,
+        sectionHeights,
+      });
 
-    return withPositionAdjustment(state, () => updatedElements);
-  },
+      return withPositionAdjustment(state, () => updatedElements);
+    },
+  ),
 
-  ADD_ELEMENT: (state, action) =>
+  ADD_ELEMENT: createSafeHandler(isAddElementPayload, (state: State, payload: AddElementPayload) =>
     handleElementMutation(state, (elements, selectedElement) => {
-      const text = action.payload?.text;
+      const text = payload?.text;
       const numberOfSections = state.numberOfSections;
 
       const newElements = createElementAdder(elements, selectedElement, text, {
@@ -359,30 +564,34 @@ const actionHandlers: Record<string, ActionHandler> = {
         ),
       };
     }),
+  ),
 
-  ADD_ELEMENTS_SILENT: (state, action) =>
-    handleElementMutation(state, (elements, selectedElement) => {
-      const texts = action.payload?.texts || [];
-      const tentative = action.payload?.tentative || false;
-      const numberOfSections = state.numberOfSections;
+  ADD_ELEMENTS_SILENT: createSafeHandler(
+    isAddElementsSilentPayload,
+    (state: State, payload: AddElementsSilentPayload) =>
+      handleElementMutation(state, (elements, selectedElement) => {
+        const texts = payload?.texts || [];
+        const tentative = payload?.tentative || false;
+        const numberOfSections = state.numberOfSections;
 
-      return {
-        elements: addElementsWithAdjustment(
-          elements,
-          selectedElement,
-          texts,
-          {
-            tentative,
-            numberOfSections,
-            zoomRatio: state.zoomRatio,
-            layoutMode: state.layoutMode,
-            // directionは既存通り
-          },
-          state.width || 0,
-          state.height || 0,
-        ),
-      };
-    }),
+        return {
+          elements: addElementsWithAdjustment(
+            elements,
+            selectedElement,
+            texts,
+            {
+              tentative,
+              numberOfSections,
+              zoomRatio: state.zoomRatio,
+              layoutMode: state.layoutMode,
+              // directionは既存通り
+            },
+            state.width || 0,
+            state.height || 0,
+          ),
+        };
+      }),
+  ),
 
   ADD_SIBLING_ELEMENT: (state) =>
     handleElementMutation(state, (elements, selectedElement) => {
@@ -497,90 +706,96 @@ const actionHandlers: Record<string, ActionHandler> = {
     return state;
   },
 
-  DROP_ELEMENT: (state, action) => {
-    if (!action?.payload) return state;
-    const { payload } = action;
-    const { id, oldParentId, newParentId, newOrder, depth, direction } = payload as {
-      id: string;
-      oldParentId: string | null;
-      newParentId: string | null;
-      newOrder: number;
-      depth: number;
-      direction?: DirectionType;
-    };
+  DROP_ELEMENT: createSafeHandler(
+    isDropElementPayload,
+    (state: State, payload: DropElementPayload) => {
+      const { id, oldParentId, newParentId, newOrder, depth, direction } = payload;
 
-    if (id === newParentId || (newParentId && isDescendant(state.elements, id, newParentId))) {
-      return state;
-    }
+      // 基本的な妥当性チェック
+      if (!state.elements[id]) {
+        debugLog(`Element with id ${id} not found for drop operation`);
+        return state;
+      }
 
-    let updatedElements = { ...state.elements };
-    const element = updatedElements[id];
-    const oldParent = oldParentId ? updatedElements[oldParentId] : null;
-    const newParent = newParentId ? updatedElements[newParentId] : null;
+      if (id === newParentId || (newParentId && isDescendant(state.elements, id, newParentId))) {
+        debugLog(`Invalid drop operation: circular reference detected`);
+        return state;
+      }
 
-    const isSameParent = oldParentId === newParentId;
+      if (newOrder < 0 || depth < 0) {
+        debugLog(`Invalid drop values: newOrder=${newOrder}, depth=${depth}`);
+        return state;
+      }
 
-    // 古い親のchildren更新（異なる親の場合のみ）
-    if (!isSameParent && oldParent && oldParentId) {
-      updatedElements[oldParentId] = {
-        ...oldParent,
-        children: Math.max(0, oldParent.children - 1),
+      let updatedElements = { ...state.elements };
+      const element = updatedElements[id];
+      const oldParent = oldParentId ? updatedElements[oldParentId] : null;
+      const newParent = newParentId ? updatedElements[newParentId] : null;
+
+      const isSameParent = oldParentId === newParentId;
+
+      // 古い親のchildren更新（異なる親の場合のみ）
+      if (!isSameParent && oldParent && oldParentId) {
+        updatedElements[oldParentId] = {
+          ...oldParent,
+          children: Math.max(0, oldParent.children - 1),
+        };
+
+        // 元の親の下にある兄弟要素のorderを再計算
+        const oldSiblings = Object.values(updatedElements)
+          .filter((n) => n.parentId === oldParentId && n.id !== id)
+          .sort((a, b) => a.order - b.order);
+
+        oldSiblings.forEach((sibling, index) => {
+          if (sibling.order !== index) {
+            updatedElements[sibling.id] = {
+              ...sibling,
+              order: index,
+            };
+          }
+        });
+      }
+
+      // 対象要素の更新
+      updatedElements[id] = {
+        ...element,
+        parentId: newParentId,
+        depth: depth,
+        order: newOrder,
+        ...(direction !== undefined && { direction }),
       };
 
-      // 元の親の下にある兄弟要素のorderを再計算
-      const oldSiblings = Object.values(updatedElements)
-        .filter((n) => n.parentId === oldParentId && n.id !== id)
-        .sort((a, b) => a.order - b.order);
-
-      oldSiblings.forEach((sibling, index) => {
-        if (sibling.order !== index) {
+      // 同じ親の兄弟要素の順序更新
+      const siblings = Object.values(updatedElements).filter(
+        (e) => e.parentId === newParentId && e.id !== id,
+      );
+      siblings.sort((a, b) => a.order - b.order);
+      siblings.forEach((sibling, index) => {
+        const siblingIndex = index >= newOrder ? index + 1 : index;
+        if (sibling.order !== siblingIndex) {
           updatedElements[sibling.id] = {
             ...sibling,
-            order: index,
+            order: siblingIndex,
           };
         }
       });
-    }
 
-    // 対象要素の更新
-    updatedElements[id] = {
-      ...element,
-      parentId: newParentId,
-      depth: depth,
-      order: newOrder,
-      ...(direction !== undefined && { direction }),
-    };
-
-    // 同じ親の兄弟要素の順序更新
-    const siblings = Object.values(updatedElements).filter(
-      (e) => e.parentId === newParentId && e.id !== id,
-    );
-    siblings.sort((a, b) => a.order - b.order);
-    siblings.forEach((sibling, index) => {
-      const siblingIndex = index >= newOrder ? index + 1 : index;
-      if (sibling.order !== siblingIndex) {
-        updatedElements[sibling.id] = {
-          ...sibling,
-          order: siblingIndex,
+      // 新しい親のchildren更新（異なる親の場合のみ）
+      if (!isSameParent && newParent && newParentId) {
+        updatedElements[newParentId] = {
+          ...newParent,
+          children: newParent.children + 1,
         };
       }
-    });
 
-    // 新しい親のchildren更新（異なる親の場合のみ）
-    if (!isSameParent && newParent && newParentId) {
-      updatedElements[newParentId] = {
-        ...newParent,
-        children: newParent.children + 1,
-      };
-    }
+      // 親が変わった場合は深さを再設定
+      if (!isSameParent) {
+        updatedElements = setDepthRecursive(updatedElements, updatedElements[id]);
+      }
 
-    // 親が変わった場合は深さを再設定
-    if (!isSameParent) {
-      updatedElements = setDepthRecursive(updatedElements, updatedElements[id]);
-    }
-
-    return withPositionAdjustment(state, () => updatedElements);
-  },
+      return withPositionAdjustment(state, () => updatedElements);
+    },
+  ),
 
   CUT_ELEMENT: (state) => {
     const selectedElements = Object.values(state.elements).filter((e) => e.selected);
@@ -672,6 +887,30 @@ const actionHandlers: Record<string, ActionHandler> = {
 };
 
 export const reducer = (state: State, action: Action): State => {
-  const handler = actionHandlers[action.type];
-  return handler ? handler(state, action) : state;
+  try {
+    const handler = actionHandlers[action.type];
+    if (!handler) {
+      debugLog(`Unknown action type: ${action.type}`);
+      return state;
+    }
+
+    const newState = handler(state, action);
+
+    // 状態の妥当性をチェック
+    if (!newState || typeof newState !== 'object') {
+      debugLog(`Invalid state returned for action ${action.type}`);
+      return state;
+    }
+
+    // elements が存在することを確認
+    if (!newState.elements || typeof newState.elements !== 'object') {
+      debugLog(`Invalid elements in state for action ${action.type}`);
+      return state;
+    }
+
+    return newState;
+  } catch (error) {
+    debugLog(`Error handling action ${action.type}:`, error);
+    return state;
+  }
 };
