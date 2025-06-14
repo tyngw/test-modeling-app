@@ -16,13 +16,14 @@ import { DEFAULT_POSITION, NUMBER_OF_SECTIONS } from '../config/elementSettings'
 import { createNewElement } from '../utils/element/elementHelpers';
 import { convertLegacyElement } from '../utils/file/fileHelpers';
 import { getTabsState, setTabsState } from '../utils/storage/localStorageHelpers';
-import { TabState, TabsStorage, TabsContextValue } from '../types/tabTypes';
+import { TabState, TabsStorage, TabsContextValue, LayoutMode } from '../types/tabTypes';
 
 const TabsContext = createContext<TabsContextValue | undefined>(undefined);
 
 const createInitialTabState = (currentSections?: number): TabState => {
   const newRootId = '1';
   const numSections = currentSections ?? NUMBER_OF_SECTIONS;
+  const defaultLayoutMode: LayoutMode = 'default';
 
   const initialElements = {
     [newRootId]: {
@@ -45,7 +46,9 @@ const createInitialTabState = (currentSections?: number): TabState => {
       ...initialState,
       numberOfSections: numSections,
       elements: initialElements,
+      layoutMode: defaultLayoutMode, // state.layoutModeも同じ値を設定
     },
+    layoutMode: defaultLayoutMode, // tab.layoutModeも同じ値を設定
   };
 };
 
@@ -60,6 +63,8 @@ const loadTabsState = (): TabsStorage => {
         // タブデータを変換
         const convertedTabs = parsed.tabs.map((tab) => ({
           ...tab,
+          // レイアウトモードが設定されていない場合は'default'を設定（後方互換性のため）
+          layoutMode: tab.layoutMode || 'default',
           state: {
             ...tab.state,
             elements: Object.fromEntries(
@@ -83,7 +88,7 @@ const loadTabsState = (): TabsStorage => {
       }
     }
   } catch (e) {
-    console.error('Failed to load tabs state:', e);
+    // エラーが発生した場合は新規作成
   }
 
   // 新規作成
@@ -96,7 +101,8 @@ const loadTabsState = (): TabsStorage => {
 
 // ローカルストレージに状態を保存
 const saveTabsToLocalStorage = (tabs: TabState[], currentTabId: string) => {
-  setTabsState(JSON.stringify({ tabs, currentTabId }));
+  const saveData: TabsStorage = { tabs, currentTabId };
+  setTabsState(JSON.stringify(saveData));
 };
 
 export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -130,7 +136,30 @@ export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const switchTab = useCallback((tabId: string) => {
-    setTabsState((prev) => ({ ...prev, currentTabId: tabId }));
+    setTabsState((prev) => {
+      const targetTab = prev.tabs.find((tab) => tab.id === tabId);
+      if (!targetTab) return prev;
+
+      // 切り替え先のタブのlayoutModeでstateを更新
+      const updatedTabs = prev.tabs.map((tab) => {
+        if (tab.id === tabId) {
+          return {
+            ...tab,
+            state: {
+              ...tab.state,
+              layoutMode: tab.layoutMode,
+            },
+          };
+        }
+        return tab;
+      });
+
+      return {
+        ...prev,
+        currentTabId: tabId,
+        tabs: updatedTabs,
+      };
+    });
   }, []);
 
   const updateTabState = useCallback((tabId: string, updater: (prevState: State) => State) => {
@@ -138,28 +167,24 @@ export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const updatedTabs = prev.tabs.map((tab) => {
         if (tab.id === tabId) {
           const updatedState = updater(tab.state);
-          
+
           // 現在の要素の状態をJSON文字列に変換（整形して比較）
           const normalizedElements = JSON.parse(JSON.stringify(updatedState.elements));
           const currentElementsJson = JSON.stringify(normalizedElements);
-          
+
           // 最後に保存された要素の状態と比較して、変更があるかどうかを判断
           const hasChanges = tab.lastSavedElements !== currentElementsJson;
-          
-          console.log('updateTabState: タブID', tabId);
-          console.log('updateTabState: 要素に変更があるか', hasChanges);
-          console.log('updateTabState: 保存済みフラグを設定', !hasChanges);
-          
-          return { 
-            ...tab, 
+
+          return {
+            ...tab,
             state: updatedState,
             // 変更がある場合は未保存状態に設定
-            isSaved: !hasChanges
+            isSaved: !hasChanges,
           };
         }
         return tab;
       });
-      
+
       return {
         ...prev,
         tabs: updatedTabs,
@@ -174,31 +199,29 @@ export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }));
   }, []);
 
-  const updateTabSaveStatus = useCallback((tabId: string, isSaved: boolean, lastSavedElements?: string) => {
-    console.log('updateTabSaveStatus: タブID', tabId);
-    console.log('updateTabSaveStatus: 保存済みフラグ', isSaved);
-    console.log('updateTabSaveStatus: 最後に保存された要素の状態', lastSavedElements ? lastSavedElements.substring(0, 50) + '...' : 'なし');
-    
-    setTabsState((prev) => {
-      const updatedTabs = prev.tabs.map((tab) => {
-        if (tab.id === tabId) {
-          console.log('updateTabSaveStatus: タブを更新', tab.id);
-          return { 
-            ...tab, 
-            isSaved,
-            // lastSavedElements が指定されている場合は更新
-            lastSavedElements: lastSavedElements || tab.lastSavedElements
-          };
-        }
-        return tab;
+  const updateTabSaveStatus = useCallback(
+    (tabId: string, isSaved: boolean, lastSavedElements?: string) => {
+      setTabsState((prev) => {
+        const updatedTabs = prev.tabs.map((tab) => {
+          if (tab.id === tabId) {
+            return {
+              ...tab,
+              isSaved,
+              // lastSavedElements が指定されている場合は更新
+              lastSavedElements: lastSavedElements || tab.lastSavedElements,
+            };
+          }
+          return tab;
+        });
+
+        return {
+          ...prev,
+          tabs: updatedTabs,
+        };
       });
-      
-      return {
-        ...prev,
-        tabs: updatedTabs,
-      };
-    });
-  }, []);
+    },
+    [],
+  );
 
   const getCurrentTabState = useCallback(() => {
     const currentTab = tabs.find((tab) => tab.id === currentTabId);
@@ -221,6 +244,32 @@ export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     [currentTabId, updateTabState],
   );
 
+  const getCurrentTabLayoutMode = useCallback(() => {
+    const currentTab = tabs.find((tab) => tab.id === currentTabId);
+    return currentTab?.layoutMode || 'default';
+  }, [tabs, currentTabId]);
+
+  const updateCurrentTabLayoutMode = useCallback(
+    (mode: LayoutMode) => {
+      setTabsState((prev) => ({
+        ...prev,
+        tabs: prev.tabs.map((tab) =>
+          tab.id === currentTabId
+            ? {
+                ...tab,
+                layoutMode: mode,
+                state: {
+                  ...tab.state,
+                  layoutMode: mode,
+                },
+              }
+            : tab,
+        ),
+      }));
+    },
+    [currentTabId],
+  );
+
   const contextValue = useMemo(
     () => ({
       tabs,
@@ -234,6 +283,8 @@ export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       getCurrentTabState,
       getCurrentTabNumberOfSections,
       updateCurrentTabNumberOfSections,
+      getCurrentTabLayoutMode,
+      updateCurrentTabLayoutMode,
     }),
     [
       tabs,
@@ -247,6 +298,8 @@ export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       getCurrentTabState,
       getCurrentTabNumberOfSections,
       updateCurrentTabNumberOfSections,
+      getCurrentTabLayoutMode,
+      updateCurrentTabLayoutMode,
     ],
   );
 

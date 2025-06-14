@@ -103,11 +103,12 @@ export function AppLayout({
           setShowCloseConfirm={setShowCloseConfirm}
           tabToClose={tabToClose}
           closeTab={forceCloseTab}
+          dispatch={dispatch}
         />
 
-        <SettingsModal isOpen={isSettingsOpen} onClose={toggleSettings} />
+        <SettingsModal isOpen={isSettingsOpen} onClose={toggleSettings} dispatch={dispatch} />
 
-        <HelpModal isOpen={isHelpOpen} onClose={toggleHelp} />
+        <HelpModal isOpen={isHelpOpen} onClose={toggleHelp} dispatch={dispatch} />
       </CanvasProvider>
     );
   }, [

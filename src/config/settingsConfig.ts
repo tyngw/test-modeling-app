@@ -14,6 +14,17 @@ export const SETTINGS_TABS: SettingTab[] = [
     label: 'Elements Setting',
     fields: [
       {
+        key: 'layoutMode',
+        label: 'Layout Mode',
+        type: 'radio',
+        helperText: 'レイアウトモードの選択 ※現在のタブのみに適用されます',
+        defaultValue: 'default',
+        options: [
+          { value: 'default', label: '通常モード' },
+          { value: 'mindmap', label: 'マインドマップモード' },
+        ],
+      },
+      {
         key: 'numberOfSections',
         label: 'Number of sections',
         type: 'number',

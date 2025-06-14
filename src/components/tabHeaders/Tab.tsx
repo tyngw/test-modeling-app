@@ -1,5 +1,5 @@
 // src/components/TabHeaders/tab.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { TabHeaderProps } from '../../types/tabTypes';
 import { useIsMounted } from '../../hooks/UseIsMounted';
 
@@ -7,14 +7,6 @@ const Tab: React.FC<TabHeaderProps> = React.memo(
   ({ tab, isCurrent, closeTab, switchTab, theme }) => {
     const isMounted = useIsMounted();
     const [isHovered, setIsHovered] = useState(false);
-
-    // タブの保存状態をコンソールに出力
-    useEffect(() => {
-      console.log('Tab: タブID', tab.id);
-      console.log('Tab: タブ名', tab.name);
-      console.log('Tab: 保存済みフラグ', tab.isSaved);
-      console.log('Tab: アスタリスク表示', !tab.isSaved ? ' *' : '');
-    }, [tab.id, tab.name, tab.isSaved]);
 
     if (!isMounted) return null;
 
@@ -41,32 +33,38 @@ const Tab: React.FC<TabHeaderProps> = React.memo(
         }}
         onClick={() => switchTab(tab.id)}
       >
-        <span
+        <div
           style={{
-            flex: '1 1 auto',
+            display: 'flex',
+            alignItems: 'center',
+            flex: '1',
             overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            minWidth: '0',
           }}
         >
-          {tab.name}
-        </span>
-        
-        {/* アスタリスクを閉じるボタンとファイル名の間に配置 */}
-        {!tab.isSaved && (
           <span
             style={{
-              flex: '0 0 auto',
-              marginRight: '2px',
-              marginLeft: '2px',
-              fontSize: '12px',
+              flex: '0 1 auto',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              minWidth: '0',
             }}
           >
-            {' *'}
+            {tab.name}
           </span>
-        )}
-        
+          {!tab.isSaved && (
+            <span
+              style={{
+                flex: '0 0 auto',
+                marginRight: '0px',
+                marginLeft: '2px',
+                fontSize: '12px',
+              }}
+            >
+              {'*'}
+            </span>
+          )}
+        </div>
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -76,7 +74,9 @@ const Tab: React.FC<TabHeaderProps> = React.memo(
           onMouseLeave={() => setIsHovered(false)}
           style={{
             flex: '0 0 auto',
-            marginLeft: '2px',
+            padding: '0px',
+            marginLeft: '0px',
+            marginRight: '2px',
             border: '0',
             backgroundColor: 'transparent',
             fontSize: '16px',
@@ -94,5 +94,7 @@ const Tab: React.FC<TabHeaderProps> = React.memo(
     );
   },
 );
+
+Tab.displayName = 'Tab';
 
 export default Tab;

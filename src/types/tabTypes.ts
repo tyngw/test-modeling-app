@@ -21,6 +21,11 @@ export interface Theme {
 }
 
 /**
+ * レイアウトモードの型定義
+ */
+export type LayoutMode = 'default' | 'mindmap';
+
+/**
  * タブの状態を表す型
  */
 export interface TabState {
@@ -34,6 +39,8 @@ export interface TabState {
   isSaved: boolean;
   /** 最後に保存された要素の状態（JSON文字列） */
   lastSavedElements?: string;
+  /** レイアウトモード */
+  layoutMode: LayoutMode;
 }
 
 /**
@@ -104,4 +111,8 @@ export interface TabsContextValue {
   getCurrentTabNumberOfSections: () => number;
   /** 現在のタブのセクション数更新関数 */
   updateCurrentTabNumberOfSections: (value: number) => void;
+  /** 現在のタブのレイアウトモード取得関数 */
+  getCurrentTabLayoutMode: () => LayoutMode;
+  /** 現在のタブのレイアウトモード更新関数 */
+  updateCurrentTabLayoutMode: (mode: LayoutMode) => void;
 }

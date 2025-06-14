@@ -87,6 +87,7 @@ export type DropElementAction = {
     newParentId: string | null;
     newOrder?: number;
     depth?: number;
+    direction?: 'left' | 'right' | 'none';
   };
 };
 

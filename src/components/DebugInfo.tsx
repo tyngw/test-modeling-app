@@ -10,6 +10,7 @@ interface DebugInfoProps {
   dropPosition?: DropPosition;
   isDraggedOrDescendant?: boolean;
   siblingInfo?: { prevElement?: CanvasElement; nextElement?: CanvasElement } | null;
+  elements: { [key: string]: CanvasElement };
 }
 
 const DebugInfo: React.FC<DebugInfoProps> = ({
@@ -19,6 +20,7 @@ const DebugInfo: React.FC<DebugInfoProps> = ({
   dropPosition,
   isDraggedOrDescendant,
   siblingInfo,
+  elements,
 }) => {
   if (!isDevelopment || !isHovered) {
     return null;
@@ -104,6 +106,11 @@ const DebugInfo: React.FC<DebugInfoProps> = ({
               <td>{element.children}</td>
             </tr>
             <tr>
+              <td>direction</td>
+              <td>:</td>
+              <td>{element.direction || 'none'}</td>
+            </tr>
+            <tr>
               <td>startMarker</td>
               <td>:</td>
               <td>{element.startMarker}</td>
@@ -134,11 +141,32 @@ const DebugInfo: React.FC<DebugInfoProps> = ({
               <td>{element.tentative ? 'Yes' : 'No'}</td>
             </tr>
             {currentDropTarget && currentDropTarget.id === element.id && (
-              <tr>
-                <td colSpan={3} style={{ color: 'blue' }}>
-                  DROP TARGET ({dropPosition})
-                </td>
-              </tr>
+              <>
+                <tr>
+                  <td colSpan={3} style={{ color: 'blue', fontWeight: 'bold' }}>
+                    DROP TARGET ({dropPosition})
+                  </td>
+                </tr>
+                <tr>
+                  <td>target dir</td>
+                  <td>:</td>
+                  <td>{element.direction || 'none'}</td>
+                </tr>
+                {element.direction === 'none' && (
+                  <tr>
+                    <td>child dir guess</td>
+                    <td>:</td>
+                    <td>Based on drop position</td>
+                  </tr>
+                )}
+                {element.parentId && (
+                  <tr>
+                    <td>parent dir</td>
+                    <td>:</td>
+                    <td>{elements[element.parentId]?.direction || 'none'}</td>
+                  </tr>
+                )}
+              </>
             )}
             {isDraggedOrDescendant && (
               <tr>

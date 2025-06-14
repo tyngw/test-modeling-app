@@ -9,6 +9,7 @@ import {
   handleArrowLeft,
 } from '../utils/elementSelector';
 import { Element } from '../types/types';
+import { DirectionType } from '../types/types';
 import { DEFAULT_POSITION, NUMBER_OF_SECTIONS } from '../config/elementSettings';
 import { Action } from '../types/actionTypes';
 import { debugLog } from '../utils/debugLogHelpers';
@@ -39,6 +40,7 @@ import {
   createSelectedElementHandler,
   createSimplePropertyHandler,
 } from '../utils/stateHelpers';
+import { LayoutMode } from '../types/tabTypes';
 
 /**
  * アプリケーションの状態を表す型
@@ -54,6 +56,8 @@ export interface State {
   zoomRatio: number;
   /** セクション数 */
   numberOfSections: number;
+  /** レイアウトモード */
+  layoutMode?: LayoutMode;
 }
 
 export const initialState: State = {
@@ -146,7 +150,7 @@ function handleSelectedElementAction(
  * アクションハンドラーの型定義
  * 各アクションタイプに対応する状態更新関数のマップ
  */
-type ActionHandler = (state: State, action?: any) => State;
+type ActionHandler = (state: State, action?: { type: string; payload?: unknown }) => State;
 
 /**
  * すべてのアクションハンドラーのマップ
@@ -277,7 +281,7 @@ const actionHandlers: Record<string, ActionHandler> = {
     };
   },
 
-  EDIT_ELEMENT: createSelectedElementHandler((element) => ({ editing: true }), false),
+  EDIT_ELEMENT: createSelectedElementHandler((_element) => ({ editing: true }), false),
 
   END_EDITING: (state) =>
     withPositionAdjustment(state, () =>
@@ -341,7 +345,13 @@ const actionHandlers: Record<string, ActionHandler> = {
         numberOfSections,
       });
       return {
-        elements: adjustElementPositions(newElements, () => state.numberOfSections),
+        elements: adjustElementPositions(
+          newElements,
+          () => state.numberOfSections,
+          state.layoutMode,
+          state.width || 0,
+          state.height || 0,
+        ),
       };
     }),
 
@@ -352,11 +362,20 @@ const actionHandlers: Record<string, ActionHandler> = {
       const numberOfSections = state.numberOfSections;
 
       return {
-        elements: addElementsWithAdjustment(elements, selectedElement, texts, {
-          tentative,
-          numberOfSections,
-          zoomRatio: state.zoomRatio,
-        }),
+        elements: addElementsWithAdjustment(
+          elements,
+          selectedElement,
+          texts,
+          {
+            tentative,
+            numberOfSections,
+            zoomRatio: state.zoomRatio,
+            layoutMode: state.layoutMode,
+            // directionは既存通り
+          },
+          state.width || 0,
+          state.height || 0,
+        ),
       };
     }),
 
@@ -364,8 +383,16 @@ const actionHandlers: Record<string, ActionHandler> = {
     handleElementMutation(state, (elements, selectedElement) => {
       const numberOfSections = state.numberOfSections;
       const newElements = createSiblingElementAdder(elements, selectedElement, numberOfSections);
+
+      // layoutModeとキャンバスサイズを渡す
       return {
-        elements: adjustElementPositions(newElements, () => state.numberOfSections),
+        elements: adjustElementPositions(
+          newElements,
+          () => state.numberOfSections,
+          (state.layoutMode || 'default') as LayoutMode,
+          state.width || 0,
+          state.height || 0,
+        ),
       };
     }),
 
@@ -465,22 +492,30 @@ const actionHandlers: Record<string, ActionHandler> = {
   },
 
   DROP_ELEMENT: (state, action) => {
+    if (!action?.payload) return state;
     const { payload } = action;
-    const { id, oldParentId, newParentId, newOrder, depth } = payload;
+    const { id, oldParentId, newParentId, newOrder, depth, direction } = payload as {
+      id: string;
+      oldParentId: string | null;
+      newParentId: string | null;
+      newOrder: number;
+      depth: number;
+      direction?: DirectionType;
+    };
 
-    if (id === newParentId || isDescendant(state.elements, id, newParentId)) {
+    if (id === newParentId || (newParentId && isDescendant(state.elements, id, newParentId))) {
       return state;
     }
 
     let updatedElements = { ...state.elements };
     const element = updatedElements[id];
-    const oldParent = updatedElements[oldParentId];
-    const newParent = updatedElements[newParentId];
+    const oldParent = oldParentId ? updatedElements[oldParentId] : null;
+    const newParent = newParentId ? updatedElements[newParentId] : null;
 
     const isSameParent = oldParentId === newParentId;
 
     // 古い親のchildren更新（異なる親の場合のみ）
-    if (!isSameParent && oldParent) {
+    if (!isSameParent && oldParent && oldParentId) {
       updatedElements[oldParentId] = {
         ...oldParent,
         children: Math.max(0, oldParent.children - 1),
@@ -507,6 +542,7 @@ const actionHandlers: Record<string, ActionHandler> = {
       parentId: newParentId,
       depth: depth,
       order: newOrder,
+      ...(direction !== undefined && { direction }),
     };
 
     // 同じ親の兄弟要素の順序更新
@@ -525,7 +561,7 @@ const actionHandlers: Record<string, ActionHandler> = {
     });
 
     // 新しい親のchildren更新（異なる親の場合のみ）
-    if (!isSameParent && newParent) {
+    if (!isSameParent && newParent && newParentId) {
       updatedElements[newParentId] = {
         ...newParent,
         children: newParent.children + 1,
@@ -595,7 +631,13 @@ const actionHandlers: Record<string, ActionHandler> = {
     return handleElementMutation(state, (elements, selectedElement) => {
       const pastedElements = pasteElements(elements, globalCutElements, selectedElement);
       return {
-        elements: adjustElementPositions(pastedElements, () => state.numberOfSections),
+        elements: adjustElementPositions(
+          pastedElements,
+          () => state.numberOfSections,
+          (state.layoutMode || 'default') as LayoutMode,
+          state.width || 0,
+          state.height || 0,
+        ),
       };
     });
   },
@@ -605,6 +647,9 @@ const actionHandlers: Record<string, ActionHandler> = {
       elements: adjustElementPositions(
         setVisibilityRecursive(elements, selectedElement, true),
         () => state.numberOfSections,
+        (state.layoutMode || 'default') as LayoutMode,
+        state.width || 0,
+        state.height || 0,
       ),
     })),
 
@@ -613,6 +658,9 @@ const actionHandlers: Record<string, ActionHandler> = {
       elements: adjustElementPositions(
         setVisibilityRecursive(elements, selectedElement, false),
         () => state.numberOfSections,
+        (state.layoutMode || 'default') as LayoutMode,
+        state.width || 0,
+        state.height || 0,
       ),
     })),
 };
