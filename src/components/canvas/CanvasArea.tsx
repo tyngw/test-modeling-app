@@ -247,8 +247,8 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
                     handleMouseDown={handleMouseDown}
                     handleMouseUp={handleMouseUp}
                     onHoverChange={handleElementHover}
-                    dropInsertY={dropInsertY}
-                    siblingInfo={siblingInfo}
+                    _dropInsertY={dropInsertY}
+                    _siblingInfo={siblingInfo}
                   />
                   {hasChildren && (
                     <MarkerButton
@@ -306,8 +306,8 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
                     }}
                     handleMouseUp={handleMouseUp}
                     onHoverChange={handleElementHover}
-                    dropInsertY={dropInsertY}
-                    siblingInfo={siblingInfo}
+                    _dropInsertY={dropInsertY}
+                    _siblingInfo={siblingInfo}
                   />
                 );
               })}

@@ -2,6 +2,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Element, DirectionType } from '../types/types';
 import { LayoutMode } from '../types/tabTypes';
+import { ElementsMap, ElementAdderOptions } from '../types/elementTypes';
 import { createNewElement } from './element';
 import { adjustElementPositions } from './layoutHelpers';
 import { calculateElementWidth, wrapText } from './textareaHelpers';
@@ -11,7 +12,6 @@ import {
   DEFAULT_FONT_SIZE,
   LINE_HEIGHT_RATIO,
 } from '../config/elementSettings';
-import { ElementsMap, ElementAdderOptions } from '../types/elementTypes';
 // 型定義は直接使用している場所に移動しました
 
 /**
@@ -394,14 +394,15 @@ export const withPositionAdjustment = (
 export const createElementPropertyHandler = <T extends { id: string } & Record<string, unknown>>(
   updateFn: (element: Element, payload: T) => Partial<Element>,
 ) => {
-  return (state: { elements: ElementsMap }, action: { payload: T }) => {
-    const { id } = action.payload;
+  return (state: StateWithElements, action: { payload?: any }): StateWithElements => {
+    if (!action.payload) return state;
+    const { id } = action.payload as T;
     const element = state.elements[id];
     if (!element) return state;
 
     return {
       ...state,
-      elements: updateElementProperties(state.elements, id, updateFn(element, action.payload)),
+      elements: updateElementProperties(state.elements, id, updateFn(element, action.payload as T)),
     };
   };
 };
@@ -465,10 +466,8 @@ export const createSelectedElementHandler = (
  * @returns アクションハンドラー
  */
 export const createSimplePropertyHandler = (propertyName: string) => {
-  return (
-    state: { elements: ElementsMap },
-    action: { payload: { id: string } & Record<string, unknown> },
-  ) => {
+  return (state: StateWithElements, action: { payload?: any }): StateWithElements => {
+    if (!action.payload) return state;
     const { id } = action.payload;
     const value = action.payload[propertyName];
 
@@ -480,3 +479,13 @@ export const createSimplePropertyHandler = (propertyName: string) => {
     };
   };
 };
+
+// State型の部分的な定義（循環参照を避けるため）
+interface StateWithElements {
+  elements: ElementsMap;
+  width: number;
+  height: number;
+  zoomRatio: number;
+  numberOfSections: number;
+  layoutMode?: LayoutMode;
+}
