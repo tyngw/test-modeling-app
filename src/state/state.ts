@@ -9,6 +9,7 @@ import {
   handleArrowLeft,
 } from '../utils/elementSelector';
 import { Element } from '../types/types';
+import { DirectionType } from '../types/types';
 import { DEFAULT_POSITION, NUMBER_OF_SECTIONS } from '../config/elementSettings';
 import { Action } from '../types/actionTypes';
 import { debugLog } from '../utils/debugLogHelpers';
@@ -491,22 +492,30 @@ const actionHandlers: Record<string, ActionHandler> = {
   },
 
   DROP_ELEMENT: (state, action) => {
+    if (!action?.payload) return state;
     const { payload } = action;
-    const { id, oldParentId, newParentId, newOrder, depth } = payload;
+    const { id, oldParentId, newParentId, newOrder, depth, direction } = payload as {
+      id: string;
+      oldParentId: string | null;
+      newParentId: string | null;
+      newOrder: number;
+      depth: number;
+      direction?: DirectionType;
+    };
 
-    if (id === newParentId || isDescendant(state.elements, id, newParentId)) {
+    if (id === newParentId || (newParentId && isDescendant(state.elements, id, newParentId))) {
       return state;
     }
 
     let updatedElements = { ...state.elements };
     const element = updatedElements[id];
-    const oldParent = updatedElements[oldParentId];
-    const newParent = updatedElements[newParentId];
+    const oldParent = oldParentId ? updatedElements[oldParentId] : null;
+    const newParent = newParentId ? updatedElements[newParentId] : null;
 
     const isSameParent = oldParentId === newParentId;
 
     // 古い親のchildren更新（異なる親の場合のみ）
-    if (!isSameParent && oldParent) {
+    if (!isSameParent && oldParent && oldParentId) {
       updatedElements[oldParentId] = {
         ...oldParent,
         children: Math.max(0, oldParent.children - 1),
@@ -533,6 +542,7 @@ const actionHandlers: Record<string, ActionHandler> = {
       parentId: newParentId,
       depth: depth,
       order: newOrder,
+      ...(direction !== undefined && { direction }),
     };
 
     // 同じ親の兄弟要素の順序更新
@@ -551,7 +561,7 @@ const actionHandlers: Record<string, ActionHandler> = {
     });
 
     // 新しい親のchildren更新（異なる親の場合のみ）
-    if (!isSameParent && newParent) {
+    if (!isSameParent && newParent && newParentId) {
       updatedElements[newParentId] = {
         ...newParent,
         children: newParent.children + 1,

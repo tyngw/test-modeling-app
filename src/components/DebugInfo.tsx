@@ -156,7 +156,7 @@ const DebugInfo: React.FC<DebugInfoProps> = ({
                   <tr>
                     <td>child dir guess</td>
                     <td>:</td>
-                    <td>{element.x > element.width / 2 ? 'left' : 'right'}</td>
+                    <td>Based on drop position</td>
                   </tr>
                 )}
                 {element.parentId && (
