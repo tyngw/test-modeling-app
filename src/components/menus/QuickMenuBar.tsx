@@ -58,7 +58,7 @@ const QuickMenuBar = ({
   toggleSettings,
   onAIClick,
 }: QuickMenuBarProps) => {
-  const { dispatch, state } = useCanvas();
+  const { dispatch } = useCanvas();
   const { addTab } = useTabs();
   const fileInput = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);

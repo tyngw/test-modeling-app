@@ -44,7 +44,7 @@ export const copyToClipboard = (elements: ElementsMap): void => {
   setCutElements(JSON.stringify(elements));
 
   // Continue with standard text clipboard functionality
-  const getElementText = (element: Element, depth: number = 0): string => {
+  const getElementText = (element: Element, depth = 0): string => {
     const children = Object.values(elements).filter((el) => el.parentId === element.id);
     const childTexts = children.map((child) => getElementText(child, depth + 1));
     const tabs = '\t'.repeat(depth);

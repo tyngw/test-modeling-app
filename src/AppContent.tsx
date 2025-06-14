@@ -37,14 +37,7 @@ const AppContent: React.FC = () => {
   // モーダル状態管理
   const [
     { isHelpOpen, isSettingsOpen, showCloseConfirm, tabToClose },
-    {
-      toggleHelp,
-      toggleSettings,
-      openCloseConfirm,
-      setShowCloseConfirm,
-      setTabToClose,
-      closeConfirmModal,
-    },
+    { toggleHelp, toggleSettings, openCloseConfirm, setShowCloseConfirm },
   ] = useModalState(handleEndEditing);
 
   // タブ閉じる要求時のハンドラー

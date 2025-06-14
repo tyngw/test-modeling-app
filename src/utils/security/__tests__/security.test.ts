@@ -1,23 +1,15 @@
 // src/utils/security/__tests__/security.test.ts
 
-import { 
-  sanitizeText, 
-  escapeForJson, 
-  escapeHtmlAttribute, 
-  isValidUrl, 
-  sanitizeFilename, 
-  sanitizeObject, 
-  sanitizeApiResponse 
+import {
+  sanitizeText,
+  escapeForJson,
+  isValidUrl,
+  sanitizeFilename,
+  sanitizeObject,
+  sanitizeApiResponse,
 } from '../sanitization';
 
-import { 
-  validateApiKey, 
-  validateTextInput, 
-  validateJsonData, 
-  validateFileContent, 
-  validateSettingValue, 
-  validateExternalUrl 
-} from '../validation';
+import { validateTextInput, validateFileContent, validateJsonData } from '../validation';
 
 describe('セキュリティ機能のテスト', () => {
   describe('sanitizeText', () => {
@@ -144,9 +136,9 @@ describe('セキュリティ機能のテスト', () => {
     });
 
     test('無効なJSONを拒否する', () => {
-      expect(validateJsonData('{"key": value}')).toBe(false);  // クォートなし
-      expect(validateJsonData('{key: "value"}')).toBe(false);  // キーにクォートなし
-      expect(validateJsonData('{"key": "value",}')).toBe(false);  // 末尾カンマ
+      expect(validateJsonData('{"key": value}')).toBe(false); // クォートなし
+      expect(validateJsonData('{key: "value"}')).toBe(false); // キーにクォートなし
+      expect(validateJsonData('{"key": "value",}')).toBe(false); // 末尾カンマ
     });
 
     test('空文字列や非文字列を拒否する', () => {
@@ -161,9 +153,9 @@ describe('セキュリティ機能のテスト', () => {
         safe: 'normal text',
         dangerous: '<script>alert("XSS")</script>',
         number: 123,
-        boolean: true
+        boolean: true,
       };
-      
+
       const result = sanitizeObject(input);
       expect(result.safe).toBe('normal text');
       expect(result.dangerous).toBe('');
@@ -175,10 +167,10 @@ describe('セキュリティ機能のテスト', () => {
       const input = {
         nested: {
           safe: 'normal text',
-          dangerous: '<script>alert("XSS")</script>'
-        }
+          dangerous: '<script>alert("XSS")</script>',
+        },
       };
-      
+
       const result = sanitizeObject(input);
       expect(result.nested.safe).toBe('normal text');
       expect(result.nested.dangerous).toBe('');
@@ -186,12 +178,9 @@ describe('セキュリティ機能のテスト', () => {
 
     test('配列内のオブジェクトもサニタイズする', () => {
       const input = {
-        items: [
-          { text: 'safe text' },
-          { text: '<script>alert("XSS")</script>' }
-        ]
+        items: [{ text: 'safe text' }, { text: '<script>alert("XSS")</script>' }],
       };
-      
+
       const result = sanitizeObject(input);
       expect(result.items[0].text).toBe('safe text');
       expect(result.items[1].text).toBe('');
@@ -211,10 +200,10 @@ describe('セキュリティ機能のテスト', () => {
       const maliciousResponse = {
         content: 'normal text <script>alert("XSS")</script>',
         data: {
-          value: '<img src="x" onerror="alert(\'XSS\')">'
-        }
+          value: '<img src="x" onerror="alert(\'XSS\')">',
+        },
       };
-      
+
       const result = sanitizeApiResponse(maliciousResponse);
       expect(result.content).toBe('normal text ');
       expect(result.data.value).toBe('');
@@ -250,10 +239,10 @@ describe('統合セキュリティテスト', () => {
       '<img src="x" onerror="alert(\'XSS\')">',
       '<svg onload="alert(\'XSS\')">',
       '"><script>alert("XSS")</script>',
-      'javascript:/*-/*`/*\\`/*\'/*"/**/(/* */onerror=alert(\'XSS\') )//%0D%0A%0d%0a//</stYle/</titLe/</teXtarEa/</scRipt/--!>\\x3csVg/<sVg/oNloAd=alert(//XSS//)//>'
+      "javascript:/*-/*`/*\\`/*'/*\"/**/(/* */onerror=alert('XSS') )//%0D%0A%0d%0a//</stYle/</titLe/</teXtarEa/</scRipt/--!>\\x3csVg/<sVg/oNloAd=alert(//XSS//)//>",
     ];
 
-    attacks.forEach(attack => {
+    attacks.forEach((attack) => {
       expect(validateTextInput(attack)).toBe(false);
       const sanitized = sanitizeText(attack);
       expect(sanitized).not.toContain('<script');
@@ -268,10 +257,10 @@ describe('統合セキュリティテスト', () => {
       '..\\..\\windows\\system32\\config\\sam',
       'test<script>alert("XSS")</script>.json',
       'test.php.json',
-      '.htaccess'
+      '.htaccess',
     ];
 
-    maliciousFilenames.forEach(filename => {
+    maliciousFilenames.forEach((filename) => {
       const sanitized = sanitizeFilename(filename);
       expect(sanitized).not.toContain('../');
       expect(sanitized).not.toContain('..\\');
@@ -283,10 +272,10 @@ describe('統合セキュリティテスト', () => {
     const maliciousJsonInputs = [
       '{"__proto__": {"isAdmin": true}}',
       '{"constructor": {"prototype": {"isAdmin": true}}}',
-      '{"test": "value", "evil": "<script>alert(\\"XSS\\")</script>"}'
+      '{"test": "value", "evil": "<script>alert(\\"XSS\\")</script>"}',
     ];
 
-    maliciousJsonInputs.forEach(input => {
+    maliciousJsonInputs.forEach((input) => {
       if (validateJsonData(input)) {
         const parsed = JSON.parse(input);
         const sanitized = sanitizeObject(parsed);

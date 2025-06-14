@@ -1,5 +1,5 @@
 import React from 'react';
-import { Element as CanvasElement, DirectionType } from '../../types/types';
+import { Element as CanvasElement } from '../../types/types';
 import {
   CONNECTION_PATH_STYLE,
   CURVE_CONTROL_OFFSET,

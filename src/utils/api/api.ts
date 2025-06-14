@@ -3,7 +3,7 @@ import axios from 'axios';
 import { getApiEndpoint } from '../storage/localStorageHelpers';
 import { getSystemPrompt } from '../../constants/promptHelpers';
 import { SuggestionResponse, suggestionResponseSchema } from './schema';
-import { sanitizeApiResponse, sanitizeText } from '../security/sanitization';
+import { sanitizeApiResponse } from '../security/sanitization';
 import { validateJsonData } from '../security/validation';
 
 // 複数メッセージ対応のための型定義
@@ -16,17 +16,13 @@ interface Message {
   parts: MessagePart[];
 }
 
-interface SystemInstruction {
-  parts: MessagePart[];
-}
-
 // レスポンスのタイプを定義するジェネリック型
 type ApiResponse<T = string> = T;
 
 export const generateWithGemini = async (
   prompt: string,
   apiKey: string,
-  modelType: string,
+  _modelType: string,
 ): Promise<string> => {
   try {
     console.log('prompt: \n', prompt);
@@ -44,7 +40,7 @@ export const generateWithGemini = async (
             parts: [{ text: prompt }],
           },
         ],
-        system_instruction: {
+        systemInstruction: {
           parts: [{ text: systemPrompt }],
         },
         // レスポンス形式を明示的に指定
@@ -72,10 +68,10 @@ export const generateWithGemini = async (
 
     // テキストレスポンスの取得とサニタイゼーション
     const rawTextResponse = response.data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    
+
     // AIレスポンスのセキュリティチェックとサニタイゼーション
     const sanitizedResponse = sanitizeApiResponse(rawTextResponse);
-    
+
     console.log('Sanitized response:', sanitizedResponse);
     return sanitizedResponse;
   } catch (error) {
@@ -88,7 +84,7 @@ export const generateWithGemini = async (
 export const generateElementSuggestions = async (
   prompt: string,
   apiKey: string,
-  modelType: string,
+  _modelType: string,
 ): Promise<SuggestionResponse> => {
   try {
     console.log('prompt: \n', prompt);
@@ -105,7 +101,7 @@ export const generateElementSuggestions = async (
             parts: [{ text: prompt }],
           },
         ],
-        system_instruction: {
+        systemInstruction: {
           parts: [{ text: systemPrompt }],
         },
         generationConfig: {
@@ -127,13 +123,13 @@ export const generateElementSuggestions = async (
     // JSONレスポンスの取得とサニタイゼーション
     const rawJsonText =
       response.data.candidates?.[0]?.content?.parts?.[0]?.text || '{"suggestions":[]}';
-    
+
     // JSONデータの検証
     if (!validateJsonData(rawJsonText)) {
       console.warn('Invalid JSON response from API, using empty suggestions');
       return { suggestions: [] };
     }
-    
+
     let jsonResponse: SuggestionResponse;
 
     try {
@@ -171,7 +167,7 @@ export const generateElementSuggestions = async (
 export const generateWithGeminiJson = async <T>(
   prompt: string,
   apiKey: string,
-  modelType: string,
+  _modelType: string,
   responseSchema: any, // JSONスキーマ
 ): Promise<ApiResponse<T>> => {
   try {
@@ -189,7 +185,7 @@ export const generateWithGeminiJson = async <T>(
             parts: [{ text: prompt }],
           },
         ],
-        system_instruction: {
+        systemInstruction: {
           parts: [{ text: systemPrompt }],
         },
         generationConfig: {
@@ -239,7 +235,7 @@ export const generateWithGeminiMultipleMessages = async (
   messages: { role: 'user' | 'model'; text: string }[],
   systemInstruction: string,
   apiKey: string,
-  modelType: string,
+  _modelType: string,
 ): Promise<string> => {
   try {
     const endpoint = `${getApiEndpoint()}?key=${apiKey}`;
@@ -256,7 +252,7 @@ export const generateWithGeminiMultipleMessages = async (
       endpoint,
       {
         contents,
-        system_instruction: {
+        systemInstruction: {
           parts: [{ text: systemInstruction }],
         },
         // レスポンス形式を明示的に指定
@@ -283,7 +279,7 @@ export const generateWithGeminiMultipleMessages = async (
 
     // レスポンスデータの取得とサニタイゼーション
     const rawTextResponse = response.data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    
+
     // AIレスポンスのセキュリティチェックとサニタイゼーション
     const sanitizedResponse = sanitizeApiResponse(rawTextResponse);
 
@@ -300,7 +296,7 @@ export const generateWithGeminiMultipleMessagesJson = async <T>(
   messages: { role: 'user' | 'model'; text: string }[],
   systemInstruction: string,
   apiKey: string,
-  modelType: string,
+  _modelType: string,
   responseSchema: any, // JSONスキーマ
 ): Promise<ApiResponse<T>> => {
   try {
@@ -318,7 +314,7 @@ export const generateWithGeminiMultipleMessagesJson = async <T>(
       endpoint,
       {
         contents,
-        system_instruction: {
+        systemInstruction: {
           parts: [{ text: systemInstruction }],
         },
         generationConfig: {

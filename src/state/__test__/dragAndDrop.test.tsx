@@ -14,7 +14,7 @@ describe('ドラッグ＆ドロップ', () => {
     });
 
     let state = result.current.state;
-    let elementB = Object.values(state.elements).find(
+    const elementB = Object.values(state.elements).find(
       (elm: Element) => elm.parentId === '1',
     ) as Element;
 
@@ -24,7 +24,7 @@ describe('ドラッグ＆ドロップ', () => {
     });
 
     state = result.current.state;
-    let elementC = Object.values(state.elements).find(
+    const elementC = Object.values(state.elements).find(
       (elm: Element) => elm.parentId === '1' && elm.id !== elementB.id,
     ) as Element;
 
