@@ -378,13 +378,41 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
           }
         }
 
-        // between位置の計算
+        // between位置の計算 - 兄弟要素のdirectionを考慮してX座標を設定
+        let insertX: number;
+        let siblingDirection: DirectionType = 'right'; // デフォルト値
+
+        // 兄弟要素のdirectionを取得（prevElementまたはnextElementから）
+        if (prevElement && prevElement.direction) {
+          siblingDirection = prevElement.direction;
+        } else if (nextElement && nextElement.direction) {
+          siblingDirection = nextElement.direction;
+        } else if (element.direction && element.direction !== 'none') {
+          siblingDirection = element.direction;
+        }
+
+        // directionに基づいてX座標を計算
+        const parentElement = element.parentId ? elements[element.parentId] : null;
+        if (parentElement) {
+          insertX =
+            siblingDirection === 'left'
+              ? parentElement.x - OFFSET.X - (draggingElement?.width ?? 0)
+              : parentElement.x + parentElement.width + OFFSET.X;
+        } else {
+          // 親がない場合（ルート要素の兄弟）
+          insertX =
+            siblingDirection === 'left'
+              ? element.x - OFFSET.X - (draggingElement?.width ?? 0)
+              : element.x + element.width + OFFSET.X;
+        }
+
         if (prevElement && nextElement) {
           // 2つの要素の間
           const gap = nextElement.y - (prevElement.y + prevElement.height);
           result = {
             position: 'between',
             insertY: prevElement.y + prevElement.height + gap / 2,
+            insertX,
             siblingInfo: { prevElement, nextElement },
           };
         } else if (prevElement) {
@@ -392,6 +420,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
           result = {
             position: 'between',
             insertY: prevElement.y + prevElement.height + OFFSET.Y,
+            insertX,
             siblingInfo: { prevElement },
           };
         } else if (nextElement) {
@@ -399,6 +428,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
           result = {
             position: 'between',
             insertY: nextElement.y - OFFSET.Y,
+            insertX,
             siblingInfo: { nextElement },
           };
         } else {
@@ -406,11 +436,15 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
           result = {
             position: 'between',
             insertY: element.y + element.height + OFFSET.Y,
+            insertX,
             siblingInfo: {},
           };
         }
 
-        debugLog('Drop position mode (between siblings):', 'between');
+        debugLog(
+          `Drop position mode (between siblings) - direction: ${siblingDirection}, insertX: ${insertX}`,
+          'between',
+        );
       }
 
       // 要素中心からの距離を計算
@@ -491,39 +525,136 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
         debugLog(`[findDropTarget] Candidate: ${candidate.id}, isRoot: ${isRoot}`);
       });
 
-      // 要素間の領域を検出 - 特に子要素を持つ要素間のスペースを考慮
-      if (candidates.length === 0) {
-        // すべての可視要素を親のIDでグループ化
-        const elementsByParent: { [parentId: string]: Element[] } = {};
+      // 要素間の領域を検出 - direction別の空間検出を最優先で実行
+      // すべての可視要素を親のIDでグループ化
+      const elementsByParent: { [parentId: string]: Element[] } = {};
 
-        Object.values(elements)
-          .filter((el) => el.visible && !selectedElementIds.includes(el.id))
-          .forEach((el) => {
-            const parentId = el.parentId || 'root';
-            if (!elementsByParent[parentId]) {
-              elementsByParent[parentId] = [];
+      Object.values(elements)
+        .filter((el) => el.visible && !selectedElementIds.includes(el.id))
+        .forEach((el) => {
+          const parentId = el.parentId || 'root';
+          if (!elementsByParent[parentId]) {
+            elementsByParent[parentId] = [];
+          }
+          elementsByParent[parentId].push(el);
+        });
+
+      // 各グループを順序でソート
+      for (const parentId in elementsByParent) {
+        elementsByParent[parentId].sort((a, b) => a.y - b.y);
+      }
+
+      // 各グループ内で要素間の空間を検出 - directionを考慮（最優先）
+      for (const [parentKey, groupElements] of Object.entries(elementsByParent)) {
+        if (groupElements.length < 2) continue; // 少なくとも2つの要素が必要
+
+        // 親要素を取得してルート要素かどうかを判定
+        const parentElement = parentKey !== 'root' ? elements[parentKey] : null;
+        const isParentRoot =
+          parentElement && parentElement.direction === 'none' && parentElement.parentId === null;
+
+        if (isParentRoot) {
+          // ルート要素の子の場合、directionでグループ分け
+          const leftChildren = groupElements
+            .filter((el) => el.direction === 'left')
+            .sort((a, b) => a.y - b.y);
+          const rightChildren = groupElements
+            .filter((el) => el.direction === 'right')
+            .sort((a, b) => a.y - b.y);
+
+          // 左側の子要素間のスペースをチェック
+          for (let i = 0; i < leftChildren.length - 1; i++) {
+            const currentElement = leftChildren[i];
+            const nextElement = leftChildren[i + 1];
+
+            // 要素間の空間を計算
+            const gap = nextElement.y - (currentElement.y + currentElement.height);
+            if (gap < 5) continue; // 最小ギャップの閾値
+
+            // 要素間の領域を定義
+            const gapAreaTop = currentElement.y + currentElement.height;
+            const gapAreaBottom = nextElement.y;
+
+            // 左側の要素なので、親要素の左側の範囲で判定
+            const gapAreaLeft = parentElement.x - OFFSET.X * 2 - (draggingElement?.width ?? 0);
+            const gapAreaRight = parentElement.x;
+
+            debugLog(
+              `[Left gap check] mouse(${mouseX},${mouseY}), gapArea(${gapAreaLeft},${gapAreaTop},${gapAreaRight},${gapAreaBottom})`,
+            );
+
+            // マウスが要素間の空間にあるかチェック
+            if (
+              mouseX >= gapAreaLeft &&
+              mouseX <= gapAreaRight &&
+              mouseY >= gapAreaTop &&
+              mouseY <= gapAreaBottom
+            ) {
+              debugLog(`[Left gap found] Between ${currentElement.id} and ${nextElement.id}`);
+              return {
+                element: currentElement,
+                position: 'between',
+                insertY: gapAreaTop + gap / 2,
+                insertX: parentElement.x - OFFSET.X - (draggingElement?.width ?? 0),
+                siblingInfo: {
+                  prevElement: currentElement,
+                  nextElement: nextElement,
+                },
+              };
             }
-            elementsByParent[parentId].push(el);
-          });
+          }
 
-        // 各グループを順序でソート
-        for (const parentId in elementsByParent) {
-          elementsByParent[parentId].sort((a, b) => a.y - b.y);
-        }
+          // 右側の子要素間のスペースをチェック
+          for (let i = 0; i < rightChildren.length - 1; i++) {
+            const currentElement = rightChildren[i];
+            const nextElement = rightChildren[i + 1];
 
-        // 各グループ内で要素間の空間を検出
-        for (const [, groupElements] of Object.entries(elementsByParent)) {
-          if (groupElements.length < 2) continue; // 少なくとも2つの要素が必要
+            // 要素間の空間を計算
+            const gap = nextElement.y - (currentElement.y + currentElement.height);
+            if (gap < 5) continue; // 最小ギャップの閾値
 
-          // 順序付けされたグループ内の要素間を検出
+            // 要素間の領域を定義
+            const gapAreaTop = currentElement.y + currentElement.height;
+            const gapAreaBottom = nextElement.y;
+
+            // 右側の要素なので、親要素の右側の範囲で判定
+            const gapAreaLeft = parentElement.x + parentElement.width;
+            const gapAreaRight = gapAreaLeft + OFFSET.X * 2 + (draggingElement?.width ?? 0);
+
+            debugLog(
+              `[Right gap check] mouse(${mouseX},${mouseY}), gapArea(${gapAreaLeft},${gapAreaTop},${gapAreaRight},${gapAreaBottom})`,
+            );
+
+            // マウスが要素間の空間にあるかチェック
+            if (
+              mouseX >= gapAreaLeft &&
+              mouseX <= gapAreaRight &&
+              mouseY >= gapAreaTop &&
+              mouseY <= gapAreaBottom
+            ) {
+              debugLog(`[Right gap found] Between ${currentElement.id} and ${nextElement.id}`);
+              return {
+                element: currentElement,
+                position: 'between',
+                insertY: gapAreaTop + gap / 2,
+                insertX: parentElement.x + parentElement.width + OFFSET.X,
+                siblingInfo: {
+                  prevElement: currentElement,
+                  nextElement: nextElement,
+                },
+              };
+            }
+          }
+        } else {
+          // ルート以外の親の場合は従来の処理
+          groupElements.sort((a, b) => a.y - b.y);
+
           for (let i = 0; i < groupElements.length - 1; i++) {
             const currentElement = groupElements[i];
             const nextElement = groupElements[i + 1];
 
             // 要素間の空間を計算
             const gap = nextElement.y - (currentElement.y + currentElement.height);
-
-            // 空間が十分大きいか確認（小さすぎる隙間は対象外）
             if (gap < 5) continue; // 最小ギャップの閾値
 
             // 要素間の領域を定義
@@ -531,11 +662,8 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
             const gapAreaBottom = nextElement.y;
 
             // X座標の検出範囲を定義
-            // 2つの要素のX座標とX座標+幅から共通の水平範囲を計算
             const currentElementRight = currentElement.x + currentElement.width;
             const nextElementRight = nextElement.x + nextElement.width;
-
-            // X方向の判定領域を、2つの要素の幅のみに制限する
             const gapAreaLeft = Math.min(currentElement.x, nextElement.x);
             const gapAreaRight = Math.max(currentElementRight, nextElementRight);
 
@@ -548,9 +676,9 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
             ) {
               // 要素間の空間が見つかった場合、betweenモードでのドロップを提案
               return {
-                element: currentElement, // 上側の要素を参照として使用
+                element: currentElement,
                 position: 'between',
-                insertY: gapAreaTop + gap / 2, // 空間の中心に配置
+                insertY: gapAreaTop + gap / 2,
                 siblingInfo: {
                   prevElement: currentElement,
                   nextElement: nextElement,
@@ -559,48 +687,50 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
             }
           }
         }
+      }
 
-        // グループの最後の要素の下部領域の検出
-        for (const [parentKey, groupElements] of Object.entries(elementsByParent)) {
-          if (groupElements.length === 0) continue;
+      // グループの最後の要素の下部領域の検出
+      for (const [parentKey, groupElements] of Object.entries(elementsByParent)) {
+        if (groupElements.length === 0) continue;
 
-          // グループ内で最も下にある要素を探す
-          const lastElement = groupElements.reduce((last, current) => {
-            return current.y + current.height > last.y + last.height ? current : last;
-          }, groupElements[0]);
+        // グループ内で最も下にある要素を探す
+        const lastElement = groupElements.reduce((last, current) => {
+          return current.y + current.height > last.y + last.height ? current : last;
+        }, groupElements[0]);
 
-          // マウスがこのグループの水平範囲内で、最後の要素よりも下にあるかチェック
-          const parentElement = parentKey !== 'root' ? elements[parentKey] : null;
-          let groupLeft, groupRight;
+        // マウスがこのグループの水平範囲内で、最後の要素よりも下にあるかチェック
+        const parentElement = parentKey !== 'root' ? elements[parentKey] : null;
+        let groupLeft, groupRight;
 
-          if (parentElement) {
-            // 親要素がある場合は親の右側から検出範囲を計算
-            groupLeft = parentElement.x + parentElement.width;
-            groupRight = groupLeft + OFFSET.X * 2 + lastElement.width;
-          } else {
-            // ルート要素の場合
-            groupLeft = lastElement.x - OFFSET.X;
-            groupRight = lastElement.x + lastElement.width + OFFSET.X;
-          }
+        if (parentElement) {
+          // 親要素がある場合は親の右側から検出範囲を計算
+          groupLeft = parentElement.x + parentElement.width;
+          groupRight = groupLeft + OFFSET.X * 2 + lastElement.width;
+        } else {
+          // ルート要素の場合
+          groupLeft = lastElement.x - OFFSET.X;
+          groupRight = lastElement.x + lastElement.width + OFFSET.X;
+        }
 
-          const bottomThreshold = lastElement.y + lastElement.height + OFFSET.Y * 2;
+        const bottomThreshold = lastElement.y + lastElement.height + OFFSET.Y * 2;
 
-          if (
-            mouseX >= groupLeft &&
-            mouseX <= groupRight &&
-            mouseY >= lastElement.y + lastElement.height &&
-            mouseY <= bottomThreshold
-          ) {
-            // 最後の要素の下部にドロップする場合
-            return {
-              element: lastElement,
-              position: 'between',
-              insertY: lastElement.y + lastElement.height + OFFSET.Y,
-              siblingInfo: { prevElement: lastElement },
-            };
-          }
+        if (
+          mouseX >= groupLeft &&
+          mouseX <= groupRight &&
+          mouseY >= lastElement.y + lastElement.height &&
+          mouseY <= bottomThreshold
+        ) {
+          // 最後の要素の下部にドロップする場合
+          return {
+            element: lastElement,
+            position: 'between',
+            insertY: lastElement.y + lastElement.height + OFFSET.Y,
+            siblingInfo: { prevElement: lastElement },
+          };
         }
       }
+
+      // 要素間空間が見つからなかった場合、通常の候補要素による検索を実行
 
       let closestTarget: DropTargetInfo = null;
       let minSquaredDistance = Infinity;
@@ -905,21 +1035,49 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
           const isNewParentRoot = newParent?.direction === 'none' && newParent?.parentId === null;
 
           if (isNewParentRoot) {
-            // 新しい親がルート要素の場合、ドロップ位置に基づいて方向を決定
-            // 最新のマウス位置から直接判定
-            if (currentDropTarget && target) {
-              // ルート要素の中心より左側にドロップした場合は left
-              const rootCenterX = target.x + target.width / 2;
-              const mousePos =
-                currentDropTarget.insertX !== undefined ? currentDropTarget.insertX : rootCenterX; // fallback
-
-              newDirection = mousePos < rootCenterX ? 'left' : 'right';
-              debugLog(
-                `[processBetweenDrop] Root drop direction: ${newDirection}, mouseX: ${mousePos}, rootCenterX: ${rootCenterX}`,
-              );
+            // 新しい親がルート要素の場合
+            if (currentDropTarget?.siblingInfo) {
+              // betweenモードで兄弟要素の間にドロップする場合、兄弟要素のdirectionを継承
+              const { prevElement, nextElement } = currentDropTarget.siblingInfo;
+              if (prevElement && prevElement.direction) {
+                newDirection = prevElement.direction;
+                debugLog(
+                  `[processBetweenDrop] Between mode - inherit direction from prev: ${newDirection}`,
+                );
+              } else if (nextElement && nextElement.direction) {
+                newDirection = nextElement.direction;
+                debugLog(
+                  `[processBetweenDrop] Between mode - inherit direction from next: ${newDirection}`,
+                );
+              } else {
+                // 兄弟要素のdirectionが取得できない場合、マウス位置で判定
+                if (currentDropTarget && target) {
+                  const rootCenterX = target.x + target.width / 2;
+                  const mousePos =
+                    currentDropTarget.insertX !== undefined
+                      ? currentDropTarget.insertX
+                      : rootCenterX;
+                  newDirection = mousePos < rootCenterX ? 'left' : 'right';
+                  debugLog(
+                    `[processBetweenDrop] Between mode fallback - mouse position: ${newDirection}`,
+                  );
+                } else {
+                  newDirection = 'right';
+                }
+              }
             } else {
-              // fallback
-              newDirection = 'right';
+              // 通常のドロップ（betweenモードではない）の場合、マウス位置で判定
+              if (currentDropTarget && target) {
+                const rootCenterX = target.x + target.width / 2;
+                const mousePos =
+                  currentDropTarget.insertX !== undefined ? currentDropTarget.insertX : rootCenterX;
+                newDirection = mousePos < rootCenterX ? 'left' : 'right';
+                debugLog(
+                  `[processBetweenDrop] Root drop direction: ${newDirection}, mouseX: ${mousePos}, rootCenterX: ${rootCenterX}`,
+                );
+              } else {
+                newDirection = 'right';
+              }
             }
           } else {
             // 新しい親がルート要素以外の場合、親の方向を継承
