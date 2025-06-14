@@ -1,6 +1,7 @@
 // src/utils/stateHelpers.ts
 import { v4 as uuidv4 } from 'uuid';
-import { Element } from '../types/types';
+import { Element, DirectionType } from '../types/types';
+import { LayoutMode } from '../types/tabTypes';
 import { createNewElement } from './element';
 import { adjustElementPositions } from './layoutHelpers';
 import { calculateElementWidth, wrapText } from './textareaHelpers';
@@ -11,12 +12,7 @@ import {
   LINE_HEIGHT_RATIO,
 } from '../config/elementSettings';
 import { ElementsMap, ElementAdderOptions } from '../types/elementTypes';
-import {
-  ElementUpdaterFunction,
-  ElementFilterFunction,
-  ElementPropertyUpdater,
-  ElementUpdatesMap,
-} from '../types/stateHelpers';
+// 型定義は直接使用している場所に移動しました
 
 /**
  * 新しい要素を追加するヘルパー関数
@@ -32,11 +28,26 @@ export const createElementAdder = (
   text?: string,
   options?: ElementAdderOptions,
 ): ElementsMap => {
+  // directionの設定ロジック
+  let direction: DirectionType;
+
+  if (options?.direction) {
+    // 明示的な方向指定がある場合はそれを使用
+    direction = options.direction;
+  } else if (parentElement.direction === 'none') {
+    // ルート要素の子の場合は必ずright
+    direction = 'right';
+  } else {
+    // それ以外は親の方向を継承
+    direction = parentElement.direction;
+  }
+
   const newElement = createNewElement({
     parentId: parentElement.id,
     order: options?.order ?? parentElement.children,
     depth: parentElement.depth + 1,
     numSections: options?.numberOfSections,
+    direction,
   });
 
   if (text) {
@@ -89,12 +100,16 @@ export const createSiblingElementAdder = (
     }
   });
 
+  // 選択された要素の方向を継承
+  const direction = selectedElement.direction;
+
   // 新しい要素を作成
   const newElement = createNewElement({
     parentId: parentId,
     order: newOrder,
     depth: selectedElement.depth,
     numSections: numberOfSections,
+    direction,
   });
   updatedElements[selectedElement.id] = { ...selectedElement, selected: false };
   updatedElements[newElement.id] = newElement;
@@ -148,8 +163,10 @@ export const pasteElements = (
   });
 
   // Set the root element of pasted content as selected, and deselect the parent
-  const pastedRootElementId = idMap.get(rootElement.id)!;
-  newElements[pastedRootElementId].selected = true;
+  const pastedRootElementId = idMap.get(rootElement.id) || rootElement.id;
+  if (newElements[pastedRootElementId]) {
+    newElements[pastedRootElementId].selected = true;
+  }
   const updatedParent = {
     ...parentElement,
     children: parentElement.children + 1,
@@ -174,11 +191,18 @@ export const addElementsWithAdjustment = (
     tentative?: boolean;
     numberOfSections: number;
     zoomRatio: number;
+    layoutMode?: string;
+    direction?: DirectionType;
   },
+  canvasWidth = 0,
+  canvasHeight = 0,
 ) => {
   let newElements = { ...elements };
   const parent = { ...parentElement };
   const initialChildren = parent.children;
+
+  // directionの設定：マインドマップモードでも明示的な指定がない限り'right'
+  const direction = options?.direction || 'right';
 
   texts.forEach((text, index) => {
     newElements = createElementAdder(newElements, parent, text, {
@@ -186,6 +210,7 @@ export const addElementsWithAdjustment = (
       tentative: options.tentative ?? false,
       order: initialChildren + index,
       numberOfSections: options.numberOfSections,
+      direction,
     });
   });
 
@@ -216,7 +241,14 @@ export const addElementsWithAdjustment = (
     }
   });
 
-  return adjustElementPositions(newElements, () => options.numberOfSections);
+  // レイアウトモードとキャンバスサイズを渡す
+  return adjustElementPositions(
+    newElements,
+    () => options.numberOfSections,
+    (options.layoutMode || 'mindmap') as LayoutMode,
+    canvasWidth,
+    canvasHeight,
+  );
 };
 
 /**
@@ -323,13 +355,34 @@ export const updateSelectedElements = (
  * @returns 更新された状態
  */
 export const withPositionAdjustment = (
-  state: any,
+  state: {
+    elements: ElementsMap;
+    numberOfSections: number;
+    layoutMode?: LayoutMode;
+    width: number;
+    height: number;
+    zoomRatio: number;
+  },
   elementsUpdater: (elements: ElementsMap) => ElementsMap,
-): any => {
+): typeof state => {
   const updatedElements = elementsUpdater(state.elements);
+
+  // layoutModeが存在する場合は使用、存在しない場合はmindmap
+  const layoutMode = (state.layoutMode || 'mindmap') as LayoutMode;
+
+  // キャンバスサイズを取得（存在する場合）
+  const canvasWidth = state.width || 0;
+  const canvasHeight = state.height || 0;
+
   return {
     ...state,
-    elements: adjustElementPositions(updatedElements, () => state.numberOfSections),
+    elements: adjustElementPositions(
+      updatedElements,
+      () => state.numberOfSections,
+      layoutMode,
+      canvasWidth,
+      canvasHeight,
+    ),
   };
 };
 
@@ -338,10 +391,10 @@ export const withPositionAdjustment = (
  * @param updateFn 要素の更新関数
  * @returns アクションハンドラー
  */
-export const createElementPropertyHandler = <T extends Record<string, any>>(
+export const createElementPropertyHandler = <T extends { id: string } & Record<string, unknown>>(
   updateFn: (element: Element, payload: T) => Partial<Element>,
 ) => {
-  return (state: any, action: { payload: T }) => {
+  return (state: { elements: ElementsMap }, action: { payload: T }) => {
     const { id } = action.payload;
     const element = state.elements[id];
     if (!element) return state;
@@ -360,8 +413,8 @@ export const createElementPropertyHandler = <T extends Record<string, any>>(
  * @returns アクションハンドラー
  */
 export const createSelectedElementHandler = (
-  updateFn: (element: Element, payload?: any) => Partial<Element>,
-  adjustPosition: boolean = false,
+  updateFn: (element: Element, payload?: unknown) => Partial<Element>,
+  adjustPosition = false,
 ) => {
   return (state: any, action?: { payload?: any }) => {
     const selectedElements = Object.values(state.elements) as Element[];
@@ -380,9 +433,22 @@ export const createSelectedElementHandler = (
     const updatedElements = batchUpdateElements(state.elements, updatesMap);
 
     if (adjustPosition) {
+      // layoutModeが存在する場合は使用、存在しない場合はdefault
+      const layoutMode = state.layoutMode || 'default';
+
+      // キャンバスサイズを取得（存在する場合）
+      const canvasWidth = state.width || 0;
+      const canvasHeight = state.height || 0;
+
       return {
         ...state,
-        elements: adjustElementPositions(updatedElements, () => state.numberOfSections),
+        elements: adjustElementPositions(
+          updatedElements,
+          () => state.numberOfSections,
+          layoutMode,
+          canvasWidth,
+          canvasHeight,
+        ),
       };
     } else {
       return {
@@ -398,8 +464,11 @@ export const createSelectedElementHandler = (
  * @param propertyName 更新するプロパティ名
  * @returns アクションハンドラー
  */
-export const createSimplePropertyHandler = <T>(propertyName: string) => {
-  return (state: any, action: { payload: { id: string } & Record<string, T> }) => {
+export const createSimplePropertyHandler = (propertyName: string) => {
+  return (
+    state: { elements: ElementsMap },
+    action: { payload: { id: string } & Record<string, unknown> },
+  ) => {
     const { id } = action.payload;
     const value = action.payload[propertyName];
 

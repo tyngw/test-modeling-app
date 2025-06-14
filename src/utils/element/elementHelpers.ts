@@ -1,10 +1,10 @@
 // src/utils/element/elementHelpers.ts
-import { Element, MarkerType } from '../../types/types';
+import { Element, MarkerType, DirectionType } from '../../types/types';
 import { v4 as uuidv4 } from 'uuid';
 import { getMarkerType } from '../storage/localStorageHelpers';
 import { SIZE, NUMBER_OF_SECTIONS } from '../../config/elementSettings';
 import { debugLog } from '../debugLogHelpers';
-import { ElementsMap, NewElementOptions } from '../../types/elementTypes';
+import { ElementsMap } from '../../types/elementTypes';
 
 /**
  * 新規要素作成のパラメータ
@@ -15,6 +15,7 @@ export interface NewElementParams {
   order?: number;
   depth?: number;
   numSections?: number;
+  direction?: DirectionType;
 }
 
 export const createNewElement = ({
@@ -22,6 +23,7 @@ export const createNewElement = ({
   order = 0,
   depth = 1,
   numSections = NUMBER_OF_SECTIONS,
+  direction = parentId === null ? 'none' : 'right',
 }: NewElementParams = {}): Element => {
   const markerType = getMarkerType();
 
@@ -43,6 +45,7 @@ export const createNewElement = ({
     tentative: false,
     startMarker: markerType as MarkerType,
     endMarker: 'none' as MarkerType,
+    direction, // 必須プロパティとして追加
   };
 };
 
