@@ -44,7 +44,7 @@ describe('切り取り、コピー、貼り付け操作', () => {
       dispatch({ type: 'ADD_ELEMENT' });
     });
 
-    let state = result.current.state;
+    const state = result.current.state;
     const childElement = Object.values(state.elements).find(
       (elm: Element) => elm.parentId === '1',
     ) as Element;
@@ -94,7 +94,7 @@ describe('切り取り、コピー、貼り付け操作', () => {
       dispatch({ type: 'ADD_ELEMENT' });
     });
 
-    let state = result.current.state;
+    const state = result.current.state;
     const childElement = Object.values(state.elements).find(
       (elm: Element) => elm.parentId === '1',
     ) as Element;

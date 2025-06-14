@@ -40,19 +40,19 @@ export function useFileOperations({
     if (!currentTab) return;
 
     saveElements(Object.values(currentTab.state.elements), currentTab.name);
-    
+
     // JSON保存後にタブを保存済みとしてマーク
     if (currentTab.id) {
       // 現在の要素の状態をJSON文字列として保存（整形して比較）
       const normalizedElements = JSON.parse(JSON.stringify(currentTab.state.elements));
       const currentElementsJson = JSON.stringify(normalizedElements);
-      
+
       console.log('保存処理: タブID', currentTab.id);
       console.log('保存処理: 要素の状態', currentElementsJson.substring(0, 50) + '...');
-      
+
       // タブを保存済みとしてマークし、最後に保存された要素の状態を更新
       updateTabSaveStatus(currentTab.id, true, currentElementsJson);
-      
+
       console.log('保存処理: 保存済みフラグを設定', true);
     }
   }, [currentTab, updateTabSaveStatus]);
@@ -72,10 +72,10 @@ export function useFileOperations({
         // タブ名を設定
         const newTabName = result.fileName.replace('.json', '');
         updateTabName(newTabId, newTabName);
-        
+
         // 現在の要素の状態をJSON文字列として保存
         const currentElementsJson = JSON.stringify(result.elements);
-        
+
         // JSON形式でロードしたタブは保存済みとしてマーク
         updateTabSaveStatus(newTabId, true, currentElementsJson);
 

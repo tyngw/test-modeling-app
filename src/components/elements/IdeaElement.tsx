@@ -28,7 +28,6 @@ import { isDescendant } from '../../utils/element/elementHelpers';
 import { debugLog } from '../../utils/debugLogHelpers';
 import { useTabs } from '../../context/TabsContext';
 import { useIsMounted } from '../../hooks/UseIsMounted';
-import DebugInfo from '../DebugInfo';
 
 interface IdeaElementProps {
   element: CanvasElement;
@@ -38,8 +37,8 @@ interface IdeaElementProps {
   handleMouseDown: (e: React.MouseEvent<SVGElement>, element: CanvasElement) => void;
   handleMouseUp: () => void;
   onHoverChange?: (elementId: string, isHovered: boolean) => void;
-  dropInsertY?: number;
-  siblingInfo?: { prevElement?: CanvasElement; nextElement?: CanvasElement } | null;
+  _dropInsertY?: number;
+  _siblingInfo?: { prevElement?: CanvasElement; nextElement?: CanvasElement } | null;
 }
 
 const renderActionButtons = (
@@ -132,13 +131,12 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
   draggingElement,
   handleMouseDown,
   onHoverChange,
-  dropInsertY,
-  siblingInfo,
+  _dropInsertY,
+  _siblingInfo,
 }) => {
-  const { state, dispatch } = useCanvas();
-  const { getCurrentTabState, getCurrentTabNumberOfSections } = useTabs();
+  const { dispatch } = useCanvas();
+  const { getCurrentTabState } = useTabs();
   const tabState = getCurrentTabState() || { elements: {}, zoomRatio: 1 };
-  const numberOfSections = getCurrentTabNumberOfSections();
   const isMounted = useIsMounted();
   const currentDropTargetId = currentDropTarget?.id || -1;
   const [isHovered, setIsHovered] = useState(false);

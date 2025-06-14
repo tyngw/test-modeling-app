@@ -13,7 +13,6 @@ import {
 import { getFontFamily, getElementColor, getTextColor } from '../utils/storage/localStorageHelpers';
 import { Element } from '../types/types';
 import { inputFieldKeyActionMap } from '../config/keyActionMap';
-import { sanitizeText } from '../utils/security/sanitization';
 import { validateTextInput } from '../utils/security/validation';
 
 interface InputFieldsProps {
@@ -80,10 +79,12 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>, index: number) => {
       const rawValue = e.target.value;
-      
+
       // 入力値のセキュリティ検証とサニタイゼーション
       if (!validateTextInput(rawValue)) {
-        console.warn('無効なテキスト入力が検出されました。安全でない内容が含まれている可能性があります。');
+        console.warn(
+          '無効なテキスト入力が検出されました。安全でない内容が含まれている可能性があります。',
+        );
         return; // 危険な入力は拒否
       }
 

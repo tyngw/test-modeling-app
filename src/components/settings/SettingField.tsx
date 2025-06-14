@@ -41,7 +41,7 @@ export const SettingField: React.FC<SettingFieldProps> = ({
    */
   const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = e.target.value;
-    
+
     // 設定値の検証
     if (!validateSettingValue(field.key, rawValue)) {
       console.warn(`設定値が無効です: ${field.key}`);

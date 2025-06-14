@@ -10,7 +10,7 @@
  */
 export function sanitizeText(input: string): string {
   if (typeof input !== 'string') return '';
-  let result = input
+  const result = input
     .replace(/data:[^,]*,/gi, ',') // data:からカンマまでを「,」に置換
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // 必ずスクリプトタグを消す
     .replace(/<[^>]*>/g, '') // その他のタグも消す
@@ -30,7 +30,7 @@ export function escapeForJson(input: string): string {
   return input
     .replace(/\\/g, '\\\\')
     .replace(/"/g, '\\"')
-    .replace(/\u0008/g, '\\b')
+    .replace(/[\b]/g, '\\b')
     .replace(/\f/g, '\\f')
     .replace(/\n/g, '\\n')
     .replace(/\r/g, '\\r')
@@ -44,7 +44,7 @@ export function escapeForJson(input: string): string {
  */
 export function escapeHtmlAttribute(input: string): string {
   if (typeof input !== 'string') {
-    return ''
+    return '';
   }
 
   return input
@@ -53,7 +53,7 @@ export function escapeHtmlAttribute(input: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#x27;')
-    .replace(/\//g, '&#x2F;')
+    .replace(/\//g, '&#x2F;');
 }
 
 /**
@@ -63,26 +63,26 @@ export function escapeHtmlAttribute(input: string): string {
  */
 export function isValidUrl(url: string): boolean {
   if (typeof url !== 'string' || url.length === 0) {
-    return false
+    return false;
   }
 
   try {
-    const urlObj = new URL(url)
-    
+    const urlObj = new URL(url);
+
     // 安全なプロトコルのみを許可
-    const allowedProtocols = ['http:', 'https:', 'mailto:']
+    const allowedProtocols = ['http:', 'https:', 'mailto:'];
     if (!allowedProtocols.includes(urlObj.protocol)) {
-      return false
+      return false;
     }
 
     // JavaScriptプロトコルやデータURLを明示的に拒否
     if (url.toLowerCase().includes('javascript:') || url.toLowerCase().includes('data:')) {
-      return false
+      return false;
     }
 
-    return true
+    return true;
   } catch {
-    return false
+    return false;
   }
 }
 
@@ -93,14 +93,25 @@ export function isValidUrl(url: string): boolean {
  */
 export function sanitizeFilename(filename: string): string {
   if (typeof filename !== 'string') {
-    return 'untitled'
+    return 'untitled';
   }
 
   // まずHTMLタグを除去
   let result = filename
-    .replace(/<[^>]*>/g, '')  // HTMLタグを除去
+    .replace(/<[^>]*>/g, '') // HTMLタグを除去
     // 危険な文字を除去（制御文字、特殊文字）
-    .replace(/[<>:"/\\|?*\x00-\x1f\x7f-\x9f]/g, '')
+    .replace(/[<>:"/\\|?*]/g, '');
+
+  // 制御文字を文字コードで除去
+  result = result
+    .split('')
+    .filter((char) => {
+      const code = char.charCodeAt(0);
+      return !(code >= 0 && code <= 31) && !(code >= 127 && code <= 159);
+    })
+    .join('');
+
+  result = result
     // ドットで始まるファイル名を防ぐ
     .replace(/^\.+/, '')
     // 予約語を避ける
@@ -109,9 +120,9 @@ export function sanitizeFilename(filename: string): string {
     .replace(/\.{2,}/g, '.')
     // 末尾のドットを除去
     .replace(/\.+$/, '')
-    .trim()
+    .trim();
 
-  return result || 'untitled'
+  return result || 'untitled';
 }
 
 /**
@@ -121,32 +132,32 @@ export function sanitizeFilename(filename: string): string {
  */
 export function sanitizeObject<T>(obj: T): T {
   if (obj === null || obj === undefined) {
-    return obj
+    return obj;
   }
 
   if (typeof obj === 'string') {
-    return sanitizeText(obj) as T
+    return sanitizeText(obj) as T;
   }
 
   if (typeof obj === 'number' || typeof obj === 'boolean') {
-    return obj
+    return obj;
   }
 
   if (Array.isArray(obj)) {
-    return obj.map(item => sanitizeObject(item)) as T
+    return obj.map((item) => sanitizeObject(item)) as T;
   }
 
   if (typeof obj === 'object') {
-    const sanitized: any = {}
+    const sanitized: any = {};
     for (const [key, value] of Object.entries(obj)) {
       // キー名もサニタイズ
-      const sanitizedKey = sanitizeText(key)
-      sanitized[sanitizedKey] = sanitizeObject(value)
+      const sanitizedKey = sanitizeText(key);
+      sanitized[sanitizedKey] = sanitizeObject(value);
     }
-    return sanitized as T
+    return sanitized as T;
   }
 
-  return obj
+  return obj;
 }
 
 /**
@@ -154,24 +165,26 @@ export function sanitizeObject<T>(obj: T): T {
  * @param response - サニタイズするレスポンステキスト
  * @returns サニタイズされたレスポンス
  */
-export function sanitizeApiResponse(response: string): string
-export function sanitizeApiResponse(response: any): any
+export function sanitizeApiResponse(response: string): string;
+export function sanitizeApiResponse(response: any): any;
 export function sanitizeApiResponse(response: any): any {
   if (typeof response === 'string') {
     // 基本的なHTMLタグは保持しつつ、危険なスクリプトを除去
-    return response
-      // スクリプトタグを完全に除去
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-      // イベントハンドラー属性を除去
-      .replace(/\bon\w+\s*=\s*[^>]*/gi, '')
-      // JavaScriptプロトコルを除去
-      .replace(/javascript:/gi, '')
-      // データURLを除去
-      .replace(/data:\s*[^;]*;base64/gi, '')
-      // style属性内のexpression()を除去（IE向け）
-      .replace(/expression\s*\([^)]*\)/gi, '')
+    return (
+      response
+        // スクリプトタグを完全に除去
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+        // イベントハンドラー属性を除去
+        .replace(/\bon\w+\s*=\s*[^>]*/gi, '')
+        // JavaScriptプロトコルを除去
+        .replace(/javascript:/gi, '')
+        // データURLを除去
+        .replace(/data:\s*[^;]*;base64/gi, '')
+        // style属性内のexpression()を除去（IE向け）
+        .replace(/expression\s*\([^)]*\)/gi, '')
+    );
   }
 
   // オブジェクトや配列の場合はsanitizeObjectを使用
-  return sanitizeObject(response)
+  return sanitizeObject(response);
 }

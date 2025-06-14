@@ -60,7 +60,7 @@ describe('要素状態管理', () => {
       dispatch({ type: 'COLLAPSE_ELEMENT' });
     });
 
-    let collapsedState = result.current.state.elements;
+    const collapsedState = result.current.state.elements;
     expect(
       (Object.values(collapsedState).find((elm: Element) => elm.id === childElement.id) as Element)
         .visible,
