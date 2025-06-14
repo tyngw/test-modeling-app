@@ -12,7 +12,7 @@ import { ConnectionPath } from '../connections/ConnectionPath';
 import useResizeEffect from '../../hooks/UseResizeEffect';
 import { useCanvas } from '../../context/CanvasContext';
 import { useClickOutside } from '../../hooks/UseClickOutside';
-import { useElementDragEffect, ElementDragEffectResult } from '../../hooks/UseElementDragEffect';
+import { useElementDragEffect } from '../../hooks/UseElementDragEffect';
 import { useTouchHandlers } from '../../hooks/UseTouchHandlers';
 import { useKeyboardHandler } from '../../hooks/UseKeyboardHandler';
 import {
@@ -67,11 +67,14 @@ const canvasContainerStyle = {
   overflow: 'auto',
 };
 
-const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
+const CanvasArea: React.FC<CanvasAreaProps> = ({
+  isHelpOpen: _isHelpOpen,
+  toggleHelp: _toggleHelp,
+}) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const [isClient, setIsClient] = useState(false);
   const { state, dispatch } = useCanvas();
-  const { elements, zoomRatio } = state;
+  const { elements } = state;
   const [connectionPathColor, setConnectionPathColor] = useState(DEFAULT_CONNECTION_PATH_COLOR);
   const [connectionPathStroke, setConnectionPathStroke] = useState(DEFAULT_CONNECTION_PATH_STROKE);
   const [canvasBackgroundColor, setCanvasBackgroundColor] = useState(
@@ -331,7 +334,10 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
     return Object.values(elements)
       .filter((element): element is CanvasElement => element.visible && !!element.parentId)
       .map((element) => {
-        const parent = elements[element.parentId!] as CanvasElement;
+        const parentId = element.parentId;
+        if (!parentId) return null;
+
+        const parent = elements[parentId] as CanvasElement;
         if (
           draggingElement &&
           (element.id === draggingElement.id ||
@@ -398,6 +404,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ isHelpOpen, toggleHelp }) => {
             currentDropTarget={currentDropTarget}
             dropPosition={dropPosition}
             siblingInfo={siblingInfo}
+            elements={elements}
           />
         );
       })
