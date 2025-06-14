@@ -2,10 +2,14 @@ import React from 'react';
 import ModalWindow from './ModalWindow';
 import HelpIcon from './icons/HelpIcon';
 import { helpSections, type HelpSection } from '../constants/helpContent';
+import { Action } from '../types/actionTypes';
 
 interface HelpModalProps {
   isOpen: boolean;
   onClose: () => void;
+  dispatch: React.Dispatch<Action>;
+  modalId?: string;
+  onOpen?: () => void;
 }
 
 /**
@@ -13,9 +17,17 @@ interface HelpModalProps {
  * XSS攻撃を防ぐため、dangerouslySetInnerHTMLの代わりに
  * 構造化されたデータを使用して安全にレンダリング
  */
-const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
+const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, dispatch, modalId, onOpen }) => {
   return (
-    <ModalWindow isOpen={isOpen} onClose={onClose} title="ヘルプ" icon={<HelpIcon />}>
+    <ModalWindow
+      isOpen={isOpen}
+      onClose={onClose}
+      title="ヘルプ"
+      icon={<HelpIcon />}
+      dispatch={dispatch}
+      modalId={modalId}
+      onOpen={onOpen}
+    >
       <div className="space-y-6">
         {helpSections.map((section: HelpSection, sectionIndex) => (
           <div key={sectionIndex} className="space-y-2">
