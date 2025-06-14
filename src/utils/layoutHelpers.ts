@@ -95,11 +95,14 @@ const layoutNode = (
 
       // 親要素の位置調整（子要素の中央に配置）
       if (children.length > 0) {
-        const allChildren = [...leftChildren, ...rightChildren];
-        const firstChild = allChildren[0];
-        const lastChild = allChildren[allChildren.length - 1];
-        const childrenMidY = (firstChild.y + lastChild.y + lastChild.height) / 2;
-        node.y = childrenMidY - node.height / 2;
+        // 元のorder順序を保ったまま、配置済みの子要素の範囲を計算
+        const sortedChildren = children.filter((child) => child.y !== undefined);
+        if (sortedChildren.length > 0) {
+          const firstChild = sortedChildren[0];
+          const lastChild = sortedChildren[sortedChildren.length - 1];
+          const childrenMidY = (firstChild.y + lastChild.y + lastChild.height) / 2;
+          node.y = childrenMidY - node.height / 2;
+        }
       }
 
       maxChildBottom = Math.max(leftMaxY, rightMaxY);
