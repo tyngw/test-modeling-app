@@ -1,12 +1,11 @@
 // src/utils/file/fileHelpers.ts
 import { SIZE } from '../../config/elementSettings';
 import { createNewElement } from '../element/elementHelpers';
-import { Element, MarkerType } from '../../types/types';
+import { Element, MarkerType, DirectionType } from '../../types/types';
 import {
   DEFAULT_FONT_FAMILY,
   DEFAULT_FONT_SIZE,
   ELEM_STYLE,
-  CONNECTION_PATH_STYLE,
   DEFAULT_CANVAS_BACKGROUND_COLOR,
   DEFAULT_TEXT_COLOR,
 } from '../../config/elementSettings';
@@ -43,6 +42,7 @@ type LegacyElement = {
   endConnectionPathType?: MarkerType; // 旧エンドマーカータイプ
   startMarker?: MarkerType;
   endMarker?: MarkerType;
+  direction?: DirectionType; // 方向プロパティを追加
 };
 
 // 型ガード関数を改善
@@ -89,6 +89,12 @@ export const convertLegacyElement = (element: unknown): Element => {
       tentative: element.tentative !== undefined ? Boolean(element.tentative) : base.tentative,
       startMarker: base.startMarker,
       endMarker: base.endMarker,
+      direction:
+        element.direction !== undefined
+          ? element.direction
+          : element.parentId === null
+            ? 'none'
+            : 'right',
     };
 
     // connectionPathType が存在する場合、startMarker に変換
@@ -133,6 +139,12 @@ export const convertLegacyElement = (element: unknown): Element => {
     tentative: element.tentative !== undefined ? Boolean(element.tentative) : base.tentative,
     startMarker: base.startMarker,
     endMarker: base.endMarker,
+    direction:
+      element.direction !== undefined
+        ? element.direction
+        : element.parentId === null
+          ? 'none'
+          : 'right',
   };
 
   // connectionPathType が存在する場合、startMarker に変換
@@ -186,7 +198,7 @@ export const loadElements = (
         }
 
         const parsedData = JSON.parse(contents);
-        
+
         // JSONデータの検証
         if (!validateJsonData(parsedData)) {
           throw new Error('JSONデータが安全でない可能性があります');
@@ -194,7 +206,7 @@ export const loadElements = (
 
         // データをサニタイズ
         const sanitizedData = sanitizeObject(parsedData);
-        
+
         let rawElements: any[] = [];
 
         // データ形式の判定
@@ -213,7 +225,7 @@ export const loadElements = (
 
         // IDが欠けている要素をフィルタリング
         const validRawElements = rawElements.filter((elem) => {
-          if (!elem.id && !elem.hasOwnProperty('id')) {
+          if (!elem.id && !Object.prototype.hasOwnProperty.call(elem, 'id')) {
             console.warn('IDが欠けている要素を削除します');
             return false;
           }
@@ -425,6 +437,7 @@ export const saveElements = (elements: Element[], fileName: string) => {
   const name = determineFileName(fileName, rootElementText);
 
   const elementsToSave = elements.map((element) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { x, y, ...elementWithoutXY } = element;
     return elementWithoutXY;
   });
