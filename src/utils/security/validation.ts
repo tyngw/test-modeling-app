@@ -10,26 +10,31 @@
  */
 export function validateApiKey(apiKey: string): boolean {
   if (typeof apiKey !== 'string') {
-    return false
+    return false;
   }
 
   // 空文字列やnull値を拒否
   if (apiKey.trim().length === 0) {
-    return false
+    return false;
   }
 
   // 危険な文字が含まれていないかチェック
-  const dangerousChars = /[<>'"&\x00-\x1f]/
-  if (dangerousChars.test(apiKey)) {
-    return false
+  const dangerousChars = /[<>'"&]/;
+  const hasControlChars = apiKey.split('').some((char) => {
+    const code = char.charCodeAt(0);
+    return code >= 0 && code <= 31;
+  });
+
+  if (dangerousChars.test(apiKey) || hasControlChars) {
+    return false;
   }
 
   // 一般的なAPIキーの長さ制限（8-128文字）
   if (apiKey.length < 8 || apiKey.length > 128) {
-    return false
+    return false;
   }
 
-  return true
+  return true;
 }
 
 /**
@@ -38,39 +43,39 @@ export function validateApiKey(apiKey: string): boolean {
  * @param maxLength - 最大文字数（デフォルト: 10000）
  * @returns テキストが有効な場合はtrue
  */
-export function validateTextInput(text: string, maxLength: number = 10000): boolean {
+export function validateTextInput(text: string, maxLength = 10000): boolean {
   if (typeof text !== 'string') {
-    return false
+    return false;
   }
 
   // 長さチェック
   if (text.length > maxLength) {
-    return false
+    return false;
   }
 
   // 危険なパターンのチェック
   const dangerousPatterns = [
-    /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/i,  // スクリプトタグ
-    /javascript:.*$/i,                                       // JavaScriptプロトコル
-    /data:.*$/i,                                            // データURL
-    /eval\s*\([^)]*\)/i,                                    // eval関数
-    /on\w+\s*=/i,                                           // イベントハンドラー
-    /expression\s*\([^)]*\)/i                               // CSS expression
-  ]
+    /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/i, // スクリプトタグ
+    /javascript:.*$/i, // JavaScriptプロトコル
+    /data:.*$/i, // データURL
+    /eval\s*\([^)]*\)/i, // eval関数
+    /on\w+\s*=/i, // イベントハンドラー
+    /expression\s*\([^)]*\)/i, // CSS expression
+  ];
 
   for (const pattern of dangerousPatterns) {
     if (pattern.test(text)) {
-      return false
+      return false;
     }
   }
 
   // 極端に多くのHTMLタグが含まれていないかチェック
-  const htmlTagCount = (text.match(/<[^>]*>/g) || []).length
+  const htmlTagCount = (text.match(/<[^>]*>/g) || []).length;
   if (htmlTagCount > 10) {
-    return false
+    return false;
   }
 
-  return true
+  return true;
 }
 
 /**
@@ -82,57 +87,59 @@ export function validateJsonData(data: any): boolean {
   // 文字列の場合はJSONとしてパースを試みる
   if (typeof data === 'string') {
     if (data.trim().length === 0) {
-      return false
+      return false;
     }
     try {
-      data = JSON.parse(data)
+      data = JSON.parse(data);
     } catch {
-      return false
+      return false;
     }
   }
 
   // null、undefined、プリミティブ型は安全
   if (data === null || data === undefined || typeof data !== 'object') {
-    return true
+    return true;
   }
 
   // 循環参照のチェック
   try {
-    JSON.stringify(data)
+    JSON.stringify(data);
   } catch {
-    return false
+    return false;
   }
 
   // 深すぎるネストを防ぐ
-  const maxDepth = 10
-  function checkDepth(obj: any, depth: number = 0): boolean {
+  const maxDepth = 10;
+  function checkDepth(obj: any, depth = 0): boolean {
     if (depth > maxDepth) {
-      return false
+      return false;
     }
 
     if (obj && typeof obj === 'object') {
       for (const value of Object.values(obj)) {
         if (!checkDepth(value, depth + 1)) {
-          return false
+          return false;
         }
       }
     }
 
-    return true
+    return true;
   }
 
   if (!checkDepth(data)) {
-    return false
+    return false;
   }
 
   // プロトタイプ汚染を防ぐ
-  if (data.hasOwnProperty('__proto__') || 
-      data.hasOwnProperty('constructor') || 
-      data.hasOwnProperty('prototype')) {
-    return false
+  if (
+    Object.prototype.hasOwnProperty.call(data, '__proto__') ||
+    Object.prototype.hasOwnProperty.call(data, 'constructor') ||
+    Object.prototype.hasOwnProperty.call(data, 'prototype')
+  ) {
+    return false;
   }
 
-  return true
+  return true;
 }
 
 /**
@@ -143,13 +150,13 @@ export function validateJsonData(data: any): boolean {
  */
 export function validateFileContent(content: string, maxSize: number = 1024 * 1024): boolean {
   if (typeof content !== 'string') {
-    return false
+    return false;
   }
 
   // サイズチェック（1MB以下）
-  const contentSize = new Blob([content]).size
+  const contentSize = new Blob([content]).size;
   if (contentSize > maxSize) {
-    return false
+    return false;
   }
 
   // 危険なスクリプトが含まれていないかチェック
@@ -159,16 +166,16 @@ export function validateFileContent(content: string, maxSize: number = 1024 * 10
     /on\w+\s*=/i,
     /data:\s*[^;]*;base64/i,
     /eval\s*\(/i,
-    /Function\s*\(/i
-  ]
+    /Function\s*\(/i,
+  ];
 
   for (const pattern of dangerousPatterns) {
     if (pattern.test(content)) {
-      return false
+      return false;
     }
   }
 
-  return true
+  return true;
 }
 
 /**
@@ -179,7 +186,7 @@ export function validateFileContent(content: string, maxSize: number = 1024 * 10
  */
 export function validateSettingValue(key: string, value: any): boolean {
   if (typeof key !== 'string' || key.trim().length === 0) {
-    return false
+    return false;
   }
 
   // 設定キーのホワイトリスト
@@ -191,39 +198,39 @@ export function validateSettingValue(key: string, value: any): boolean {
     'fontSize',
     'maxHistory',
     'showLineNumbers',
-    'wordWrap'
-  ]
+    'wordWrap',
+  ];
 
   if (!allowedKeys.includes(key)) {
-    return false
+    return false;
   }
 
   // キーごとの値検証
   switch (key) {
     case 'apiKey':
-      return validateApiKey(value)
-    
+      return validateApiKey(value);
+
     case 'theme':
-      return ['light', 'dark', 'auto'].includes(value)
-    
+      return ['light', 'dark', 'auto'].includes(value);
+
     case 'language':
-      return ['ja', 'en'].includes(value)
-    
+      return ['ja', 'en'].includes(value);
+
     case 'autoSave':
-      return typeof value === 'boolean'
-    
+      return typeof value === 'boolean';
+
     case 'fontSize':
-      return typeof value === 'number' && value >= 10 && value <= 24
-    
+      return typeof value === 'number' && value >= 10 && value <= 24;
+
     case 'maxHistory':
-      return typeof value === 'number' && value >= 0 && value <= 100
-    
+      return typeof value === 'number' && value >= 0 && value <= 100;
+
     case 'showLineNumbers':
     case 'wordWrap':
-      return typeof value === 'boolean'
-    
+      return typeof value === 'boolean';
+
     default:
-      return false
+      return false;
   }
 }
 
@@ -234,18 +241,20 @@ export function validateSettingValue(key: string, value: any): boolean {
  */
 export function validateExternalUrl(url: string): boolean {
   if (typeof url !== 'string' || url.trim().length === 0) {
-    return false
+    return false;
   }
 
   try {
-    const urlObj = new URL(url)
-    
+    const urlObj = new URL(url);
+
     // HTTPSのみ許可（開発環境ではHTTPも許可）
-    const isHttpsOrLocalhost = urlObj.protocol === 'https:' || 
-      (urlObj.protocol === 'http:' && (urlObj.hostname === 'localhost' || urlObj.hostname === '127.0.0.1'))
-    
+    const isHttpsOrLocalhost =
+      urlObj.protocol === 'https:' ||
+      (urlObj.protocol === 'http:' &&
+        (urlObj.hostname === 'localhost' || urlObj.hostname === '127.0.0.1'));
+
     if (!isHttpsOrLocalhost) {
-      return false
+      return false;
     }
 
     // プライベートIPアドレスへのアクセスを制限
@@ -256,21 +265,21 @@ export function validateExternalUrl(url: string): boolean {
       /^127\./,
       /^169\.254\./,
       /^::1$/,
-      /^fe80:/
-    ]
+      /^fe80:/,
+    ];
 
-    const isPrivateIp = privateIpPatterns.some(pattern => pattern.test(urlObj.hostname))
+    const isPrivateIp = privateIpPatterns.some((pattern) => pattern.test(urlObj.hostname));
     if (isPrivateIp && !['localhost', '127.0.0.1'].includes(urlObj.hostname)) {
-      return false
+      return false;
     }
 
     // 危険なプロトコルを拒否
     if (url.toLowerCase().includes('javascript:') || url.toLowerCase().includes('data:')) {
-      return false
+      return false;
     }
 
-    return true
+    return true;
   } catch {
-    return false
+    return false;
   }
 }

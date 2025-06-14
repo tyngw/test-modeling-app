@@ -15,7 +15,7 @@ const createTextMeasurementContext = (): CanvasRenderingContext2D => {
 };
 
 // テキストの幅を正確に計算する関数
-export const calculateTextWidth = (text: string, padding: number = 0): number => {
+export const calculateTextWidth = (text: string, padding = 0): number => {
   const context = createTextMeasurementContext();
   return Math.ceil(
     text.split('\n').reduce((maxWidth: number, line: string) => {
@@ -26,7 +26,7 @@ export const calculateTextWidth = (text: string, padding: number = 0): number =>
 };
 
 // 要素の幅を計算する関数
-export const calculateElementWidth = (texts: string[], padding: number = 0): number => {
+export const calculateElementWidth = (texts: string[], padding = 0): number => {
   const maxTextWidth = texts.reduce((max: number, text: string) => {
     return Math.max(max, calculateTextWidth(text || '', padding));
   }, 0);
@@ -38,7 +38,7 @@ export const calculateElementWidth = (texts: string[], padding: number = 0): num
 export const wrapText = (
   text: string,
   maxWidth: number,
-  zoomRatio: number = DEFAULT_ZOOM_RATIO,
+  _zoomRatio: number = DEFAULT_ZOOM_RATIO,
 ): string[] => {
   const context = createTextMeasurementContext();
   const paragraphs = text.split('\n');

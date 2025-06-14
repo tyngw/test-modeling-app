@@ -189,7 +189,7 @@ export const getMarkerUrlById = (markerId: string): string | undefined => {
 /**
  * マーカータイプから対応するマーカーURLを取得する関数
  */
-export const getMarkerUrlByType = (type: string, isEnd: boolean = false): string | undefined => {
+export const getMarkerUrlByType = (type: string, isEnd = false): string | undefined => {
   const suffix = isEnd ? '-end' : '';
 
   switch (type) {

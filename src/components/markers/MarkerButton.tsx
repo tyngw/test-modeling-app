@@ -9,7 +9,7 @@ interface MarkerButtonProps {
   hoverId: string | null;
   onHover: (id: string | null) => void;
   onShowMenu: (id: string) => void;
-  isInGroup?: boolean;
+  _isInGroup?: boolean;
 }
 
 export const MarkerButton: React.FC<MarkerButtonProps> = ({
@@ -19,7 +19,7 @@ export const MarkerButton: React.FC<MarkerButtonProps> = ({
   hoverId,
   onHover,
   onShowMenu,
-  isInGroup = false,
+  _isInGroup = false,
 }) => {
   // ボタン表示条件のチェック
   if (isEndMarker) {
