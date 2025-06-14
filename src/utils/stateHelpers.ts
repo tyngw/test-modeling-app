@@ -1,6 +1,7 @@
 // src/utils/stateHelpers.ts
 import { v4 as uuidv4 } from 'uuid';
 import { Element, DirectionType } from '../types/types';
+import { LayoutMode } from '../types/tabTypes';
 import { createNewElement } from './element';
 import { adjustElementPositions } from './layoutHelpers';
 import { calculateElementWidth, wrapText } from './textareaHelpers';
@@ -244,7 +245,7 @@ export const addElementsWithAdjustment = (
   return adjustElementPositions(
     newElements,
     () => options.numberOfSections,
-    options.layoutMode || 'mindmap',
+    (options.layoutMode || 'mindmap') as LayoutMode,
     canvasWidth,
     canvasHeight,
   );
@@ -357,16 +358,17 @@ export const withPositionAdjustment = (
   state: {
     elements: ElementsMap;
     numberOfSections: number;
-    layoutMode?: string;
-    width?: number;
-    height?: number;
+    layoutMode?: LayoutMode;
+    width: number;
+    height: number;
+    zoomRatio: number;
   },
   elementsUpdater: (elements: ElementsMap) => ElementsMap,
 ): typeof state => {
   const updatedElements = elementsUpdater(state.elements);
 
   // layoutModeが存在する場合は使用、存在しない場合はmindmap
-  const layoutMode = state.layoutMode || 'mindmap';
+  const layoutMode = (state.layoutMode || 'mindmap') as LayoutMode;
 
   // キャンバスサイズを取得（存在する場合）
   const canvasWidth = state.width || 0;
