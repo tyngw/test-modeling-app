@@ -150,7 +150,7 @@ function handleSelectedElementAction(
  * アクションハンドラーの型定義
  * 各アクションタイプに対応する状態更新関数のマップ
  */
-type ActionHandler = (state: State, action?: { type: string; payload?: unknown }) => State;
+type ActionHandler = (state: State, action: { type: string; payload?: any }) => State;
 
 /**
  * すべてのアクションハンドラーのマップ
@@ -165,7 +165,7 @@ const actionHandlers: Record<string, ActionHandler> = {
   ARROW_LEFT: handleArrowAction(handleArrowLeft),
 
   LOAD_ELEMENTS: (state, action) => {
-    if (Object.keys(action.payload).length === 0) return initialState;
+    if (!action.payload || Object.keys(action.payload).length === 0) return initialState;
 
     const updatedElements = Object.values(action.payload).reduce<ElementsMap>(
       (acc, element: unknown) => {
@@ -180,6 +180,7 @@ const actionHandlers: Record<string, ActionHandler> = {
   },
 
   SELECT_ELEMENT: (state, action) => {
+    if (!action.payload) return state;
     const { id, ctrlKey, shiftKey } = action.payload;
     const selectedElement = state.elements[id];
     if (!selectedElement) return state;
@@ -259,6 +260,7 @@ const actionHandlers: Record<string, ActionHandler> = {
 
   // 後方互換性のために残す
   UPDATE_CONNECTION_PATH_TYPE: (state, action) => {
+    if (!action.payload) return state;
     const { id, connectionPathType } = action.payload;
     return {
       ...state,
@@ -271,6 +273,7 @@ const actionHandlers: Record<string, ActionHandler> = {
 
   // 後方互換性のために残す
   UPDATE_END_CONNECTION_PATH_TYPE: (state, action) => {
+    if (!action.payload) return state;
     const { id, endConnectionPathType } = action.payload;
     return {
       ...state,
@@ -289,6 +292,7 @@ const actionHandlers: Record<string, ActionHandler> = {
     ),
 
   MOVE_ELEMENT: (state, action) => {
+    if (!action.payload) return state;
     const { id, x, y } = action.payload;
     const selectedElements = Object.values(state.elements).filter((e) => e.selected);
 
@@ -322,6 +326,7 @@ const actionHandlers: Record<string, ActionHandler> = {
   },
 
   UPDATE_ELEMENT_SIZE: (state, action) => {
+    if (!action.payload) return state;
     const { id, width, height, sectionHeights } = action.payload;
     const element = state.elements[id];
     if (!element) return state;
@@ -450,6 +455,7 @@ const actionHandlers: Record<string, ActionHandler> = {
   }),
 
   CANCEL_TENTATIVE_ELEMENTS: (state, action) => {
+    if (!action.payload) return state;
     const tentativeElements = Object.values(state.elements).filter(
       (e) => e.tentative && e.parentId === action.payload,
     );
