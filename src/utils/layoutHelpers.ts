@@ -12,7 +12,8 @@ const layoutNode = (
   startY: number,
   depth: number,
   getNumberOfSections: () => number,
-): { newY: number } => {
+  layoutMode: LayoutMode = 'default',
+): { newY: number; leftMaxY?: number; rightMaxY?: number } => {
   debugLog(`[layoutNode]「${node.texts}」 id=${node.id}, depth=${depth}, startY=${startY} ---`);
 
   // X座標の計算
@@ -48,36 +49,95 @@ const layoutNode = (
   debugLog(`children=${children.length}`);
   let currentY = startY;
   let maxChildBottom = startY;
+  let leftMaxY = startY;
+  let rightMaxY = startY;
 
   if (children.length > 0) {
     const defaultHeight = SIZE.SECTION_HEIGHT * getNumberOfSections();
     const requiredOffset = Math.max((node.height - defaultHeight) * 0.5, OFFSET.Y);
     currentY = currentY + requiredOffset;
 
-    for (const child of children) {
-      const result = layoutNode(child, elements, currentY, depth + 1, getNumberOfSections);
-      currentY = result.newY + OFFSET.Y;
-      maxChildBottom = Math.max(maxChildBottom, result.newY);
+    if (layoutMode === 'mindmap') {
+      // マインドマップモード：direction別に分けて配置
+      const leftChildren = children.filter((child) => child.direction === 'left');
+      const rightChildren = children.filter((child) => child.direction === 'right');
+
+      let leftCurrentY = currentY;
+      let rightCurrentY = currentY;
+
+      // 左側の子要素を配置
+      for (const child of leftChildren) {
+        const result = layoutNode(
+          child,
+          elements,
+          leftCurrentY,
+          depth + 1,
+          getNumberOfSections,
+          layoutMode,
+        );
+        leftCurrentY = result.newY + OFFSET.Y;
+        leftMaxY = Math.max(leftMaxY, result.newY);
+      }
+
+      // 右側の子要素を配置
+      for (const child of rightChildren) {
+        const result = layoutNode(
+          child,
+          elements,
+          rightCurrentY,
+          depth + 1,
+          getNumberOfSections,
+          layoutMode,
+        );
+        rightCurrentY = result.newY + OFFSET.Y;
+        rightMaxY = Math.max(rightMaxY, result.newY);
+      }
+
+      // 親要素の位置調整（子要素の中央に配置）
+      if (children.length > 0) {
+        const allChildren = [...leftChildren, ...rightChildren];
+        const firstChild = allChildren[0];
+        const lastChild = allChildren[allChildren.length - 1];
+        const childrenMidY = (firstChild.y + lastChild.y + lastChild.height) / 2;
+        node.y = childrenMidY - node.height / 2;
+      }
+
+      maxChildBottom = Math.max(leftMaxY, rightMaxY);
+      currentY = Math.max(maxChildBottom, node.y + node.height);
+    } else {
+      // 通常モード：従来通りの配置
+      for (const child of children) {
+        const result = layoutNode(
+          child,
+          elements,
+          currentY,
+          depth + 1,
+          getNumberOfSections,
+          layoutMode,
+        );
+        currentY = result.newY + OFFSET.Y;
+        maxChildBottom = Math.max(maxChildBottom, result.newY);
+      }
+
+      const firstChild = children[0];
+      const lastChild = children[children.length - 1];
+      const childrenMidY = (firstChild.y + lastChild.y + lastChild.height) / 2;
+      node.y = childrenMidY - node.height / 2;
+
+      // Use maxChildBottom to ensure we don't overlap with any children
+      currentY = Math.max(maxChildBottom, node.y + node.height);
     }
-
-    const firstChild = children[0];
-    const lastChild = children[children.length - 1];
-    const childrenMidY = (firstChild.y + lastChild.y + lastChild.height) / 2;
-    node.y = childrenMidY - node.height / 2;
-
-    // Use maxChildBottom to ensure we don't overlap with any children
-    currentY = Math.max(maxChildBottom, node.y + node.height);
     debugLog(
       `[layoutNode](子要素あり)「${node.texts}」 id=${node.id}, y=${node.y}, maxChildBottom=${maxChildBottom}, finalY=${currentY}`,
     );
-    return { newY: currentY };
+    return { newY: currentY, leftMaxY, rightMaxY };
   } else {
     node.y = startY;
     currentY = startY + node.height;
     debugLog(
       `[layoutNode](子要素なし)「${node.texts}」 id=${node.id}, y=${node.y}, newY=${currentY}`,
     );
-    return { newY: currentY };
+    return { newY: currentY, leftMaxY: currentY, rightMaxY: currentY };
   }
 };
 
@@ -113,12 +173,26 @@ export const adjustElementPositions = (
     rootElement.y = centerY;
 
     // 子要素をレイアウト
-    const result = layoutNode(rootElement, updatedElements, centerY, 0, getNumberOfSections);
+    const result = layoutNode(
+      rootElement,
+      updatedElements,
+      centerY,
+      0,
+      getNumberOfSections,
+      layoutMode,
+    );
     currentY = result.newY + OFFSET.Y;
   } else {
     // 通常モード：ルート要素を順番に配置
     for (const root of rootElements) {
-      const result = layoutNode(root, updatedElements, currentY, 0, getNumberOfSections);
+      const result = layoutNode(
+        root,
+        updatedElements,
+        currentY,
+        0,
+        getNumberOfSections,
+        layoutMode,
+      );
       currentY = result.newY + OFFSET.Y;
     }
   }
