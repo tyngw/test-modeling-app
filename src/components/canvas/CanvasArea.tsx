@@ -478,6 +478,40 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
 
     if (!coordinates) return null;
 
+    // betweenモードの場合、正しいdirectionを計算
+    let previewDirection = draggingElement.direction;
+
+    if (dropPosition === 'between') {
+      // betweenモードでは兄弟要素のdirectionを継承
+      if (target.direction) {
+        previewDirection = target.direction;
+      } else if (newParent && newParent.direction === 'none') {
+        // 親がルート要素の場合、siblingInfoから方向を決定
+        if (siblingInfo?.prevElement?.direction) {
+          previewDirection = siblingInfo.prevElement.direction;
+        } else if (siblingInfo?.nextElement?.direction) {
+          previewDirection = siblingInfo.nextElement.direction;
+        } else {
+          // フォールバック: 座標位置で判定
+          const rootCenterX = newParent.x + newParent.width / 2;
+          previewDirection = coordinates.x < rootCenterX ? 'left' : 'right';
+        }
+      } else if (newParent) {
+        // 親がルート要素以外の場合、親のdirectionを継承
+        previewDirection = newParent.direction || 'right';
+      }
+    } else if (dropPosition === 'child') {
+      // childモードでは、ドロップ先要素の設定に基づいて決定
+      if (target.direction === 'none' && target.parentId === null) {
+        // ルート要素への子要素追加の場合、座標位置で判定
+        const rootCenterX = target.x + target.width / 2;
+        previewDirection = coordinates.x < rootCenterX ? 'left' : 'right';
+      } else {
+        // 通常の子要素追加の場合、親のdirectionを継承
+        previewDirection = target.direction || 'right';
+      }
+    }
+
     return (
       <ConnectionPath
         parentElement={newParent}
@@ -485,6 +519,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
           ...draggingElement,
           x: coordinates.x,
           y: coordinates.y,
+          direction: previewDirection, // 計算された正しいdirectionを設定
         }}
         absolutePositions={{
           parent: { x: newParent.x, y: newParent.y },
