@@ -80,6 +80,9 @@ const QuickMenuBar = ({
             setIsZoomLoading(false);
           }, 300);
         }, 50);
+      } else if (action === 'ADD_ELEMENT') {
+        // ADD_ELEMENTは空のpayloadを明示的に渡す
+        dispatch({ type: action, payload: {} });
       } else {
         dispatch({ type: action });
       }

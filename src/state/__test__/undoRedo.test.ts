@@ -9,7 +9,7 @@ describe('UNDO/REDO機能', () => {
 
     const initialElements = result.current.state.elements;
     act(() => {
-      dispatch({ type: 'ADD_ELEMENT' });
+      dispatch({ type: 'ADD_ELEMENT', payload: {} });
     });
     const afterAddState = result.current.state.elements;
 

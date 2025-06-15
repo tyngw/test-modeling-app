@@ -48,7 +48,7 @@ describe('要素状態管理', () => {
 
     act(() => {
       dispatch({ type: 'SELECT_ELEMENT', payload: { id: '1', ctrlKey: false, shiftKey: false } });
-      dispatch({ type: 'ADD_ELEMENT' });
+      dispatch({ type: 'ADD_ELEMENT', payload: {} });
     });
 
     const childElement = Object.values(result.current.state.elements).find(
