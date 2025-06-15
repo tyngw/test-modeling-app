@@ -10,7 +10,7 @@ describe('ドラッグ＆ドロップ', () => {
 
     await act(async () => {
       dispatch({ type: 'SELECT_ELEMENT', payload: { id: '1', ctrlKey: false, shiftKey: false } });
-      dispatch({ type: 'ADD_ELEMENT' });
+      dispatch({ type: 'ADD_ELEMENT', payload: {} });
     });
 
     let state = result.current.state;
@@ -20,7 +20,7 @@ describe('ドラッグ＆ドロップ', () => {
 
     await act(async () => {
       dispatch({ type: 'SELECT_ELEMENT', payload: { id: '1', ctrlKey: false, shiftKey: false } });
-      dispatch({ type: 'ADD_ELEMENT' });
+      dispatch({ type: 'ADD_ELEMENT', payload: {} });
     });
 
     state = result.current.state;
@@ -33,7 +33,7 @@ describe('ドラッグ＆ドロップ', () => {
         type: 'SELECT_ELEMENT',
         payload: { id: elementB.id, ctrlKey: false, shiftKey: false },
       });
-      dispatch({ type: 'ADD_ELEMENT' });
+      dispatch({ type: 'ADD_ELEMENT', payload: {} });
     });
 
     state = result.current.state;
@@ -88,8 +88,8 @@ describe('ドラッグ＆ドロップ', () => {
 
     // 親ノードと子ノードを作成
     act(() => {
-      dispatch({ type: 'SELECT_ELEMENT', payload: '1' });
-      dispatch({ type: 'ADD_ELEMENT' });
+      dispatch({ type: 'SELECT_ELEMENT', payload: { id: '1', ctrlKey: false, shiftKey: false } });
+      dispatch({ type: 'ADD_ELEMENT', payload: {} });
     });
 
     const initialState = result.current.state;
@@ -128,8 +128,8 @@ describe('ドラッグ＆ドロップ', () => {
 
     // 3階層のノードを作成 (1 -> 2 -> 3)
     act(() => {
-      dispatch({ type: 'SELECT_ELEMENT', payload: '1' });
-      dispatch({ type: 'ADD_ELEMENT' });
+      dispatch({ type: 'SELECT_ELEMENT', payload: { id: '1', ctrlKey: false, shiftKey: false } });
+      dispatch({ type: 'ADD_ELEMENT', payload: {} });
     });
 
     let state = result.current.state;
@@ -138,8 +138,11 @@ describe('ドラッグ＆ドロップ', () => {
     ) as Element;
 
     act(() => {
-      dispatch({ type: 'SELECT_ELEMENT', payload: elementB.id });
-      dispatch({ type: 'ADD_ELEMENT' });
+      dispatch({
+        type: 'SELECT_ELEMENT',
+        payload: { id: elementB.id, ctrlKey: false, shiftKey: false },
+      });
+      dispatch({ type: 'ADD_ELEMENT', payload: {} });
     });
 
     state = result.current.state;
@@ -206,11 +209,11 @@ describe('ドラッグ＆ドロップ', () => {
     // 親要素に3つの子要素を作成
     await act(async () => {
       dispatch({ type: 'SELECT_ELEMENT', payload: { id: '1', ctrlKey: false, shiftKey: false } });
-      dispatch({ type: 'ADD_ELEMENT' }); // order 0
+      dispatch({ type: 'ADD_ELEMENT', payload: {} }); // order 0
       dispatch({ type: 'SELECT_ELEMENT', payload: { id: '1', ctrlKey: false, shiftKey: false } });
-      dispatch({ type: 'ADD_ELEMENT' }); // order 1
+      dispatch({ type: 'ADD_ELEMENT', payload: {} }); // order 1
       dispatch({ type: 'SELECT_ELEMENT', payload: { id: '1', ctrlKey: false, shiftKey: false } });
-      dispatch({ type: 'ADD_ELEMENT' }); // order 2
+      dispatch({ type: 'ADD_ELEMENT', payload: {} }); // order 2
     });
 
     let state = result.current.state;

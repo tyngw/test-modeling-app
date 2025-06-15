@@ -38,10 +38,10 @@ describe('切り取り、コピー、貼り付け操作', () => {
 
     // ルート要素を選択して子要素を追加
     act(() => {
-      dispatch({ type: 'SELECT_ELEMENT', payload: '1' });
+      dispatch({ type: 'SELECT_ELEMENT', payload: { id: '1', ctrlKey: false, shiftKey: false } });
     });
     act(() => {
-      dispatch({ type: 'ADD_ELEMENT' });
+      dispatch({ type: 'ADD_ELEMENT', payload: {} });
     });
 
     const state = result.current.state;
@@ -88,10 +88,10 @@ describe('切り取り、コピー、貼り付け操作', () => {
 
     // ルート要素を選択して子要素を追加
     act(() => {
-      dispatch({ type: 'SELECT_ELEMENT', payload: '1' });
+      dispatch({ type: 'SELECT_ELEMENT', payload: { id: '1', ctrlKey: false, shiftKey: false } });
     });
     act(() => {
-      dispatch({ type: 'ADD_ELEMENT' });
+      dispatch({ type: 'ADD_ELEMENT', payload: {} });
     });
 
     const state = result.current.state;
@@ -138,7 +138,7 @@ describe('切り取り、コピー、貼り付け操作', () => {
     // ルート要素を選択して子要素を追加
     act(() => {
       dispatch({ type: 'SELECT_ELEMENT', payload: { id: '1', ctrlKey: false, shiftKey: false } });
-      dispatch({ type: 'ADD_ELEMENT' });
+      dispatch({ type: 'ADD_ELEMENT', payload: {} });
     });
 
     let state = result.current.state;
@@ -168,7 +168,7 @@ describe('切り取り、コピー、貼り付け操作', () => {
     // 親要素を選択して新しい子要素を追加
     act(() => {
       dispatch({ type: 'SELECT_ELEMENT', payload: { id: '1', ctrlKey: false, shiftKey: false } });
-      dispatch({ type: 'ADD_ELEMENT' });
+      dispatch({ type: 'ADD_ELEMENT', payload: {} });
     });
 
     state = result.current.state;
@@ -210,7 +210,7 @@ describe('切り取り、コピー、貼り付け操作', () => {
     // ルート要素を選択して子要素を追加
     act(() => {
       dispatch({ type: 'SELECT_ELEMENT', payload: { id: '1', ctrlKey: false, shiftKey: false } });
-      dispatch({ type: 'ADD_ELEMENT' });
+      dispatch({ type: 'ADD_ELEMENT', payload: {} });
     });
 
     let state = result.current.state;
@@ -224,7 +224,7 @@ describe('切り取り、コピー、貼り付け操作', () => {
         type: 'SELECT_ELEMENT',
         payload: { id: childElement.id, ctrlKey: false, shiftKey: false },
       });
-      dispatch({ type: 'ADD_ELEMENT' });
+      dispatch({ type: 'ADD_ELEMENT', payload: {} });
     });
 
     // 子要素を選択してコピー
@@ -242,7 +242,7 @@ describe('切り取り、コピー、貼り付け操作', () => {
     // ルート要素を選択して新しい子要素を追加
     act(() => {
       dispatch({ type: 'SELECT_ELEMENT', payload: { id: '1', ctrlKey: false, shiftKey: false } });
-      dispatch({ type: 'ADD_ELEMENT' });
+      dispatch({ type: 'ADD_ELEMENT', payload: {} });
     });
 
     state = result.current.state;
@@ -282,7 +282,7 @@ describe('切り取り、コピー、貼り付け操作', () => {
     // ルート要素を選択して子要素を追加
     act(() => {
       dispatch({ type: 'SELECT_ELEMENT', payload: { id: '1', ctrlKey: false, shiftKey: false } });
-      dispatch({ type: 'ADD_ELEMENT' });
+      dispatch({ type: 'ADD_ELEMENT', payload: {} });
     });
 
     // 子要素に子要素を追加するためにもう一度
@@ -300,7 +300,7 @@ describe('切り取り、コピー、貼り付け操作', () => {
         type: 'SELECT_ELEMENT',
         payload: { id: childElement.id, ctrlKey: false, shiftKey: false },
       });
-      dispatch({ type: 'ADD_ELEMENT' });
+      dispatch({ type: 'ADD_ELEMENT', payload: {} });
     });
 
     // 現在の状態を確認
