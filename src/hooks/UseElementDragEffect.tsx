@@ -780,8 +780,24 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
       e: React.MouseEvent<HTMLElement | SVGElement> | React.TouchEvent<HTMLElement | SVGElement>,
       element: Element,
     ) => {
+      // デバッグ情報を追加
+      console.log(
+        `[DEBUG] UseElementDragEffect.handleMouseDown called for element ${element.id}:`,
+        {
+          selected: element.selected,
+          parentId: element.parentId,
+          eventType: e.nativeEvent instanceof TouchEvent ? 'touch' : 'mouse',
+          willReturn: !element.selected || !element.parentId,
+        },
+      );
+
       // 要素が選択状態でない場合はドラッグを開始しない
-      if (!element.selected || !element.parentId) return;
+      if (!element.selected || !element.parentId) {
+        console.log(
+          `[DEBUG] Drag prevented for element ${element.id}: selected=${element.selected}, parentId=${element.parentId}`,
+        );
+        return;
+      }
 
       e.stopPropagation();
 
@@ -1245,6 +1261,14 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
   );
 
   const handleMouseUp = useCallback(async () => {
+    console.log(`[DEBUG] handleMouseUp called. draggingElement:`, draggingElement?.id || 'none');
+    console.log(
+      `[DEBUG] currentDropTarget:`,
+      currentDropTarget
+        ? { elementId: currentDropTarget.element.id, position: currentDropTarget.position }
+        : 'none',
+    );
+
     if (!draggingElement) return;
 
     try {

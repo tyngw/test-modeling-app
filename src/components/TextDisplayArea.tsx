@@ -28,6 +28,8 @@ interface TextDisplayAreaProps {
   onHeightChange: (newHeight: number) => void;
   onUrlClick?: (url: string, event: React.MouseEvent) => void;
   onElementClick?: (event: React.MouseEvent) => void;
+  onMouseDown?: (event: React.MouseEvent) => void; // マウスダウンイベント用
+  onTouchStart?: (event: React.TouchEvent) => void; // タッチスタートイベント用
   isSelected?: boolean; // 要素が選択状態かどうか
 }
 
@@ -42,6 +44,8 @@ const TextDisplayArea = memo<TextDisplayAreaProps>(function TextDisplayArea({
   onHeightChange,
   onUrlClick,
   onElementClick,
+  onMouseDown,
+  onTouchStart,
   isSelected = false,
 }) {
   const [dimensions, setDimensions] = useState({
@@ -253,27 +257,25 @@ const TextDisplayArea = memo<TextDisplayAreaProps>(function TextDisplayArea({
 
     if (!touch) return;
 
+    console.log(`[DEBUG] URL touched on mobile. isSelected: ${isSelected}, url: ${url}`);
+
     // モバイル端末で要素が既に選択状態の場合はURL処理
     if (isMobile && isSelected) {
       event.preventDefault();
       event.stopPropagation();
 
-      const syntheticEvent = {
-        clientX: touch.clientX,
-        clientY: touch.clientY,
-        ctrlKey: false,
-        metaKey: false,
-        preventDefault: () => event.preventDefault(),
-        stopPropagation: () => event.stopPropagation(),
-      } as React.MouseEvent<HTMLDivElement>;
+      console.log(`[DEBUG] Opening URL on mobile: ${url}`);
 
-      handleUrlAction(url, syntheticEvent);
+      // 直接URLを開く（モバイルでは新しいタブで開く）
+      openUrlInNewTab(url);
       return;
     }
 
     // モバイル端末で選択状態でない場合、またはPC端末の場合は要素選択
     const syntheticEvent = {
       clientX: touch.clientX,
+      clientY: touch.clientY,
+      ctrlKey: false,
       clientY: touch.clientY,
       ctrlKey: false,
       metaKey: false,
@@ -363,6 +365,8 @@ const TextDisplayArea = memo<TextDisplayAreaProps>(function TextDisplayArea({
             touchAction: 'manipulation',
           }}
           onClick={handleTextClick}
+          onMouseDown={onMouseDown}
+          onTouchStart={onTouchStart}
           onTouchEnd={handleTouchEnd}
         >
           {renderTextWithUrls(safeText)}

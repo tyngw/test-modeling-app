@@ -229,6 +229,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
 
   const handleSelect = (e: React.MouseEvent) => {
     e.stopPropagation();
+    console.log(`[DEBUG] Element ${element.id} clicked - current selected: ${element.selected}`);
     dispatch({
       type: 'SELECT_ELEMENT',
       payload: {
@@ -351,7 +352,21 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
           strokeDasharray={element.tentative ? '4 2' : 'none'}
           onClick={handleSelect}
           onDoubleClick={() => dispatch({ type: 'EDIT_ELEMENT' })}
-          onMouseDown={(e) => handleMouseDown(e, element)}
+          onMouseDown={(e) => {
+            console.log(`[DEBUG] onMouseDown triggered for element ${element.id}`, {
+              button: e.button,
+              selected: element.selected,
+              parentId: element.parentId,
+            });
+            handleMouseDown(e, element);
+          }}
+          onTouchStart={(e) => {
+            console.log(`[DEBUG] onTouchStart triggered for element ${element.id}`, {
+              selected: element.selected,
+              parentId: element.parentId,
+            });
+            handleMouseDown(e, element);
+          }}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
           data-element-id={element.id}
@@ -421,6 +436,14 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
                 onHeightChange={(newHeight) => handleHeightChange(index, newHeight)}
                 onUrlClick={undefined}
                 onElementClick={handleSelect}
+                onMouseDown={(e) => {
+                  console.log(`[DEBUG] TextDisplayArea onMouseDown for element ${element.id}`);
+                  handleMouseDown(e, element);
+                }}
+                onTouchStart={(e) => {
+                  console.log(`[DEBUG] TextDisplayArea onTouchStart for element ${element.id}`);
+                  handleMouseDown(e, element);
+                }}
                 isSelected={element.selected}
               />
             )}

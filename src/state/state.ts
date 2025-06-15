@@ -353,6 +353,12 @@ const actionHandlers: Record<string, ActionHandler> = {
     (state: State, payload: SelectElementPayload) => {
       const { id, ctrlKey = false, shiftKey = false } = payload;
       const selectedElement = state.elements[id];
+      console.log(`[DEBUG] SELECT_ELEMENT action for ${id}:`, {
+        found: !!selectedElement,
+        currentSelected: selectedElement?.selected || false,
+        hasParentId: !!selectedElement?.parentId,
+      });
+
       if (!selectedElement) {
         debugLog(`Element with id ${id} not found`);
         return state;
@@ -408,6 +414,13 @@ const actionHandlers: Record<string, ActionHandler> = {
         updatedElements,
         (element) => validSelectedIds.includes(element.id),
         { selected: true },
+      );
+
+      console.log(
+        `[DEBUG] SELECT_ELEMENT completed. Selected elements:`,
+        Object.values(updatedElements)
+          .filter((e) => e.selected)
+          .map((e) => ({ id: e.id, parentId: e.parentId })),
       );
 
       return {
