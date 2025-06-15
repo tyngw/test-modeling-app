@@ -51,7 +51,11 @@ export const useKeyboardHandler = ({ dispatch, elements, addToast }: UseKeyboard
           }
         }
       } else if (actionType) {
-        dispatch({ type: actionType });
+        if (actionType === 'ADD_ELEMENT') {
+          dispatch({ type: actionType, payload: {} });
+        } else {
+          dispatch({ type: actionType });
+        }
       }
     },
     [dispatch, elements, addToast],
