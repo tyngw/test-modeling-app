@@ -230,27 +230,6 @@ const TextDisplayArea = memo<TextDisplayAreaProps>(function TextDisplayArea({
       return;
     }
 
-    // 一時的なデバッグ: モバイルでクリックが動作しているかを確認
-    if (isMobile && typeof window !== 'undefined') {
-      const message = isSelected
-        ? `選択状態のURL要素をクリックしました: ${url}\nURLを開きますか？`
-        : `未選択のURL要素をクリックしました: ${url}\n要素を選択しますか？`;
-
-      const userConfirmed = confirm(message);
-
-      if (isSelected && userConfirmed) {
-        // 選択状態でOKの場合はURL処理
-        openUrlInNewTab(url);
-        return;
-      } else if (!isSelected && userConfirmed) {
-        // 未選択でOKの場合は要素選択
-        if (onElementClick) {
-          onElementClick(event as any);
-        }
-        return;
-      }
-    }
-
     // モバイル端末で要素が既に選択状態の場合はURL処理
     if (isMobile && isSelected) {
       event.preventDefault();
@@ -273,36 +252,6 @@ const TextDisplayArea = memo<TextDisplayAreaProps>(function TextDisplayArea({
     const touch = event.changedTouches[0];
 
     if (!touch) return;
-
-    // 一時的なデバッグ: モバイルでタッチが動作しているかを確認
-    if (isMobile && typeof window !== 'undefined') {
-      const message = isSelected
-        ? `選択状態のURL要素をタップしました: ${url}\nURLを開きますか？`
-        : `未選択のURL要素をタップしました: ${url}\n要素を選択しますか？`;
-
-      const userConfirmed = confirm(message);
-
-      if (isSelected && userConfirmed) {
-        // 選択状態でOKの場合はURL処理
-        openUrlInNewTab(url);
-        return;
-      } else if (!isSelected && userConfirmed) {
-        // 未選択でOKの場合は要素選択
-        const syntheticEvent = {
-          clientX: touch.clientX,
-          clientY: touch.clientY,
-          ctrlKey: false,
-          metaKey: false,
-          preventDefault: () => event.preventDefault(),
-          stopPropagation: () => event.stopPropagation(),
-        } as React.MouseEvent<HTMLDivElement>;
-
-        if (onElementClick) {
-          onElementClick(syntheticEvent);
-        }
-        return;
-      }
-    }
 
     // モバイル端末で要素が既に選択状態の場合はURL処理
     if (isMobile && isSelected) {
