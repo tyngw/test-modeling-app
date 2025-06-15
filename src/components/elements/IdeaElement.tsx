@@ -423,6 +423,12 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
                 zoomRatio={tabState.zoomRatio}
                 fontFamily={fontFamily}
                 onHeightChange={(newHeight) => handleHeightChange(index, newHeight)}
+                onUrlClick={(url, event) => {
+                  // URLクリック時のデバッグログ
+                  debugLog(`URL clicked: ${url}, Ctrl pressed: ${event.ctrlKey || event.metaKey}`);
+                }}
+                onElementClick={handleSelect}
+                isSelected={element.selected}
               />
             )}
             {index < element.texts.length - 1 && (
