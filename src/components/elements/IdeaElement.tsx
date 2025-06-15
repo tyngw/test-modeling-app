@@ -25,7 +25,6 @@ import {
 } from '../../utils/storage/localStorageHelpers';
 import { Element as CanvasElement, DropPosition } from '../../types/types';
 import { isDescendant } from '../../utils/element/elementHelpers';
-import { debugLog } from '../../utils/debugLogHelpers';
 import { useTabs } from '../../context/TabsContext';
 import { useIsMounted } from '../../hooks/UseIsMounted';
 
@@ -214,9 +213,6 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
         const newWidth = calculateElementWidth(element.texts, TEXTAREA_PADDING.HORIZONTAL);
         const totalHeight = newSectionHeights.reduce((sum, h) => sum + h, 0);
 
-        debugLog(
-          `[IdeaElement][handleHeightChange] resized: ${element.texts} ${element.width} x ${element.height} -> ${newWidth} x ${totalHeight}`,
-        );
         dispatch({
           type: 'UPDATE_ELEMENT_SIZE',
           payload: {
@@ -423,6 +419,9 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
                 zoomRatio={tabState.zoomRatio}
                 fontFamily={fontFamily}
                 onHeightChange={(newHeight) => handleHeightChange(index, newHeight)}
+                onUrlClick={undefined}
+                onElementClick={handleSelect}
+                isSelected={element.selected}
               />
             )}
             {index < element.texts.length - 1 && (
