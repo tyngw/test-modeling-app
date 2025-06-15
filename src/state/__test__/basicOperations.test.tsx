@@ -29,7 +29,7 @@ describe('基本操作', () => {
     const initialElementLength = Object.keys(result.current.state.elements).length;
 
     act(() => {
-      dispatch({ type: 'ADD_ELEMENT' });
+      dispatch({ type: 'ADD_ELEMENT', payload: {} });
     });
 
     const afterState = result.current.state;
@@ -55,7 +55,7 @@ describe('基本操作', () => {
     const initialElementLength = Object.keys(result.current.state.elements).length;
 
     act(() => {
-      dispatch({ type: 'ADD_ELEMENT' });
+      dispatch({ type: 'ADD_ELEMENT', payload: {} });
     });
 
     const afterAddState = result.current.state;
@@ -89,7 +89,7 @@ describe('基本操作', () => {
 
     act(() => {
       dispatch({ type: 'SELECT_ELEMENT', payload: { id: '1', ctrlKey: false, shiftKey: false } });
-      dispatch({ type: 'ADD_ELEMENT' });
+      dispatch({ type: 'ADD_ELEMENT', payload: {} });
     });
 
     let state = result.current.state;
@@ -102,7 +102,7 @@ describe('基本操作', () => {
         type: 'SELECT_ELEMENT',
         payload: { id: childElement.id, ctrlKey: false, shiftKey: false },
       });
-      dispatch({ type: 'ADD_ELEMENT' });
+      dispatch({ type: 'ADD_ELEMENT', payload: {} });
     });
 
     state = result.current.state;
