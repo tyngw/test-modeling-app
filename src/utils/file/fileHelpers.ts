@@ -218,10 +218,14 @@ export const loadElements = (
         let elementsMap: Record<string, Element> = {};
 
         // データ構造の判定と変換
+        console.log('[readFile] Starting data structure detection and conversion');
+        console.log('[readFile] Sanitized data:', sanitizedData);
+
         if (isHierarchicalStructure(sanitizedData)) {
           // 新しい階層構造の場合
-          console.log('階層構造のファイルを読み込み中...');
+          console.log('[readFile] Detected hierarchical structure, converting to flat...');
           elementsMap = convertHierarchicalToFlat(sanitizedData);
+          console.log('[readFile] Conversion result:', elementsMap);
         } else if (isFlatStructure(sanitizedData)) {
           // フラット構造（バージョン付き）の場合
           console.log('フラット構造のファイルを読み込み中...');
@@ -340,8 +344,18 @@ export const loadElements = (
             {} as Record<string, Element>,
           );
         } else {
+          console.log('[readFile] ERROR: Unrecognized data format');
+          console.log('[readFile] Data type checks:', {
+            isHierarchical: isHierarchicalStructure(sanitizedData),
+            isFlat: isFlatStructure(sanitizedData),
+            isLegacyArray: isLegacyArrayFormat(sanitizedData),
+            isLegacyMap: isLegacyMapFormat(sanitizedData),
+          });
           throw new Error('認識できないデータ形式です');
         }
+
+        console.log('[readFile] Final elementsMap before resolve:', elementsMap);
+        console.log('[readFile] Elements count:', Object.keys(elementsMap).length);
 
         resolve({ elements: elementsMap, fileName: file.name });
       } catch (error) {
