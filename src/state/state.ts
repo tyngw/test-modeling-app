@@ -9,10 +9,10 @@ import {
   handleArrowLeft,
 } from '../utils/elementSelector';
 import { Element, MarkerType } from '../types/types';
-import { DEFAULT_POSITION, NUMBER_OF_SECTIONS } from '../config/elementSettings';
+import { DEFAULT_POSITION, NUMBER_OF_SECTIONS, OFFSET, SIZE } from '../config/elementSettings';
 import { Action } from '../types/actionTypes';
 import { debugLog } from '../utils/debugLogHelpers';
-import { createNewElement } from '../utils/element/elementHelpers';
+import { createNewElement, getChildrenFromHierarchy } from '../utils/element/elementHelpers';
 import { ElementsMap } from '../types/elementTypes';
 import { adjustElementPositions } from '../utils/layoutHelpers';
 import {
@@ -759,6 +759,28 @@ const actionHandlers: Record<string, ActionHandler> = {
 
       const text = payload?.text;
 
+      // 階層構造から親要素の既存の子要素を順序通りに取得
+      const siblings = state.hierarchicalData
+        ? getChildrenFromHierarchy(selectedElement.id, state.hierarchicalData, state.elementsCache)
+        : Object.values(state.elementsCache).filter(
+            (el) => el.parentId === selectedElement.id && el.visible,
+          );
+
+      // 新しい要素の初期座標を計算
+      let initialX: number;
+      let initialY: number;
+
+      if (siblings.length > 0) {
+        // 兄弟要素がある場合：末尾要素の下に配置
+        const lastSibling = siblings[siblings.length - 1];
+        initialX = lastSibling.x; // 末尾要素のX座標と同じ
+        initialY = lastSibling.y + lastSibling.height + OFFSET.Y; // 末尾要素の下端+OFFSETに配置
+      } else {
+        // 兄弟要素がない場合：親要素の右隣に配置
+        initialX = selectedElement.x + selectedElement.width + OFFSET.X; // 親要素の右+OFFSETに配置
+        initialY = selectedElement.y; // 親要素と同じY座標
+      }
+
       // 新しい要素を作成
       const newElement: Element = {
         ...createNewElement({
@@ -767,11 +789,18 @@ const actionHandlers: Record<string, ActionHandler> = {
         id: Date.now().toString(), // 簡易的なID生成
         parentId: selectedElement.id,
         depth: selectedElement.depth + 1,
+        x: initialX, // 計算された初期X座標を設定
+        y: initialY, // 計算された初期Y座標を設定
         texts: text
           ? [text, ...Array(Math.max(0, state.numberOfSections - 1)).fill('')]
           : Array(state.numberOfSections).fill(''),
         selected: true, // 新要素を選択状態に
       };
+
+      // デバッグログ: 作成された要素の座標を確認
+      debugLog(
+        `[ADD_ELEMENT] 新要素作成: ID=${newElement.id}, X=${newElement.x}, Y=${newElement.y}`,
+      );
 
       // 階層構造に要素を追加
       let result: HierarchicalOperationResult;
@@ -791,6 +820,14 @@ const actionHandlers: Record<string, ActionHandler> = {
         };
       });
 
+      // デバッグログ: 階層操作後の新要素の座標を確認
+      const newElementAfterHierarchy = elementsWithUpdatedSelection[newElement.id];
+      if (newElementAfterHierarchy) {
+        debugLog(
+          `[ADD_ELEMENT] 階層操作後の新要素: X=${newElementAfterHierarchy.x}, Y=${newElementAfterHierarchy.y}`,
+        );
+      }
+
       // 位置調整を行う
       const adjustedElementsCache = adjustElementPositions(
         elementsWithUpdatedSelection,
@@ -798,7 +835,16 @@ const actionHandlers: Record<string, ActionHandler> = {
         state.layoutMode,
         state.width || 0,
         state.height || 0,
+        result.hierarchicalData,
       );
+
+      // デバッグログ: 位置調整後の新要素の座標を確認
+      const newElementAfterAdjustment = adjustedElementsCache[newElement.id];
+      if (newElementAfterAdjustment) {
+        debugLog(
+          `[ADD_ELEMENT] 位置調整後の新要素: X=${newElementAfterAdjustment.x}, Y=${newElementAfterAdjustment.y}`,
+        );
+      }
 
       const finalHierarchicalData = convertFlatToHierarchical(adjustedElementsCache);
       if (!finalHierarchicalData) return state;
@@ -824,6 +870,28 @@ const actionHandlers: Record<string, ActionHandler> = {
       const texts = payload?.texts || [];
       const tentative = payload?.tentative || false;
 
+      // 階層構造から親要素の既存の子要素を順序通りに取得
+      const siblings = state.hierarchicalData
+        ? getChildrenFromHierarchy(selectedElement.id, state.hierarchicalData, state.elementsCache)
+        : Object.values(state.elementsCache).filter(
+            (el) => el.parentId === selectedElement.id && el.visible,
+          );
+
+      // 初期座標を計算
+      let currentX: number;
+      let currentY: number;
+
+      if (siblings.length > 0) {
+        // 兄弟要素がある場合：末尾要素の下に配置
+        const lastSibling = siblings[siblings.length - 1];
+        currentX = lastSibling.x; // 末尾要素のX座標と同じ
+        currentY = lastSibling.y + lastSibling.height + OFFSET.Y; // 末尾要素の下端+OFFSETに配置
+      } else {
+        // 兄弟要素がない場合：親要素の右隣に配置
+        currentX = selectedElement.x + selectedElement.width + OFFSET.X; // 親要素の右+OFFSETに配置
+        currentY = selectedElement.y; // 親要素と同じY座標
+      }
+
       let currentHierarchy = state.hierarchicalData;
 
       // 複数の要素を順次追加
@@ -835,6 +903,8 @@ const actionHandlers: Record<string, ActionHandler> = {
           id: (Date.now() + i).toString(),
           parentId: selectedElement.id,
           depth: selectedElement.depth + 1,
+          x: currentX, // 計算された初期X座標を設定
+          y: currentY + i * (SIZE.SECTION_HEIGHT * state.numberOfSections + OFFSET.Y), // 各要素を順次下に配置
           texts: Array(state.numberOfSections)
             .fill('')
             .map((_, index) => (index === 0 ? texts[i] : '')),
@@ -856,6 +926,7 @@ const actionHandlers: Record<string, ActionHandler> = {
         state.layoutMode,
         state.width || 0,
         state.height || 0,
+        currentHierarchy,
       );
 
       const finalHierarchicalData = convertFlatToHierarchical(adjustedElementsCache);

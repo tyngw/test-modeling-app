@@ -40,10 +40,8 @@ export function convertFlatToHierarchical(
     }
   });
 
-  // 各親の子要素をIDでソート（階層構造では配列の順序で管理）
-  childrenMap.forEach((children) => {
-    children.sort((a, b) => a.id.localeCompare(b.id));
-  });
+  // 階層構造では配列の順序をそのまま保持（ソートしない）
+  // 各親の子要素は配列の順序通りに管理される
 
   /**
    * 再帰的に階層ノードを構築

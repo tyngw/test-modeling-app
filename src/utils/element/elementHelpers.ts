@@ -5,6 +5,7 @@ import { getMarkerType } from '../storage/localStorageHelpers';
 import { SIZE, NUMBER_OF_SECTIONS } from '../../config/elementSettings';
 import { debugLog } from '../debugLogHelpers';
 import { ElementsMap } from '../../types/elementTypes';
+import { HierarchicalStructure } from '../../types/hierarchicalTypes';
 
 /**
  * 新規要素作成のパラメータ
@@ -215,4 +216,58 @@ export const formatElementsForPrompt = (
   };
 
   return buildTree(null, 0).join('\n');
+};
+
+/**
+ * 階層構造から正しい順序で子要素を取得
+ * @param parentId 親要素のID
+ * @param hierarchicalData 階層構造データ
+ * @param elements 要素マップ（フォールバック用）
+ * @returns 正しい順序の子要素配列
+ */
+export const getChildrenFromHierarchy = (
+  parentId: string | null,
+  hierarchicalData: HierarchicalStructure | null,
+  elements: ElementsMap,
+): Element[] => {
+  if (!hierarchicalData) {
+    // 階層データがない場合はフォールバック（IDでソート）
+    return Object.values(elements)
+      .filter((e) => e.parentId === parentId && e.visible)
+      .sort((a, b) => a.id.localeCompare(b.id));
+  }
+
+  /**
+   * ノードを再帰的に検索して子要素を配列順序で取得
+   */
+  const findNodeAndGetChildren = (node: any, targetParentId: string | null): Element[] => {
+    if (node.data.id === targetParentId) {
+      // 目的の親ノードを発見、その子要素を配列の順序通りに返す
+      if (node.children && node.children.length > 0) {
+        return node.children
+          .map((child: any) => child.data)
+          .filter((element: Element) => element.visible);
+      }
+      return [];
+    }
+
+    // 子ノードを再帰的に検索
+    if (node.children && node.children.length > 0) {
+      for (const child of node.children) {
+        const result = findNodeAndGetChildren(child, targetParentId);
+        if (result.length > 0 || child.data.id === targetParentId) {
+          return result;
+        }
+      }
+    }
+
+    return [];
+  };
+
+  if (parentId === null) {
+    // ルート要素の場合
+    return [hierarchicalData.root.data].filter((element) => element.visible);
+  }
+
+  return findNodeAndGetChildren(hierarchicalData.root, parentId);
 };

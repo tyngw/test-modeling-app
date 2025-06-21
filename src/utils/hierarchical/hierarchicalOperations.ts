@@ -41,6 +41,20 @@ export function addElementToHierarchy(
       throw new Error(`親ノード ${parentId} が見つかりません`);
     }
 
+    // 既存の子要素の最大Y座標を取得して、新しい要素を末尾に配置
+    // let maxY = parentNode.data.y || 0;
+    // if (parentNode.children && parentNode.children.length > 0) {
+    //   maxY = Math.max(...parentNode.children.map((child) => child.data.y || 0));
+    //   // 既存の子要素の下に配置するため、最大Y座標に要素の高さ分を加える
+    //   maxY += (parentNode.children[parentNode.children.length - 1]?.data.height || 60) + 20;
+    // } else {
+    //   // 初回の子要素の場合は、親要素のY座標の下に配置
+    //   maxY += (parentNode.data.height || 60) + 20;
+    // }
+
+    // // 新しい要素のY座標を設定
+    // newElement.y = maxY;
+
     // 新しいノードを作成
     const newNode: HierarchicalNode = {
       data: newElement,
