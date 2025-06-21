@@ -9,8 +9,8 @@ describe('基本操作', () => {
     const { result } = renderHook(() => useStore());
     const state = result.current.state;
 
-    expect(Object.keys(state.elements)).toHaveLength(1);
-    const [rootElement] = Object.values(state.elements) as Element[];
+    expect(Object.keys(state.elementsCache)).toHaveLength(1);
+    const [rootElement] = Object.values(state.elementsCache) as Element[];
     expect(rootElement).toMatchObject({
       parentId: null,
       selected: true,
@@ -25,19 +25,19 @@ describe('基本操作', () => {
     const { result } = renderHook(() => useStore());
     const { dispatch } = result.current;
 
-    const initialElement = Object.values(result.current.state.elements)[0] as Element;
-    const initialElementLength = Object.keys(result.current.state.elements).length;
+    const initialElement = Object.values(result.current.state.elementsCache)[0] as Element;
+    const initialElementLength = Object.keys(result.current.state.elementsCache).length;
 
     act(() => {
       dispatch({ type: 'ADD_ELEMENT', payload: {} });
     });
 
     const afterState = result.current.state;
-    const elements = Object.values(afterState.elements) as Element[];
+    const elements = Object.values(afterState.elementsCache) as Element[];
     const addedElement = elements.find((e) => e.id !== initialElement.id)!;
     const parentElement = elements.find((e) => e.id === initialElement.id)!;
 
-    expect(Object.keys(afterState.elements)).toHaveLength(initialElementLength + 1);
+    expect(Object.keys(afterState.elementsCache)).toHaveLength(initialElementLength + 1);
     expect(parentElement).toMatchObject({
       children: 1,
       selected: false,

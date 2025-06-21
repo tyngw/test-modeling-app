@@ -33,7 +33,9 @@ export function useTabManagement() {
 
         // 編集終了時にタブ名を更新
         if (action.type === 'END_EDITING') {
-          const elements = Object.values(newState.elements);
+          const elements = Object.values(
+            newState.elementsCache || {},
+          ) as unknown as import('../types/types').Element[];
           const rootElementText = extractRootElementTextFromElements(elements);
 
           if (rootElementText) {
@@ -54,7 +56,9 @@ export function useTabManagement() {
   const updateTabNameFromRootElement = useCallback(() => {
     if (!currentTab || !currentTabId) return;
 
-    const elements = Object.values(currentTab.state.elements);
+    const elements = Object.values(
+      currentTab.state.elementsCache || {},
+    ) as unknown as import('../types/types').Element[];
     const rootElementText = extractRootElementTextFromElements(elements);
 
     if (rootElementText) {

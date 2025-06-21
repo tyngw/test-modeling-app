@@ -29,6 +29,11 @@ const isTouchEvent = (event: MouseEvent | TouchEvent): event is TouchEvent => {
   return 'touches' in event;
 };
 
+interface State {
+  zoomRatio: number;
+  elementsCache: { [key: string]: Element };
+}
+
 type Position = { x: number; y: number };
 export type DropTargetInfo = {
   element: Element;
@@ -457,7 +462,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
 
       return { ...result, distanceSq };
     },
-    [calculateChildPosition, draggingElement],
+    [calculateChildPosition, draggingElement, state.zoomRatio],
   );
 
   const findDropTarget = useCallback(
@@ -818,24 +823,17 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
 
       // ドラッグ開始時に選択されている全要素の元の位置を保存
       elementOriginalPositions.current.clear();
-      const selectedElements = Object.values(state.elementsCache).filter((el): el is Element => {
-        const element = el as Element;
-        return element.selected;
-      });
+      const selectedElements = Object.values(state.elements).filter((el) => el.selected);
 
       selectedElements.forEach((el) => {
-        const element = el as Element;
-        elementOriginalPositions.current.set(element.id, { x: element.x, y: element.y });
+        elementOriginalPositions.current.set(el.id, { x: el.x, y: el.y });
       });
     },
-    [convertToZoomCoordinates, state.elementsCache, dispatch],
+    [convertToZoomCoordinates, state.elements, dispatch],
   );
 
   const resetElementsPosition = useCallback(() => {
-    const selectedElements = Object.values(state.elementsCache).filter((el): el is Element => {
-      const element = el as Element;
-      return element.selected;
-    });
+    const selectedElements = Object.values(state.elements).filter((el) => el.selected);
     selectedElements.forEach((element) => {
       // 保存した元の位置情報を使用
       const originalPos = elementOriginalPositions.current.get(element.id);
@@ -849,7 +847,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
     // 状態をリセット
     setDraggingElement(null);
     elementOriginalPositions.current.clear();
-  }, [state.elementsCache, dispatch]);
+  }, [state.elements, dispatch]);
 
   // 要素をドロップする際の親変更を検証する関数
   const validateParentChange = useCallback(
@@ -871,9 +869,9 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
       }
 
       // 自身の子孫要素に移動しようとしている場合は無効
-      if (isDescendant(state.elementsCache, element.id, newParentId)) {
+      if (isDescendant(state.elements, element.id, newParentId)) {
         // 直接の子要素への移動かどうかを判定
-        const isDirectChild = state.elementsCache[newParentId]?.parentId === element.id;
+        const isDirectChild = state.elements[newParentId]?.parentId === element.id;
         debugLog(
           `無効な操作: ${isDirectChild ? '自身の子要素' : '循環参照'} element=${element.id}, newParentId=${newParentId}`,
         );
@@ -886,7 +884,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
       }
 
       // 階層構造の制約チェック
-      const newParentDepth = newParentId ? state.elementsCache[newParentId]?.depth || 0 : 0;
+      const newParentDepth = newParentId ? state.elements[newParentId]?.depth || 0 : 0;
       const maxAllowedDepth = 10; // 最大深さの制限値
       if (newParentDepth >= maxAllowedDepth) {
         debugLog(`無効な操作: 最大深さ超過 currentDepth=${newParentDepth}, max=${maxAllowedDepth}`);
@@ -898,7 +896,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
 
       return { isValid: true };
     },
-    [state.elementsCache],
+    [state.elements],
   );
 
   // 子要素としてドロップする処理
@@ -954,7 +952,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
       });
       return true;
     },
-    [validateParentChange, addToast, resetElementsPosition, dispatch, currentDropTarget?.insertX],
+    [validateParentChange, addToast, resetElementsPosition, dispatch],
   );
 
   // 兄弟要素間にドロップする処理
@@ -1049,7 +1047,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
         let newDirection: DirectionType | undefined = undefined;
 
         if (newParentId) {
-          const newParent = state.elementsCache[newParentId];
+          const newParent = state.elements[newParentId];
           const isNewParentRoot = newParent?.direction === 'none' && newParent?.parentId === null;
 
           if (isNewParentRoot) {
@@ -1123,7 +1121,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
       addToast,
       resetElementsPosition,
       dispatch,
-      state.elementsCache,
+      state.elements,
     ],
   );
 
@@ -1197,80 +1195,69 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
       // 前から後ろに移動する場合（移動元order < 移動先order）
       if (maxDraggedOrder < targetBaseOrder) {
         // 移動元と移動先の間にある要素のorderを減らす
-        const affectedElements = Object.values(state.elementsCache).filter((el): el is Element => {
-          const element = el as Element;
-          return (
-            element.parentId === elementParentId &&
-            element.order > maxDraggedOrder &&
-            element.order < targetBaseOrder + draggedElements.length &&
-            !draggedElements.some((dragged) => dragged.id === element.id)
-          );
-        });
+        const affectedElements = Object.values(state.elements).filter(
+          (el) =>
+            el.parentId === elementParentId &&
+            el.order > maxDraggedOrder &&
+            el.order < targetBaseOrder + draggedElements.length &&
+            !draggedElements.some((dragged) => dragged.id === el.id),
+        );
 
         affectedElements.forEach((element) => {
-          // TODO: 階層構造ベースの状態管理でorder更新を実装
-          // dispatch({
-          //   type: 'UPDATE_ELEMENT_ORDER',
-          //   payload: {
-          //     id: element.id,
-          //     order: element.order - draggedElements.length,
-          //   },
-          // });
-          console.warn('ORDER UPDATE NOT IMPLEMENTED for element:', element.id);
+          dispatch({
+            type: 'UPDATE_ELEMENT_ORDER',
+            payload: {
+              id: element.id,
+              order: element.order - draggedElements.length,
+            },
+          });
         });
       }
       // 後ろから前に移動する場合（移動元order > 移動先order）
       else if (minDraggedOrder > targetBaseOrder) {
         // 移動先と移動元の間にある要素のorderを増やす
-        const affectedElements = Object.values(state.elementsCache).filter((el): el is Element => {
-          const element = el as Element;
-          return (
-            element.parentId === elementParentId &&
-            element.order >= targetBaseOrder &&
-            element.order < minDraggedOrder &&
-            !draggedElements.some((dragged) => dragged.id === element.id)
-          );
-        });
+        const affectedElements = Object.values(state.elements).filter(
+          (el) =>
+            el.parentId === elementParentId &&
+            el.order >= targetBaseOrder &&
+            el.order < minDraggedOrder &&
+            !draggedElements.some((dragged) => dragged.id === el.id),
+        );
 
         affectedElements.forEach((element) => {
-          // TODO: 階層構造ベースの状態管理でorder更新を実装
-          // dispatch({
-          //   type: 'UPDATE_ELEMENT_ORDER',
-          //   payload: {
-          //     id: element.id,
-          //     order: element.order + draggedElements.length,
-          //   },
-          // });
-          console.warn('ORDER UPDATE NOT IMPLEMENTED for element:', element.id);
+          dispatch({
+            type: 'UPDATE_ELEMENT_ORDER',
+            payload: {
+              id: element.id,
+              order: element.order + draggedElements.length,
+            },
+          });
         });
       }
       // 移動元と移動先が同じ場合は何もしない
     },
-    [state.elementsCache],
+    [state.elements, dispatch],
   );
 
   // 新しい要素追加時にorder値を調整する関数
   const adjustOrdersForNewElements = useCallback(
     (baseOrder: number, count: number, elementParentId: string | null) => {
       // baseOrder以上のorderを持つ既存要素のorderを調整
-      const affectedElements = Object.values(state.elementsCache).filter((el): el is Element => {
-        const element = el as Element;
-        return element.parentId === elementParentId && element.order >= baseOrder;
-      });
+      const affectedElements = Object.values(state.elements).filter(
+        (el) => el.parentId === elementParentId && el.order >= baseOrder,
+      );
 
       affectedElements.forEach((element) => {
-        // TODO: 階層構造ベースの状態管理でorder更新を実装
-        // dispatch({
-        //   type: 'UPDATE_ELEMENT_ORDER',
-        //   payload: {
-        //     id: element.id,
-        //     order: element.order + count,
-        //   },
-        // });
-        console.warn('ORDER ADJUSTMENT NOT IMPLEMENTED for element:', element.id);
+        dispatch({
+          type: 'UPDATE_ELEMENT_ORDER',
+          payload: {
+            id: element.id,
+            order: element.order + count,
+          },
+        });
       });
     },
-    [state.elementsCache],
+    [state.elements, dispatch],
   );
 
   const handleMouseUp = useCallback(async () => {
@@ -1285,7 +1272,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
     if (!draggingElement) return;
 
     try {
-      const selectedElements = Object.values(state.elementsCache).filter((el) => el.selected);
+      const selectedElements = Object.values(state.elements).filter((el) => el.selected);
 
       if (currentDropTarget) {
         const { element: target, position } = currentDropTarget;
@@ -1331,7 +1318,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
   }, [
     draggingElement,
     currentDropTarget,
-    state.elementsCache,
+    state.elements,
     dispatch,
     addToast,
     resetElementsPosition,
@@ -1349,7 +1336,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
         e.preventDefault();
       }
 
-      const dropTarget = findDropTarget(e, state.elementsCache);
+      const dropTarget = findDropTarget(e, state.elements);
 
       // 新しいドロップターゲットと現在のドロップターゲットを比較し、
       // 実際に変更がある場合のみステートを更新する
@@ -1383,7 +1370,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
     [
       draggingElement,
       currentDropTarget,
-      state.elementsCache,
+      state.elements,
       findDropTarget,
       convertToZoomCoordinates,
       dragStartOffset,

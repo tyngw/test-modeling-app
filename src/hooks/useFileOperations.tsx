@@ -39,12 +39,12 @@ export function useFileOperations({
   const handleSaveElements = useCallback(() => {
     if (!currentTab) return;
 
-    saveElements(Object.values(currentTab.state.elements), currentTab.name);
+    saveElements(Object.values(currentTab.state.elementsCache || {}), currentTab.name);
 
     // JSON保存後にタブを保存済みとしてマーク
     if (currentTab.id) {
       // 現在の要素の状態をJSON文字列として保存（整形して比較）
-      const normalizedElements = JSON.parse(JSON.stringify(currentTab.state.elements));
+      const normalizedElements = JSON.parse(JSON.stringify(currentTab.state.elementsCache || {}));
       const currentElementsJson = JSON.stringify(normalizedElements);
 
       console.log('保存処理: タブID', currentTab.id);

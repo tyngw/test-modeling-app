@@ -74,7 +74,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
   const svgRef = useRef<SVGSVGElement>(null);
   const [isClient, setIsClient] = useState(false);
   const { state, dispatch } = useCanvas();
-  const { elements } = state;
+  const { elementsCache } = state;
   const [connectionPathColor, setConnectionPathColor] = useState(DEFAULT_CONNECTION_PATH_COLOR);
   const [connectionPathStroke, setConnectionPathStroke] = useState(DEFAULT_CONNECTION_PATH_STROKE);
   const [canvasBackgroundColor, setCanvasBackgroundColor] = useState(
@@ -83,8 +83,8 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
   const { addToast } = useToast();
   const [displayScopeSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const [displayArea, setDisplayArea] = useState('0 0 0 0');
-  const editingNode = Object.values(elements).find(
-    (element) => (element as CanvasElement).editing,
+  const editingNode = Object.values(elementsCache).find(
+    (element): element is CanvasElement => (element as CanvasElement).editing,
   ) as CanvasElement | undefined;
   const [hover, setHover] = useState<string | null>(null);
   const [showMenuForElement, setShowMenuForElement] = useState<string | null>(null);
@@ -94,7 +94,10 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
   useResizeEffect({
     setCanvasSize,
     setDisplayArea,
-    state,
+    state: {
+      elements: elementsCache,
+      zoomRatio: state.zoomRatio,
+    },
     isClient,
   });
 
@@ -113,13 +116,13 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
   // タッチ操作のハンドラーをカスタムフックから取得
   const { isPinching, handleTouchStart, handleTouchMove, handleTouchEnd } = useTouchHandlers({
     handleMouseDown,
-    elements: state.elements,
+    elements: elementsCache,
   });
 
   // キーボード操作のハンドラーをカスタムフックから取得
   const handleKeyDown = useKeyboardHandler({
     dispatch,
-    elements: state.elements,
+    elements: elementsCache,
     addToast,
   });
 
@@ -204,24 +207,30 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     const nonRootElementsWithChildren: CanvasElement[] = [];
 
     // 要素を可視状態でフィルタリングしつつグループ化
-    Object.values(elements)
-      .filter((element): element is CanvasElement => element.visible)
+    Object.values(elementsCache)
+      .filter((element): element is CanvasElement => (element as CanvasElement).visible)
       .forEach((element) => {
+        const canvasElement = element as CanvasElement;
         // グループキーの生成（ルート要素は特別扱い）
-        const groupKey = element.parentId ? `${element.parentId}_${element.depth}` : 'root';
+        const groupKey = canvasElement.parentId
+          ? `${canvasElement.parentId}_${canvasElement.depth}`
+          : 'root';
 
         // グループが存在しない場合は初期化
         if (!elementGroups[groupKey]) {
           elementGroups[groupKey] = [];
         }
-        elementGroups[groupKey].push(element);
+        elementGroups[groupKey].push(canvasElement);
 
         // 子要素を持つ非ルート要素を記録（始点マーカーボタン用）
         if (
-          element.parentId &&
-          Object.values(elements).some((el) => el.parentId === element.id && el.visible)
+          canvasElement.parentId &&
+          Object.values(elementsCache).some((el): el is CanvasElement => {
+            const childElement = el as CanvasElement;
+            return childElement.parentId === canvasElement.id && childElement.visible;
+          })
         ) {
-          nonRootElementsWithChildren.push(element);
+          nonRootElementsWithChildren.push(canvasElement);
         }
       });
 
@@ -233,9 +242,10 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
           if (groupKey === 'root') {
             return groupElements.map((element) => {
               // 始点マーカーボタンを表示するかどうかの条件チェック
-              const hasChildren = Object.values(elements).some(
-                (el) => el.parentId === element.id && el.visible,
-              );
+              const hasChildren = Object.values(elementsCache).some((el): el is CanvasElement => {
+                const childElement = el as CanvasElement;
+                return childElement.parentId === element.id && childElement.visible;
+              });
 
               return (
                 <React.Fragment key={element.id}>
@@ -266,7 +276,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
 
           // グループキーから親要素IDを取得
           const [parentId] = groupKey.split('_');
-          const parentElement = elements[parentId] as CanvasElement | undefined;
+          const parentElement = elementsCache[parentId] as CanvasElement | undefined;
 
           // 親要素が存在しない場合はスキップ（論理エラー防止）
           if (!parentElement) return [];
@@ -331,23 +341,27 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
 
   // 接続パスとエンドマーカーボタンのレンダリング
   const renderConnectionPaths = () => {
-    return Object.values(elements)
-      .filter((element): element is CanvasElement => element.visible && !!element.parentId)
+    return Object.values(elementsCache)
+      .filter((element): element is CanvasElement => {
+        const canvasElement = element as CanvasElement;
+        return canvasElement.visible && !!canvasElement.parentId;
+      })
       .map((element) => {
-        const parentId = element.parentId;
+        const canvasElement = element as CanvasElement;
+        const parentId = canvasElement.parentId;
         if (!parentId) return null;
 
-        const parent = elements[parentId] as CanvasElement;
+        const parent = elementsCache[parentId] as CanvasElement;
         if (
           draggingElement &&
-          (element.id === draggingElement.id ||
-            isDescendant(elements, draggingElement.id, element.id))
+          (canvasElement.id === draggingElement.id ||
+            isDescendant(elementsCache, draggingElement.id, canvasElement.id))
         ) {
           return null;
         }
 
         return (
-          <React.Fragment key={`connection-group-${element.id}`}>
+          <React.Fragment key={`connection-group-${canvasElement.id}`}>
             <ConnectionPath
               parentElement={parent}
               element={element}
@@ -393,18 +407,18 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
 
     return Array.from(elementsToShow)
       .map((elementId) => {
-        const element = elements[elementId];
-        if (!element || !element.visible) return null;
+        const element = elementsCache[elementId];
+        if (!element || !(element as CanvasElement).visible) return null;
 
         return (
           <DebugInfo
-            key={`debug-${element.id}`}
-            element={element}
+            key={`debug-${(element as CanvasElement).id}`}
+            element={element as CanvasElement}
             isHovered={true}
             currentDropTarget={currentDropTarget}
             dropPosition={dropPosition}
             siblingInfo={siblingInfo}
-            elements={elements}
+            elements={elementsCache}
           />
         );
       })
@@ -420,7 +434,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
 
     // ドロップ座標を計算（ユーティリティ関数を使用）
     const coordinates = calculateDropCoordinates({
-      elements,
+      elements: elementsCache,
       currentDropTarget: target,
       draggingElement,
       dropPosition,
@@ -462,13 +476,13 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     const target = currentDropTarget as CanvasElement;
 
     const newParent =
-      dropPosition === 'child' ? target : target.parentId ? elements[target.parentId] : null;
+      dropPosition === 'child' ? target : target.parentId ? elementsCache[target.parentId] : null;
 
     if (!newParent) return null;
 
     // ドロップ座標を計算（ユーティリティ関数を使用）
     const coordinates = calculateDropCoordinates({
-      elements,
+      elements: elementsCache,
       currentDropTarget: target,
       draggingElement,
       dropPosition,
@@ -544,7 +558,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
       elementId = showMenuForElement.substring(4);
     }
 
-    const element = elements[elementId] as CanvasElement;
+    const element = elementsCache[elementId] as CanvasElement;
     if (!element) return null;
 
     const totalHeight = element.height;

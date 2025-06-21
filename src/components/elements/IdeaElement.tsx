@@ -193,15 +193,22 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
     tabState.zoomRatio,
   ]);
 
-  const hiddenChildren = useMemo(
-    () =>
-      Object.values(tabState.elements).filter((el) => el.parentId === element.id && !el.visible),
-    [tabState.elements, element.id],
-  );
+  const hiddenChildren = useMemo(() => {
+    // 型ガードで新しいState型であることを確認
+    if ('elementsCache' in tabState) {
+      return Object.values(tabState.elementsCache).filter((el): el is CanvasElement => {
+        const canvasElement = el as CanvasElement;
+        return canvasElement.parentId === element.id && !canvasElement.visible;
+      });
+    }
+    return [];
+  }, [tabState, element.id]);
 
   const isDraggedOrDescendant = draggingElement
     ? draggingElement.id === element.id ||
-      isDescendant(tabState.elements, draggingElement.id, element.id)
+      ('elementsCache' in tabState
+        ? isDescendant(tabState.elementsCache, draggingElement.id, element.id)
+        : false)
     : false;
 
   const handleHeightChange = useCallback(
@@ -270,7 +277,11 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
   return (
     <React.Fragment key={element.id}>
       <g opacity={isDraggedOrDescendant ? 0.3 : 1}>
-        {renderActionButtons(element, dispatch, Object.values(tabState.elements))}
+        {renderActionButtons(
+          element,
+          dispatch,
+          'elementsCache' in tabState ? Object.values(tabState.elementsCache) : [],
+        )}
         {hiddenChildren.length > 0 && (
           <>
             {element.texts.length > 1 ? (
