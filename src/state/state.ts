@@ -8,7 +8,7 @@ import {
   handleArrowRight,
   handleArrowLeft,
 } from '../utils/elementSelector';
-import { Element } from '../types/types';
+import { Element, MarkerType } from '../types/types';
 import { DEFAULT_POSITION, NUMBER_OF_SECTIONS } from '../config/elementSettings';
 import { Action } from '../types/actionTypes';
 import { debugLog } from '../utils/debugLogHelpers';
@@ -494,15 +494,16 @@ const actionHandlers: Record<string, ActionHandler> = {
   ),
 
   UPDATE_START_MARKER: createSafeHandler(
-    (payload: unknown): payload is { id: string; value: any } => {
+    (payload: unknown): payload is { id: string; startMarker: MarkerType } => {
       return (
         typeof payload === 'object' &&
         payload !== null &&
         'id' in payload &&
-        typeof (payload as any).id === 'string'
+        typeof (payload as any).id === 'string' &&
+        'startMarker' in payload
       );
     },
-    (state: State, payload: { id: string; value: any }) => {
+    (state: State, payload: { id: string; startMarker: MarkerType }) => {
       if (!state.hierarchicalData) return state;
 
       const element = state.elementsCache[payload.id];
@@ -510,7 +511,7 @@ const actionHandlers: Record<string, ActionHandler> = {
 
       const updatedElement = {
         ...element,
-        startMarker: payload.value,
+        startMarker: payload.startMarker,
       };
 
       const result = updateElementInHierarchy(state.hierarchicalData, payload.id, updatedElement);
@@ -519,15 +520,16 @@ const actionHandlers: Record<string, ActionHandler> = {
   ),
 
   UPDATE_END_MARKER: createSafeHandler(
-    (payload: unknown): payload is { id: string; value: any } => {
+    (payload: unknown): payload is { id: string; endMarker: MarkerType } => {
       return (
         typeof payload === 'object' &&
         payload !== null &&
         'id' in payload &&
-        typeof (payload as any).id === 'string'
+        typeof (payload as any).id === 'string' &&
+        'endMarker' in payload
       );
     },
-    (state: State, payload: { id: string; value: any }) => {
+    (state: State, payload: { id: string; endMarker: MarkerType }) => {
       if (!state.hierarchicalData) return state;
 
       const element = state.elementsCache[payload.id];
@@ -535,7 +537,7 @@ const actionHandlers: Record<string, ActionHandler> = {
 
       const updatedElement = {
         ...element,
-        endMarker: payload.value,
+        endMarker: payload.endMarker,
       };
 
       const result = updateElementInHierarchy(state.hierarchicalData, payload.id, updatedElement);

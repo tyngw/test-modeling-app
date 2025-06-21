@@ -163,6 +163,13 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
   }, []);
 
   const handleMarkerSelect = (elementId: string, markerType: MarkerType, isEndMarker: boolean) => {
+    console.log('[DEBUG] CanvasArea: handleMarkerSelect called', {
+      elementId,
+      markerType,
+      isEndMarker,
+      currentElement: elementsCache[elementId],
+    });
+
     if (isEndMarker) {
       dispatch({
         type: 'UPDATE_END_MARKER',
