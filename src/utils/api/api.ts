@@ -2,7 +2,7 @@
 import axios from 'axios';
 import { getApiEndpoint } from '../storage/localStorageHelpers';
 import { getSystemPrompt } from '../../constants/promptHelpers';
-import { SuggestionResponse, suggestionResponseSchema } from './schema';
+import { SuggestionResponse } from './schema';
 import { sanitizeApiResponse } from '../security/sanitization';
 import { validateJsonData } from '../security/validation';
 
@@ -25,7 +25,14 @@ export const generateWithGemini = async (
   _modelType: string,
 ): Promise<string> => {
   try {
-    console.log('prompt: \n', prompt);
+    // プロンプトの長さを制限（トークン制限を回避）
+    const maxPromptLength = 8000; // 約8000文字に制限
+    const truncatedPrompt =
+      prompt.length > maxPromptLength
+        ? prompt.substring(0, maxPromptLength) + '\n...(省略)'
+        : prompt;
+
+    // // console.log('prompt: \n', truncatedPrompt);
     const endpoint = `${getApiEndpoint()}?key=${apiKey}`;
     const systemPrompt = getSystemPrompt();
 
@@ -37,7 +44,7 @@ export const generateWithGemini = async (
         contents: [
           {
             role: 'user',
-            parts: [{ text: prompt }],
+            parts: [{ text: truncatedPrompt }],
           },
         ],
         systemInstruction: {
@@ -48,15 +55,9 @@ export const generateWithGemini = async (
           temperature: 0.2, // 低い温度で一貫した結果を返す
           topP: 0.8,
           topK: 40,
-          maxOutputTokens: 1024,
-          // 改行区切りリスト形式のテキストを要求する記述を追加
-          // 明示的にテキスト形式を指定し、特定のフォーマットを強制
-          responseSchema: {
-            type: 'string',
-            format: 'text/plain',
-            description:
-              'A list of items, each on a new line. Do not include bullet points or numbering.',
-          },
+          maxOutputTokens: 2048, // トークン数を増加
+          // シンプルなテキスト形式でのレスポンスを要求
+          // responseMimeTypeとresponseSchemaは使わずにプロンプトで指示
         },
       },
       {
@@ -72,10 +73,28 @@ export const generateWithGemini = async (
     // AIレスポンスのセキュリティチェックとサニタイゼーション
     const sanitizedResponse = sanitizeApiResponse(rawTextResponse);
 
-    console.log('Sanitized response:', sanitizedResponse);
+    // // console.log('Sanitized response:', sanitizedResponse);
     return sanitizedResponse;
   } catch (error) {
-    console.error('Gemini API Error:', error);
+    // // console.error('Gemini API Error:', error);
+
+    // より詳細なエラー情報を表示
+    if (axios.isAxiosError(error)) {
+      // // console.error('Response status:', error.response?.status);
+      // // console.error('Response data:', error.response?.data);
+      // // console.error('Request config:', {
+      //   url: error.config?.url,
+      //   method: error.config?.method,
+      //   headers: error.config?.headers,
+      // });
+
+      if (error.response?.status === 400) {
+        throw new Error(
+          `API リクエストエラー: ${error.response?.data?.error?.message || 'リクエストの形式が正しくありません'}`,
+        );
+      }
+    }
+
     throw new Error('API呼び出しに失敗しました');
   }
 };
@@ -87,7 +106,7 @@ export const generateElementSuggestions = async (
   _modelType: string,
 ): Promise<SuggestionResponse> => {
   try {
-    console.log('prompt: \n', prompt);
+    // // console.log('prompt: \n', prompt);
     const endpoint = `${getApiEndpoint()}?key=${apiKey}`;
     const systemPrompt = getSystemPrompt();
 
@@ -110,7 +129,8 @@ export const generateElementSuggestions = async (
           topK: 40,
           maxOutputTokens: 1024,
           responseMimeType: 'application/json',
-          responseSchema: suggestionResponseSchema,
+          // responseSchemaを一時的に削除してテスト
+          // responseSchema: suggestionResponseSchema,
         },
       },
       {
@@ -126,7 +146,7 @@ export const generateElementSuggestions = async (
 
     // JSONデータの検証
     if (!validateJsonData(rawJsonText)) {
-      console.warn('Invalid JSON response from API, using empty suggestions');
+      // // console.warn('Invalid JSON response from API, using empty suggestions');
       return { suggestions: [] };
     }
 
@@ -150,15 +170,15 @@ export const generateElementSuggestions = async (
         jsonResponse = { suggestions: [] };
       }
 
-      console.log('JSON Response:', jsonResponse);
+      // // console.log('JSON Response:', jsonResponse);
       return jsonResponse;
     } catch (parseError) {
-      console.error('JSON parse error:', parseError);
+      // // console.error('JSON parse error:', parseError);
       // JSON解析エラーの場合は空の応答を返す
       return { suggestions: [] };
     }
   } catch (error) {
-    console.error('Gemini API Error:', error);
+    // // console.error('Gemini API Error:', error);
     throw new Error('API呼び出しに失敗しました');
   }
 };
@@ -168,10 +188,10 @@ export const generateWithGeminiJson = async <T>(
   prompt: string,
   apiKey: string,
   _modelType: string,
-  responseSchema: any, // JSONスキーマ
+  _responseSchema: any, // JSONスキーマ（現在未使用）
 ): Promise<ApiResponse<T>> => {
   try {
-    console.log('prompt: \n', prompt);
+    // // console.log('prompt: \n', prompt);
     const endpoint = `${getApiEndpoint()}?key=${apiKey}`;
     const systemPrompt = getSystemPrompt();
 
@@ -190,7 +210,7 @@ export const generateWithGeminiJson = async <T>(
         },
         generationConfig: {
           responseMimeType: 'application/json',
-          responseSchema: responseSchema,
+          // responseSchema: responseSchema, // 一時的に無効化
         },
       },
       {
@@ -221,11 +241,11 @@ export const generateWithGeminiJson = async <T>(
       const sanitizedResponse = sanitizeApiResponse(parsedResponse);
       return sanitizedResponse as T;
     } catch (parseError) {
-      console.error('JSON parse error:', parseError);
+      // console.error('JSON parse error:', parseError);
       throw new Error('JSONの解析に失敗しました');
     }
   } catch (error) {
-    console.error('Gemini API Error:', error);
+    // console.error('Gemini API Error:', error);
     throw new Error('API呼び出しに失敗しました');
   }
 };
@@ -246,7 +266,7 @@ export const generateWithGeminiMultipleMessages = async (
       parts: [{ text: message.text }],
     }));
 
-    console.log('messages: \n', contents);
+    // console.log('messages: \n', contents);
 
     const response = await axios.post(
       endpoint,
@@ -283,10 +303,10 @@ export const generateWithGeminiMultipleMessages = async (
     // AIレスポンスのセキュリティチェックとサニタイゼーション
     const sanitizedResponse = sanitizeApiResponse(rawTextResponse);
 
-    console.log('Sanitized multiple messages response:', sanitizedResponse);
+    // console.log('Sanitized multiple messages response:', sanitizedResponse);
     return sanitizedResponse;
   } catch (error) {
-    console.error('Gemini API Error:', error);
+    // console.error('Gemini API Error:', error);
     throw new Error('API呼び出しに失敗しました');
   }
 };
@@ -308,7 +328,7 @@ export const generateWithGeminiMultipleMessagesJson = async <T>(
       parts: [{ text: message.text }],
     }));
 
-    console.log('messages: \n', contents);
+    // console.log('messages: \n', contents);
 
     const response = await axios.post(
       endpoint,
@@ -349,11 +369,11 @@ export const generateWithGeminiMultipleMessagesJson = async <T>(
       const sanitizedResponse = sanitizeApiResponse(parsedResponse);
       return sanitizedResponse as T;
     } catch (parseError) {
-      console.error('JSON parse error:', parseError);
+      // console.error('JSON parse error:', parseError);
       throw new Error('JSONの解析に失敗しました');
     }
   } catch (error) {
-    console.error('Gemini API Error:', error);
+    // console.error('Gemini API Error:', error);
     throw new Error('API呼び出しに失敗しました');
   }
 };

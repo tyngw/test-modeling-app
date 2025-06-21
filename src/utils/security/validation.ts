@@ -250,7 +250,7 @@ export function validateSettingValue(key: string, value: unknown): boolean {
       return typeof value === 'string' && (value === '' || validateTextInput(value, 50000));
 
     case 'modelType':
-      return typeof value === 'string' && ['gemini-1.5-flash', 'gemini-2.0-flash'].includes(value);
+      return typeof value === 'string' && ['gemini-2.0-flash', 'gemini-2.5-flash'].includes(value);
 
     case 'layoutMode':
       return typeof value === 'string' && ['default', 'mindmap'].includes(value);
