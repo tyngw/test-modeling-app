@@ -749,12 +749,16 @@ const actionHandlers: Record<string, ActionHandler> = {
 
       // 新しい要素を作成
       const newElement: Element = {
-        ...createNewElement(),
+        ...createNewElement({
+          numSections: state.numberOfSections,
+        }),
         id: Date.now().toString(), // 簡易的なID生成
         parentId: selectedElement.id,
         order: 0, // 最初の子として追加
         depth: selectedElement.depth + 1,
-        texts: text ? [text] : [''],
+        texts: text
+          ? [text, ...Array(Math.max(0, state.numberOfSections - 1)).fill('')]
+          : Array(state.numberOfSections).fill(''),
         selected: true, // 新要素を選択状態に
       };
 
@@ -799,12 +803,16 @@ const actionHandlers: Record<string, ActionHandler> = {
       // 複数の要素を順次追加
       for (let i = 0; i < texts.length; i++) {
         const newElement: Element = {
-          ...createNewElement(),
+          ...createNewElement({
+            numSections: state.numberOfSections,
+          }),
           id: (Date.now() + i).toString(),
           parentId: selectedElement.id,
           order: i,
           depth: selectedElement.depth + 1,
-          texts: [texts[i]],
+          texts: Array(state.numberOfSections)
+            .fill('')
+            .map((_, index) => (index === 0 ? texts[i] : '')),
           tentative,
         };
 
@@ -844,12 +852,14 @@ const actionHandlers: Record<string, ActionHandler> = {
 
     // 兄弟要素を作成
     const newElement: Element = {
-      ...createNewElement(),
+      ...createNewElement({
+        numSections: state.numberOfSections,
+      }),
       id: Date.now().toString(),
       parentId: selectedElement.parentId,
       order: selectedElement.order + 1,
       depth: selectedElement.depth,
-      texts: [''],
+      texts: Array(state.numberOfSections).fill(''),
       selected: true,
     };
 
