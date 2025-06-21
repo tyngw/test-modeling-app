@@ -1,7 +1,7 @@
 // src/components/canvas/CanvasArea.tsx
 'use client';
 
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import IdeaElement from '../elements/IdeaElement';
 import DebugInfo from '../DebugInfo';
 import InputFields from '../InputFields';
@@ -83,9 +83,23 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
   const { addToast } = useToast();
   const [displayScopeSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const [displayArea, setDisplayArea] = useState('0 0 0 0');
-  const editingNode = Object.values(elementsCache).find(
-    (element): element is CanvasElement => (element as CanvasElement).editing,
-  ) as CanvasElement | undefined;
+
+  const editingNode = useMemo(() => {
+    const editing = Object.values(elementsCache).find(
+      (element): element is CanvasElement => (element as CanvasElement).editing,
+    ) as CanvasElement | undefined;
+
+    console.log('[DEBUG] CanvasArea: editingNode search', {
+      totalElements: Object.keys(elementsCache).length,
+      editingElements: Object.values(elementsCache)
+        .filter((e) => e.editing)
+        .map((e) => ({ id: e.id, editing: e.editing })),
+      editingNode: editing ? editing.id : 'none',
+    });
+
+    return editing;
+  }, [elementsCache]);
+
   const [hover, setHover] = useState<string | null>(null);
   const [showMenuForElement, setShowMenuForElement] = useState<string | null>(null);
   const [hoveredElements, setHoveredElements] = useState<{ [key: string]: boolean }>({});

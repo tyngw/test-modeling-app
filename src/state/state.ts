@@ -598,7 +598,15 @@ const actionHandlers: Record<string, ActionHandler> = {
 
   EDIT_ELEMENT: createNoPayloadHandler((state) => {
     const selectedElement = getSelectedElementFromState(state);
-    if (!selectedElement || !state.hierarchicalData) return state;
+    if (!selectedElement || !state.hierarchicalData) {
+      debugLog('EDIT_ELEMENT: No selected element or hierarchical data');
+      return state;
+    }
+
+    debugLog(`EDIT_ELEMENT: Editing element ${selectedElement.id}`, {
+      currentEditing: selectedElement.editing,
+      willSetEditing: true,
+    });
 
     const updatedElement = { ...selectedElement, editing: true };
     const result = updateElementInHierarchy(
@@ -606,6 +614,13 @@ const actionHandlers: Record<string, ActionHandler> = {
       selectedElement.id,
       updatedElement,
     );
+
+    debugLog(`EDIT_ELEMENT: Result elements cache`, {
+      editingElements: Object.values(result.elementsCache)
+        .filter((e) => e.editing)
+        .map((e) => e.id),
+    });
+
     return createStateFromHierarchicalResult(state, result);
   }),
 

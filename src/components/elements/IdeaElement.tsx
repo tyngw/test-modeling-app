@@ -362,7 +362,14 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
           }
           strokeDasharray={element.tentative ? '4 2' : 'none'}
           onClick={handleSelect}
-          onDoubleClick={() => dispatch({ type: 'EDIT_ELEMENT' })}
+          onDoubleClick={(e) => {
+            console.log(`[DEBUG] onDoubleClick triggered for element ${element.id}`, {
+              editing: element.editing,
+              selected: element.selected,
+            });
+            e.stopPropagation(); // ダブルクリックを優先
+            dispatch({ type: 'EDIT_ELEMENT' });
+          }}
           onMouseDown={(e) => {
             console.log(`[DEBUG] onMouseDown triggered for element ${element.id}`, {
               button: e.button,
@@ -465,6 +472,11 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
                 onHeightChange={(newHeight) => handleHeightChange(index, newHeight)}
                 onUrlClick={undefined}
                 onElementClick={handleSelect}
+                onDoubleClick={(e) => {
+                  console.log(`[DEBUG] TextDisplayArea onDoubleClick for element ${element.id}`);
+                  e.stopPropagation();
+                  dispatch({ type: 'EDIT_ELEMENT' });
+                }}
                 onMouseDown={(e) => {
                   console.log(`[DEBUG] TextDisplayArea onMouseDown for element ${element.id}`);
                   // MouseEvent<Element>をMouseEvent<SVGElement>に適切にキャスト
