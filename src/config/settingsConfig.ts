@@ -139,10 +139,10 @@ export const SETTINGS_TABS: SettingTab[] = [
         label: 'Select Model',
         type: 'radio',
         helperText: 'APIモデルの選択',
-        defaultValue: 'gemini-1.5-flash',
+        defaultValue: 'gemini-2.0-flash',
         options: [
-          { value: 'gemini-1.5-flash', label: 'Gemini-1.5-flash' },
           { value: 'gemini-2.0-flash', label: 'Gemini-2.0-flash' },
+          { value: 'gemini-2.5-flash', label: 'Gemini-2.5-flash' },
         ],
       },
       {

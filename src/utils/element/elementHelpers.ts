@@ -12,7 +12,6 @@ import { ElementsMap } from '../../types/elementTypes';
  */
 export interface NewElementParams {
   parentId?: string | null;
-  order?: number;
   depth?: number;
   numSections?: number;
   direction?: DirectionType;
@@ -20,7 +19,6 @@ export interface NewElementParams {
 
 export const createNewElement = ({
   parentId = null,
-  order = 0,
   depth = 1,
   numSections = NUMBER_OF_SECTIONS,
   direction = parentId === null ? 'none' : 'right',
@@ -36,7 +34,6 @@ export const createNewElement = ({
     height: SIZE.SECTION_HEIGHT * numSections,
     sectionHeights: Array(numSections).fill(SIZE.SECTION_HEIGHT),
     parentId,
-    order,
     depth,
     children: 0,
     editing: true,
@@ -50,9 +47,11 @@ export const createNewElement = ({
 };
 
 export const getChildren = (parentId: string | null, elements: ElementsMap): Element[] => {
+  // 階層構造の順序を保持するため、Y座標でソート
+  // これにより moveElementInHierarchy で設定された配列順序が反映される
   return Object.values(elements)
     .filter((e) => e.parentId === parentId && e.visible)
-    .sort((a, b) => a.order - b.order);
+    .sort((a, b) => a.y - b.y); // Y座標でソートして配列の順序を反映
 };
 
 export const setDepthRecursive = (elements: ElementsMap, parentElement: Element): ElementsMap => {
@@ -116,9 +115,7 @@ export const deleteElementRecursive = (
 ): ElementsMap => {
   if (deleteElement.parentId === null) return elements;
 
-  debugLog(
-    `deleteElementRecursive: 削除開始 id=${deleteElement.id}, order=${deleteElement.order}, y=${deleteElement.y}`,
-  );
+  debugLog(`deleteElementRecursive: 削除開始 id=${deleteElement.id}, y=${deleteElement.y}`);
 
   const updatedElements = { ...elements };
   const parent = updatedElements[deleteElement.parentId];
@@ -126,7 +123,6 @@ export const deleteElementRecursive = (
 
   // 削除要素の位置情報を記録（後で兄弟要素の位置を調整するため）
   const deletedElementPosition = {
-    order: deleteElement.order,
     y: deleteElement.y,
     height: deleteElement.height,
   };
@@ -152,24 +148,12 @@ export const deleteElementRecursive = (
   };
   debugLog(`親要素を更新: id=${parent.id}, children=${parent.children - 1}, y=${parent.y}`);
 
-  // 同じparentIdを持つ要素のorderを再計算
+  // 同じparentIdを持つ要素をIDでソート（階層構造では配列の順序で管理）
   const siblings = Object.values(updatedElements)
     .filter((n) => n.parentId === parent.id)
-    .sort((a, b) => a.order - b.order);
+    .sort((a, b) => a.id.localeCompare(b.id));
 
   debugLog(`兄弟要素の数: ${siblings.length}`);
-  // まずorderを更新
-  siblings.forEach((sibling, index) => {
-    if (sibling.order !== index) {
-      debugLog(
-        `  兄弟要素のorder更新: id=${sibling.id}, old=${sibling.order}, new=${index}, y=${sibling.y}`,
-      );
-      updatedElements[sibling.id] = {
-        ...sibling,
-        order: index,
-      };
-    }
-  });
 
   return updatedElements;
 };

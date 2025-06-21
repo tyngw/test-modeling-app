@@ -4,9 +4,9 @@ import { useCallback } from 'react';
 import { useToast } from '../context/ToastContext';
 import { ToastMessages } from '../constants/toastMessages';
 import { generateWithGemini } from '../utils/api';
-import { getApiKey, getModelType } from '../utils/storage';
+import { getApiKey, getModelType, getPrompt } from '../utils/storage';
 import { formatElementsForPrompt } from '../utils/element';
-import { createSystemPrompt } from '../constants/promptHelpers';
+import { createUserPrompt } from '../constants/promptHelpers';
 import { TabState } from '../types/tabTypes';
 import { Action } from '../types/actionTypes';
 import { Element } from '../types/types';
@@ -26,9 +26,12 @@ export function useAIGeneration({ currentTab, dispatch }: UseAIGenerationParams)
   const handleAIClick = useCallback(async () => {
     if (!currentTab) return;
 
-    const selectedElement = Object.values(currentTab.state.elements).find((el) => el.selected) as
-      | Element
-      | undefined;
+    const selectedElement = Object.values(currentTab.state.elementsCache || {}).find(
+      (el): el is Element => {
+        const element = el as Element;
+        return element.selected;
+      },
+    );
 
     if (!selectedElement) {
       addToast(ToastMessages.noSelect);
@@ -42,7 +45,8 @@ export function useAIGeneration({ currentTab, dispatch }: UseAIGenerationParams)
       return;
     }
 
-    const inputText = localStorage.getItem('prompt') || '';
+    const inputText = getPrompt();
+    // console.log('[DEBUG] Retrieved prompt from settings:', inputText);
 
     if (!inputText) {
       addToast(ToastMessages.noPrompt);
@@ -50,10 +54,17 @@ export function useAIGeneration({ currentTab, dispatch }: UseAIGenerationParams)
     }
 
     try {
-      const structureText = formatElementsForPrompt(currentTab.state.elements, selectedElement.id);
-      const fullPrompt = createSystemPrompt({ structureText, inputText });
+      const structureText = formatElementsForPrompt(
+        currentTab.state.elementsCache || {},
+        selectedElement.id,
+      );
+
+      // ユーザープロンプト（実際のデータ）を作成
+      const userPrompt = createUserPrompt({ structureText, inputText });
+      // console.log('[DEBUG] User prompt being sent to API:', userPrompt);
+
       const modelType = getModelType();
-      const result = await generateWithGemini(fullPrompt, decryptedApiKey, modelType);
+      const result = await generateWithGemini(userPrompt, decryptedApiKey, modelType);
 
       let childNodes: string[] = [];
 

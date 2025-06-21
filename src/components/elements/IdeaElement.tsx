@@ -53,9 +53,9 @@ const renderActionButtons = (
       (el) => el.parentId === element.parentId && el.tentative,
     );
 
-    // 自身も含めて最小orderを計算
-    const minOrder = Math.min(...tentativeSiblings.map((el) => el.order));
-    return element.order === minOrder;
+    // 自身も含めて最初の要素かどうかをIDで判定（作成順）
+    const minId = Math.min(...tentativeSiblings.map((el) => parseInt(el.id)));
+    return parseInt(element.id) === minId;
   };
 
   if (!shouldShowButtons(element, elements)) return null;
@@ -193,15 +193,22 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
     tabState.zoomRatio,
   ]);
 
-  const hiddenChildren = useMemo(
-    () =>
-      Object.values(tabState.elements).filter((el) => el.parentId === element.id && !el.visible),
-    [tabState.elements, element.id],
-  );
+  const hiddenChildren = useMemo(() => {
+    // 型ガードで新しいState型であることを確認
+    if ('elementsCache' in tabState) {
+      return Object.values(tabState.elementsCache).filter((el): el is CanvasElement => {
+        const canvasElement = el as CanvasElement;
+        return canvasElement.parentId === element.id && !canvasElement.visible;
+      });
+    }
+    return [];
+  }, [tabState, element.id]);
 
   const isDraggedOrDescendant = draggingElement
     ? draggingElement.id === element.id ||
-      isDescendant(tabState.elements, draggingElement.id, element.id)
+      ('elementsCache' in tabState
+        ? isDescendant(tabState.elementsCache, draggingElement.id, element.id)
+        : false)
     : false;
 
   const handleHeightChange = useCallback(
@@ -269,8 +276,16 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
 
   return (
     <React.Fragment key={element.id}>
-      <g opacity={isDraggedOrDescendant ? 0.3 : 1}>
-        {renderActionButtons(element, dispatch, Object.values(tabState.elements))}
+      <g
+        opacity={isDraggedOrDescendant ? 0.3 : 1}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
+        {renderActionButtons(
+          element,
+          dispatch,
+          'elementsCache' in tabState ? Object.values(tabState.elementsCache) : [],
+        )}
         {hiddenChildren.length > 0 && (
           <>
             {element.texts.length > 1 ? (
@@ -351,7 +366,14 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
           }
           strokeDasharray={element.tentative ? '4 2' : 'none'}
           onClick={handleSelect}
-          onDoubleClick={() => dispatch({ type: 'EDIT_ELEMENT' })}
+          onDoubleClick={(e) => {
+            console.log(`[DEBUG] onDoubleClick triggered for element ${element.id}`, {
+              editing: element.editing,
+              selected: element.selected,
+            });
+            e.stopPropagation(); // ダブルクリックを優先
+            dispatch({ type: 'EDIT_ELEMENT' });
+          }}
           onMouseDown={(e) => {
             console.log(`[DEBUG] onMouseDown triggered for element ${element.id}`, {
               button: e.button,
@@ -381,11 +403,10 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
               target: e.target as SVGElement,
               preventDefault: () => e.preventDefault(),
               stopPropagation: () => e.stopPropagation(),
+              nativeEvent: e.nativeEvent, // nativeEventを追加
             } as unknown as React.MouseEvent<SVGElement>;
             handleMouseDown(syntheticMouseEvent, element);
           }}
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
           data-element-id={element.id}
           style={{
             fill:
@@ -453,6 +474,11 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
                 onHeightChange={(newHeight) => handleHeightChange(index, newHeight)}
                 onUrlClick={undefined}
                 onElementClick={handleSelect}
+                onDoubleClick={(e) => {
+                  console.log(`[DEBUG] TextDisplayArea onDoubleClick for element ${element.id}`);
+                  e.stopPropagation();
+                  dispatch({ type: 'EDIT_ELEMENT' });
+                }}
                 onMouseDown={(e) => {
                   console.log(`[DEBUG] TextDisplayArea onMouseDown for element ${element.id}`);
                   // MouseEvent<Element>をMouseEvent<SVGElement>に適切にキャスト
@@ -460,6 +486,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
                     ...e,
                     currentTarget: e.currentTarget as HTMLElement,
                     target: e.target as Element,
+                    nativeEvent: e.nativeEvent, // nativeEventを保持
                   } as unknown as React.MouseEvent<SVGElement>;
                   handleMouseDown(syntheticEvent, element);
                 }}
@@ -481,6 +508,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
                     target: e.target as Element,
                     preventDefault: () => e.preventDefault(),
                     stopPropagation: () => e.stopPropagation(),
+                    nativeEvent: e.nativeEvent, // nativeEventを追加
                   } as unknown as React.MouseEvent<SVGElement>;
                   handleMouseDown(syntheticMouseEvent, element);
                 }}

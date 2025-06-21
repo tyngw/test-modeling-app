@@ -45,7 +45,10 @@ const createInitialTabState = (currentSections?: number): TabState => {
     state: {
       ...initialState,
       numberOfSections: numSections,
-      elements: initialElements,
+      // elementsをelementsCacheに変換
+      ...(Object.keys(initialElements).length > 0 && {
+        elementsCache: initialElements,
+      }),
       layoutMode: defaultLayoutMode, // state.layoutModeも同じ値を設定
     },
     layoutMode: defaultLayoutMode, // tab.layoutModeも同じ値を設定
@@ -67,12 +70,15 @@ const loadTabsState = (): TabsStorage => {
           layoutMode: tab.layoutMode || 'default',
           state: {
             ...tab.state,
-            elements: Object.fromEntries(
-              Object.entries(tab.state.elements).map(([id, element]) => [
-                id,
-                convertLegacyElement(element),
-              ]),
-            ),
+            // 古いelements形式を新しいelementsCache形式に変換
+            ...('elements' in tab.state && {
+              elementsCache: Object.fromEntries(
+                Object.entries((tab.state as any).elements).map(([id, element]) => [
+                  id,
+                  convertLegacyElement(element),
+                ]),
+              ),
+            }),
           },
         }));
 
@@ -169,7 +175,7 @@ export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           const updatedState = updater(tab.state);
 
           // 現在の要素の状態をJSON文字列に変換（整形して比較）
-          const normalizedElements = JSON.parse(JSON.stringify(updatedState.elements));
+          const normalizedElements = JSON.parse(JSON.stringify(updatedState.elementsCache || {}));
           const currentElementsJson = JSON.stringify(normalizedElements);
 
           // 最後に保存された要素の状態と比較して、変更があるかどうかを判断

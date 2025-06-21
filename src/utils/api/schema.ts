@@ -16,4 +16,5 @@ export const suggestionResponseSchema = {
     },
   },
   required: ['suggestions'],
+  additionalProperties: false,
 };

@@ -45,7 +45,7 @@ const layoutNode = (
     }
   }
 
-  const children = getChildren(node.id, elements).sort((a, b) => a.order - b.order);
+  const children = getChildren(node.id, elements); // 階層構造の順序を保持（ソートしない）
   debugLog(`children=${children.length}`);
   let currentY = startY;
   let maxChildBottom = startY;
@@ -156,7 +156,7 @@ export const adjustElementPositions = (
   );
 
   const updatedElements = { ...elements };
-  const rootElements = getChildren(null, updatedElements).sort((a, b) => a.order - b.order);
+  const rootElements = getChildren(null, updatedElements).sort((a, b) => a.id.localeCompare(b.id)); // IDでソート
 
   let currentY = DEFAULT_POSITION.Y;
 
