@@ -53,9 +53,9 @@ const renderActionButtons = (
       (el) => el.parentId === element.parentId && el.tentative,
     );
 
-    // 自身も含めて最小orderを計算
-    const minOrder = Math.min(...tentativeSiblings.map((el) => el.order));
-    return element.order === minOrder;
+    // 自身も含めて最初の要素かどうかをIDで判定（作成順）
+    const minId = Math.min(...tentativeSiblings.map((el) => parseInt(el.id)));
+    return parseInt(element.id) === minId;
   };
 
   if (!shouldShowButtons(element, elements)) return null;
@@ -276,7 +276,11 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
 
   return (
     <React.Fragment key={element.id}>
-      <g opacity={isDraggedOrDescendant ? 0.3 : 1}>
+      <g
+        opacity={isDraggedOrDescendant ? 0.3 : 1}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
         {renderActionButtons(
           element,
           dispatch,
@@ -403,8 +407,6 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
             } as unknown as React.MouseEvent<SVGElement>;
             handleMouseDown(syntheticMouseEvent, element);
           }}
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
           data-element-id={element.id}
           style={{
             fill:

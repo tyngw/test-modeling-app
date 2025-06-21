@@ -18,7 +18,9 @@ import { adjustElementPositions } from '../utils/layoutHelpers';
 import {
   getSelectedAndChildren,
   copyToClipboard,
+  cutToClipboard,
   getGlobalCutElements,
+  getGlobalCopiedElements,
 } from '../utils/clipboard/clipboardHelpers';
 import { LayoutMode } from '../types/tabTypes';
 
@@ -201,7 +203,9 @@ export interface State {
  */
 const createInitialState = (): State => {
   const initialElement: Element = {
-    ...createNewElement(),
+    ...createNewElement({
+      depth: 0, // ルート要素のdepthは0
+    }),
     id: '1',
     x: DEFAULT_POSITION.X,
     y: DEFAULT_POSITION.Y,
@@ -400,11 +404,7 @@ const actionHandlers: Record<string, ActionHandler> = {
       if (!state.hierarchicalData) return state;
 
       const selectedElement = state.elementsCache[id];
-      console.log(`[DEBUG] SELECT_ELEMENT action for ${id}:`, {
-        found: !!selectedElement,
-        currentSelected: selectedElement?.selected || false,
-        hasParentId: !!selectedElement?.parentId,
-      });
+      // Debug: SELECT_ELEMENT action details
 
       if (!selectedElement) {
         debugLog(`Element with id ${id} not found`);
@@ -429,7 +429,7 @@ const actionHandlers: Record<string, ActionHandler> = {
         const parentId = firstSelected.parentId;
         const siblings = Object.values(state.elementsCache)
           .filter((e) => e.parentId === parentId)
-          .sort((a, b) => a.order - b.order);
+          .sort((a, b) => a.id.localeCompare(b.id)); // IDでソート
 
         const startIndex = siblings.findIndex((e) => e.id === firstSelected.id);
         const endIndex = siblings.findIndex((e) => e.id === id);
@@ -452,12 +452,7 @@ const actionHandlers: Record<string, ActionHandler> = {
 
       const result = setSelectionInHierarchy(state.hierarchicalData, validSelectedIds);
 
-      console.log(
-        `[DEBUG] SELECT_ELEMENT completed. Selected elements:`,
-        Object.values(result.elementsCache)
-          .filter((e) => e.selected)
-          .map((e) => ({ id: e.id, parentId: e.parentId })),
-      );
+      // Debug: SELECT_ELEMENT completed
 
       return createStateFromHierarchicalResult(state, result);
     },
@@ -769,7 +764,6 @@ const actionHandlers: Record<string, ActionHandler> = {
         }),
         id: Date.now().toString(), // 簡易的なID生成
         parentId: selectedElement.id,
-        order: 0, // 最初の子として追加
         depth: selectedElement.depth + 1,
         texts: text
           ? [text, ...Array(Math.max(0, state.numberOfSections - 1)).fill('')]
@@ -778,11 +772,26 @@ const actionHandlers: Record<string, ActionHandler> = {
       };
 
       // 階層構造に要素を追加
-      const result = addElementToHierarchy(state.hierarchicalData, selectedElement.id, newElement);
+      let result: HierarchicalOperationResult;
+      try {
+        result = addElementToHierarchy(state.hierarchicalData, selectedElement.id, newElement);
+      } catch (error) {
+        return state; // エラー時は元の状態を返す
+      }
+
+      // 既存の要素の選択状態を解除し、新しい要素のみを選択状態にする
+      const elementsWithUpdatedSelection: { [id: string]: Element } = {};
+      Object.entries(result.elementsCache).forEach(([id, element]) => {
+        elementsWithUpdatedSelection[id] = {
+          ...element,
+          selected: id === newElement.id, // 新しい要素のみを選択状態に
+          editing: id === newElement.id, // 新しい要素を編集状態に
+        };
+      });
 
       // 位置調整を行う
       const adjustedElementsCache = adjustElementPositions(
-        result.elementsCache,
+        elementsWithUpdatedSelection,
         () => state.numberOfSections,
         state.layoutMode,
         state.width || 0,
@@ -823,12 +832,13 @@ const actionHandlers: Record<string, ActionHandler> = {
           }),
           id: (Date.now() + i).toString(),
           parentId: selectedElement.id,
-          order: i,
           depth: selectedElement.depth + 1,
           texts: Array(state.numberOfSections)
             .fill('')
             .map((_, index) => (index === 0 ? texts[i] : '')),
           tentative,
+          editing: false, // Silent追加では編集状態にしない
+          selected: false, // Silent追加では選択状態にしない
         };
 
         const result = addElementToHierarchy(currentHierarchy, selectedElement.id, newElement);
@@ -872,7 +882,6 @@ const actionHandlers: Record<string, ActionHandler> = {
       }),
       id: Date.now().toString(),
       parentId: selectedElement.parentId,
-      order: selectedElement.order + 1,
       depth: selectedElement.depth,
       texts: Array(state.numberOfSections).fill(''),
       selected: true,
@@ -918,15 +927,10 @@ const actionHandlers: Record<string, ActionHandler> = {
     const firstElement = selectedElements[0];
     const siblings = Object.values(state.elementsCache)
       .filter((e) => e.parentId === firstElement.parentId && !e.selected)
-      .sort((a, b) => a.order - b.order);
-
-    // 選択要素より前にある兄弟要素の最後の要素
-    const prevSibling = siblings.filter((e) => e.order < firstElement.order).pop();
-    // 選択要素より後にある兄弟要素の最初の要素
-    const nextSibling = siblings.find((e) => e.order > firstElement.order);
+      .sort((a, b) => a.id.localeCompare(b.id)); // IDでソート
 
     // 兄弟要素があればそれを選択、なければ親要素を選択
-    const nextSelectedId = prevSibling?.id || nextSibling?.id || firstElement.parentId;
+    const nextSelectedId = siblings[0]?.id || firstElement.parentId;
 
     let currentHierarchy = state.hierarchicalData;
 
@@ -1091,6 +1095,15 @@ const actionHandlers: Record<string, ActionHandler> = {
     (state: State, payload: DropElementPayload) => {
       const { id, newParentId, newOrder } = payload;
 
+      console.log(
+        '[DROP_ELEMENT] Processing element:',
+        id,
+        'newParentId:',
+        newParentId,
+        'newOrder:',
+        newOrder,
+      );
+
       // 基本的な妥当性チェック
       if (!state.elementsCache[id] || !state.hierarchicalData) {
         debugLog(`Element with id ${id} not found for drop operation`);
@@ -1109,6 +1122,7 @@ const actionHandlers: Record<string, ActionHandler> = {
       }
 
       // 要素を移動
+      console.log('[DROP_ELEMENT] Calling moveElementInHierarchy with:', id, newParentId, newOrder);
       const result = moveElementInHierarchy(state.hierarchicalData, id, newParentId, newOrder);
 
       // 位置調整を行う
@@ -1157,7 +1171,7 @@ const actionHandlers: Record<string, ActionHandler> = {
       currentHierarchy = result.hierarchicalData;
     });
 
-    copyToClipboard(cutElementsMap);
+    cutToClipboard(cutElementsMap);
 
     const elementsCache = convertHierarchicalToFlat(currentHierarchy);
 
@@ -1171,17 +1185,14 @@ const actionHandlers: Record<string, ActionHandler> = {
 
   COPY_ELEMENT: createNoPayloadHandler((state) => {
     const selectedElement = getSelectedElementFromState(state);
-    if (!selectedElement) return state;
+    if (!selectedElement) {
+      return state;
+    }
 
     const elementsToCopy = getSelectedAndChildren(state.elementsCache, selectedElement);
 
-    // 選択状態をリセット（コピー時には選択状態をfalseに）
-    const copyElements: ElementsMap = {};
-    Object.keys(elementsToCopy).forEach((id) => {
-      copyElements[id] = { ...elementsToCopy[id], selected: false };
-    });
-
-    copyToClipboard(copyElements);
+    // getSelectedAndChildrenが既に適切なparentId=nullとselected=trueを設定している
+    copyToClipboard(elementsToCopy);
     return state;
   }),
 
@@ -1189,20 +1200,23 @@ const actionHandlers: Record<string, ActionHandler> = {
     const selectedElements = getSelectedElementsFromState(state);
     if (selectedElements.length !== 1 || !state.hierarchicalData) return state;
 
+    // 切り取った要素とコピーした要素の両方を確認
     const globalCutElements = getGlobalCutElements();
-    if (!globalCutElements) return state;
+    const globalCopiedElements = getGlobalCopiedElements();
+    const elementsToAdd = globalCutElements || globalCopiedElements;
+
+    if (!elementsToAdd) return state;
 
     // TODO: pasteElements関数を階層構造対応版に変更する必要があります
     // 今は簡単な実装として、選択要素の子として要素を追加
     const selectedElement = selectedElements[0];
     let currentHierarchy = state.hierarchicalData;
 
-    Object.values(globalCutElements).forEach((element, index) => {
+    Object.values(elementsToAdd).forEach((element, index) => {
       const newElement: Element = {
         ...element,
         id: (Date.now() + index).toString(),
         parentId: selectedElement.id,
-        order: index,
         depth: selectedElement.depth + 1,
         selected: false,
       };

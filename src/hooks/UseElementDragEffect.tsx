@@ -44,7 +44,7 @@ export type DropTargetInfo = {
 const getChildren = (element: Element, elements: ElementsMap): Element[] => {
   return Object.values(elements)
     .filter((e) => e.parentId === element.id && e.visible)
-    .sort((a, b) => a.order - b.order);
+    .sort((a, b) => a.id.localeCompare(b.id)); // IDでソート（階層構造では配列の順序で管理）
 };
 
 // X座標が要素の範囲内かどうかを判定
@@ -988,17 +988,15 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
 
         if (prevElement && nextElement) {
           // 2つの要素の間にドロップする場合
-          debugLog(
-            `  Between two elements: prev=${prevElement.id}(order=${prevElement.order}), next=${nextElement.id}(order=${nextElement.order})`,
-          );
+          debugLog(`  Between two elements: prev=${prevElement.id}, next=${nextElement.id}`);
           newParentId = prevElement.parentId;
         } else if (prevElement) {
           // 最後の要素の後にドロップする場合
-          debugLog(`  After last element: prev=${prevElement.id}(order=${prevElement.order})`);
+          debugLog(`  After last element: prev=${prevElement.id}`);
           newParentId = prevElement.parentId;
         } else if (nextElement) {
           // 最初の要素の前にドロップする場合
-          debugLog(`  Before first element: next=${nextElement.id}(order=${nextElement.order})`);
+          debugLog(`  Before first element: next=${nextElement.id}`);
           newParentId = nextElement.parentId;
         } else {
           // siblingInfoはあるがprevElementもnextElementもない場合
@@ -1052,7 +1050,11 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
       }
 
       // 順序を調整しながら一括移動
-      selectedElements.forEach((element, index) => {
+      // 複数要素をドロップする場合、挿入による配列変化を考慮して逆順で処理
+      // 逆順で処理することで、後の要素の挿入位置が前の要素の挿入により影響を受けない
+      const elementsToProcess = [...selectedElements].reverse();
+
+      elementsToProcess.forEach((element, _index) => {
         // 新しい親が元の要素の場合は深さを1レベル深くする、それ以外は対象要素と同じ深さにする
         const newDepth = newParentId === target.id ? target.depth + 1 : target.depth;
 
@@ -1070,14 +1072,8 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
               const { prevElement, nextElement } = currentDropTarget.siblingInfo;
               if (prevElement && prevElement.direction) {
                 newDirection = prevElement.direction;
-                debugLog(
-                  `[processBetweenDrop] Between mode - inherit direction from prev: ${newDirection}`,
-                );
               } else if (nextElement && nextElement.direction) {
                 newDirection = nextElement.direction;
-                debugLog(
-                  `[processBetweenDrop] Between mode - inherit direction from next: ${newDirection}`,
-                );
               } else {
                 // 兄弟要素のdirectionが取得できない場合、マウス位置で判定
                 if (currentDropTarget && target) {
@@ -1087,9 +1083,6 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
                       ? currentDropTarget.insertX
                       : rootCenterX;
                   newDirection = mousePos < rootCenterX ? 'left' : 'right';
-                  debugLog(
-                    `[processBetweenDrop] Between mode fallback - mouse position: ${newDirection}`,
-                  );
                 } else {
                   newDirection = 'right';
                 }
@@ -1101,9 +1094,6 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
                 const mousePos =
                   currentDropTarget.insertX !== undefined ? currentDropTarget.insertX : rootCenterX;
                 newDirection = mousePos < rootCenterX ? 'left' : 'right';
-                debugLog(
-                  `[processBetweenDrop] Root drop direction: ${newDirection}, mouseX: ${mousePos}, rootCenterX: ${rootCenterX}`,
-                );
               } else {
                 newDirection = 'right';
               }
@@ -1114,13 +1104,27 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
           }
         }
 
+        // 逆順処理における各要素の挿入位置を計算
+        // 最初の要素（逆順処理では最後に選択された要素）は baseOrder の位置に挿入
+        // 後続の要素は baseOrder の位置に挿入（逆順なので同じ位置に連続挿入される）
+        const finalOrder = targetOrderValues.baseOrder;
+
+        console.log(
+          '[processBetweenDrop] Dispatching DROP_ELEMENT for:',
+          element.id,
+          'newOrder:',
+          finalOrder,
+          'newParentId:',
+          newParentId,
+        );
+
         dispatch({
           type: 'DROP_ELEMENT',
           payload: {
             id: element.id,
             oldParentId: element.parentId,
             newParentId,
-            newOrder: targetOrderValues.baseOrder + index,
+            newOrder: finalOrder,
             depth: newDepth,
             direction: newDirection,
           },
@@ -1143,156 +1147,120 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
     (dropTarget: DropTargetInfo, draggedElements: Element[]) => {
       let baseOrder = 0;
 
+      console.log('[calculateTargetOrderValues] DropTarget:', dropTarget);
+      console.log(
+        '[calculateTargetOrderValues] DraggedElements:',
+        draggedElements.map((el) => el.id),
+      );
+
       if (dropTarget?.siblingInfo) {
         const { prevElement, nextElement } = dropTarget.siblingInfo;
 
+        console.log(
+          '[calculateTargetOrderValues] SiblingInfo - prev:',
+          prevElement?.id,
+          'next:',
+          nextElement?.id,
+        );
+
+        // between ドロップの場合、兄弟要素の親を取得
+        let targetParentId: string | null = null;
+        if (prevElement) {
+          targetParentId = prevElement.parentId;
+        } else if (nextElement) {
+          targetParentId = nextElement.parentId;
+        } else {
+          // 兄弟要素がない場合は、ドロップターゲットを親とする
+          targetParentId = dropTarget.element.id;
+        }
+
+        console.log('[calculateTargetOrderValues] TargetParentId:', targetParentId);
+
+        // ドラッグ中の要素のIDリストを作成
+        const draggedElementIds = draggedElements.map((el) => el.id);
+
+        // 同じ親を持つ兄弟要素を取得（ドラッグ中の要素を除外）
+        const siblings = Object.values(state.elementsCache)
+          .filter(
+            (el) =>
+              el.visible && el.parentId === targetParentId && !draggedElementIds.includes(el.id), // ドラッグ中の要素を除外
+          )
+          .sort((a, b) => a.y - b.y); // Y座標で並び替え
+
+        console.log(
+          '[calculateTargetOrderValues] Siblings (after filtering):',
+          siblings.map((s) => ({ id: s.id, y: s.y })),
+        );
+
         if (prevElement && nextElement) {
           // 2つの要素の間にドロップする場合
-
-          // 移動する要素が現在この2つの要素の間にあるかチェック
-          const isDraggingElementBetween = draggedElements.some(
-            (el) => el.order > prevElement.order && el.order < nextElement.order,
+          const nextIndex = siblings.findIndex((el) => el.id === nextElement.id);
+          baseOrder = Math.max(0, nextIndex); // nextElementの位置に挿入
+          console.log(
+            '[calculateTargetOrderValues] Between prev and next - nextIndex:',
+            nextIndex,
+            'baseOrder:',
+            baseOrder,
           );
-
-          if (isDraggingElementBetween) {
-            // 既に間にある場合は現在のorder値を維持
-            baseOrder = draggedElements[0].order;
-          } else {
-            // 移動元の要素が移動先の前にある場合
-            const allDraggedBeforePrev = draggedElements.every(
-              (el) => el.order < prevElement.order,
-            );
-
-            if (allDraggedBeforePrev) {
-              // 前から後ろへの移動: nextElement.orderから逆算
-              baseOrder = nextElement.order - draggedElements.length;
-            } else {
-              // 後ろから前への移動: prevElement.orderから計算
-              baseOrder = prevElement.order + 1;
-            }
-          }
         } else if (prevElement) {
           // 最後の要素の後にドロップする場合
-          baseOrder = prevElement.order + 1;
+          const prevIndex = siblings.findIndex((el) => el.id === prevElement.id);
+          baseOrder = prevIndex >= 0 ? prevIndex + 1 : siblings.length; // prevElementの次の位置に挿入
+          console.log(
+            '[calculateTargetOrderValues] After prev - prevIndex:',
+            prevIndex,
+            'baseOrder:',
+            baseOrder,
+          );
         } else if (nextElement) {
           // 最初の要素の前にドロップする場合
-          // 移動元の要素が既に先頭にあるかチェック
-          const isDraggingFirst = draggedElements.some((el) => el.order === 0);
-
-          if (isDraggingFirst && nextElement.order === draggedElements.length) {
-            // 既に先頭にあり、かつ移動先も先頭の場合は維持
-            baseOrder = 0;
-          } else {
-            baseOrder = 0; // 最初の位置
-          }
+          baseOrder = 0; // 配列の最初に挿入
+          console.log('[calculateTargetOrderValues] Before next - baseOrder:', baseOrder);
+        } else {
+          // 兄弟要素がない場合（最初の子要素として追加）
+          baseOrder = 0;
+          console.log('[calculateTargetOrderValues] No siblings - baseOrder:', baseOrder);
         }
-      } else {
-        baseOrder = 0;
+      } else if (dropTarget) {
+        // child ドロップの場合
+        const targetParentId = dropTarget.element.id;
+        const siblings = Object.values(state.elementsCache).filter(
+          (el) => el.visible && el.parentId === targetParentId,
+        );
+        baseOrder = siblings.length; // 末尾に追加
+        console.log(
+          '[calculateTargetOrderValues] Child drop - siblings length:',
+          siblings.length,
+          'baseOrder:',
+          baseOrder,
+        );
       }
 
+      console.log('[calculateTargetOrderValues] Final baseOrder:', baseOrder);
       return { baseOrder };
+    },
+    [state.elementsCache],
+  );
+
+  // 階層構造での要素移動時の配列順序調整関数（現在は階層操作で自動処理されるため削除予定）
+  const moveElementsWithinSameParent = useCallback(
+    (_draggedElements: Element[], _targetIndex: number, _elementParentId: string | null) => {
+      // 階層構造では配列の順序で管理されるため、orderベースのロジックを階層操作に置き換える
+      // この実装は階層構造の操作で自動的に処理されるため、ここでは何もしない
     },
     [],
   );
 
-  // 同じ親内での要素移動時にorder値を調整する関数
-  const moveElementsWithinSameParent = useCallback(
-    (draggedElements: Element[], targetBaseOrder: number, elementParentId: string | null) => {
-      if (draggedElements.length === 0) return;
-
-      // ドラッグしている要素のorder値
-      const draggedOrders = draggedElements.map((el) => el.order).sort((a, b) => a - b);
-      const minDraggedOrder = draggedOrders[0];
-      const maxDraggedOrder = draggedOrders[draggedOrders.length - 1];
-
-      // 前から後ろに移動する場合（移動元order < 移動先order）
-      if (maxDraggedOrder < targetBaseOrder) {
-        // 移動元と移動先の間にある要素のorderを減らす
-        const affectedElements = Object.values(state.elementsCache).filter((el): el is Element => {
-          const element = el as Element;
-          return (
-            element.parentId === elementParentId &&
-            element.order > maxDraggedOrder &&
-            element.order < targetBaseOrder + draggedElements.length &&
-            !draggedElements.some((dragged) => dragged.id === element.id)
-          );
-        });
-
-        affectedElements.forEach((element) => {
-          // TODO: 階層構造ベースの状態管理でorder更新を実装
-          // dispatch({
-          //   type: 'UPDATE_ELEMENT_ORDER',
-          //   payload: {
-          //     id: element.id,
-          //     order: element.order - draggedElements.length,
-          //   },
-          // });
-          console.warn('ORDER UPDATE NOT IMPLEMENTED for element:', element.id);
-        });
-      }
-      // 後ろから前に移動する場合（移動元order > 移動先order）
-      else if (minDraggedOrder > targetBaseOrder) {
-        // 移動先と移動元の間にある要素のorderを増やす
-        const affectedElements = Object.values(state.elementsCache).filter((el): el is Element => {
-          const element = el as Element;
-          return (
-            element.parentId === elementParentId &&
-            element.order >= targetBaseOrder &&
-            element.order < minDraggedOrder &&
-            !draggedElements.some((dragged) => dragged.id === element.id)
-          );
-        });
-
-        affectedElements.forEach((element) => {
-          // TODO: 階層構造ベースの状態管理でorder更新を実装
-          // dispatch({
-          //   type: 'UPDATE_ELEMENT_ORDER',
-          //   payload: {
-          //     id: element.id,
-          //     order: element.order + draggedElements.length,
-          //   },
-          // });
-          console.warn('ORDER UPDATE NOT IMPLEMENTED for element:', element.id);
-        });
-      }
-      // 移動元と移動先が同じ場合は何もしない
-    },
-    [state.elementsCache],
-  );
-
-  // 新しい要素追加時にorder値を調整する関数
+  // 新しい要素追加時の配列順序調整関数（現在は階層操作で自動処理されるため削除予定）
   const adjustOrdersForNewElements = useCallback(
-    (baseOrder: number, count: number, elementParentId: string | null) => {
-      // baseOrder以上のorderを持つ既存要素のorderを調整
-      const affectedElements = Object.values(state.elementsCache).filter((el): el is Element => {
-        const element = el as Element;
-        return element.parentId === elementParentId && element.order >= baseOrder;
-      });
-
-      affectedElements.forEach((element) => {
-        // TODO: 階層構造ベースの状態管理でorder更新を実装
-        // dispatch({
-        //   type: 'UPDATE_ELEMENT_ORDER',
-        //   payload: {
-        //     id: element.id,
-        //     order: element.order + count,
-        //   },
-        // });
-        console.warn('ORDER ADJUSTMENT NOT IMPLEMENTED for element:', element.id);
-      });
+    (_baseIndex: number, _count: number, _elementParentId: string | null) => {
+      // 階層構造では配列の順序で管理されるため、orderベースのロジックを階層操作に置き換える
+      // この実装は階層構造の操作で自動的に処理されるため、ここでは何もしない
     },
-    [state.elementsCache],
+    [],
   );
 
   const handleMouseUp = useCallback(async () => {
-    console.log(`[DEBUG] handleMouseUp called. draggingElement:`, draggingElement?.id || 'none');
-    console.log(
-      `[DEBUG] currentDropTarget:`,
-      currentDropTarget
-        ? { elementId: currentDropTarget.element.id, position: currentDropTarget.position }
-        : 'none',
-    );
-
     if (!draggingElement) return;
 
     try {

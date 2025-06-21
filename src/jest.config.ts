@@ -13,7 +13,12 @@ const config: Config.InitialOptions = {
   transform: {
     '^.+\\.tsx?$': 'ts-jest',
   },
-  setupFilesAfterEnv: ['./src/setupTests.ts'],
+  setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
+  testTimeout: 10000,
+  bail: false,
+  verbose: true,
+  collectCoverage: false,
+  maxWorkers: 1,
 };
 
 export default config;

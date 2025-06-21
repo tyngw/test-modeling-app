@@ -25,7 +25,8 @@ export function addElementToHierarchy(
   parentId: string | null,
   newElement: Element,
 ): HierarchicalOperationResult {
-  const clonedHierarchy = structuredClone(hierarchical);
+  // structuredCloneの代わりにJSON.parse(JSON.stringify())を使用
+  const clonedHierarchy = JSON.parse(JSON.stringify(hierarchical)) as HierarchicalStructure;
 
   if (parentId === null) {
     // ルート要素の置き換え（通常は発生しない）
@@ -53,11 +54,6 @@ export function addElementToHierarchy(
 
     // 親ノードのchildren数を更新
     parentNode.data.children = parentNode.children.length;
-
-    // 追加後、order値を更新
-    parentNode.children.forEach((child, index) => {
-      child.data.order = index;
-    });
   }
 
   const elementsCache = convertHierarchicalToFlat(clonedHierarchy);
@@ -82,7 +78,8 @@ export function deleteElementFromHierarchy(
     throw new Error('ルート要素は削除できません');
   }
 
-  const clonedHierarchy = structuredClone(hierarchical);
+  // structuredCloneの代わりにJSON.parse(JSON.stringify())を使用
+  const clonedHierarchy = JSON.parse(JSON.stringify(hierarchical)) as HierarchicalStructure;
   const parentNode = findParentNodeInHierarchy(clonedHierarchy, elementId);
 
   if (!parentNode || !parentNode.children) {
@@ -99,11 +96,6 @@ export function deleteElementFromHierarchy(
 
   // 親ノードのchildren数を更新
   parentNode.data.children = parentNode.children.length;
-
-  // 削除後、order値を更新
-  parentNode.children.forEach((child, index) => {
-    child.data.order = index;
-  });
 
   const elementsCache = convertHierarchicalToFlat(clonedHierarchy);
 
@@ -149,7 +141,8 @@ export function moveElementInHierarchy(
     throw new Error('循環参照が発生するため移動できません');
   }
 
-  const clonedHierarchy = structuredClone(hierarchical);
+  // structuredCloneの代わりにJSON.parse(JSON.stringify())を使用
+  const clonedHierarchy = JSON.parse(JSON.stringify(hierarchical)) as HierarchicalStructure;
 
   // 移動対象ノードを取得
   const targetNode = findNodeInHierarchy(clonedHierarchy, elementId);
@@ -164,11 +157,6 @@ export function moveElementInHierarchy(
     if (oldIndex !== -1) {
       oldParentNode.children.splice(oldIndex, 1);
       oldParentNode.data.children = oldParentNode.children.length;
-
-      // 元の親の子要素のorder値を更新
-      oldParentNode.children.forEach((child, index) => {
-        child.data.order = index;
-      });
     }
   }
 
@@ -178,13 +166,14 @@ export function moveElementInHierarchy(
     if (!clonedHierarchy.root.children) {
       clonedHierarchy.root.children = [];
     }
+    console.log(
+      '[moveElementInHierarchy] Adding to root at index:',
+      newOrder,
+      'current children:',
+      clonedHierarchy.root.children.length,
+    );
     clonedHierarchy.root.children.splice(newOrder, 0, targetNode);
     clonedHierarchy.root.data.children = clonedHierarchy.root.children.length;
-
-    // ルートの子要素のorder値を更新
-    clonedHierarchy.root.children.forEach((child, index) => {
-      child.data.order = index;
-    });
   } else {
     const newParentNode = findNodeInHierarchy(clonedHierarchy, newParentId);
     if (!newParentNode) {
@@ -197,13 +186,24 @@ export function moveElementInHierarchy(
 
     // 指定位置に挿入
     const insertIndex = Math.min(newOrder, newParentNode.children.length);
+    console.log(
+      '[moveElementInHierarchy] Adding to parent:',
+      newParentId,
+      'at index:',
+      insertIndex,
+      'current children:',
+      newParentNode.children.length,
+      'requested order:',
+      newOrder,
+    );
     newParentNode.children.splice(insertIndex, 0, targetNode);
     newParentNode.data.children = newParentNode.children.length;
-
-    // 新しい親の子要素のorder値を更新
-    newParentNode.children.forEach((child, index) => {
-      child.data.order = index;
-    });
+    console.log(
+      '[moveElementInHierarchy] After insert - children count:',
+      newParentNode.children.length,
+      'children IDs:',
+      newParentNode.children.map((c) => c.data.id),
+    );
   }
 
   // 移動した要素のparentIdと深度を更新
@@ -233,15 +233,19 @@ export function updateElementInHierarchy(
   elementId: string,
   updates: Partial<Element>,
 ): HierarchicalOperationResult {
-  const clonedHierarchy = structuredClone(hierarchical);
+  // structuredCloneの代わりにJSON.parse(JSON.stringify())を使用
+  const clonedHierarchy = JSON.parse(JSON.stringify(hierarchical)) as HierarchicalStructure;
   const targetNode = findNodeInHierarchy(clonedHierarchy, elementId);
 
   if (!targetNode) {
     throw new Error(`更新対象の要素 ${elementId} が見つかりません`);
   }
 
-  // 要素を更新
-  Object.assign(targetNode.data, updates);
+  // 要素を更新（新しいオブジェクトを作成）
+  targetNode.data = {
+    ...targetNode.data,
+    ...updates,
+  };
 
   const elementsCache = convertHierarchicalToFlat(clonedHierarchy);
 
@@ -304,7 +308,8 @@ export function setVisibilityInHierarchy(
   parentId: string,
   visible: boolean,
 ): HierarchicalOperationResult {
-  const clonedHierarchy = structuredClone(hierarchical);
+  // structuredCloneの代わりにJSON.parse(JSON.stringify())を使用
+  const clonedHierarchy = JSON.parse(JSON.stringify(hierarchical)) as HierarchicalStructure;
   const parentNode = findNodeInHierarchy(clonedHierarchy, parentId);
 
   if (!parentNode) {
@@ -341,7 +346,8 @@ export function setSelectionInHierarchy(
   hierarchical: HierarchicalStructure,
   elementIds: string[],
 ): HierarchicalOperationResult {
-  const clonedHierarchy = structuredClone(hierarchical);
+  // structuredCloneの代わりにJSON.parse(JSON.stringify())を使用
+  const clonedHierarchy = JSON.parse(JSON.stringify(hierarchical)) as HierarchicalStructure;
   const selectedIdSet = new Set(elementIds);
 
   function updateSelectionRecursive(node: HierarchicalNode): void {

@@ -7,28 +7,28 @@ describe('UNDO/REDO機能', () => {
     const { result } = renderHook(() => useStore());
     const { dispatch } = result.current;
 
-    const initialElements = result.current.state.elements;
+    const initialElements = result.current.state.elementsCache;
     act(() => {
       dispatch({ type: 'ADD_ELEMENT', payload: {} });
     });
-    const afterAddState = result.current.state.elements;
+    const afterAddState = result.current.state.elementsCache;
 
     act(() => {
       dispatch({ type: 'UNDO' });
     });
-    expect(result.current.state.elements).toEqual(initialElements);
+    expect(result.current.state.elementsCache).toEqual(initialElements);
 
     act(() => {
       dispatch({ type: 'REDO' });
     });
-    expect(result.current.state.elements).toEqual(afterAddState);
+    expect(result.current.state.elementsCache).toEqual(afterAddState);
   });
 
   it('UNDO/REDOがテキスト更新後に動作することを確認する', () => {
     const { result } = renderHook(() => useStore());
     const { dispatch } = result.current;
 
-    const initialText = result.current.state.elements['1'].texts[0];
+    const initialText = result.current.state.elementsCache['1'].texts[0];
     const newText = 'Updated text';
 
     act(() => {
@@ -41,11 +41,11 @@ describe('UNDO/REDO機能', () => {
     act(() => {
       dispatch({ type: 'UNDO' });
     });
-    expect(result.current.state.elements['1'].texts[0]).toBe(initialText);
+    expect(result.current.state.elementsCache['1'].texts[0]).toBe(initialText);
 
     act(() => {
       dispatch({ type: 'REDO' });
     });
-    expect(result.current.state.elements['1'].texts[0]).toBe(newText);
+    expect(result.current.state.elementsCache['1'].texts[0]).toBe(newText);
   });
 });

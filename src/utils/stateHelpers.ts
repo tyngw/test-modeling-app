@@ -44,7 +44,6 @@ export const createElementAdder = (
 
   const newElement = createNewElement({
     parentId: parentElement.id,
-    order: options?.order ?? parentElement.children,
     depth: parentElement.depth + 1,
     numSections: options?.numberOfSections,
     direction,
@@ -85,20 +84,7 @@ export const createSiblingElementAdder = (
   numberOfSections?: number,
 ): ElementsMap => {
   const parentId = selectedElement.parentId;
-  const siblings = Object.values(elements).filter((e) => e.parentId === parentId);
-  const newOrder = selectedElement.order + 1;
-
   const updatedElements = { ...elements };
-
-  // 新しいorder以上の兄弟要素のorderを更新
-  siblings.forEach((sibling) => {
-    if (sibling.order >= newOrder) {
-      updatedElements[sibling.id] = {
-        ...sibling,
-        order: sibling.order + 1,
-      };
-    }
-  });
 
   // 選択された要素の方向を継承
   const direction = selectedElement.direction;
@@ -106,7 +92,6 @@ export const createSiblingElementAdder = (
   // 新しい要素を作成
   const newElement = createNewElement({
     parentId: parentId,
-    order: newOrder,
     depth: selectedElement.depth,
     numSections: numberOfSections,
     direction,
@@ -158,7 +143,6 @@ export const pasteElements = (
       id: newId,
       depth: newDepth,
       parentId: cutElement.parentId === null ? parentElement.id : idMap.get(cutElement.parentId)!,
-      order: cutElement.parentId === null ? parentElement.children : cutElement.order,
     };
   });
 

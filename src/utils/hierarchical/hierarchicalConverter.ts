@@ -24,7 +24,7 @@ export function convertFlatToHierarchical(
   const rootElement = elementArray.find((element) => element.parentId === null);
 
   if (!rootElement) {
-    console.warn('ルート要素が見つかりません');
+    // ルート要素が見つかりません
     return null;
   }
 
@@ -40,9 +40,9 @@ export function convertFlatToHierarchical(
     }
   });
 
-  // 各親の子要素をorderでソート
+  // 各親の子要素をIDでソート（階層構造では配列の順序で管理）
   childrenMap.forEach((children) => {
-    children.sort((a, b) => a.order - b.order);
+    children.sort((a, b) => a.id.localeCompare(b.id));
   });
 
   /**
@@ -185,21 +185,13 @@ export function validateHierarchicalStructure(hierarchical: HierarchicalStructur
 
     // 子ノードの再帰的バリデーション
     if (node.children && node.children.length > 0) {
-      node.children.forEach((child, index) => {
+      node.children.forEach((child, _index) => {
         // parentIdの整合性チェック
         if (child.data.parentId !== node.data.id) {
           errors.push(
             `子ノード ${child.data.id} のparentIdが不正です。期待値: ${node.data.id}, 実際の値: ${child.data.parentId}`,
           );
         }
-
-        // orderの整合性チェック
-        if (child.data.order !== index) {
-          errors.push(
-            `子ノード ${child.data.id} のorder値が不正です。期待値: ${index}, 実際の値: ${child.data.order}`,
-          );
-        }
-
         validateNode(child, depth + 1);
       });
     }
