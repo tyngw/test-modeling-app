@@ -276,8 +276,6 @@ const TextDisplayArea = memo<TextDisplayAreaProps>(function TextDisplayArea({
       clientX: touch.clientX,
       clientY: touch.clientY,
       ctrlKey: false,
-      clientY: touch.clientY,
-      ctrlKey: false,
       metaKey: false,
       preventDefault: () => event.preventDefault(),
       stopPropagation: () => event.stopPropagation(),

@@ -365,7 +365,24 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
               selected: element.selected,
               parentId: element.parentId,
             });
-            handleMouseDown(e, element);
+            // TouchEventをMouseEventに変換
+            const touch = e.touches[0];
+            const syntheticMouseEvent = {
+              clientX: touch.clientX,
+              clientY: touch.clientY,
+              button: 0,
+              buttons: 1,
+              ctrlKey: false,
+              metaKey: false,
+              shiftKey: false,
+              altKey: false,
+              detail: 1,
+              currentTarget: e.currentTarget as SVGRectElement,
+              target: e.target as SVGElement,
+              preventDefault: () => e.preventDefault(),
+              stopPropagation: () => e.stopPropagation(),
+            } as unknown as React.MouseEvent<SVGElement>;
+            handleMouseDown(syntheticMouseEvent, element);
           }}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
@@ -438,11 +455,34 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
                 onElementClick={handleSelect}
                 onMouseDown={(e) => {
                   console.log(`[DEBUG] TextDisplayArea onMouseDown for element ${element.id}`);
-                  handleMouseDown(e, element);
+                  // MouseEvent<Element>をMouseEvent<SVGElement>に適切にキャスト
+                  const syntheticEvent = {
+                    ...e,
+                    currentTarget: e.currentTarget as HTMLElement,
+                    target: e.target as Element,
+                  } as unknown as React.MouseEvent<SVGElement>;
+                  handleMouseDown(syntheticEvent, element);
                 }}
                 onTouchStart={(e) => {
                   console.log(`[DEBUG] TextDisplayArea onTouchStart for element ${element.id}`);
-                  handleMouseDown(e, element);
+                  // TouchEventをMouseEventに変換
+                  const touch = e.touches[0];
+                  const syntheticMouseEvent = {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY,
+                    button: 0,
+                    buttons: 1,
+                    ctrlKey: false,
+                    metaKey: false,
+                    shiftKey: false,
+                    altKey: false,
+                    detail: 1,
+                    currentTarget: e.currentTarget as HTMLElement,
+                    target: e.target as Element,
+                    preventDefault: () => e.preventDefault(),
+                    stopPropagation: () => e.stopPropagation(),
+                  } as unknown as React.MouseEvent<SVGElement>;
+                  handleMouseDown(syntheticMouseEvent, element);
                 }}
                 isSelected={element.selected}
               />
