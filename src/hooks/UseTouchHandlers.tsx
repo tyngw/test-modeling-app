@@ -64,12 +64,27 @@ export const useTouchHandlers = ({ handleMouseDown, elements }: UseTouchHandlers
             // IDが見つかった場合、その要素のhandleMouseDownを直接呼び出す
             const element = elements[elementId];
             if (element) {
-              // 元のタッチイベントを型キャストして使用
-              // unknownを経由することで型安全性を保つ
-              const touchEvent = e as unknown as React.TouchEvent<HTMLElement | SVGElement>;
+              // TouchEventをMouseEventに変換
+              const touch = e.touches[0];
+              const syntheticMouseEvent = {
+                clientX: touch.clientX,
+                clientY: touch.clientY,
+                button: 0,
+                buttons: 1,
+                ctrlKey: false,
+                metaKey: false,
+                shiftKey: false,
+                altKey: false,
+                detail: 1,
+                currentTarget: e.currentTarget,
+                target: e.target,
+                preventDefault: () => e.preventDefault(),
+                stopPropagation: () => e.stopPropagation(),
+                nativeEvent: e, // 元のTouchEventをnativeEventとして設定
+              } as unknown as React.MouseEvent<HTMLElement | SVGElement>;
 
               // イベントをハンドラに渡す
-              handleMouseDown(touchEvent, element);
+              handleMouseDown(syntheticMouseEvent, element);
             }
           }
         }

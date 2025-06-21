@@ -392,6 +392,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
               target: e.target as SVGElement,
               preventDefault: () => e.preventDefault(),
               stopPropagation: () => e.stopPropagation(),
+              nativeEvent: e.nativeEvent, // nativeEventを追加
             } as unknown as React.MouseEvent<SVGElement>;
             handleMouseDown(syntheticMouseEvent, element);
           }}
@@ -471,6 +472,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
                     ...e,
                     currentTarget: e.currentTarget as HTMLElement,
                     target: e.target as Element,
+                    nativeEvent: e.nativeEvent, // nativeEventを保持
                   } as unknown as React.MouseEvent<SVGElement>;
                   handleMouseDown(syntheticEvent, element);
                 }}
@@ -492,6 +494,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
                     target: e.target as Element,
                     preventDefault: () => e.preventDefault(),
                     stopPropagation: () => e.stopPropagation(),
+                    nativeEvent: e.nativeEvent, // nativeEventを追加
                   } as unknown as React.MouseEvent<SVGElement>;
                   handleMouseDown(syntheticMouseEvent, element);
                 }}

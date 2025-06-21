@@ -794,11 +794,22 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
         return;
       }
 
-      e.stopPropagation();
+      // stopPropagationが存在する場合のみ呼び出す
+      if (e.stopPropagation && typeof e.stopPropagation === 'function') {
+        e.stopPropagation();
+      }
+
+      // nativeEventが存在しない場合の対処
+      if (!e.nativeEvent) {
+        console.warn(`[DEBUG] nativeEvent is missing for element ${element.id}`);
+        return;
+      }
 
       let nativeEvent: MouseEvent | TouchEvent;
       if (e.nativeEvent instanceof TouchEvent) {
-        e.preventDefault();
+        if (e.preventDefault && typeof e.preventDefault === 'function') {
+          e.preventDefault();
+        }
         nativeEvent = e.nativeEvent;
       } else {
         nativeEvent = e.nativeEvent;
