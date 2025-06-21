@@ -775,22 +775,8 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
       e: React.MouseEvent<HTMLElement | SVGElement> | React.TouchEvent<HTMLElement | SVGElement>,
       element: Element,
     ) => {
-      // デバッグ情報を追加
-      console.log(
-        `[DEBUG] UseElementDragEffect.handleMouseDown called for element ${element.id}:`,
-        {
-          selected: element.selected,
-          parentId: element.parentId,
-          eventType: e.nativeEvent instanceof TouchEvent ? 'touch' : 'mouse',
-          willReturn: !element.selected || !element.parentId,
-        },
-      );
-
       // 要素が選択状態でない場合はドラッグを開始しない
       if (!element.selected || !element.parentId) {
-        console.log(
-          `[DEBUG] Drag prevented for element ${element.id}: selected=${element.selected}, parentId=${element.parentId}`,
-        );
         return;
       }
 
@@ -1156,13 +1142,6 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
       if (dropTarget?.siblingInfo) {
         const { prevElement, nextElement } = dropTarget.siblingInfo;
 
-        console.log(
-          '[calculateTargetOrderValues] SiblingInfo - prev:',
-          prevElement?.id,
-          'next:',
-          nextElement?.id,
-        );
-
         // between ドロップの場合、兄弟要素の親を取得
         let targetParentId: string | null = null;
         if (prevElement) {
@@ -1173,8 +1152,6 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
           // 兄弟要素がない場合は、ドロップターゲットを親とする
           targetParentId = dropTarget.element.id;
         }
-
-        console.log('[calculateTargetOrderValues] TargetParentId:', targetParentId);
 
         // ドラッグ中の要素のIDリストを作成
         const draggedElementIds = draggedElements.map((el) => el.id);
@@ -1187,35 +1164,17 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
           )
           .sort((a, b) => a.y - b.y); // Y座標で並び替え
 
-        console.log(
-          '[calculateTargetOrderValues] Siblings (after filtering):',
-          siblings.map((s) => ({ id: s.id, y: s.y })),
-        );
-
         if (prevElement && nextElement) {
           // 2つの要素の間にドロップする場合
           const nextIndex = siblings.findIndex((el) => el.id === nextElement.id);
           baseOrder = Math.max(0, nextIndex); // nextElementの位置に挿入
-          console.log(
-            '[calculateTargetOrderValues] Between prev and next - nextIndex:',
-            nextIndex,
-            'baseOrder:',
-            baseOrder,
-          );
         } else if (prevElement) {
           // 最後の要素の後にドロップする場合
           const prevIndex = siblings.findIndex((el) => el.id === prevElement.id);
           baseOrder = prevIndex >= 0 ? prevIndex + 1 : siblings.length; // prevElementの次の位置に挿入
-          console.log(
-            '[calculateTargetOrderValues] After prev - prevIndex:',
-            prevIndex,
-            'baseOrder:',
-            baseOrder,
-          );
         } else if (nextElement) {
           // 最初の要素の前にドロップする場合
           baseOrder = 0; // 配列の最初に挿入
-          console.log('[calculateTargetOrderValues] Before next - baseOrder:', baseOrder);
         } else {
           // 兄弟要素がない場合（最初の子要素として追加）
           baseOrder = 0;

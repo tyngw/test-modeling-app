@@ -48,39 +48,27 @@ export function useFileOperations({
       const normalizedElements = JSON.parse(JSON.stringify(currentTab.state.elementsCache || {}));
       const currentElementsJson = JSON.stringify(normalizedElements);
 
-      console.log('保存処理: タブID', currentTab.id);
-      console.log('保存処理: 要素の状態', currentElementsJson.substring(0, 50) + '...');
-
       // タブを保存済みとしてマークし、最後に保存された要素の状態を更新
       updateTabSaveStatus(currentTab.id, true, currentElementsJson);
-
-      console.log('保存処理: 保存済みフラグを設定', true);
     }
   }, [currentTab, updateTabSaveStatus]);
 
   const handleLoadElements = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       try {
-        console.log('[handleLoadElements] Starting file load process...');
         const result = await loadElements(event.nativeEvent);
-        console.log('[handleLoadElements] File loaded successfully:', result);
 
         // 新しいタブを作成して、読み込んだ要素をそのタブに適用
         const newTabId = addTab();
-        console.log('[handleLoadElements] Created new tab:', newTabId);
 
         // elementsMapから階層構造を構築
-        console.log('[handleLoadElements] Converting elements to hierarchical structure...');
         const hierarchicalData = convertFlatToHierarchical(result.elements);
         if (!hierarchicalData) {
           throw new Error('ファイルから階層構造を作成できませんでした');
         }
-        console.log('[handleLoadElements] Hierarchical structure created:', hierarchicalData);
 
         // LOAD_ELEMENTSアクションと同等の処理を手動で実行
         updateTabState(newTabId, (prevState) => {
-          console.log('[handleLoadElements] Updating tab state with loaded elements');
-
           return {
             ...prevState,
             hierarchicalData,
@@ -101,8 +89,6 @@ export function useFileOperations({
 
         // 新しいタブに切り替え
         switchTab(newTabId);
-
-        console.log('[handleLoadElements] File load process completed successfully');
       } catch (error: any) {
         console.error('[handleLoadElements] Error during file load:', error);
         addToast(error.message);

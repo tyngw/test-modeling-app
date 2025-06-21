@@ -166,12 +166,6 @@ export function moveElementInHierarchy(
     if (!clonedHierarchy.root.children) {
       clonedHierarchy.root.children = [];
     }
-    console.log(
-      '[moveElementInHierarchy] Adding to root at index:',
-      newOrder,
-      'current children:',
-      clonedHierarchy.root.children.length,
-    );
     clonedHierarchy.root.children.splice(newOrder, 0, targetNode);
     clonedHierarchy.root.data.children = clonedHierarchy.root.children.length;
   } else {
@@ -186,24 +180,8 @@ export function moveElementInHierarchy(
 
     // 指定位置に挿入
     const insertIndex = Math.min(newOrder, newParentNode.children.length);
-    console.log(
-      '[moveElementInHierarchy] Adding to parent:',
-      newParentId,
-      'at index:',
-      insertIndex,
-      'current children:',
-      newParentNode.children.length,
-      'requested order:',
-      newOrder,
-    );
     newParentNode.children.splice(insertIndex, 0, targetNode);
     newParentNode.data.children = newParentNode.children.length;
-    console.log(
-      '[moveElementInHierarchy] After insert - children count:',
-      newParentNode.children.length,
-      'children IDs:',
-      newParentNode.children.map((c) => c.data.id),
-    );
   }
 
   // 移動した要素のparentIdと深度を更新

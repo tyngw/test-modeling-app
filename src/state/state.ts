@@ -367,48 +367,33 @@ const actionHandlers: Record<string, ActionHandler> = {
   ARROW_LEFT: createNoPayloadHandler(handleArrowAction(handleArrowLeft)),
 
   LOAD_ELEMENTS: createSafeHandler(isElementsMapPayload, (state: State, payload: ElementsMap) => {
-    console.log('[LOAD_ELEMENTS] Starting load process with payload:', payload);
-    console.log('[LOAD_ELEMENTS] Payload keys count:', Object.keys(payload).length);
-
     if (Object.keys(payload).length === 0) {
       debugLog('Loading empty elements map, returning initial state');
-      console.log('[LOAD_ELEMENTS] Empty payload, returning initial state');
       return initialState;
     }
 
     // フラット構造から階層構造に変換
-    console.log('[LOAD_ELEMENTS] Converting flat structure to hierarchical');
     const hierarchicalData = convertFlatToHierarchical(payload);
     if (!hierarchicalData) {
       debugLog('Failed to convert flat structure to hierarchical');
-      console.log('[LOAD_ELEMENTS] ERROR: Failed to convert to hierarchical structure');
       return state;
     }
-
-    console.log('[LOAD_ELEMENTS] Successfully converted to hierarchical:', hierarchicalData);
 
     const elementsCache = Object.values(payload).reduce<ElementsMap>((acc, element) => {
       if (!element.id) {
         debugLog('Skipping invalid element without id:', element);
-        console.log('[LOAD_ELEMENTS] WARNING: Skipping element without id:', element);
         return acc;
       }
       acc[element.id] = element.parentId === null ? { ...element, visible: true } : element;
       return acc;
     }, {});
 
-    console.log('[LOAD_ELEMENTS] Final elementsCache:', elementsCache);
-    console.log('[LOAD_ELEMENTS] Elements count in cache:', Object.keys(elementsCache).length);
-
-    const finalState = {
+    return {
       ...state,
       hierarchicalData,
       elementsCache,
       cacheValid: true,
     };
-
-    console.log('[LOAD_ELEMENTS] Returning final state with hierarchical data and cache');
-    return finalState;
   }),
 
   SELECT_ELEMENT: createSafeHandler(
@@ -1110,15 +1095,6 @@ const actionHandlers: Record<string, ActionHandler> = {
     (state: State, payload: DropElementPayload) => {
       const { id, newParentId, newOrder } = payload;
 
-      console.log(
-        '[DROP_ELEMENT] Processing element:',
-        id,
-        'newParentId:',
-        newParentId,
-        'newOrder:',
-        newOrder,
-      );
-
       // 基本的な妥当性チェック
       if (!state.elementsCache[id] || !state.hierarchicalData) {
         debugLog(`Element with id ${id} not found for drop operation`);
@@ -1136,8 +1112,6 @@ const actionHandlers: Record<string, ActionHandler> = {
         return state;
       }
 
-      // 要素を移動
-      console.log('[DROP_ELEMENT] Calling moveElementInHierarchy with:', id, newParentId, newOrder);
       const result = moveElementInHierarchy(state.hierarchicalData, id, newParentId, newOrder);
 
       // 位置調整を行う

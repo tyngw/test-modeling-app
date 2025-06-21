@@ -14,26 +14,17 @@ export function convertFlatToHierarchical(
   elements: ElementsMap,
   version = '1.4.43',
 ): HierarchicalStructure | null {
-  console.log('[convertFlatToHierarchical] Starting conversion with elements:', elements);
   const elementArray = Object.values(elements);
-  console.log('[convertFlatToHierarchical] Element array length:', elementArray.length);
 
   if (elementArray.length === 0) {
-    console.log('[convertFlatToHierarchical] Empty element array, returning null');
     return null;
   }
 
   // ルート要素を見つける
   const rootElement = elementArray.find((element) => element.parentId === null);
-  console.log('[convertFlatToHierarchical] Root element found:', rootElement);
 
   if (!rootElement) {
     // ルート要素が見つかりません
-    console.log('[convertFlatToHierarchical] ERROR: No root element found');
-    console.log(
-      '[convertFlatToHierarchical] Available elements:',
-      elementArray.map((e) => ({ id: e.id, parentId: e.parentId })),
-    );
     return null;
   }
 
@@ -48,15 +39,6 @@ export function convertFlatToHierarchical(
       childrenMap.get(element.parentId)!.push(element);
     }
   });
-
-  console.log(
-    '[convertFlatToHierarchical] Children map created:',
-    Array.from(childrenMap.entries()).map(([parentId, children]) => ({
-      parentId,
-      childrenCount: children.length,
-      childrenIds: children.map((c) => c.id),
-    })),
-  );
 
   // 各親の子要素をIDでソート（階層構造では配列の順序で管理）
   childrenMap.forEach((children) => {
@@ -83,14 +65,11 @@ export function convertFlatToHierarchical(
   }
 
   const rootNode = buildHierarchicalNode(rootElement);
-  console.log('[convertFlatToHierarchical] Root node built:', rootNode);
-
   const result = {
     root: rootNode,
     version,
   };
 
-  console.log('[convertFlatToHierarchical] Conversion completed successfully:', result);
   return result;
 }
 
@@ -100,7 +79,6 @@ export function convertFlatToHierarchical(
  * @returns フラット構造の要素マップ
  */
 export function convertHierarchicalToFlat(hierarchical: HierarchicalStructure): ElementsMap {
-  console.log('[convertHierarchicalToFlat] Starting conversion from hierarchical:', hierarchical);
   const elements: ElementsMap = {};
 
   /**
@@ -108,29 +86,16 @@ export function convertHierarchicalToFlat(hierarchical: HierarchicalStructure): 
    * @param node 階層ノード
    */
   function flattenNode(node: HierarchicalNode): void {
-    console.log('[convertHierarchicalToFlat] Processing node:', node.data.id, node.data);
     // ノードのデータを要素マップに追加
     elements[node.data.id] = node.data;
 
     // 子ノードがある場合は再帰的に処理
     if (node.children && node.children.length > 0) {
-      console.log(
-        '[convertHierarchicalToFlat] Processing',
-        node.children.length,
-        'children of',
-        node.data.id,
-      );
       node.children.forEach(flattenNode);
     }
   }
 
   flattenNode(hierarchical.root);
-
-  console.log('[convertHierarchicalToFlat] Conversion completed. Elements:', elements);
-  console.log(
-    '[convertHierarchicalToFlat] Total elements converted:',
-    Object.keys(elements).length,
-  );
   return elements;
 }
 
