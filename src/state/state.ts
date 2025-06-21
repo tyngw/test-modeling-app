@@ -411,7 +411,47 @@ const actionHandlers: Record<string, ActionHandler> = {
         return state;
       }
 
-      const currentSelected = getSelectedElementsFromState(state);
+      // 編集中の要素がある場合は、先に編集を終了する
+      const editingElements = Object.values(state.elementsCache).filter((e) => e.editing);
+      let workingState = state;
+
+      if (editingElements.length > 0) {
+        debugLog(`SELECT_ELEMENT: Ending editing for ${editingElements.length} elements`);
+
+        // すべての要素の編集状態を終了
+        const updatedElementsCache = Object.values(workingState.elementsCache).reduce<ElementsMap>(
+          (acc, element) => {
+            acc[element.id] = { ...element, editing: false };
+            return acc;
+          },
+          {},
+        );
+
+        // 階層構造に反映し、位置調整を行う
+        const hierarchicalData = convertFlatToHierarchical(updatedElementsCache);
+        if (hierarchicalData) {
+          const adjustedElementsCache = adjustElementPositions(
+            updatedElementsCache,
+            () => workingState.numberOfSections,
+            workingState.layoutMode,
+            workingState.width || 0,
+            workingState.height || 0,
+            hierarchicalData,
+          );
+
+          const finalHierarchicalData = convertFlatToHierarchical(adjustedElementsCache);
+          if (finalHierarchicalData) {
+            workingState = {
+              ...workingState,
+              hierarchicalData: finalHierarchicalData,
+              elementsCache: adjustedElementsCache,
+              cacheValid: true,
+            };
+          }
+        }
+      }
+
+      const currentSelected = getSelectedElementsFromState(workingState);
       const firstSelected = currentSelected[0];
 
       // 異なるparentIdの要素が含まれる場合は何もしない
@@ -420,14 +460,14 @@ const actionHandlers: Record<string, ActionHandler> = {
         currentSelected.length > 0 &&
         currentSelected.some((e) => e.parentId !== selectedElement.parentId)
       ) {
-        return state;
+        return workingState;
       }
 
       let newSelectedIds: string[] = [];
 
       if (shiftKey && currentSelected.length > 0) {
         const parentId = firstSelected.parentId;
-        const siblings = Object.values(state.elementsCache)
+        const siblings = Object.values(workingState.elementsCache)
           .filter((e) => e.parentId === parentId)
           .sort((a, b) => a.id.localeCompare(b.id)); // IDでソート
 
@@ -446,15 +486,17 @@ const actionHandlers: Record<string, ActionHandler> = {
 
       const parentId = selectedElement.parentId;
       const validSelectedIds = newSelectedIds.filter((id) => {
-        const elem = state.elementsCache[id];
+        const elem = workingState.elementsCache[id];
         return elem && elem.parentId === parentId;
       });
 
-      const result = setSelectionInHierarchy(state.hierarchicalData, validSelectedIds);
+      if (!workingState.hierarchicalData) return workingState;
+
+      const result = setSelectionInHierarchy(workingState.hierarchicalData, validSelectedIds);
 
       // Debug: SELECT_ELEMENT completed
 
-      return createStateFromHierarchicalResult(state, result);
+      return createStateFromHierarchicalResult(workingState, result);
     },
   ),
 
