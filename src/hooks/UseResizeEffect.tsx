@@ -25,11 +25,24 @@ interface ResizeEffectProps {
     zoomRatio: number;
   };
   isClient?: boolean;
+  isDragInProgress?: boolean; // ドラッグ中フラグを追加
 }
 
-const useResizeEffect = ({ setCanvasSize, setDisplayArea, state, isClient }: ResizeEffectProps) => {
+const useResizeEffect = ({
+  setCanvasSize,
+  setDisplayArea,
+  state,
+  isClient,
+  isDragInProgress,
+}: ResizeEffectProps) => {
   useEffect(() => {
     if (typeof window === 'undefined' || !isClient) return;
+
+    // ドラッグ中はキャンバスサイズの再計算をスキップ
+    if (isDragInProgress) {
+      console.log('[useResizeEffect] Skipping canvas resize during drag');
+      return;
+    }
 
     const newCanvasSize = calculateCanvasSize(state.elements);
     const maxHeight = window.innerHeight - HEADER_HEIGHT;
@@ -44,7 +57,7 @@ const useResizeEffect = ({ setCanvasSize, setDisplayArea, state, isClient }: Res
 
     setCanvasSize(newCanvasSize);
     setDisplayArea(`0 0 ${newViewSize.width} ${newViewSize.height}`);
-  }, [state.elements, state.zoomRatio, setCanvasSize, setDisplayArea, isClient]);
+  }, [state.elements, state.zoomRatio, setCanvasSize, setDisplayArea, isClient, isDragInProgress]);
 };
 
 export default useResizeEffect;

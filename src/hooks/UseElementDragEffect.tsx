@@ -64,6 +64,7 @@ export interface ElementDragEffectResult {
   dropInsertX: number | undefined;
   dropTargetDirection: DirectionType | undefined;
   siblingInfo: { prevElement?: Element; nextElement?: Element } | null;
+  isDragInProgress: boolean; // ドラッグ中かどうかを示すフラグ
 }
 
 export const useElementDragEffect = (): ElementDragEffectResult => {
@@ -1536,5 +1537,6 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
     dropInsertX: currentDropTarget?.insertX || undefined,
     dropTargetDirection: currentDropTarget?.direction || undefined,
     siblingInfo: currentDropTarget?.siblingInfo || null,
+    isDragInProgress: !!draggingElement, // draggingElementがnullでない場合にtrue
   };
 };

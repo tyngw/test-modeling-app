@@ -112,17 +112,6 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
   const [showMenuForElement, setShowMenuForElement] = useState<string | null>(null);
   const [hoveredElements, setHoveredElements] = useState<{ [key: string]: boolean }>({});
 
-  // カスタムフックの使用
-  useResizeEffect({
-    setCanvasSize,
-    setDisplayArea,
-    state: {
-      elements: elementsCache,
-      zoomRatio: state.zoomRatio,
-    },
-    isClient,
-  });
-
   useClickOutside(svgRef, !!editingNode);
 
   const {
@@ -135,7 +124,20 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     dropInsertX,
     dropTargetDirection,
     siblingInfo,
+    isDragInProgress,
   } = useElementDragEffect();
+
+  // カスタムフックの使用
+  useResizeEffect({
+    setCanvasSize,
+    setDisplayArea,
+    state: {
+      elements: elementsCache,
+      zoomRatio: state.zoomRatio,
+    },
+    isClient,
+    isDragInProgress, // ドラッグ中のフラグを追加
+  });
 
   // タッチ操作のハンドラーをカスタムフックから取得
   const { isPinching, handleTouchStart, handleTouchMove, handleTouchEnd } = useTouchHandlers({
