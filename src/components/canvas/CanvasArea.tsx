@@ -460,12 +460,19 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
 
   // ドラッグドロップの視覚的なプレビューを描画
   const renderDropPreview = () => {
-    if (!draggingElement || !currentDropTarget || !dropPosition) {
-      debugLog('[DropPreview] Missing required data:', {
+    // ドラッグ中の場合のみ、必要なデータが揃っているかチェック
+    if (isDragInProgress && (!draggingElement || !currentDropTarget || !dropPosition)) {
+      // ドラッグ中に必要なデータが足りない場合のみログ出力
+      debugLog('[DropPreview] Missing required data during drag:', {
         draggingElement: !!draggingElement,
         currentDropTarget: !!currentDropTarget,
         dropPosition,
       });
+      return null;
+    }
+
+    // ドラッグしていない場合は単にnullを返す
+    if (!draggingElement || !currentDropTarget || !dropPosition) {
       return null;
     }
 
