@@ -252,80 +252,100 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
               ? element.x - OFFSET.X - (draggingElement?.width ?? 0)
               : element.x + element.width + OFFSET.X;
 
-          let prevElement: Element | undefined;
-          let nextElement: Element | undefined;
-
-          // 同じ方向の子要素のみをフィルタリング（ルート要素の場合）
-          const directionFilteredChildren = isRootInMindmap
-            ? children.filter((child) => child.direction === childDirection)
-            : children;
-
-          // マウス位置に最も近い子要素を見つける
-          for (let i = 0; i < directionFilteredChildren.length; i++) {
-            const child = directionFilteredChildren[i];
-            if (mouseY < child.y) {
-              nextElement = child;
-              if (i > 0) prevElement = directionFilteredChildren[i - 1];
-              break;
-            } else if (mouseY < child.y + child.height) {
-              const midpoint = child.y + child.height / 2;
-              if (mouseY < midpoint) {
-                nextElement = child;
-                if (i > 0) prevElement = directionFilteredChildren[i - 1];
-              } else {
-                prevElement = child;
-                if (i < directionFilteredChildren.length - 1)
-                  nextElement = directionFilteredChildren[i + 1];
-              }
-              break;
-            } else if (
-              i === directionFilteredChildren.length - 1 ||
-              mouseY < directionFilteredChildren[i + 1].y
-            ) {
-              prevElement = child;
-              if (i < directionFilteredChildren.length - 1)
-                nextElement = directionFilteredChildren[i + 1];
-              break;
-            }
-          }
-
-          if (prevElement && nextElement) {
-            // 2つの子要素の間
-            const gap = nextElement.y - (prevElement.y + prevElement.height);
+          // ルート要素の場合は、betweenモードではなくchildモードを使用
+          if (isRootInMindmap) {
             result = {
-              position: 'between',
-              insertY: prevElement.y + prevElement.height + gap / 2,
-              insertX,
-              siblingInfo: { prevElement, nextElement },
-            };
-          } else if (prevElement) {
-            // 最後の子要素の後
-            result = {
-              position: 'between',
-              insertY: prevElement.y + prevElement.height + OFFSET.Y,
-              insertX,
-              siblingInfo: { prevElement },
-            };
-          } else if (nextElement) {
-            // 最初の子要素の前
-            result = {
-              position: 'between',
-              insertY: nextElement.y - OFFSET.Y,
-              insertX,
-              siblingInfo: { nextElement },
-            };
-          } else {
-            // このケースは通常発生しないはず
-            result = {
-              position: 'between',
+              position: 'child',
               insertY: element.y + element.height / 2,
               insertX,
               siblingInfo: {},
             };
-          }
+            debugLog(`Drop position mode (${childDirection} side, root with children):`, 'child');
+          } else {
+            let prevElement: Element | undefined;
+            let nextElement: Element | undefined;
 
-          debugLog(`Drop position mode (${childDirection} side, with children):`, 'between');
+            // 同じ方向の子要素のみをフィルタリング（ルート要素の場合）
+            const directionFilteredChildren = isRootInMindmap
+              ? children.filter((child) => child.direction === childDirection)
+              : children;
+
+            // マウス位置に最も近い子要素を見つける
+            for (let i = 0; i < directionFilteredChildren.length; i++) {
+              const child = directionFilteredChildren[i];
+              if (mouseY < child.y) {
+                nextElement = child;
+                if (i > 0) prevElement = directionFilteredChildren[i - 1];
+                break;
+              } else if (mouseY < child.y + child.height) {
+                const midpoint = child.y + child.height / 2;
+                if (mouseY < midpoint) {
+                  nextElement = child;
+                  if (i > 0) prevElement = directionFilteredChildren[i - 1];
+                } else {
+                  prevElement = child;
+                  if (i < directionFilteredChildren.length - 1)
+                    nextElement = directionFilteredChildren[i + 1];
+                }
+                break;
+              } else if (
+                i === directionFilteredChildren.length - 1 ||
+                mouseY < directionFilteredChildren[i + 1].y
+              ) {
+                prevElement = child;
+                if (i < directionFilteredChildren.length - 1)
+                  nextElement = directionFilteredChildren[i + 1];
+                break;
+              }
+            }
+
+            if (prevElement && nextElement) {
+              // 2つの子要素の間
+              const gap = nextElement.y - (prevElement.y + prevElement.height);
+              result = {
+                position: 'between',
+                insertY: prevElement.y + prevElement.height + gap / 2,
+                insertX,
+                siblingInfo: { prevElement, nextElement },
+              };
+            } else if (prevElement) {
+              // 最後の子要素の後
+              result = {
+                position: 'between',
+                insertY: prevElement.y + prevElement.height + OFFSET.Y,
+                insertX,
+                siblingInfo: { prevElement },
+              };
+            } else if (nextElement) {
+              // 最初の子要素の前
+              result = {
+                position: 'between',
+                insertY: nextElement.y - OFFSET.Y,
+                insertX,
+                siblingInfo: { nextElement },
+              };
+            } else {
+              // このケースは通常発生しないはず
+              result = {
+                position: 'between',
+                insertY: element.y + element.height / 2,
+                insertX,
+                siblingInfo: {},
+              };
+            }
+
+            debugLog(`Drop position mode (${childDirection} side, with children):`, 'between');
+          }
         }
+      } else if (isRootInMindmap || element.parentId === null) {
+        // ルート要素の場合は兄弟判定をスキップし、デフォルトのchild位置を返す
+        debugLog(`[Root element ${element.id}] Not on valid side, using default child position`);
+        result = {
+          position: 'child',
+          insertY: element.y + element.height / 2,
+          insertX: element.x + element.width + OFFSET.X,
+          siblingInfo: {},
+        };
       } else {
         // 同じ親を持つ要素（兄弟要素）を取得
         const draggingElementId = draggingElement?.id;
