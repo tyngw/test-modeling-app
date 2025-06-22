@@ -9,10 +9,19 @@ import {
   handleArrowLeft,
 } from '../utils/elementSelector';
 import { Element, MarkerType } from '../types/types';
-import { DEFAULT_POSITION, NUMBER_OF_SECTIONS, OFFSET, SIZE } from '../config/elementSettings';
+import {
+  DEFAULT_POSITION,
+  NUMBER_OF_SECTIONS,
+  OFFSET,
+  SIZE,
+  DEFAULT_FONT_SIZE,
+  LINE_HEIGHT_RATIO,
+  TEXTAREA_PADDING,
+} from '../config/elementSettings';
 import { Action } from '../types/actionTypes';
 import { debugLog } from '../utils/debugLogHelpers';
 import { createNewElement, getChildrenFromHierarchy } from '../utils/element/elementHelpers';
+import { calculateElementWidth, wrapText } from '../utils/textareaHelpers';
 import { ElementsMap } from '../types/elementTypes';
 import { adjustElementPositions } from '../utils/layoutHelpers';
 import {
@@ -79,6 +88,8 @@ interface AddElementPayload {
 interface AddElementsSilentPayload {
   texts?: string[];
   tentative?: boolean;
+  parentId?: string; // 親要素のIDを指定可能にする
+  onError?: (message: string) => void; // エラーハンドリングコールバック
 }
 
 // 型ガード関数
@@ -172,7 +183,9 @@ const isAddElementsSilentPayload = (payload: unknown): payload is AddElementsSil
     (typeof payload === 'object' &&
       payload !== null &&
       (!('texts' in payload) || Array.isArray((payload as any).texts)) &&
-      (!('tentative' in payload) || typeof (payload as any).tentative === 'boolean'))
+      (!('tentative' in payload) || typeof (payload as any).tentative === 'boolean') &&
+      (!('parentId' in payload) || typeof (payload as any).parentId === 'string') &&
+      (!('onError' in payload) || typeof (payload as any).onError === 'function'))
   );
 };
 
@@ -903,8 +916,30 @@ const actionHandlers: Record<string, ActionHandler> = {
   ADD_ELEMENTS_SILENT: createSafeHandler(
     isAddElementsSilentPayload,
     (state: State, payload: AddElementsSilentPayload) => {
-      const selectedElement = getSelectedElementFromState(state);
-      if (!selectedElement || !state.hierarchicalData) return state;
+      // 親要素を決定：payloadで指定されていればそれを使用、そうでなければ現在選択中の要素
+      let targetElement: Element | undefined;
+
+      if (payload?.parentId) {
+        // 指定されたIDの要素を検索
+        targetElement = state.elementsCache[payload.parentId];
+      } else {
+        // 従来の動作：現在選択されている要素を使用
+        targetElement = getSelectedElementFromState(state);
+      }
+
+      if (!targetElement || !state.hierarchicalData) {
+        // エラーハンドリング: 対象要素が見つからない場合
+        if (payload?.onError) {
+          payload.onError('AI生成中に対象要素が削除されたため、結果を追加できませんでした。');
+        }
+        debugLog(
+          `[ADD_ELEMENTS_SILENT] 対象要素が見つかりません: ${payload?.parentId || '選択要素なし'}`,
+        );
+        return state;
+      }
+
+      // この時点でtargetElementは確実に存在する
+      const safeTargetElement: Element = targetElement;
 
       // Undoスナップショットを保存
       saveSnapshot(state.elementsCache);
@@ -914,9 +949,13 @@ const actionHandlers: Record<string, ActionHandler> = {
 
       // 階層構造から親要素の既存の子要素を順序通りに取得
       const siblings = state.hierarchicalData
-        ? getChildrenFromHierarchy(selectedElement.id, state.hierarchicalData, state.elementsCache)
+        ? getChildrenFromHierarchy(
+            safeTargetElement.id,
+            state.hierarchicalData,
+            state.elementsCache,
+          )
         : Object.values(state.elementsCache).filter(
-            (el) => el.parentId === selectedElement.id && el.visible,
+            (el) => el.parentId === safeTargetElement.id && el.visible,
           );
 
       // 初期座標を計算
@@ -930,23 +969,43 @@ const actionHandlers: Record<string, ActionHandler> = {
         currentY = lastSibling.y + lastSibling.height + OFFSET.Y; // 末尾要素の下端+OFFSETに配置
       } else {
         // 兄弟要素がない場合：親要素の右隣に配置
-        currentX = selectedElement.x + selectedElement.width + OFFSET.X; // 親要素の右+OFFSETに配置
-        currentY = selectedElement.y; // 親要素と同じY座標
+        currentX = safeTargetElement.x + safeTargetElement.width + OFFSET.X; // 親要素の右+OFFSETに配置
+        currentY = safeTargetElement.y; // 親要素と同じY座標
       }
 
       let currentHierarchy = state.hierarchicalData;
 
       // 複数の要素を順次追加
       for (let i = 0; i < texts.length; i++) {
+        // テキスト内容に基づいて適切な幅を計算
+        const textContent = texts[i];
+        const elementWidth = calculateElementWidth([textContent], TEXTAREA_PADDING.HORIZONTAL);
+
+        // セクション高さを計算
+        const lines = wrapText(textContent || '', elementWidth, state.zoomRatio || 1).length;
+        const sectionHeight = Math.max(
+          SIZE.SECTION_HEIGHT * (state.zoomRatio || 1),
+          lines * DEFAULT_FONT_SIZE * LINE_HEIGHT_RATIO +
+            TEXTAREA_PADDING.VERTICAL * (state.zoomRatio || 1),
+        );
+
+        // 要素の総高さを計算
+        const totalHeight = Array(state.numberOfSections)
+          .fill(sectionHeight)
+          .reduce((sum, h) => sum + h, 0);
+
         const newElement: Element = {
           ...createNewElement({
             numSections: state.numberOfSections,
           }),
           id: (Date.now() + i).toString(),
-          parentId: selectedElement.id,
-          depth: selectedElement.depth + 1,
+          parentId: safeTargetElement.id,
+          depth: safeTargetElement.depth + 1,
           x: currentX, // 計算された初期X座標を設定
-          y: currentY + i * (SIZE.SECTION_HEIGHT * state.numberOfSections + OFFSET.Y), // 各要素を順次下に配置
+          y: currentY + i * (totalHeight + OFFSET.Y), // 実際の高さに基づいて配置
+          width: elementWidth, // 計算された幅を設定
+          height: totalHeight, // 計算された高さを設定
+          sectionHeights: Array(state.numberOfSections).fill(sectionHeight), // 計算されたセクション高さを設定
           texts: Array(state.numberOfSections)
             .fill('')
             .map((_, index) => (index === 0 ? texts[i] : '')),
@@ -955,7 +1014,7 @@ const actionHandlers: Record<string, ActionHandler> = {
           selected: false, // Silent追加では選択状態にしない
         };
 
-        const result = addElementToHierarchy(currentHierarchy, selectedElement.id, newElement);
+        const result = addElementToHierarchy(currentHierarchy, safeTargetElement.id, newElement);
         currentHierarchy = result.hierarchicalData;
       }
 
@@ -973,6 +1032,9 @@ const actionHandlers: Record<string, ActionHandler> = {
 
       const finalHierarchicalData = convertFlatToHierarchical(adjustedElementsCache);
       if (!finalHierarchicalData) return state;
+
+      // 成功ログ
+      debugLog(`[ADD_ELEMENTS_SILENT] ${texts.length}個の要素を追加しました`);
 
       return {
         ...state,

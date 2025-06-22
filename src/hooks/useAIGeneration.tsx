@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useToast } from '../context/ToastContext';
 import { ToastMessages } from '../constants/toastMessages';
 import { generateWithGemini } from '../utils/api';
@@ -10,6 +10,7 @@ import { createUserPrompt } from '../constants/promptHelpers';
 import { TabState } from '../types/tabTypes';
 import { Action } from '../types/actionTypes';
 import { Element } from '../types/types';
+import { debugLog } from '../utils/debugLogHelpers';
 
 interface UseAIGenerationParams {
   currentTab: TabState | undefined;
@@ -22,46 +23,62 @@ interface UseAIGenerationParams {
  */
 export function useAIGeneration({ currentTab, dispatch }: UseAIGenerationParams) {
   const { addToast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleAIClick = useCallback(async () => {
-    if (!currentTab) return;
-
-    const selectedElement = Object.values(currentTab.state.elementsCache || {}).find(
-      (el): el is Element => {
-        const element = el as Element;
-        return element.selected;
-      },
-    );
-
-    if (!selectedElement) {
-      addToast(ToastMessages.noSelect);
+    if (isLoading) {
       return;
     }
 
-    const decryptedApiKey = await getApiKey();
-
-    if (!decryptedApiKey) {
-      addToast(ToastMessages.noApiKey, 'warn');
-      return;
-    }
-
-    const inputText = getPrompt();
-    // console.log('[DEBUG] Retrieved prompt from settings:', inputText);
-
-    if (!inputText) {
-      addToast(ToastMessages.noPrompt);
-      return;
-    }
+    setIsLoading(true);
 
     try {
+      if (!currentTab) {
+        return;
+      }
+
+      // AI生成開始時点での選択要素を固定
+      const selectedElement = Object.values(currentTab.state.elementsCache || {}).find(
+        (el): el is Element => {
+          const element = el as Element;
+          return element.selected;
+        },
+      );
+
+      if (!selectedElement) {
+        addToast(ToastMessages.noSelect);
+        return;
+      }
+
+      // 生成開始時点での要素IDを固定
+      const targetElementId = selectedElement.id;
+
+      const decryptedApiKey = await getApiKey();
+
+      if (!decryptedApiKey) {
+        addToast(ToastMessages.noApiKey, 'warn');
+        return;
+      }
+
+      const inputText = getPrompt();
+
+      if (!inputText) {
+        addToast(ToastMessages.noPrompt);
+        return;
+      }
+
       const structureText = formatElementsForPrompt(
         currentTab.state.elementsCache || {},
-        selectedElement.id,
+        targetElementId,
       );
 
       // ユーザープロンプト（実際のデータ）を作成
       const userPrompt = createUserPrompt({ structureText, inputText });
-      // console.log('[DEBUG] User prompt being sent to API:', userPrompt);
+
+      // AI生成開始ログ
+      debugLog(
+        `[AI] 生成開始: 対象要素="${selectedElement.texts?.[0] || 'なし'}", プロンプト="${inputText}"`,
+      );
 
       const modelType = getModelType();
       const result = await generateWithGemini(userPrompt, decryptedApiKey, modelType);
@@ -91,23 +108,39 @@ export function useAIGeneration({ currentTab, dispatch }: UseAIGenerationParams)
           .filter((line: string) => line.length > 0 && line !== '```'); // ```だけの行を除外
       }
 
+      // 生成された要素が0件の場合
+      if (childNodes.length === 0) {
+        addToast(ToastMessages.aiNoResults, 'info');
+        return;
+      }
+
       // 処理した結果を要素として追加
       dispatch({
         type: 'ADD_ELEMENTS_SILENT',
         payload: {
-          parentId: selectedElement.id,
+          parentId: targetElementId,
           texts: childNodes,
           tentative: true,
+          onError: (errorMessage: string) => {
+            debugLog(`[AI] リデューサーエラー: ${errorMessage}`);
+            addToast(errorMessage, 'warn');
+          },
         },
       });
+
+      debugLog(`[AI] 生成完了: ${childNodes.length}個の要素を追加`);
     } catch (error: unknown) {
+      // ここは予期しないシステムエラーのみを処理（API呼び出しエラーなど）
+      debugLog(`[AI] 予期しないエラー: ${error instanceof Error ? error.message : '不明なエラー'}`);
       const message =
         error instanceof Error
-          ? `${ToastMessages.aiError}: ${error.message}`
-          : ToastMessages.aiError;
-      addToast(message);
+          ? `予期しないエラーが発生しました: ${error.message}`
+          : '予期しないエラーが発生しました';
+      addToast(message, 'error');
+    } finally {
+      setIsLoading(false);
     }
-  }, [currentTab, dispatch, addToast]);
+  }, [currentTab, dispatch, addToast, isLoading]);
 
-  return { handleAIClick };
+  return { handleAIClick, isLoading };
 }

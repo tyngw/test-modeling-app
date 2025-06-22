@@ -19,23 +19,62 @@ const ToastContext = createContext<ToastContextType | null>(null);
 
 export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [toasts, setToasts] = useState<Toast[]>([]);
+  // 最近追加されたトーストの追跡（重複防止強化のため）
+  const [recentToasts, setRecentToasts] = useState<Map<string, number>>(new Map());
 
-  const addToast = useCallback((message: string, type: ToastType = 'info') => {
-    const id = new Date().getTime().toString() + Math.random().toString();
-    const newToast: Toast = { id, message, type };
+  const addToast = useCallback(
+    (message: string, type: ToastType = 'info') => {
+      const toastKey = `${message}:${type}`;
+      const now = Date.now();
 
-    setToasts((prevToasts) => {
-      const updatedToasts = [...prevToasts, newToast];
-      if (updatedToasts.length > 5) {
-        updatedToasts.shift();
-      }
-      return updatedToasts;
-    });
+      // 重複防止: 同じメッセージが既に存在する場合は追加しない
+      setToasts((prevToasts) => {
+        const isDuplicate = prevToasts.some(
+          (toast) => toast.message === message && toast.type === type,
+        );
 
-    setTimeout(() => {
-      setToasts((prevToasts) => prevToasts.filter((toast) => toast.id !== id));
-    }, 3000);
-  }, []);
+        if (isDuplicate) {
+          return prevToasts; // 重複の場合は何もしない
+        }
+
+        // 最近（3秒以内）に同じトーストが追加されたかチェック
+        const lastToastTime = recentToasts.get(toastKey);
+        if (lastToastTime && now - lastToastTime < 3000) {
+          return prevToasts; // 3秒以内の重複は無視
+        }
+
+        // 最近のトーストを記録
+        setRecentToasts((prev) => {
+          const newMap = new Map(prev);
+          newMap.set(toastKey, now);
+          // 古いエントリを削除（メモリリーク防止）
+          for (const [key, time] of newMap.entries()) {
+            if (now - time > 10000) {
+              // 10秒以上古い記録は削除
+              newMap.delete(key);
+            }
+          }
+          return newMap;
+        });
+
+        const id = new Date().getTime().toString() + Math.random().toString();
+        const newToast: Toast = { id, message, type };
+
+        const updatedToasts = [...prevToasts, newToast];
+        if (updatedToasts.length > 5) {
+          updatedToasts.shift();
+        }
+
+        // 3秒後にトーストを削除
+        setTimeout(() => {
+          setToasts((currentToasts) => currentToasts.filter((toast) => toast.id !== id));
+        }, 3000);
+
+        return updatedToasts;
+      });
+    },
+    [recentToasts],
+  );
 
   const getToastStyle = (type: ToastType) => {
     switch (type) {
