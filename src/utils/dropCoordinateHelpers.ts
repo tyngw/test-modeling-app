@@ -13,6 +13,8 @@ interface CalculateDropCoordinatesParams {
   dropPosition: DropPosition;
   dropInsertY: number | undefined | null;
   dropInsertX?: number; // 追加: ドロップ時のX座標
+  dropTargetDirection?: DirectionType; // 追加: ドロップターゲットの方向情報
+  direction?: DirectionType; // 追加: ドロップ方向情報
   siblingInfo: {
     prevElement?: CanvasElement;
     nextElement?: CanvasElement;
@@ -29,14 +31,31 @@ export const calculateDropCoordinates = ({
   dropPosition,
   dropInsertY,
   dropInsertX,
+  dropTargetDirection,
+  direction: passedDirection,
   siblingInfo,
 }: CalculateDropCoordinatesParams): DropCoordinates | null => {
   let x, y;
 
-  // 要素の方向を取得
-  const direction = currentDropTarget.direction || 'right';
+  // 要素の方向を取得 - passedDirectionが指定されている場合はそれを最優先
+  const direction =
+    passedDirection || dropTargetDirection || currentDropTarget.direction || 'right';
   const isRootInMindmap =
     currentDropTarget.direction === 'none' && currentDropTarget.parentId === null;
+
+  console.log('[calculateDropCoordinates] Input:', {
+    targetId: currentDropTarget.id,
+    direction,
+    passedDirection,
+    dropTargetDirection,
+    isRootInMindmap,
+    dropPosition,
+    dropInsertX,
+    dropInsertY,
+    currentTargetX: currentDropTarget.x,
+    currentTargetWidth: currentDropTarget.width,
+    draggingElementWidth: draggingElement.width,
+  });
 
   // ドロップする方向を決定
   // マインドマップのルート要素の場合は、ドロップする側によって子要素の方向が決まる
@@ -59,18 +78,47 @@ export const calculateDropCoordinates = ({
     // dropInsertXが指定されている場合はそれを使用（ルート要素の左右判定に基づく）
     if (dropInsertX !== undefined) {
       x = dropInsertX;
+      console.log('[calculateDropCoordinates] Using dropInsertX:', {
+        dropInsertX,
+        finalX: x,
+        reason: 'dropInsertX provided',
+      });
     } else if (direction === 'left' || (isRootInMindmap && childDirection === 'left')) {
       // 左方向の場合
       x = currentDropTarget.x - OFFSET.X - draggingElement.width;
+      console.log('[calculateDropCoordinates] Left direction calculated:', {
+        targetX: currentDropTarget.x,
+        offset: OFFSET.X,
+        draggingWidth: draggingElement.width,
+        calculatedX: x,
+        reason: 'left direction fallback',
+      });
     } else {
       // 右方向の場合
       x = currentDropTarget.x + currentDropTarget.width + OFFSET.X;
+      console.log('[calculateDropCoordinates] Right direction calculated:', {
+        targetX: currentDropTarget.x,
+        targetWidth: currentDropTarget.width,
+        offset: OFFSET.X,
+        calculatedX: x,
+        reason: 'right direction fallback',
+      });
     }
 
     // Y座標の計算
     y = dropInsertY
       ? dropInsertY - draggingElement.height / 2
       : currentDropTarget.y + currentDropTarget.height / 2 - draggingElement.height / 2;
+
+    console.log('[calculateDropCoordinates] Final coordinates:', {
+      x,
+      y,
+      dropPosition,
+      direction,
+      dropTargetDirection,
+      isLeftSide: direction === 'left' || dropTargetDirection === 'left',
+    });
+    return { x, y };
   } else if (dropPosition === 'between' || dropPosition === 'sibling') {
     // 兄弟要素として追加する場合（between/sibling）
     const parentElement = currentDropTarget.parentId ? elements[currentDropTarget.parentId] : null;

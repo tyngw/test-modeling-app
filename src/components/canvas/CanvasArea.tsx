@@ -33,6 +33,14 @@ import {
 } from '../../utils/storage/localStorageHelpers';
 import { calculateDropCoordinates } from '../../utils/dropCoordinateHelpers';
 
+// デバッグログ機能
+const DEBUG_ENABLED = true;
+const debugLog = (message: string, ...args: any[]) => {
+  if (DEBUG_ENABLED) {
+    console.log(message, ...args);
+  }
+};
+
 interface CanvasAreaProps {
   isHelpOpen: boolean;
   toggleHelp: () => void;
@@ -124,6 +132,8 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     dropPosition,
     draggingElement,
     dropInsertY,
+    dropInsertX,
+    dropTargetDirection,
     siblingInfo,
   } = useElementDragEffect();
 
@@ -448,10 +458,29 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
 
   // ドラッグドロップの視覚的なプレビューを描画
   const renderDropPreview = () => {
-    if (!draggingElement || !currentDropTarget || !dropPosition) return null;
+    if (!draggingElement || !currentDropTarget || !dropPosition) {
+      debugLog('[DropPreview] Missing required data:', {
+        draggingElement: !!draggingElement,
+        currentDropTarget: !!currentDropTarget,
+        dropPosition,
+      });
+      return null;
+    }
 
     // 型ガード: currentDropTarget がCanvasElement であることを確認
     const target = currentDropTarget as CanvasElement;
+    debugLog('[DropPreview] Rendering preview:', {
+      targetId: target.id,
+      targetDirection: target.direction,
+      dropTargetDirection: dropTargetDirection, // 新しいプロパティから取得
+      dropPosition,
+      insertX: dropInsertX, // 新しいプロパティから取得
+      insertY: dropInsertY,
+    });
+    debugLog('[DropPreview] Direction and insertX from hook:', {
+      dropTargetDirection,
+      dropInsertX,
+    });
 
     // ドロップ座標を計算（ユーティリティ関数を使用）
     const coordinates = calculateDropCoordinates({
@@ -460,11 +489,18 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
       draggingElement,
       dropPosition,
       dropInsertY,
-      dropInsertX: (currentDropTarget as any)?.insertX, // insertX情報を渡す
+      dropInsertX: dropInsertX, // 新しいプロパティを使用
+      dropTargetDirection: dropTargetDirection, // 新しいプロパティを使用
       siblingInfo,
+      direction: dropTargetDirection, // 新しいプロパティを使用
     });
 
-    if (!coordinates) return null;
+    debugLog('[DropPreview] Calculated coordinates:', coordinates);
+
+    if (!coordinates) {
+      console.log('[DropPreview] No coordinates calculated');
+      return null;
+    }
 
     // 背景色の設定
     const bgColor =

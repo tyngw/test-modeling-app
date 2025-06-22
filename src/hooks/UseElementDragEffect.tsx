@@ -38,6 +38,7 @@ export type DropTargetInfo = {
   angle?: number; // 親要素からの角度（放射状レイアウト用）
   distance?: number; // 親要素からの距離
   siblingInfo?: { prevElement?: Element; nextElement?: Element };
+  direction?: DirectionType; // ドロップ先の方向
 } | null;
 
 // 要素の子要素を取得するヘルパー関数
@@ -60,6 +61,8 @@ export interface ElementDragEffectResult {
   dropPosition: DropPosition;
   draggingElement: Element | null;
   dropInsertY: number | undefined;
+  dropInsertX: number | undefined;
+  dropTargetDirection: DirectionType | undefined;
   siblingInfo: { prevElement?: Element; nextElement?: Element } | null;
 }
 
@@ -157,6 +160,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
       insertY: number;
       insertX?: number;
       siblingInfo?: { prevElement?: Element; nextElement?: Element };
+      direction?: DirectionType;
     } => {
       const elemTop = element.y;
       const elemBottom = element.y + element.height;
@@ -190,6 +194,18 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
 
       // ルート要素の左側ドロップのデバッグ
       if (isRootInMindmap) {
+        console.log(`[Root calc] Element ${element.id}:`, {
+          mouseX,
+          elemLeft,
+          elemRight,
+          leftPadding: leftSidePadding,
+          rightPadding: rightSidePadding,
+          isOnLeftSide,
+          isOnRightSide,
+          leftSideInRange: isOnLeftSideInYRange,
+          rightSideInRange: isOnRightSideInYRange,
+          insideElement: isInsideElement,
+        });
         debugLog(`[Root calc] mouseX: ${mouseX}, elemLeft: ${elemLeft}, elemRight: ${elemRight}`);
         debugLog(`[Root calc] leftPadding: ${leftSidePadding}, rightPadding: ${rightSidePadding}`);
         debugLog(`[Root calc] isOnLeftSide: ${isOnLeftSide}, isOnRightSide: ${isOnRightSide}`);
@@ -214,6 +230,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
         insertY: number;
         insertX?: number;
         siblingInfo?: { prevElement?: Element; nextElement?: Element };
+        direction?: DirectionType;
       };
 
       // 要素の上にある場合は子要素として追加 (child mode)
@@ -228,6 +245,9 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
         let childDirection: DirectionType = direction;
         if (isRootInMindmap) {
           childDirection = isOnLeftSideInYRange ? 'left' : 'right';
+          debugLog(
+            `[childDirection calculation] isOnLeftSideInYRange: ${isOnLeftSideInYRange}, childDirection: ${childDirection}`,
+          );
         }
 
         if (children.length === 0) {
@@ -238,11 +258,20 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
               ? element.x - OFFSET.X - (draggingElement?.width ?? 0)
               : element.x + element.width + OFFSET.X;
 
+          console.log(`[calculatePositionAndDistance] Root ${element.id} no children:`, {
+            childDirection,
+            insertX,
+            elementX: element.x,
+            elementWidth: element.width,
+            draggingWidth: draggingElement?.width,
+          });
+
           result = {
             position: 'child', // betweenからchildに変更: 子要素として追加するため
             insertY: element.y + element.height / 2,
             insertX,
             siblingInfo: {}, // siblingInfoは保持
+            direction: childDirection,
           };
           debugLog(`Drop position mode (${childDirection} side, no children):`, 'child');
         } else {
@@ -259,8 +288,10 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
               insertY: element.y + element.height / 2,
               insertX,
               siblingInfo: {},
+              direction: childDirection,
             };
             debugLog(`Drop position mode (${childDirection} side, root with children):`, 'child');
+            debugLog(`[Root result] direction set to: ${childDirection}, insertX: ${insertX}`);
           } else {
             let prevElement: Element | undefined;
             let nextElement: Element | undefined;
@@ -307,6 +338,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
                 insertY: prevElement.y + prevElement.height + gap / 2,
                 insertX,
                 siblingInfo: { prevElement, nextElement },
+                direction: childDirection,
               };
             } else if (prevElement) {
               // 最後の子要素の後
@@ -315,6 +347,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
                 insertY: prevElement.y + prevElement.height + OFFSET.Y,
                 insertX,
                 siblingInfo: { prevElement },
+                direction: childDirection,
               };
             } else if (nextElement) {
               // 最初の子要素の前
@@ -323,6 +356,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
                 insertY: nextElement.y - OFFSET.Y,
                 insertX,
                 siblingInfo: { nextElement },
+                direction: childDirection,
               };
             } else {
               // このケースは通常発生しないはず
@@ -331,6 +365,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
                 insertY: element.y + element.height / 2,
                 insertX,
                 siblingInfo: {},
+                direction: childDirection,
               };
             }
 
@@ -345,6 +380,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
           insertY: element.y + element.height / 2,
           insertX: element.x + element.width + OFFSET.X,
           siblingInfo: {},
+          direction: element.direction || 'right', // 要素の方向を保持
         };
       } else {
         // 同じ親を持つ要素（兄弟要素）を取得
@@ -429,6 +465,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
             insertY: prevElement.y + prevElement.height + gap / 2,
             insertX,
             siblingInfo: { prevElement, nextElement },
+            direction: siblingDirection,
           };
         } else if (prevElement) {
           // 最後の要素の後
@@ -437,6 +474,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
             insertY: prevElement.y + prevElement.height + OFFSET.Y,
             insertX,
             siblingInfo: { prevElement },
+            direction: siblingDirection,
           };
         } else if (nextElement) {
           // 最初の要素の前
@@ -445,6 +483,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
             insertY: nextElement.y - OFFSET.Y,
             insertX,
             siblingInfo: { nextElement },
+            direction: siblingDirection,
           };
         } else {
           // 要素が1つしかない場合や、ドラッグ中の要素のみの場合
@@ -453,6 +492,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
             insertY: element.y + element.height + OFFSET.Y,
             insertX,
             siblingInfo: {},
+            direction: siblingDirection,
           };
         }
 
@@ -471,7 +511,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
 
       if (isRootInMindmap) {
         debugLog(
-          `[Root calc] Final result - position: ${result.position}, distanceSq: ${distanceSq}, insertY: ${result.insertY}`,
+          `[Root calc] Final result - position: ${result.position}, distanceSq: ${distanceSq}, insertY: ${result.insertY}, direction: ${result.direction}`,
         );
       }
 
@@ -751,7 +791,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
       let minSquaredDistance = Infinity;
 
       for (const element of candidates) {
-        const { position, distanceSq, insertY, insertX, siblingInfo } =
+        const { position, distanceSq, insertY, insertX, siblingInfo, direction } =
           calculatePositionAndDistance(element, mouseX, mouseY, elements);
 
         // ルート要素への左側または右側のドロップには優先度を与える
@@ -768,18 +808,23 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
             `[findDropTarget] PRIORITY: Valid root side drop detected for element ${element.id}, position: ${position}`,
           );
           // ルート要素への側面ドロップは最高優先度
-          closestTarget = { element, position, insertY, insertX, siblingInfo };
+          closestTarget = { element, position, insertY, insertX, siblingInfo, direction };
+          debugLog(
+            `[findDropTarget] Root side drop - direction: ${direction}, insertX: ${insertX}`,
+          );
           break; // ルート要素が見つかったら即座に選択
         } else if (distanceSq < minSquaredDistance) {
           minSquaredDistance = distanceSq;
-          closestTarget = { element, position, insertY, insertX, siblingInfo };
-          debugLog(`[findDropTarget] New closest: ${element.id}, distance: ${distanceSq}`);
+          closestTarget = { element, position, insertY, insertX, siblingInfo, direction };
+          debugLog(
+            `[findDropTarget] New closest: ${element.id}, distance: ${distanceSq}, direction: ${direction}`,
+          );
         }
       }
 
       if (closestTarget) {
         debugLog(
-          `[findDropTarget] Final selection: ${closestTarget.element.id}, position: ${closestTarget.position}`,
+          `[findDropTarget] Final selection: ${closestTarget.element.id}, position: ${closestTarget.position}, direction: ${closestTarget.direction}`,
         );
       } else {
         debugLog(`[findDropTarget] No drop target found`);
@@ -1314,6 +1359,12 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
               currentDropTarget.insertY !== dropTarget.insertY)));
 
       if (isTargetChanged) {
+        debugLog(`[setCurrentDropTarget] Setting drop target:`, dropTarget);
+        if (dropTarget) {
+          debugLog(
+            `[setCurrentDropTarget] Direction: ${dropTarget.direction}, InsertX: ${dropTarget.insertX}`,
+          );
+        }
         setCurrentDropTarget(dropTarget);
       }
 
@@ -1370,6 +1421,8 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
     dropPosition: currentDropTarget?.position || null,
     draggingElement,
     dropInsertY: currentDropTarget?.insertY || undefined,
+    dropInsertX: currentDropTarget?.insertX || undefined,
+    dropTargetDirection: currentDropTarget?.direction || undefined,
     siblingInfo: currentDropTarget?.siblingInfo || null,
   };
 };
