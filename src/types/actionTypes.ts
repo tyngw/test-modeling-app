@@ -58,7 +58,12 @@ export type AddElementAction =
   | { type: 'ADD_SIBLING_ELEMENT' }
   | {
       type: 'ADD_ELEMENTS_SILENT';
-      payload: { parentId?: string; texts: string[]; tentative: boolean };
+      payload: {
+        parentId?: string;
+        texts: string[];
+        tentative: boolean;
+        onError?: (message: string) => void;
+      };
     };
 
 /** 要素の削除アクション */

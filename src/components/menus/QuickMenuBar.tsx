@@ -17,6 +17,7 @@ import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import HelpOutlineOutlinedIcon from '@mui/icons-material/HelpOutlineOutlined';
 import SettingsIcon from '@mui/icons-material/Settings';
+import CircularProgress from '@mui/material/CircularProgress';
 
 import { ICONBAR_HEIGHT } from '../../config/elementSettings';
 import { useCanvas } from '../../context/CanvasContext';
@@ -38,6 +39,7 @@ interface QuickMenuBarProps {
   toggleHelp: () => void;
   toggleSettings: () => void;
   onAIClick: () => void;
+  isAILoading?: boolean;
 }
 
 type CanvasActionType =
@@ -57,6 +59,7 @@ const QuickMenuBar = ({
   toggleHelp,
   toggleSettings,
   onAIClick,
+  isAILoading,
 }: QuickMenuBarProps) => {
   const { dispatch } = useCanvas();
   const { addTab } = useTabs();
@@ -170,10 +173,20 @@ const QuickMenuBar = ({
             iconColor={theme.MENU_BAR.ICON_COLOR}
           />
           <IconButton
-            tooltip={tooltipTexts.AI}
-            onClick={onAIClick}
-            icon={AutoFixOffIcon}
+            tooltip={isAILoading ? 'AI生成中...' : tooltipTexts.AI}
+            onClick={isAILoading ? undefined : onAIClick}
+            icon={isAILoading ? undefined : AutoFixOffIcon}
             iconColor={theme.MENU_BAR.ICON_COLOR}
+            disabled={isAILoading}
+            customContent={
+              isAILoading ? (
+                <CircularProgress
+                  size={20}
+                  thickness={4}
+                  sx={{ color: theme.MENU_BAR.ICON_COLOR }}
+                />
+              ) : undefined
+            }
           />
           <IconButton
             tooltip={tooltipTexts.EXPAND}

@@ -33,24 +33,22 @@ export const MarkerMenu: React.FC<MarkerMenuProps> = ({
   ];
 
   return (
-    <foreignObject x={popupX} y={popupY} width={150} height={270} className="popup-menu">
+    <foreignObject x={popupX} y={popupY} width={150} height={260} className="popup-menu">
       <div
         className="popup-menu"
         style={{
-          position: 'absolute',
-          left: `${popupX}px`,
-          top: `${popupY}px`,
           backgroundColor: 'white',
           border: '1px solid #ccc',
           borderRadius: '4px',
-          padding: '10px',
+          padding: '8px',
           boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
-          zIndex: 1000,
           display: 'flex',
           flexDirection: 'column',
-          width: '150px',
-          maxHeight: '300px',
+          width: '100%',
+          height: '100%',
+          boxSizing: 'border-box',
           overflowY: 'auto',
+          zIndex: 1000,
         }}
         data-exclude-from-export="true"
       >

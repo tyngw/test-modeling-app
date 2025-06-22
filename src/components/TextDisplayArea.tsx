@@ -30,6 +30,7 @@ interface TextDisplayAreaProps {
   onElementClick?: (event: React.MouseEvent) => void;
   onMouseDown?: (event: React.MouseEvent) => void; // マウスダウンイベント用
   onTouchStart?: (event: React.TouchEvent) => void; // タッチスタートイベント用
+  onDoubleClick?: (event: React.MouseEvent) => void; // ダブルクリックイベント用
   isSelected?: boolean; // 要素が選択状態かどうか
 }
 
@@ -46,6 +47,7 @@ const TextDisplayArea = memo<TextDisplayAreaProps>(function TextDisplayArea({
   onElementClick,
   onMouseDown,
   onTouchStart,
+  onDoubleClick,
   isSelected = false,
 }) {
   const [dimensions, setDimensions] = useState({
@@ -363,6 +365,7 @@ const TextDisplayArea = memo<TextDisplayAreaProps>(function TextDisplayArea({
             touchAction: 'manipulation',
           }}
           onClick={handleTextClick}
+          onDoubleClick={onDoubleClick}
           onMouseDown={onMouseDown}
           onTouchStart={onTouchStart}
           onTouchEnd={handleTouchEnd}

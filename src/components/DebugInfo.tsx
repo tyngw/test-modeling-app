@@ -96,11 +96,6 @@ const DebugInfo: React.FC<DebugInfoProps> = ({
               <td>{element.depth}</td>
             </tr>
             <tr>
-              <td>order</td>
-              <td>:</td>
-              <td>{element.order}</td>
-            </tr>
-            <tr>
               <td>children</td>
               <td>:</td>
               <td>{element.children}</td>
@@ -186,18 +181,14 @@ const DebugInfo: React.FC<DebugInfoProps> = ({
                   <tr>
                     <td>prev</td>
                     <td>:</td>
-                    <td>
-                      {siblingInfo.prevElement.id} (order: {siblingInfo.prevElement.order})
-                    </td>
+                    <td>{siblingInfo.prevElement.id}</td>
                   </tr>
                 )}
                 {siblingInfo.nextElement && (
                   <tr>
                     <td>next</td>
                     <td>:</td>
-                    <td>
-                      {siblingInfo.nextElement.id} (order: {siblingInfo.nextElement.order})
-                    </td>
+                    <td>{siblingInfo.nextElement.id}</td>
                   </tr>
                 )}
               </>

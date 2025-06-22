@@ -39,6 +39,7 @@ interface AppLayoutProps {
 
   // AI機能
   handleAIClick: () => void;
+  isAILoading?: boolean;
 }
 
 /**
@@ -73,6 +74,7 @@ export function AppLayout({
 
   // AI機能
   handleAIClick,
+  isAILoading,
 }: AppLayoutProps) {
   const memoizedCanvasProvider = useMemo(() => {
     if (!currentTab) return null;
@@ -96,6 +98,7 @@ export function AppLayout({
           toggleHelp={toggleHelp}
           toggleSettings={toggleSettings}
           onAIClick={handleAIClick}
+          isAILoading={isAILoading}
         />
 
         <UnsaveConfirmModal

@@ -5,6 +5,7 @@ import { getMarkerType } from '../storage/localStorageHelpers';
 import { SIZE, NUMBER_OF_SECTIONS } from '../../config/elementSettings';
 import { debugLog } from '../debugLogHelpers';
 import { ElementsMap } from '../../types/elementTypes';
+import { HierarchicalStructure } from '../../types/hierarchicalTypes';
 
 /**
  * 新規要素作成のパラメータ
@@ -12,7 +13,6 @@ import { ElementsMap } from '../../types/elementTypes';
  */
 export interface NewElementParams {
   parentId?: string | null;
-  order?: number;
   depth?: number;
   numSections?: number;
   direction?: DirectionType;
@@ -20,7 +20,6 @@ export interface NewElementParams {
 
 export const createNewElement = ({
   parentId = null,
-  order = 0,
   depth = 1,
   numSections = NUMBER_OF_SECTIONS,
   direction = parentId === null ? 'none' : 'right',
@@ -36,7 +35,6 @@ export const createNewElement = ({
     height: SIZE.SECTION_HEIGHT * numSections,
     sectionHeights: Array(numSections).fill(SIZE.SECTION_HEIGHT),
     parentId,
-    order,
     depth,
     children: 0,
     editing: true,
@@ -50,9 +48,11 @@ export const createNewElement = ({
 };
 
 export const getChildren = (parentId: string | null, elements: ElementsMap): Element[] => {
+  // 階層構造の順序を保持するため、Y座標でソート
+  // これにより moveElementInHierarchy で設定された配列順序が反映される
   return Object.values(elements)
     .filter((e) => e.parentId === parentId && e.visible)
-    .sort((a, b) => a.order - b.order);
+    .sort((a, b) => a.y - b.y); // Y座標でソートして配列の順序を反映
 };
 
 export const setDepthRecursive = (elements: ElementsMap, parentElement: Element): ElementsMap => {
@@ -116,9 +116,7 @@ export const deleteElementRecursive = (
 ): ElementsMap => {
   if (deleteElement.parentId === null) return elements;
 
-  debugLog(
-    `deleteElementRecursive: 削除開始 id=${deleteElement.id}, order=${deleteElement.order}, y=${deleteElement.y}`,
-  );
+  debugLog(`deleteElementRecursive: 削除開始 id=${deleteElement.id}, y=${deleteElement.y}`);
 
   const updatedElements = { ...elements };
   const parent = updatedElements[deleteElement.parentId];
@@ -126,7 +124,6 @@ export const deleteElementRecursive = (
 
   // 削除要素の位置情報を記録（後で兄弟要素の位置を調整するため）
   const deletedElementPosition = {
-    order: deleteElement.order,
     y: deleteElement.y,
     height: deleteElement.height,
   };
@@ -152,24 +149,12 @@ export const deleteElementRecursive = (
   };
   debugLog(`親要素を更新: id=${parent.id}, children=${parent.children - 1}, y=${parent.y}`);
 
-  // 同じparentIdを持つ要素のorderを再計算
+  // 同じparentIdを持つ要素をIDでソート（階層構造では配列の順序で管理）
   const siblings = Object.values(updatedElements)
     .filter((n) => n.parentId === parent.id)
-    .sort((a, b) => a.order - b.order);
+    .sort((a, b) => a.id.localeCompare(b.id));
 
   debugLog(`兄弟要素の数: ${siblings.length}`);
-  // まずorderを更新
-  siblings.forEach((sibling, index) => {
-    if (sibling.order !== index) {
-      debugLog(
-        `  兄弟要素のorder更新: id=${sibling.id}, old=${sibling.order}, new=${index}, y=${sibling.y}`,
-      );
-      updatedElements[sibling.id] = {
-        ...sibling,
-        order: index,
-      };
-    }
-  });
 
   return updatedElements;
 };
@@ -231,4 +216,58 @@ export const formatElementsForPrompt = (
   };
 
   return buildTree(null, 0).join('\n');
+};
+
+/**
+ * 階層構造から正しい順序で子要素を取得
+ * @param parentId 親要素のID
+ * @param hierarchicalData 階層構造データ
+ * @param elements 要素マップ（フォールバック用）
+ * @returns 正しい順序の子要素配列
+ */
+export const getChildrenFromHierarchy = (
+  parentId: string | null,
+  hierarchicalData: HierarchicalStructure | null,
+  elements: ElementsMap,
+): Element[] => {
+  if (!hierarchicalData) {
+    // 階層データがない場合はフォールバック（IDでソート）
+    return Object.values(elements)
+      .filter((e) => e.parentId === parentId && e.visible)
+      .sort((a, b) => a.id.localeCompare(b.id));
+  }
+
+  /**
+   * ノードを再帰的に検索して子要素を配列順序で取得
+   */
+  const findNodeAndGetChildren = (node: any, targetParentId: string | null): Element[] => {
+    if (node.data.id === targetParentId) {
+      // 目的の親ノードを発見、その子要素を配列の順序通りに返す
+      if (node.children && node.children.length > 0) {
+        return node.children
+          .map((child: any) => child.data)
+          .filter((element: Element) => element.visible);
+      }
+      return [];
+    }
+
+    // 子ノードを再帰的に検索
+    if (node.children && node.children.length > 0) {
+      for (const child of node.children) {
+        const result = findNodeAndGetChildren(child, targetParentId);
+        if (result.length > 0 || child.data.id === targetParentId) {
+          return result;
+        }
+      }
+    }
+
+    return [];
+  };
+
+  if (parentId === null) {
+    // ルート要素の場合
+    return [hierarchicalData.root.data].filter((element) => element.visible);
+  }
+
+  return findNodeAndGetChildren(hierarchicalData.root, parentId);
 };

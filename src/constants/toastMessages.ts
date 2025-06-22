@@ -11,6 +11,7 @@ export const ToastMessages = {
   aiError: 'AI処理に失敗しました',
   noApiKey: 'APIキーが設定されていません',
   noPrompt: '入力情報(プロンプト)が設定されていません',
+  aiNoResults: '該当する結果が0件でした',
   loadError: 'ファイルの読み込みに失敗しました',
   saveError: 'ファイルの保存に失敗しました',
   clipboardEmpty: 'クリップボードにテキストがありません',

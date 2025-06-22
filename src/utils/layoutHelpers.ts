@@ -1,7 +1,7 @@
 import { Element } from '../types/types';
 import { OFFSET, DEFAULT_POSITION, SIZE } from '../config/elementSettings';
 import { debugLog } from './debugLogHelpers';
-import { getChildren } from './element/elementHelpers';
+import { getChildren, getChildrenFromHierarchy } from './element/elementHelpers';
 import { LayoutMode } from '../types/tabTypes';
 
 type ElementsMap = { [key: string]: Element };
@@ -13,6 +13,7 @@ const layoutNode = (
   depth: number,
   getNumberOfSections: () => number,
   layoutMode: LayoutMode = 'default',
+  hierarchicalData: any = null,
 ): { newY: number; leftMaxY?: number; rightMaxY?: number } => {
   debugLog(`[layoutNode]「${node.texts}」 id=${node.id}, depth=${depth}, startY=${startY} ---`);
 
@@ -45,7 +46,10 @@ const layoutNode = (
     }
   }
 
-  const children = getChildren(node.id, elements).sort((a, b) => a.order - b.order);
+  // 階層構造から配列順序で子要素を取得
+  const children = hierarchicalData
+    ? getChildrenFromHierarchy(node.id, hierarchicalData, elements)
+    : getChildren(node.id, elements); // フォールバック
   debugLog(`children=${children.length}`);
   let currentY = startY;
   let maxChildBottom = startY;
@@ -74,6 +78,7 @@ const layoutNode = (
           depth + 1,
           getNumberOfSections,
           layoutMode,
+          hierarchicalData,
         );
         leftCurrentY = result.newY + OFFSET.Y;
         leftMaxY = Math.max(leftMaxY, result.newY);
@@ -88,6 +93,7 @@ const layoutNode = (
           depth + 1,
           getNumberOfSections,
           layoutMode,
+          hierarchicalData,
         );
         rightCurrentY = result.newY + OFFSET.Y;
         rightMaxY = Math.max(rightMaxY, result.newY);
@@ -117,6 +123,7 @@ const layoutNode = (
           depth + 1,
           getNumberOfSections,
           layoutMode,
+          hierarchicalData,
         );
         currentY = result.newY + OFFSET.Y;
         maxChildBottom = Math.max(maxChildBottom, result.newY);
@@ -150,13 +157,18 @@ export const adjustElementPositions = (
   layoutMode: LayoutMode = 'default',
   canvasWidth = 0,
   canvasHeight = 0,
+  hierarchicalData: any = null,
 ): ElementsMap => {
   debugLog(
     `adjustElementPositions開始: 要素数=${Object.keys(elements).length}, モード=${layoutMode}`,
   );
 
   const updatedElements = { ...elements };
-  const rootElements = getChildren(null, updatedElements).sort((a, b) => a.order - b.order);
+
+  // 階層構造から配列順序でルート要素を取得
+  const rootElements = hierarchicalData
+    ? getChildrenFromHierarchy(null, hierarchicalData, updatedElements)
+    : getChildren(null, updatedElements).sort((a, b) => a.id.localeCompare(b.id)); // フォールバック
 
   let currentY = DEFAULT_POSITION.Y;
 
@@ -183,6 +195,7 @@ export const adjustElementPositions = (
       0,
       getNumberOfSections,
       layoutMode,
+      hierarchicalData,
     );
     currentY = result.newY + OFFSET.Y;
   } else {
@@ -195,6 +208,7 @@ export const adjustElementPositions = (
         0,
         getNumberOfSections,
         layoutMode,
+        hierarchicalData,
       );
       currentY = result.newY + OFFSET.Y;
     }

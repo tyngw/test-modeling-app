@@ -52,12 +52,13 @@ const SYSTEM_PROMPT_KEY = 'systemPromptTemplate';
 const APIKEY_KEY = 'apiKey';
 const MODEL_TYPE_KEY = 'modelType';
 const CUT_ELEMENTS_KEY = 'cutElements';
+const COPIED_ELEMENTS_KEY = 'copiedElements';
 
 const MODEL_ENDPOINTS: { [key: string]: string } = {
-  'gemini-1.5-flash':
-    'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
   'gemini-2.0-flash':
     'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+  'gemini-2.5-flash':
+    'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
 };
 
 // CryptoJS動的ローダー
@@ -364,15 +365,24 @@ export const setSystemPromptTemplate = (value: string): void =>
   setSetting(SYSTEM_PROMPT_KEY, value);
 
 // モデルタイプ関連
-export const getModelType = (): string =>
-  getSetting(MODEL_TYPE_KEY, Object.keys(MODEL_ENDPOINTS)[0]);
+export const getModelType = (): string => {
+  const currentModel = getSetting(MODEL_TYPE_KEY, Object.keys(MODEL_ENDPOINTS)[0]);
+
+  // gemini-1.5-flashが設定されている場合はgemini-2.0-flashに自動移行
+  if (currentModel === 'gemini-1.5-flash') {
+    setModelType('gemini-2.0-flash');
+    return 'gemini-2.0-flash';
+  }
+
+  return currentModel;
+};
 
 export const setModelType = (value: string): void => setSetting(MODEL_TYPE_KEY, value);
 
 // エンドポイント取得
 export const getApiEndpoint = (): string => {
   const modelType = getModelType();
-  return MODEL_ENDPOINTS[modelType] || MODEL_ENDPOINTS['gemini-1.5-flash'];
+  return MODEL_ENDPOINTS[modelType] || MODEL_ENDPOINTS['gemini-2.0-flash'];
 };
 
 // Cut Elements 関連
@@ -380,6 +390,12 @@ export const getCutElements = (): string | null => safeLocalStorage.getItem(CUT_
 
 export const setCutElements = (value: string): void =>
   safeLocalStorage.setItem(CUT_ELEMENTS_KEY, value);
+
+// Copied Elements 関連
+export const getCopiedElements = (): string | null => safeLocalStorage.getItem(COPIED_ELEMENTS_KEY);
+
+export const setCopiedElements = (value: string): void =>
+  safeLocalStorage.setItem(COPIED_ELEMENTS_KEY, value);
 
 // タブの状態関連
 export const getTabsState = (): string | null => safeLocalStorage.getItem(TABS_STORAGE_KEY);

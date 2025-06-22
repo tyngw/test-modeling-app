@@ -11,6 +11,16 @@ import {
 } from '../../config/elementSettings';
 import { sanitizeObject, sanitizeFilename } from '../security/sanitization';
 import { validateJsonData, validateFileContent } from '../security/validation';
+import {
+  isHierarchicalStructure,
+  isFlatStructure,
+  isLegacyArrayFormat,
+  isLegacyMapFormat,
+} from '../../types/hierarchicalTypes';
+import {
+  convertHierarchicalToFlat,
+  convertArrayToHierarchical,
+} from '../hierarchical/hierarchicalConverter';
 
 /**
  * 古いバージョンの要素データ形式を表す型
@@ -80,7 +90,6 @@ export const convertLegacyElement = (element: unknown): Element => {
       width: element.width !== undefined ? Number(element.width) : base.width,
       height: element.height !== undefined ? Number(element.height) : base.height,
       parentId: element.parentId !== undefined ? element.parentId : base.parentId,
-      order: element.order !== undefined ? Number(element.order) : base.order,
       depth: element.depth !== undefined ? Number(element.depth) : base.depth,
       children: element.children !== undefined ? Number(element.children) : base.children,
       editing: element.editing !== undefined ? Boolean(element.editing) : base.editing,
@@ -130,7 +139,6 @@ export const convertLegacyElement = (element: unknown): Element => {
     width: element.width !== undefined ? Number(element.width) : base.width,
     height: element.height !== undefined ? Number(element.height) : base.height,
     parentId: element.parentId !== undefined ? element.parentId : base.parentId,
-    order: element.order !== undefined ? Number(element.order) : base.order,
     depth: element.depth !== undefined ? Number(element.depth) : base.depth,
     children: element.children !== undefined ? Number(element.children) : base.children,
     editing: element.editing !== undefined ? Boolean(element.editing) : base.editing,
@@ -164,7 +172,7 @@ export const convertLegacyElement = (element: unknown): Element => {
   return converted;
 };
 
-// ファイル読み込み処理を修正
+// ファイル読み込み処理を階層構造対応に修正
 export const loadElements = (
   event: Event,
 ): Promise<{ elements: Record<string, Element>; fileName: string }> => {
@@ -207,56 +215,131 @@ export const loadElements = (
         // データをサニタイズ
         const sanitizedData = sanitizeObject(parsedData);
 
-        let rawElements: any[] = [];
+        let elementsMap: Record<string, Element> = {};
 
-        // データ形式の判定
-        if (Array.isArray(sanitizedData)) {
-          // 配列形式（新形式）
-          rawElements = sanitizedData;
-        } else if (typeof sanitizedData === 'object' && sanitizedData !== null) {
-          // オブジェクト形式（旧形式または状態全体）
-          rawElements =
-            'elements' in sanitizedData
-              ? Object.values(sanitizedData.elements) // 状態全体が保存されていた場合
-              : Object.values(sanitizedData); // 要素だけが保存されていた場合
+        // データ構造の判定と変換
+
+        if (isHierarchicalStructure(sanitizedData)) {
+          // 新しい階層構造の場合
+          elementsMap = convertHierarchicalToFlat(sanitizedData);
+        } else if (isFlatStructure(sanitizedData)) {
+          // フラット構造（バージョン付き）の場合
+          const rawElements = sanitizedData.elements;
+
+          // IDが欠けている要素をフィルタリング
+          const validRawElements = rawElements.filter((elem) => {
+            if (!elem.id && !Object.prototype.hasOwnProperty.call(elem, 'id')) {
+              console.warn('IDが欠けている要素を削除します');
+              return false;
+            }
+            return true;
+          });
+
+          // 要素を変換
+          const convertedElements = validRawElements.map((elem) => convertLegacyElement(elem));
+
+          // 有効なIDのセットを作成
+          const validIds = new Set(convertedElements.map((elem) => elem.id));
+
+          // 存在しないparentIdを参照している要素をフィルタリング
+          const validElements = convertedElements.filter((elem) => {
+            if (elem.parentId && !validIds.has(elem.parentId)) {
+              console.warn(
+                `存在しないparentId "${elem.parentId}" を参照している要素 "${elem.id}" を削除します`,
+              );
+              return false;
+            }
+            return true;
+          });
+
+          // 要素をIDをキーとしたオブジェクトに変換
+          elementsMap = validElements.reduce(
+            (acc, element) => {
+              acc[element.id] = element;
+              return acc;
+            },
+            {} as Record<string, Element>,
+          );
+        } else if (isLegacyArrayFormat(sanitizedData)) {
+          // レガシー配列形式の場合
+          const rawElements = sanitizedData;
+
+          // IDが欠けている要素をフィルタリング
+          const validRawElements = rawElements.filter((elem) => {
+            if (!elem.id && !Object.prototype.hasOwnProperty.call(elem, 'id')) {
+              console.warn('IDが欠けている要素を削除します');
+              return false;
+            }
+            return true;
+          });
+
+          // 要素を変換
+          const convertedElements = validRawElements.map((elem) => convertLegacyElement(elem));
+
+          // 有効なIDのセットを作成
+          const validIds = new Set(convertedElements.map((elem) => elem.id));
+
+          // 存在しないparentIdを参照している要素をフィルタリング
+          const validElements = convertedElements.filter((elem) => {
+            if (elem.parentId && !validIds.has(elem.parentId)) {
+              console.warn(
+                `存在しないparentId "${elem.parentId}" を参照している要素 "${elem.id}" を削除します`,
+              );
+              return false;
+            }
+            return true;
+          });
+
+          // 要素をIDをキーとしたオブジェクトに変換
+          elementsMap = validElements.reduce(
+            (acc, element) => {
+              acc[element.id] = element;
+              return acc;
+            },
+            {} as Record<string, Element>,
+          );
+        } else if (isLegacyMapFormat(sanitizedData)) {
+          // レガシーマップ形式の場合
+          const rawElements = Object.values(sanitizedData);
+
+          // IDが欠けている要素をフィルタリング
+          const validRawElements = rawElements.filter((elem) => {
+            if (!elem.id && !Object.prototype.hasOwnProperty.call(elem, 'id')) {
+              console.warn('IDが欠けている要素を削除します');
+              return false;
+            }
+            return true;
+          });
+
+          // 要素を変換
+          const convertedElements = validRawElements.map((elem) => convertLegacyElement(elem));
+
+          // 有効なIDのセットを作成
+          const validIds = new Set(convertedElements.map((elem) => elem.id));
+
+          // 存在しないparentIdを参照している要素をフィルタリング
+          const validElements = convertedElements.filter((elem) => {
+            if (elem.parentId && !validIds.has(elem.parentId)) {
+              console.warn(
+                `存在しないparentId "${elem.parentId}" を参照している要素 "${elem.id}" を削除します`,
+              );
+              return false;
+            }
+            return true;
+          });
+
+          // 要素をIDをキーとしたオブジェクトに変換
+          elementsMap = validElements.reduce(
+            (acc, element) => {
+              acc[element.id] = element;
+              return acc;
+            },
+            {} as Record<string, Element>,
+          );
         } else {
-          throw new Error('Invalid data format');
+          console.error('認識できないデータ形式です');
+          throw new Error('認識できないデータ形式です');
         }
-
-        // IDが欠けている要素をフィルタリング
-        const validRawElements = rawElements.filter((elem) => {
-          if (!elem.id && !Object.prototype.hasOwnProperty.call(elem, 'id')) {
-            console.warn('IDが欠けている要素を削除します');
-            return false;
-          }
-          return true;
-        });
-
-        // 要素を変換
-        const convertedElements = validRawElements.map((elem) => convertLegacyElement(elem));
-
-        // 有効なIDのセットを作成
-        const validIds = new Set(convertedElements.map((elem) => elem.id));
-
-        // 存在しないparentIdを参照している要素をフィルタリング
-        const validElements = convertedElements.filter((elem) => {
-          if (elem.parentId && !validIds.has(elem.parentId)) {
-            console.warn(
-              `存在しないparentId "${elem.parentId}" を参照している要素 "${elem.id}" を削除します`,
-            );
-            return false;
-          }
-          return true;
-        });
-
-        // 要素をIDをキーとしたオブジェクトに変換
-        const elementsMap = validElements.reduce(
-          (acc, element) => {
-            acc[element.id] = element;
-            return acc;
-          },
-          {} as Record<string, Element>,
-        );
 
         resolve({ elements: elementsMap, fileName: file.name });
       } catch (error) {
@@ -436,13 +519,33 @@ export const saveElements = (elements: Element[], fileName: string) => {
   // ファイル名を決定
   const name = determineFileName(fileName, rootElementText);
 
-  const elementsToSave = elements.map((element) => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { x, y, ...elementWithoutXY } = element;
-    return elementWithoutXY;
-  });
+  // Element配列を階層構造に変換
+  const hierarchicalData = convertArrayToHierarchical(elements);
 
-  const json = JSON.stringify(elementsToSave);
+  if (!hierarchicalData) {
+    console.error('階層構造への変換に失敗しました');
+    // フォールバック: 元の配列形式で保存
+    const elementsToSave = elements.map((element) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { x, y, ...elementWithoutXY } = element;
+      return elementWithoutXY;
+    });
+
+    const json = JSON.stringify(elementsToSave);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    const downloadLink = document.createElement('a');
+    downloadLink.href = url;
+    downloadLink.download = `${name}.json`;
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+    return;
+  }
+
+  // 階層構造形式で保存
+  const json = JSON.stringify(hierarchicalData, null, 2);
   const blob = new Blob([json], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
 
@@ -452,4 +555,15 @@ export const saveElements = (elements: Element[], fileName: string) => {
   document.body.appendChild(downloadLink);
   downloadLink.click();
   document.body.removeChild(downloadLink);
+  URL.revokeObjectURL(url);
+};
+
+/**
+ * ElementsMapから階層構造形式で保存する関数
+ * @param elementsMap 要素マップ
+ * @param fileName ファイル名
+ */
+export const saveElementsMap = (elementsMap: Record<string, Element>, fileName: string) => {
+  const elements = Object.values(elementsMap);
+  saveElements(elements, fileName);
 };

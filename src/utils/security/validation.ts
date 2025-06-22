@@ -83,7 +83,7 @@ export function validateTextInput(text: string, maxLength = 10000): boolean {
  * @param data - 検証するJSONデータ
  * @returns データが安全な場合はtrue
  */
-export function validateJsonData(data: any): boolean {
+export function validateJsonData(data: unknown): boolean {
   // 文字列の場合はJSONとしてパースを試みる
   if (typeof data === 'string') {
     if (data.trim().length === 0) {
@@ -110,7 +110,7 @@ export function validateJsonData(data: any): boolean {
 
   // 深すぎるネストを防ぐ
   const maxDepth = 10;
-  function checkDepth(obj: any, depth = 0): boolean {
+  function checkDepth(obj: unknown, depth = 0): boolean {
     if (depth > maxDepth) {
       return false;
     }
@@ -184,7 +184,7 @@ export function validateFileContent(content: string, maxSize: number = 1024 * 10
  * @param value - 設定値
  * @returns 設定が有効な場合はtrue
  */
-export function validateSettingValue(key: string, value: any): boolean {
+export function validateSettingValue(key: string, value: unknown): boolean {
   if (typeof key !== 'string' || key.trim().length === 0) {
     return false;
   }
@@ -199,6 +199,21 @@ export function validateSettingValue(key: string, value: any): boolean {
     'maxHistory',
     'showLineNumbers',
     'wordWrap',
+    'prompt',
+    'systemPromptTemplate',
+    'modelType',
+    'layoutMode',
+    'numberOfSections',
+    'markerType',
+    'canvasBackgroundColor',
+    'elementColor',
+    'textColor',
+    'strokeColor',
+    'selectedStrokeColor',
+    'strokeWidth',
+    'connectionPathColor',
+    'connectionPathStroke',
+    'fontFamily',
   ];
 
   if (!allowedKeys.includes(key)) {
@@ -208,13 +223,13 @@ export function validateSettingValue(key: string, value: any): boolean {
   // キーごとの値検証
   switch (key) {
     case 'apiKey':
-      return validateApiKey(value);
+      return typeof value === 'string' && validateApiKey(value);
 
     case 'theme':
-      return ['light', 'dark', 'auto'].includes(value);
+      return typeof value === 'string' && ['light', 'dark', 'auto'].includes(value);
 
     case 'language':
-      return ['ja', 'en'].includes(value);
+      return typeof value === 'string' && ['ja', 'en'].includes(value);
 
     case 'autoSave':
       return typeof value === 'boolean';
@@ -228,6 +243,49 @@ export function validateSettingValue(key: string, value: any): boolean {
     case 'showLineNumbers':
     case 'wordWrap':
       return typeof value === 'boolean';
+
+    case 'prompt':
+    case 'systemPromptTemplate':
+      // プロンプトフィールドは空文字列も許可
+      return typeof value === 'string' && (value === '' || validateTextInput(value, 50000));
+
+    case 'modelType':
+      return typeof value === 'string' && ['gemini-2.0-flash', 'gemini-2.5-flash'].includes(value);
+
+    case 'layoutMode':
+      return typeof value === 'string' && ['default', 'mindmap'].includes(value);
+
+    case 'numberOfSections': {
+      const numSections = typeof value === 'string' ? parseInt(value, 10) : value;
+      return (
+        typeof numSections === 'number' &&
+        !isNaN(numSections) &&
+        numSections >= 1 &&
+        numSections <= 10
+      );
+    }
+
+    case 'markerType':
+      return typeof value === 'string' && value.length <= 50;
+
+    case 'canvasBackgroundColor':
+    case 'elementColor':
+    case 'textColor':
+    case 'strokeColor':
+    case 'selectedStrokeColor':
+    case 'connectionPathColor':
+      return typeof value === 'string' && (/^#[0-9A-Fa-f]{6}$/.test(value) || value === '');
+
+    case 'strokeWidth':
+    case 'connectionPathStroke': {
+      const numStroke = typeof value === 'string' ? parseFloat(value) : value;
+      return (
+        typeof numStroke === 'number' && !isNaN(numStroke) && numStroke >= 0 && numStroke <= 20
+      );
+    }
+
+    case 'fontFamily':
+      return typeof value === 'string' && value.length <= 100;
 
     default:
       return false;
