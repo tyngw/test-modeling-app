@@ -12,6 +12,7 @@ interface CalculateDropCoordinatesParams {
   draggingElement: CanvasElement;
   dropPosition: DropPosition;
   dropInsertY: number | undefined | null;
+  dropInsertX?: number; // 追加: ドロップ時のX座標
   siblingInfo: {
     prevElement?: CanvasElement;
     nextElement?: CanvasElement;
@@ -27,6 +28,7 @@ export const calculateDropCoordinates = ({
   draggingElement,
   dropPosition,
   dropInsertY,
+  dropInsertX,
   siblingInfo,
 }: CalculateDropCoordinatesParams): DropCoordinates | null => {
   let x, y;
@@ -53,7 +55,11 @@ export const calculateDropCoordinates = ({
 
   if (dropPosition === 'child') {
     // 子要素として追加する場合
-    if (direction === 'left' || (isRootInMindmap && childDirection === 'left')) {
+
+    // dropInsertXが指定されている場合はそれを使用（ルート要素の左右判定に基づく）
+    if (dropInsertX !== undefined) {
+      x = dropInsertX;
+    } else if (direction === 'left' || (isRootInMindmap && childDirection === 'left')) {
       // 左方向の場合
       x = currentDropTarget.x - OFFSET.X - draggingElement.width;
     } else {

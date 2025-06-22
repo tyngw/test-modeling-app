@@ -936,9 +936,6 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
 
       // 全要素に対して移動処理
       selectedElements.forEach((element, index) => {
-        // childモードの場合、新しい親の深さ+1を設定
-        const newDepth = target.depth + 1;
-
         // 方向の計算
         let newDirection: DirectionType | undefined = undefined;
         const isTargetRoot = target.direction === 'none' && target.parentId === null;
@@ -961,10 +958,8 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
           type: 'DROP_ELEMENT',
           payload: {
             id: element.id,
-            oldParentId: element.parentId,
             newParentId: target.id,
             newOrder: target.children + index,
-            depth: newDepth,
             direction: newDirection,
           },
         });
@@ -1055,15 +1050,12 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
         );
       }
 
-      // 順序を調整しながら一括移動
+      // 全要素に対して移動処理
       // 複数要素をドロップする場合、挿入による配列変化を考慮して逆順で処理
       // 逆順で処理することで、後の要素の挿入位置が前の要素の挿入により影響を受けない
       const elementsToProcess = [...selectedElements].reverse();
 
       elementsToProcess.forEach((element, _index) => {
-        // 新しい親が元の要素の場合は深さを1レベル深くする、それ以外は対象要素と同じ深さにする
-        const newDepth = newParentId === target.id ? target.depth + 1 : target.depth;
-
         // 方向の計算
         let newDirection: DirectionType | undefined = undefined;
 
@@ -1128,10 +1120,8 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
           type: 'DROP_ELEMENT',
           payload: {
             id: element.id,
-            oldParentId: element.parentId,
             newParentId,
             newOrder: finalOrder,
-            depth: newDepth,
             direction: newDirection,
           },
         });

@@ -8,7 +8,7 @@ import {
   handleArrowRight,
   handleArrowLeft,
 } from '../utils/elementSelector';
-import { Element, MarkerType } from '../types/types';
+import { Element, MarkerType, DirectionType } from '../types/types';
 import {
   DEFAULT_POSITION,
   NUMBER_OF_SECTIONS,
@@ -79,6 +79,7 @@ interface DropElementPayload {
   id: string;
   newParentId: string | null;
   newOrder: number;
+  direction?: DirectionType;
 }
 
 interface AddElementPayload {
@@ -145,10 +146,11 @@ const isDropElementPayload = (payload: unknown): payload is DropElementPayload =
     payload !== null &&
     'id' in payload &&
     'newOrder' in payload &&
-    'depth' in payload &&
     typeof (payload as any).id === 'string' &&
     typeof (payload as any).newOrder === 'number' &&
-    typeof (payload as any).depth === 'number'
+    // direction は省略可能なので存在チェックのみ
+    (('direction' in payload && typeof (payload as any).direction === 'string') ||
+      !('direction' in payload))
   );
 };
 
@@ -840,6 +842,7 @@ const actionHandlers: Record<string, ActionHandler> = {
       const newElement: Element = {
         ...createNewElement({
           numSections: state.numberOfSections,
+          direction: selectedElement.direction === 'none' ? 'right' : selectedElement.direction, // 親のdirectionを継承
         }),
         id: Date.now().toString(), // 簡易的なID生成
         parentId: selectedElement.id,
@@ -997,6 +1000,8 @@ const actionHandlers: Record<string, ActionHandler> = {
         const newElement: Element = {
           ...createNewElement({
             numSections: state.numberOfSections,
+            direction:
+              safeTargetElement.direction === 'none' ? 'right' : safeTargetElement.direction, // 親のdirectionを継承
           }),
           id: (Date.now() + i).toString(),
           parentId: safeTargetElement.id,
@@ -1056,6 +1061,7 @@ const actionHandlers: Record<string, ActionHandler> = {
     const newElement: Element = {
       ...createNewElement({
         numSections: state.numberOfSections,
+        direction: selectedElement.direction, // 選択された要素のdirectionを継承
       }),
       id: Date.now().toString(),
       parentId: selectedElement.parentId,
@@ -1277,7 +1283,7 @@ const actionHandlers: Record<string, ActionHandler> = {
   DROP_ELEMENT: createSafeHandler(
     isDropElementPayload,
     (state: State, payload: DropElementPayload) => {
-      const { id, newParentId, newOrder } = payload;
+      const { id, newParentId, newOrder, direction } = payload;
 
       // 基本的な妥当性チェック
       if (!state.elementsCache[id] || !state.hierarchicalData) {
@@ -1297,6 +1303,15 @@ const actionHandlers: Record<string, ActionHandler> = {
       }
 
       const result = moveElementInHierarchy(state.hierarchicalData, id, newParentId, newOrder);
+
+      // direction の更新を適用
+      if (direction !== undefined && result.elementsCache[id]) {
+        result.elementsCache[id] = {
+          ...result.elementsCache[id],
+          direction,
+        };
+        debugLog(`Element ${id} direction updated to: ${direction}`);
+      }
 
       // 位置調整を行う
       const adjustedElementsCache = adjustElementPositions(
@@ -1386,11 +1401,22 @@ const actionHandlers: Record<string, ActionHandler> = {
     let currentHierarchy = state.hierarchicalData;
 
     Object.values(elementsToAdd).forEach((element, index) => {
+      // directionを適切に設定
+      let newDirection = element.direction;
+      if (selectedElement.direction === 'none') {
+        // ルート要素の子の場合は、元の要素のdirectionが'none'でなければそれを維持、'none'なら'right'に設定
+        newDirection = element.direction === 'none' ? 'right' : element.direction;
+      } else {
+        // 通常の要素の子の場合は、親の方向を継承
+        newDirection = selectedElement.direction;
+      }
+
       const newElement: Element = {
         ...element,
         id: (Date.now() + index).toString(),
         parentId: selectedElement.id,
         depth: selectedElement.depth + 1,
+        direction: newDirection,
         selected: false,
       };
 

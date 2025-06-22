@@ -88,10 +88,8 @@ export type DropElementAction = {
   type: 'DROP_ELEMENT';
   payload: {
     id: string;
-    oldParentId: string | null;
     newParentId: string | null;
-    newOrder?: number;
-    depth?: number;
+    newOrder: number;
     direction?: 'left' | 'right' | 'none';
   };
 };

@@ -460,6 +460,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
       draggingElement,
       dropPosition,
       dropInsertY,
+      dropInsertX: (currentDropTarget as any)?.insertX, // insertX情報を渡す
       siblingInfo,
     });
 
@@ -508,6 +509,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
       draggingElement,
       dropPosition,
       dropInsertY,
+      dropInsertX: (currentDropTarget as any)?.insertX, // insertX情報を渡す
       siblingInfo,
     });
 
