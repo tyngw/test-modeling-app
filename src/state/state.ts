@@ -1083,28 +1083,35 @@ const actionHandlers: Record<string, ActionHandler> = {
     };
   }),
 
-  CONFIRM_TENTATIVE_ELEMENTS: createNoPayloadHandler((state) => {
-    if (!state.hierarchicalData) return state;
+  CONFIRM_TENTATIVE_ELEMENTS: createSafeHandler(
+    (payload: unknown): payload is string => typeof payload === 'string',
+    (state, parentId) => {
+      if (!state.hierarchicalData) return state;
 
-    // tentativeフラグをfalseにする
-    const updatedElementsCache = Object.values(state.elementsCache).reduce<ElementsMap>(
-      (acc, element) => {
-        acc[element.id] = element.tentative ? { ...element, tentative: false } : element;
-        return acc;
-      },
-      {},
-    );
+      // 指定されたparentIdを持つtentative要素のみをfalseにする
+      const updatedElementsCache = Object.values(state.elementsCache).reduce<ElementsMap>(
+        (acc, element) => {
+          if (element.tentative && element.parentId === parentId) {
+            acc[element.id] = { ...element, tentative: false };
+          } else {
+            acc[element.id] = element;
+          }
+          return acc;
+        },
+        {},
+      );
 
-    const hierarchicalData = convertFlatToHierarchical(updatedElementsCache);
-    if (!hierarchicalData) return state;
+      const hierarchicalData = convertFlatToHierarchical(updatedElementsCache);
+      if (!hierarchicalData) return state;
 
-    return {
-      ...state,
-      hierarchicalData,
-      elementsCache: updatedElementsCache,
-      cacheValid: true,
-    };
-  }),
+      return {
+        ...state,
+        hierarchicalData,
+        elementsCache: updatedElementsCache,
+        cacheValid: true,
+      };
+    },
+  ),
 
   CANCEL_TENTATIVE_ELEMENTS: createSafeHandler(
     (payload: unknown): payload is string => typeof payload === 'string',
