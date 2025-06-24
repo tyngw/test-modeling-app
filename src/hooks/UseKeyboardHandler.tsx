@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { Element as CanvasElement } from '../types/types';
+import { ElementsMap } from '../types/elementTypes';
 import { keyActionMap } from '../config/keyActionMap';
 import { getClipboardDataForPaste } from '../utils/clipboard/clipboardHelpers';
 import { ToastMessages } from '../constants/toastMessages';
@@ -53,9 +54,18 @@ export const useKeyboardHandler = ({ dispatch, elements, addToast }: UseKeyboard
           });
 
           addToast(`${hierarchicalData.length}個の要素を階層構造で貼り付けました`);
-        } else if (pasteData.type === 'localStorage') {
-          // LocalStorageからの要素貼り付け（フォールバック）
-          dispatch({ type: 'PASTE_ELEMENT' });
+        } else if (pasteData.type === 'elements') {
+          // クリップボードからの要素貼り付け
+          dispatch({
+            type: 'PASTE_CLIPBOARD_ELEMENTS',
+            payload: {
+              elements: pasteData.data as ElementsMap,
+              targetElementId: selectedElement.id,
+            },
+          });
+
+          const elementCount = Object.keys(pasteData.data as ElementsMap).length;
+          addToast(`${elementCount}個の要素を貼り付けました`);
         }
       } else if (actionType) {
         if (actionType === 'ADD_ELEMENT') {

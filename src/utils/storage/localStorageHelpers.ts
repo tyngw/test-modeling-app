@@ -51,8 +51,6 @@ const PROMPT_KEY = 'prompt';
 const SYSTEM_PROMPT_KEY = 'systemPromptTemplate';
 const APIKEY_KEY = 'apiKey';
 const MODEL_TYPE_KEY = 'modelType';
-const CUT_ELEMENTS_KEY = 'cutElements';
-const COPIED_ELEMENTS_KEY = 'copiedElements';
 
 const MODEL_ENDPOINTS: { [key: string]: string } = {
   'gemini-2.0-flash':
@@ -384,18 +382,6 @@ export const getApiEndpoint = (): string => {
   const modelType = getModelType();
   return MODEL_ENDPOINTS[modelType] || MODEL_ENDPOINTS['gemini-2.0-flash'];
 };
-
-// Cut Elements 関連
-export const getCutElements = (): string | null => safeLocalStorage.getItem(CUT_ELEMENTS_KEY);
-
-export const setCutElements = (value: string): void =>
-  safeLocalStorage.setItem(CUT_ELEMENTS_KEY, value);
-
-// Copied Elements 関連
-export const getCopiedElements = (): string | null => safeLocalStorage.getItem(COPIED_ELEMENTS_KEY);
-
-export const setCopiedElements = (value: string): void =>
-  safeLocalStorage.setItem(COPIED_ELEMENTS_KEY, value);
 
 // タブの状態関連
 export const getTabsState = (): string | null => safeLocalStorage.getItem(TABS_STORAGE_KEY);

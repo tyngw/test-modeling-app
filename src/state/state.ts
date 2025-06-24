@@ -28,8 +28,6 @@ import {
   getSelectedAndChildren,
   copyToClipboard,
   cutToClipboard,
-  getGlobalCutElements,
-  getGlobalCopiedElements,
 } from '../utils/clipboard/clipboardHelpers';
 import { LayoutMode } from '../types/tabTypes';
 
@@ -219,6 +217,19 @@ const isAddHierarchicalElementsPayload = (
     ) &&
     (!('parentId' in payload) || typeof (payload as any).parentId === 'string') &&
     (!('onError' in payload) || typeof (payload as any).onError === 'function')
+  );
+};
+
+const isPasteClipboardElementsPayload = (
+  payload: unknown,
+): payload is { elements: ElementsMap; targetElementId: string } => {
+  return (
+    typeof payload === 'object' &&
+    payload !== null &&
+    'elements' in payload &&
+    'targetElementId' in payload &&
+    typeof (payload as any).targetElementId === 'string' &&
+    typeof (payload as any).elements === 'object'
   );
 };
 
@@ -1477,64 +1488,9 @@ const actionHandlers: Record<string, ActionHandler> = {
   }),
 
   PASTE_ELEMENT: createNoPayloadHandler((state) => {
-    const selectedElements = getSelectedElementsFromState(state);
-    if (selectedElements.length !== 1 || !state.hierarchicalData) return state;
-
-    // 切り取った要素とコピーした要素の両方を確認
-    const globalCutElements = getGlobalCutElements();
-    const globalCopiedElements = getGlobalCopiedElements();
-    const elementsToAdd = globalCutElements || globalCopiedElements;
-
-    if (!elementsToAdd) return state;
-
-    // TODO: pasteElements関数を階層構造対応版に変更する必要があります
-    // 今は簡単な実装として、選択要素の子として要素を追加
-    const selectedElement = selectedElements[0];
-    let currentHierarchy = state.hierarchicalData;
-
-    Object.values(elementsToAdd).forEach((element, index) => {
-      // directionを適切に設定
-      let newDirection = element.direction;
-      if (selectedElement.direction === 'none') {
-        // ルート要素の子の場合は、元の要素のdirectionが'none'でなければそれを維持、'none'なら'right'に設定
-        newDirection = element.direction === 'none' ? 'right' : element.direction;
-      } else {
-        // 通常の要素の子の場合は、親の方向を継承
-        newDirection = selectedElement.direction;
-      }
-
-      const newElement: Element = {
-        ...element,
-        id: (Date.now() + index).toString(),
-        parentId: selectedElement.id,
-        depth: selectedElement.depth + 1,
-        direction: newDirection,
-        selected: false,
-      };
-
-      const result = addElementToHierarchy(currentHierarchy, selectedElement.id, newElement);
-      currentHierarchy = result.hierarchicalData;
-    });
-
-    // 位置調整を行う
-    const elementsCache = convertHierarchicalToFlat(currentHierarchy);
-    const adjustedElementsCache = adjustElementPositions(
-      elementsCache,
-      () => state.numberOfSections,
-      state.layoutMode,
-      state.width || 0,
-      state.height || 0,
-    );
-
-    const finalHierarchicalData = convertFlatToHierarchical(adjustedElementsCache);
-    if (!finalHierarchicalData) return state;
-
-    return {
-      ...state,
-      hierarchicalData: finalHierarchicalData,
-      elementsCache: adjustedElementsCache,
-      cacheValid: true,
-    };
+    // この関数は基本的にはフォールバック用として残し、
+    // 実際の貼り付け処理は新しいPASTE_CLIPBOARD_ELEMENTSアクションで行います
+    return state;
   }),
 
   EXPAND_ELEMENT: createNoPayloadHandler((state) => {
@@ -1706,6 +1662,131 @@ const actionHandlers: Record<string, ActionHandler> = {
       };
     },
   ),
+
+  PASTE_CLIPBOARD_ELEMENTS: createSafeHandler(isPasteClipboardElementsPayload, (state, payload) => {
+    const { elements: elementsToAdd, targetElementId } = payload;
+    if (!state.hierarchicalData) return state;
+
+    const selectedElement = state.elementsCache[targetElementId];
+    if (!selectedElement) return state;
+
+    let currentHierarchy = state.hierarchicalData;
+
+    // 要素のIDマッピングを作成（古いID -> 新しいID）
+    const idMap = new Map<string, string>();
+    const newElements: ElementsMap = {};
+
+    // まず、ルート要素を特定（parentId === null の要素）
+    const rootElement = Object.values(elementsToAdd).find((el) => el.parentId === null);
+    if (!rootElement) return state;
+
+    // 1. 最初にすべての要素の新しいIDを生成してマッピングを作成
+    Object.values(elementsToAdd).forEach((element, index) => {
+      const newId = (Date.now() + index).toString();
+      idMap.set(element.id, newId);
+    });
+
+    // 2. 階層構造を維持しながら要素を変換
+    Object.values(elementsToAdd).forEach((element) => {
+      const newId = idMap.get(element.id)!;
+
+      // 新しい親IDを決定
+      let newParentId: string | null;
+      if (element.parentId === null) {
+        // ルート要素は選択された要素の子になる
+        newParentId = selectedElement.id;
+      } else {
+        // 子要素は新しいIDマップを使用して親を参照
+        newParentId = idMap.get(element.parentId) || null;
+      }
+
+      // directionを適切に設定
+      let newDirection = element.direction;
+      if (element.parentId === null) {
+        // ルート要素の場合
+        if (selectedElement.direction === 'none') {
+          newDirection = element.direction === 'none' ? 'right' : element.direction;
+        } else {
+          newDirection = selectedElement.direction;
+        }
+      } else {
+        // 子要素の場合は元のdirectionを維持
+        newDirection = element.direction;
+      }
+
+      // 新しい深さを計算
+      let newDepth: number;
+      if (element.parentId === null) {
+        newDepth = selectedElement.depth + 1;
+      } else {
+        // 相対的な深さを維持
+        const rootDepth = rootElement.depth;
+        const depthDifference = element.depth - rootDepth;
+        newDepth = selectedElement.depth + 1 + depthDifference;
+      }
+
+      newElements[newId] = {
+        ...element,
+        id: newId,
+        parentId: newParentId,
+        depth: newDepth,
+        direction: newDirection,
+        selected: false,
+      };
+    });
+
+    // 3. 階層構造に追加（ルート要素から開始）
+    const newRootId = idMap.get(rootElement.id)!;
+    const newRootElement = newElements[newRootId];
+
+    const result = addElementToHierarchy(currentHierarchy, selectedElement.id, newRootElement);
+    currentHierarchy = result.hierarchicalData;
+
+    // 4. 子要素を再帰的に追加
+    const addChildrenRecursively = (parentElementId: string, originalParentId: string) => {
+      const childElements = Object.values(elementsToAdd).filter(
+        (el) => el.parentId === originalParentId,
+      );
+
+      childElements.forEach((childElement) => {
+        const newChildId = idMap.get(childElement.id)!;
+        const newChildElement = newElements[newChildId];
+
+        const childResult = addElementToHierarchy(
+          currentHierarchy,
+          parentElementId,
+          newChildElement,
+        );
+        currentHierarchy = childResult.hierarchicalData;
+
+        // 孫要素も再帰的に追加
+        addChildrenRecursively(newChildId, childElement.id);
+      });
+    };
+
+    // ルート要素の子要素を再帰的に追加
+    addChildrenRecursively(newRootId, rootElement.id);
+
+    // 位置調整を行う
+    const elementsCache = convertHierarchicalToFlat(currentHierarchy);
+    const adjustedElementsCache = adjustElementPositions(
+      elementsCache,
+      () => state.numberOfSections,
+      state.layoutMode,
+      state.width || 0,
+      state.height || 0,
+    );
+
+    const finalHierarchicalData = convertFlatToHierarchical(adjustedElementsCache);
+    if (!finalHierarchicalData) return state;
+
+    return {
+      ...state,
+      hierarchicalData: finalHierarchicalData,
+      elementsCache: adjustedElementsCache,
+      cacheValid: true,
+    };
+  }),
 };
 
 export const reducer = (state: State, action: Action): State => {

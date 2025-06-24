@@ -1,5 +1,6 @@
 // src/types/actionTypes.ts
 import { Element, MarkerType, ConnectionPathType } from './types';
+import { ElementsMap } from './elementTypes';
 
 /**
  * アプリケーションの状態を変更するためのアクション型定義
@@ -98,7 +99,14 @@ export type CollapseExpandAction = { type: 'COLLAPSE_ELEMENT' } | { type: 'EXPAN
 export type ClipboardAction =
   | { type: 'CUT_ELEMENT' }
   | { type: 'COPY_ELEMENT' }
-  | { type: 'PASTE_ELEMENT' };
+  | { type: 'PASTE_ELEMENT' }
+  | {
+      type: 'PASTE_CLIPBOARD_ELEMENTS';
+      payload: {
+        elements: ElementsMap;
+        targetElementId: string;
+      };
+    };
 
 /** 要素のドロップアクション */
 export type DropElementAction = {
