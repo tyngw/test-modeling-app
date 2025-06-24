@@ -109,7 +109,7 @@ export function validateJsonData(data: unknown): boolean {
   }
 
   // 深すぎるネストを防ぐ
-  const maxDepth = 10;
+  const maxDepth = 50;
   function checkDepth(obj: unknown, depth = 0): boolean {
     if (depth > maxDepth) {
       return false;
