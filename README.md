@@ -1,69 +1,69 @@
 # Test Modeling App
 
-## What is this?
+## 概要
 
-This is an application for describing test architecture in a notation similar to UML class diagrams.
+UMLクラス図に似た記法でテストアーキテクチャを記述できるアプリケーションです。
 
-## Usage
+## 使い方
 
-### Local execution
+### ローカルでの実行
 
-1. Clone the repository
-2. Run `npm install` to install the dependencies
-3. Run `npm start` to start the application
-4. Open a web browser and navigate to `http://localhost:3000`
+1. リポジトリをクローンします
+2. 依存パッケージをインストールするために `npm install` を実行します
+3. アプリを起動するには `npm start` を実行します
+4. Webブラウザで `http://localhost:3000` にアクセスします
 
-### Deployment to GitHub Pages
+### GitHub Pagesへのデプロイ
 
-If you push to the main branch, the application will be automatically deployed.
+mainブランチにプッシュすると、自動的にアプリがデプロイされます。
 
-### Deployed application
+### 公開中のアプリ
 
-The application is deployed at [https://tyngw.github.io/test-modeling-app/](https://tyngw.github.io/test-modeling-app/)
+アプリは [https://tyngw.github.io/test-modeling-app/](https://tyngw.github.io/test-modeling-app/) で公開されています。
 
-### Application usage
+### アプリの操作方法
 
-#### Keyboard shortcuts
+#### キーボードショートカット
 
-- `Tab`: Add a child element to the selected element
-- `Delete`: Remove the selected element
-- `Enter`: Edit the selected element
-- `Esc`: Stop editing the selected element
-- `Tab` in editing mode: Move the focus to the next text box
-- `Ctrl + Z`: Undo the last action
-- `Shift + Ctrl + Z`: Redo the last action
-- `Ctrl + X`: Cut the selected element
-- `Ctrl + C`: Copy the selected element
-- `Ctrl + V`: Paste the copied element
-- `Ctrl + ArrowLeft`: Collapse the children of the selected element
-- `Ctrl + ArrowRight`: Expand the children of the selected element
+- `Tab`: 選択中の要素に子要素を追加
+- `Delete`: 選択中の要素を削除
+- `Enter`: 選択中の要素を編集
+- `Esc`: 編集モードを終了
+- 編集中に `Tab`: 次のテキストボックスにフォーカス移動
+- `Ctrl + Z`: 直前の操作を元に戻す
+- `Shift + Ctrl + Z`: 元に戻した操作をやり直す
+- `Ctrl + X`: 選択中の要素をカット
+- `Ctrl + C`: 選択中の要素をコピー
+- `Ctrl + V`: コピーした要素をペースト
+- `Ctrl + ←`: 選択中の要素の子を折りたたむ
+- `Ctrl + →`: 選択中の要素の子を展開
 
-#### Mouse operations
+#### マウス操作
 
-- `Click`: Select an element
-- `Double click`: Edit the selected element
-  - Clicking outside the element will end the editing mode
-- `Drag`: Move the selected element
+- `クリック`: 要素を選択
+- `ダブルクリック`: 要素を編集
+  - 要素外をクリックすると編集モードが終了します
+- `ドラッグ`: 選択中の要素を移動
 
-#### Menu operations
+#### メニュー操作
 
-- `New`: Create a new diagram. Unsaved changes will be discarded.
-- `Open`: Load saved data. The current data will be discarded.
-- `Save as`: Save the diagram data in JSON format
-- `Export`: Export the diagram in SVG format
+- `新規作成`: 新しい図を作成します。未保存の変更は破棄されます。
+- `開く`: 保存済みデータを読み込みます。現在のデータは破棄されます。
+- `名前を付けて保存`: 図のデータをJSON形式で保存します
+- `エクスポート`: 図をSVG形式でエクスポートします
 
 ---
 
-### Hierarchical Clipboard Paste (Automatic Indentation-Based Structure)
+### 階層付きクリップボード貼り付け（自動インデント構造復元）
 
-This app supports pasting indented (tab or space) text from the clipboard and automatically reconstructs the hierarchy as nested elements.
+このアプリは、インデント（タブやスペース）で階層化されたテキストをクリップボードから貼り付けると、自動的に階層構造を再現してくれます。
 
-#### How to Use
-1. Copy text with a hierarchical structure (such as an outline or bulleted list) to your clipboard.
-2. Paste into the app (`Ctrl + V` or `⌘ + V`).
-3. The app will automatically create parent-child relationships based on indentation.
+#### 使い方
+1. 階層構造を持つテキスト（アウトラインや箇条書きなど）をコピーします
+2. アプリ上で貼り付け（`Ctrl + V` または `⌘ + V`）します
+3. インデントに基づいて親子関係が自動的に作成されます
 
-#### Example Text
+#### 例
 ```
 Parent Item
   Child Item 1
@@ -71,33 +71,100 @@ Parent Item
   Child Item 2
 ```
 
-#### Resulting Structure
+#### 結果
 - Parent Item
   - Child Item 1
     - Grandchild Item 1
   - Child Item 2
 
-- Indentation is recognized by either tabs or two or more spaces.
-- Mixed indentation (tabs and spaces) is automatically detected.
-- If indentation is invalid or too deep, the pasted items may be flattened into a single list.
+- インデントはタブまたは2つ以上のスペースで認識されます
+- タブとスペースの混在も自動判別します
+- インデントが不正または深すぎる場合、貼り付けた項目が1つのリストに平坦化されることがあります
 
 ---
 
-## Security
+## 要素の階層構造と表示順序の仕様
 
-This application implements comprehensive XSS (Cross-Site Scripting) protection measures:
+このアプリは、要素の階層構造と表示順序を2つの仕組みで管理しています。
 
-### Implemented Security Features
+### 1. 階層データ構造
+- 要素は階層的なツリー構造（`HierarchicalStructure`）で管理されます
+- 各親要素は `children` 配列を持ち、子要素の**実際の順序**を保持します
+- この構造が要素の順序と関係の**唯一の正解**です
 
-- **Input Sanitization**: All user inputs are sanitized to remove dangerous HTML tags, JavaScript protocols, and event handlers
-- **Input Validation**: Real-time validation of user input with dangerous content rejection
-- **File Upload Security**: Multi-layer validation for file uploads including filename sanitization, size limits, and content verification
-- **API Response Sanitization**: All AI API responses are sanitized before processing
-- **Storage Security**: localStorage operations include size limits and validation with encrypted API key storage
-- **CSP Headers**: Content Security Policy and other security headers to prevent various attack vectors
+### 2. 表示順序ロジック
+- 要素の表示位置はY座標で計算されます
+- 階層構造のchildren配列順序が**論理的な順序**を決定します
+- 要素の追加や移動時は、まず階層構造に挿入し、その後位置を再計算します
 
-For detailed security information, please see [SECURITY.md](./SECURITY.md).
+### 3. ドラッグ＆ドロップ時の順序決定
 
-## License
+#### betweenモード（要素間ドロップ）
+1. **順序計算**: 
+   - Y座標順ではなく、階層構造のchildren配列順序を使用
+   - `prevElement`と`nextElement`の兄弟要素から挿入位置を計算
+   - 論理順序と物理配置の一貫性を保ちます
 
-This project is licensed under the MIT license. See [LICENSE](./LICENSE) for details.
+2. **位置計算**:
+   - `insertY`: 表示位置のY座標を計算
+   - `insertX`: 親要素や方向継承からX座標を計算
+   - `baseOrder`: 階層構造配列の位置で決定
+
+3. **要素挿入**:
+   - `moveElementInHierarchy`関数が階層構造への挿入を担当
+   - 計算された`baseOrder`位置にchildren配列へ挿入
+   - レイアウトを再計算し、表示位置を更新
+
+### 4. 一貫性ルール
+
+- **ADD_ELEMENT / ADD_SIBLING_ELEMENT**: 新要素はchildren配列の末尾に追加、その後位置決定
+- **ドラッグ＆ドロップ**: 順序はY座標でなく階層構造で決定
+- **コピー＆ペースト**: 複数要素の貼り付けでも階層構造を維持
+- **レイアウト計算**: 常にchildren配列順序を尊重
+
+### 5. デバッグと検証
+- ブラウザのDevToolsで `state.hierarchicalData` を確認し、実際の順序をチェック
+- 表示とデータの順序が一致しているか比較
+- 階層が取得できない場合も、`getChildren`関数はID順で一貫したソートを行います
+
+この仕様により、どんな操作でも要素の順序が崩れず、論理階層と表示順序が常に一致します！
+
+---
+
+#### 要素の階層構造と順序管理
+
+要素の階層構造と順序管理は以下の仕様に従います：
+
+##### 階層構造の順序管理
+- **階層構造（HierarchicalStructure）のchildren配列順序が唯一の正式な並び順**です
+- LocalStorageでの保存時も、この配列順序が維持されます
+- 表示時のY座標は、階層構造のchildren配列順序に基づいて計算されます
+- orderプロパティは存在せず、純粋に配列のインデックス位置で順序が決まります
+
+##### 要素の追加（ADD_ELEMENT / ADD_SIBLING_ELEMENT）
+- 新しい要素は親要素のchildren配列の**末尾**に追加されます
+- 画面上では、既存の子要素の下に表示されます
+- LocalStorageの階層構造と画面表示順序は常に一致します
+
+##### ドラッグ＆ドロップでの順序変更
+- **betweenモード**: 要素を他の要素間にドロップする際、children配列での正確なインデックス位置に挿入されます
+  - 前の要素（prevElement）の次の位置、または次の要素（nextElement）の位置に挿入
+  - 視覚的な順序と階層構造の配列順序の混同を避け、常にchildren配列順序を基準とします
+- **childモード**: 要素を親要素の子として追加する際、children配列の末尾に追加されます
+- moveElementInHierarchy関数がchildren配列の操作（splice）により順序を正確に管理します
+
+##### 順序の一貫性
+- 階層構造のchildren配列順序が **単一の正確な順序** として扱われます
+- すべての操作（追加、移動、コピー&ペースト）でこの順序が維持されます
+- Y座標は表示位置の計算値であり、順序決定の基準には使用されません
+- getChildrenFromHierarchy関数により、children配列の順序がそのまま保持されて要素リストが返されます
+
+---
+
+## ライセンス
+
+このプロジェクトはMITライセンスで公開されています。詳細は [LICENSE](./LICENSE) をご覧ください。
+
+---
+
+もし分かりにくい箇所や追加で知りたいことがあれば、どんどん質問してくださいね！一緒に楽しく学んでいきましょう！
