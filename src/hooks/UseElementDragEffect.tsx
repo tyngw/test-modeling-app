@@ -81,16 +81,40 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
       let clientX: number, clientY: number;
 
       if (isTouchEvent(e)) {
-        clientX = e.touches[0].clientX + window.scrollX;
-        clientY = e.touches[0].clientY + window.scrollY;
+        // タッチイベントの場合
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
       } else {
-        clientX = e.clientX + window.scrollX;
-        clientY = e.clientY + window.scrollY;
+        // マウスイベントの場合
+        clientX = e.clientX;
+        clientY = e.clientY;
       }
 
+      // キャンバスSVG要素を優先的に取得
+      const canvasSvg = document.querySelector('svg[data-testid="view-area"]');
+      if (canvasSvg) {
+        const rect = canvasSvg.getBoundingClientRect();
+        // SVG要素からの相対座標を計算
+        const relativeX = clientX - rect.left;
+        const relativeY = clientY - rect.top;
+
+        return {
+          x: relativeX / state.zoomRatio,
+          y: relativeY / state.zoomRatio,
+        };
+      }
+
+      // フォールバック: SVG要素が見つからない場合は従来の方法を使用
+      const canvasContainer = document.querySelector('[data-canvas-container]') || document.body;
+      const rect = canvasContainer.getBoundingClientRect();
+
+      // キャンバスコンテナからの相対座標を計算
+      const relativeX = clientX - rect.left;
+      const relativeY = clientY - rect.top;
+
       return {
-        x: clientX / state.zoomRatio,
-        y: (clientY - HEADER_HEIGHT) / state.zoomRatio,
+        x: relativeX / state.zoomRatio,
+        y: (relativeY - HEADER_HEIGHT) / state.zoomRatio,
       };
     },
     [state.zoomRatio],
