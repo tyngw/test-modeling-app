@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { Element as CanvasElement } from '../types/types';
 import { keyActionMap } from '../config/keyActionMap';
-import { getGlobalCutElements } from '../utils/clipboard/clipboardHelpers';
+import { getClipboardDataForPaste } from '../utils/clipboard/clipboardHelpers';
 import { ToastMessages } from '../constants/toastMessages';
 
 interface UseKeyboardHandlerProps {
@@ -18,37 +18,44 @@ export const useKeyboardHandler = ({ dispatch, elements, addToast }: UseKeyboard
       const actionType = keyActionMap[keyCombo];
 
       if (actionType === 'PASTE_ELEMENT') {
-        const globalCutElements = getGlobalCutElements();
-        if (globalCutElements && Object.keys(globalCutElements).length > 0) {
-          dispatch({ type: actionType });
-        } else {
-          try {
-            const text = await navigator.clipboard.readText();
-            const selectedElement = Object.values(elements).find((el) => el.selected);
-            if (!selectedElement) {
-              addToast(ToastMessages.noSelect);
-              return;
-            }
-            if (text) {
-              const texts = text.split('\n').filter((t) => t.trim() !== '');
-              if (texts.length === 0) {
-                addToast(ToastMessages.clipboardEmpty);
-                return;
-              }
-              dispatch({
-                type: 'ADD_ELEMENTS_SILENT',
-                payload: {
-                  parentId: selectedElement.id,
-                  texts: texts,
-                },
-              });
-            } else {
-              addToast(ToastMessages.clipboardEmpty);
-            }
-          } catch (error) {
-            console.error('クリップボード読み取りエラー:', error);
-            addToast(ToastMessages.clipboardReadError);
-          }
+        // クリップボード優先でペーストデータを取得
+        const pasteData = await getClipboardDataForPaste();
+
+        if (!pasteData) {
+          addToast(ToastMessages.clipboardEmpty);
+          return;
+        }
+
+        const selectedElement = Object.values(elements).find((el) => el.selected);
+        if (!selectedElement) {
+          addToast(ToastMessages.noSelect);
+          return;
+        }
+
+        if (pasteData.type === 'clipboard') {
+          // クリップボードからの階層構造テキスト貼り付け
+          const hierarchicalData = pasteData.data as Array<{
+            text: string;
+            level: number;
+            originalLine: string;
+          }>;
+
+          // 新しい階層構造専用アクションを使用
+          dispatch({
+            type: 'ADD_HIERARCHICAL_ELEMENTS',
+            payload: {
+              parentId: selectedElement.id,
+              hierarchicalItems: hierarchicalData,
+              onError: (message: string) => {
+                addToast(`エラー: ${message}`);
+              },
+            },
+          });
+
+          addToast(`${hierarchicalData.length}個の要素を階層構造で貼り付けました`);
+        } else if (pasteData.type === 'localStorage') {
+          // LocalStorageからの要素貼り付け（フォールバック）
+          dispatch({ type: 'PASTE_ELEMENT' });
         }
       } else if (actionType) {
         if (actionType === 'ADD_ELEMENT') {

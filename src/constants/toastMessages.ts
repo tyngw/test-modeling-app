@@ -16,5 +16,6 @@ export const ToastMessages = {
   saveError: 'ファイルの保存に失敗しました',
   clipboardEmpty: 'クリップボードにテキストがありません',
   clipboardReadError: 'クリップボードの読み取りに失敗しました',
+  clipboardPasted: 'クリップボードから貼り付けました',
   invalidParentChange: 'invalidParentChange',
 };

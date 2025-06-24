@@ -52,6 +52,37 @@ The application is deployed at [https://tyngw.github.io/test-modeling-app/](http
 - `Save as`: Save the diagram data in JSON format
 - `Export`: Export the diagram in SVG format
 
+---
+
+### Hierarchical Clipboard Paste (Automatic Indentation-Based Structure)
+
+This app supports pasting indented (tab or space) text from the clipboard and automatically reconstructs the hierarchy as nested elements.
+
+#### How to Use
+1. Copy text with a hierarchical structure (such as an outline or bulleted list) to your clipboard.
+2. Paste into the app (`Ctrl + V` or `⌘ + V`).
+3. The app will automatically create parent-child relationships based on indentation.
+
+#### Example Text
+```
+Parent Item
+  Child Item 1
+    Grandchild Item 1
+  Child Item 2
+```
+
+#### Resulting Structure
+- Parent Item
+  - Child Item 1
+    - Grandchild Item 1
+  - Child Item 2
+
+- Indentation is recognized by either tabs or two or more spaces.
+- Mixed indentation (tabs and spaces) is automatically detected.
+- If indentation is invalid or too deep, the pasted items may be flattened into a single list.
+
+---
+
 ## Security
 
 This application implements comprehensive XSS (Cross-Site Scripting) protection measures:

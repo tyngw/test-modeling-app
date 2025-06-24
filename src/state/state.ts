@@ -93,6 +93,16 @@ interface AddElementsSilentPayload {
   onError?: (message: string) => void; // エラーハンドリングコールバック
 }
 
+type AddHierarchicalElementsPayload = {
+  parentId?: string;
+  hierarchicalItems: Array<{
+    text: string;
+    level: number;
+    originalLine: string;
+  }>;
+  onError?: (message: string) => void;
+};
+
 // 型ガード関数
 const isSelectElementPayload = (payload: unknown): payload is SelectElementPayload => {
   return (
@@ -188,6 +198,27 @@ const isAddElementsSilentPayload = (payload: unknown): payload is AddElementsSil
       (!('tentative' in payload) || typeof (payload as any).tentative === 'boolean') &&
       (!('parentId' in payload) || typeof (payload as any).parentId === 'string') &&
       (!('onError' in payload) || typeof (payload as any).onError === 'function'))
+  );
+};
+
+const isAddHierarchicalElementsPayload = (
+  payload: unknown,
+): payload is AddHierarchicalElementsPayload => {
+  return (
+    typeof payload === 'object' &&
+    payload !== null &&
+    'hierarchicalItems' in payload &&
+    Array.isArray((payload as any).hierarchicalItems) &&
+    (payload as any).hierarchicalItems.every(
+      (item: any) =>
+        typeof item === 'object' &&
+        item !== null &&
+        typeof item.text === 'string' &&
+        typeof item.level === 'number' &&
+        typeof item.originalLine === 'string',
+    ) &&
+    (!('parentId' in payload) || typeof (payload as any).parentId === 'string') &&
+    (!('onError' in payload) || typeof (payload as any).onError === 'function')
   );
 };
 
@@ -1498,6 +1529,122 @@ const actionHandlers: Record<string, ActionHandler> = {
       cacheValid: true,
     };
   }),
+
+  // 新たに追加されたアクションハンドラー
+  ADD_HIERARCHICAL_ELEMENTS: createSafeHandler(
+    isAddHierarchicalElementsPayload,
+    (state: State, payload: AddHierarchicalElementsPayload) => {
+      if (!state.hierarchicalData) return state;
+
+      // Undoスナップショットを保存
+      saveSnapshot(state.elementsCache);
+
+      const { parentId, hierarchicalItems } = payload;
+
+      // 親要素を決定：payloadで指定されていればそれを使用、そうでなければ現在選択中の要素
+      let baseParentElement: Element | undefined;
+
+      if (parentId) {
+        baseParentElement = state.elementsCache[parentId];
+      } else {
+        baseParentElement = getSelectedElementFromState(state);
+      }
+
+      if (!baseParentElement) {
+        if (payload?.onError) {
+          payload.onError('親要素が見つかりません');
+        }
+        return state;
+      }
+
+      let currentHierarchy = state.hierarchicalData;
+
+      // 階層レベルごとに親要素を追跡するスタック
+      const parentStack: Array<{ element: Element; level: number }> = [
+        { element: baseParentElement, level: -1 },
+      ];
+
+      // 各階層アイテムを順次処理
+      for (let i = 0; i < hierarchicalItems.length; i++) {
+        const item = hierarchicalItems[i];
+        const { text, level } = item;
+
+        // 適切な親要素を決定（レベルに基づいてスタックを調整）
+        while (parentStack.length > 0 && parentStack[parentStack.length - 1].level >= level) {
+          parentStack.pop();
+        }
+
+        const parentInfo = parentStack[parentStack.length - 1];
+        if (!parentInfo) continue;
+
+        // 新しい要素を作成
+        const elementWidth = calculateElementWidth([text], TEXTAREA_PADDING.HORIZONTAL);
+        const lines = wrapText(text || '', elementWidth, state.zoomRatio || 1).length;
+        const sectionHeight = Math.max(
+          SIZE.SECTION_HEIGHT * (state.zoomRatio || 1),
+          lines * DEFAULT_FONT_SIZE * LINE_HEIGHT_RATIO +
+            TEXTAREA_PADDING.VERTICAL * (state.zoomRatio || 1),
+        );
+        const totalHeight = Array(state.numberOfSections)
+          .fill(sectionHeight)
+          .reduce((sum, h) => sum + h, 0);
+
+        const newElement: Element = {
+          ...createNewElement({
+            numSections: state.numberOfSections,
+            direction:
+              parentInfo.element.direction === 'none' ? 'right' : parentInfo.element.direction,
+          }),
+          id: `${Date.now()}-${i}`,
+          parentId: parentInfo.element.id,
+          depth: parentInfo.element.depth + 1,
+          x: 0, // 自動調整される
+          y: 0, // 自動調整される
+          width: elementWidth,
+          height: totalHeight,
+          sectionHeights: Array(state.numberOfSections).fill(sectionHeight),
+          texts: Array(state.numberOfSections)
+            .fill('')
+            .map((_, index) => (index === 0 ? text : '')),
+          tentative: false,
+          editing: false,
+          selected: false,
+        };
+
+        // 階層構造に要素を追加
+        const result = addElementToHierarchy(currentHierarchy, parentInfo.element.id, newElement);
+        currentHierarchy = result.hierarchicalData;
+
+        // 新しい要素を親スタックに追加（子要素のため）
+        parentStack.push({ element: newElement, level });
+      }
+
+      // フラット構造に変換
+      const elementsCache = convertHierarchicalToFlat(currentHierarchy);
+
+      // 位置調整を行う
+      const adjustedElementsCache = adjustElementPositions(
+        elementsCache,
+        () => state.numberOfSections,
+        state.layoutMode,
+        state.width || 0,
+        state.height || 0,
+        currentHierarchy,
+      );
+
+      const finalHierarchicalData = convertFlatToHierarchical(adjustedElementsCache);
+      if (!finalHierarchicalData) return state;
+
+      debugLog(`[ADD_HIERARCHICAL_ELEMENTS] ${hierarchicalItems.length}個の階層要素を追加しました`);
+
+      return {
+        ...state,
+        hierarchicalData: finalHierarchicalData,
+        elementsCache: adjustedElementsCache,
+        cacheValid: true,
+      };
+    },
+  ),
 };
 
 export const reducer = (state: State, action: Action): State => {

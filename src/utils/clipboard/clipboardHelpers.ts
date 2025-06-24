@@ -166,3 +166,107 @@ export const getGlobalCutElements = (): ElementsMap | null => {
     return null;
   }
 };
+
+/**
+ * クリップボードからテキストを読み取り、階層構造を解析する
+ *
+ * @returns 解析されたテキスト配列、またはnull
+ */
+export const readClipboardAsHierarchy = async (): Promise<string[] | null> => {
+  try {
+    const text = await navigator.clipboard.readText();
+    if (!text || !text.trim()) {
+      return null;
+    }
+
+    // 単純な改行区切りのテキストとして返す（階層は後で解析）
+    const lines = text.split('\n').filter((line) => line.trim() !== '');
+
+    if (lines.length === 0) {
+      return null;
+    }
+
+    return lines;
+  } catch (error) {
+    console.error('クリップボード読み取りエラー:', error);
+    return null;
+  }
+};
+
+/**
+ * 階層構造テキストを解析して、インデントレベルと内容を分離する
+ *
+ * @param lines テキスト行の配列
+ * @returns 階層情報を含むオブジェクトの配列
+ */
+export const parseHierarchicalText = (
+  lines: string[],
+): Array<{
+  text: string;
+  level: number;
+  originalLine: string;
+}> => {
+  const result = lines.map((line) => {
+    // タブまたは連続するスペース（4つ）をインデントとして認識
+    const tabMatch = line.match(/^(\t*)/);
+    const spaceMatch = line.match(/^( {0,})/);
+
+    let level = 0;
+    if (tabMatch && tabMatch[1]) {
+      level = tabMatch[1].length; // タブの数
+    } else if (spaceMatch && spaceMatch[1]) {
+      level = Math.floor(spaceMatch[1].length / 4); // 4スペースを1レベルとして計算
+    }
+
+    const text = line.replace(/^[\t ]*/, '').trim(); // インデントを除去
+
+    return {
+      text,
+      level,
+      originalLine: line,
+    };
+  });
+
+  return result;
+};
+
+/**
+ * クリップボードベースのペースト処理
+ * LocalStorageはフォールバックとして使用
+ *
+ * @returns ペーストするデータ、またはnull
+ */
+export const getClipboardDataForPaste = async (): Promise<{
+  type: 'clipboard' | 'localStorage';
+  data: string[] | ElementsMap | Array<{ text: string; level: number; originalLine: string }>;
+} | null> => {
+  // 1. まずクリップボードから読み取りを試行
+  const clipboardTexts = await readClipboardAsHierarchy();
+  if (clipboardTexts && clipboardTexts.length > 0) {
+    // 階層構造を解析
+    const hierarchicalData = parseHierarchicalText(clipboardTexts);
+    return {
+      type: 'clipboard',
+      data: hierarchicalData,
+    };
+  }
+
+  // 2. フォールバック: LocalStorageから要素を取得
+  const globalCutElements = getGlobalCutElements();
+  if (globalCutElements && Object.keys(globalCutElements).length > 0) {
+    return {
+      type: 'localStorage',
+      data: globalCutElements,
+    };
+  }
+
+  const globalCopiedElements = getGlobalCopiedElements();
+  if (globalCopiedElements && Object.keys(globalCopiedElements).length > 0) {
+    return {
+      type: 'localStorage',
+      data: globalCopiedElements,
+    };
+  }
+
+  return null;
+};

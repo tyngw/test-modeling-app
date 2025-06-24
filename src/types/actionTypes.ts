@@ -63,6 +63,23 @@ export type AddElementAction =
         texts: string[];
         tentative: boolean;
         onError?: (message: string) => void;
+        hierarchicalData?: Array<{
+          text: string;
+          level: number;
+          originalLine: string;
+        }>;
+      };
+    }
+  | {
+      type: 'ADD_HIERARCHICAL_ELEMENTS';
+      payload: {
+        parentId?: string;
+        hierarchicalItems: Array<{
+          text: string;
+          level: number;
+          originalLine: string;
+        }>;
+        onError?: (message: string) => void;
       };
     };
 
