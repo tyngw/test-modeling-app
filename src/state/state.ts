@@ -859,12 +859,12 @@ const actionHandlers: Record<string, ActionHandler> = {
       let initialY: number;
 
       if (siblings.length > 0) {
-        // 兄弟要素がある場合：末尾要素の下に配置
-        const lastSibling = siblings[siblings.length - 1];
-        initialX = lastSibling.x; // 末尾要素のX座標と同じ
-        initialY = lastSibling.y + lastSibling.height + OFFSET.Y; // 末尾要素の下端+OFFSETに配置
+        // 子要素がある場合：最後の子要素の下に配置
+        const lastChild = siblings[siblings.length - 1];
+        initialX = lastChild.x; // 最後の子要素のX座標と同じ
+        initialY = lastChild.y + lastChild.height + OFFSET.Y; // 最後の子要素の下端+OFFSETに配置
       } else {
-        // 兄弟要素がない場合：親要素の右隣に配置
+        // 子要素がない場合：親要素の右隣に配置
         initialX = selectedElement.x + selectedElement.width + OFFSET.X; // 親要素の右+OFFSETに配置
         initialY = selectedElement.y; // 親要素と同じY座標
       }
@@ -1088,6 +1088,32 @@ const actionHandlers: Record<string, ActionHandler> = {
     // Undoスナップショットを保存
     saveSnapshot(state.elementsCache);
 
+    // 同じ階層の兄弟要素を取得
+    const siblings = state.hierarchicalData
+      ? getChildrenFromHierarchy(
+          selectedElement.parentId,
+          state.hierarchicalData,
+          state.elementsCache,
+        )
+      : Object.values(state.elementsCache).filter(
+          (el) => el.parentId === selectedElement.parentId && el.visible,
+        );
+
+    // 新しい要素の初期座標を計算
+    let initialX: number;
+    let initialY: number;
+
+    if (siblings.length > 0) {
+      // 同じ階層の最後の要素の下に配置
+      const lastSibling = siblings[siblings.length - 1];
+      initialX = lastSibling.x; // 最後の兄弟要素のX座標と同じ
+      initialY = lastSibling.y + lastSibling.height + OFFSET.Y; // 最後の兄弟要素の下端+OFFSETに配置
+    } else {
+      // 兄弟要素がない場合：選択された要素と同じ位置に配置
+      initialX = selectedElement.x;
+      initialY = selectedElement.y + selectedElement.height + OFFSET.Y;
+    }
+
     // 兄弟要素を作成
     const newElement: Element = {
       ...createNewElement({
@@ -1097,25 +1123,60 @@ const actionHandlers: Record<string, ActionHandler> = {
       id: Date.now().toString(),
       parentId: selectedElement.parentId,
       depth: selectedElement.depth,
+      x: initialX, // 計算された初期X座標を設定
+      y: initialY, // 計算された初期Y座標を設定
       texts: Array(state.numberOfSections).fill(''),
       selected: true,
     };
 
-    // 階層構造に要素を追加
-    const result = addElementToHierarchy(
-      state.hierarchicalData,
-      selectedElement.parentId,
-      newElement,
+    // デバッグログ: 作成された要素の座標を確認
+    debugLog(
+      `[ADD_SIBLING_ELEMENT] 新要素作成: ID=${newElement.id}, X=${newElement.x}, Y=${newElement.y}`,
     );
+
+    // 階層構造に要素を追加
+    let result: HierarchicalOperationResult;
+    try {
+      result = addElementToHierarchy(state.hierarchicalData, selectedElement.parentId, newElement);
+    } catch (error) {
+      return state; // エラー時は元の状態を返す
+    }
+
+    // 既存の要素の選択状態を解除し、新しい要素のみを選択状態にする
+    const elementsWithUpdatedSelection: { [id: string]: Element } = {};
+    Object.entries(result.elementsCache).forEach(([id, element]) => {
+      elementsWithUpdatedSelection[id] = {
+        ...element,
+        selected: id === newElement.id, // 新しい要素のみを選択状態に
+        editing: id === newElement.id, // 新しい要素を編集状態に
+      };
+    });
+
+    // デバッグログ: 階層操作後の新要素の座標を確認
+    const newElementAfterHierarchy = elementsWithUpdatedSelection[newElement.id];
+    if (newElementAfterHierarchy) {
+      debugLog(
+        `[ADD_SIBLING_ELEMENT] 階層操作後の新要素: X=${newElementAfterHierarchy.x}, Y=${newElementAfterHierarchy.y}`,
+      );
+    }
 
     // 位置調整を行う
     const adjustedElementsCache = adjustElementPositions(
-      result.elementsCache,
+      elementsWithUpdatedSelection,
       () => state.numberOfSections,
       state.layoutMode,
       state.width || 0,
       state.height || 0,
+      result.hierarchicalData,
     );
+
+    // デバッグログ: 位置調整後の新要素の座標を確認
+    const newElementAfterAdjustment = adjustedElementsCache[newElement.id];
+    if (newElementAfterAdjustment) {
+      debugLog(
+        `[ADD_SIBLING_ELEMENT] 位置調整後の新要素: X=${newElementAfterAdjustment.x}, Y=${newElementAfterAdjustment.y}`,
+      );
+    }
 
     const finalHierarchicalData = convertFlatToHierarchical(adjustedElementsCache);
     if (!finalHierarchicalData) return state;
