@@ -2,6 +2,12 @@
 import { renderHook, act } from '@testing-library/react';
 import { useStore } from './textUtils';
 import { Element } from '../../types/types';
+import { getAllElementsFromHierarchy } from '../../utils/hierarchical/hierarchicalConverter';
+
+// ヘルパー関数: hierarchicalDataから要素の配列を取得
+const getAllElements = (state: any): Element[] => {
+  return state.hierarchicalData ? getAllElementsFromHierarchy(state.hierarchicalData) : [];
+};
 
 describe('ドラッグ＆ドロップ', () => {
   it('ノードをドロップした時に移動できることを確認する', async () => {
@@ -14,9 +20,7 @@ describe('ドラッグ＆ドロップ', () => {
     });
 
     let state = result.current.state;
-    const elementB = Object.values(state.elementsCache).find(
-      (elm: Element) => elm.parentId === '1',
-    ) as Element;
+    const elementB = getAllElements(state).find((elm: Element) => elm.parentId === '1') as Element;
 
     if (!elementB) {
       // 最初の子要素の作成に失敗した場合、テストをスキップ
@@ -30,7 +34,7 @@ describe('ドラッグ＆ドロップ', () => {
     });
 
     state = result.current.state;
-    const elementC = Object.values(state.elementsCache).find(
+    const elementC = getAllElements(state).find(
       (elm: Element) => elm.parentId === '1' && elm.id !== elementB.id,
     ) as Element;
 
@@ -47,10 +51,8 @@ describe('ドラッグ＆ドロップ', () => {
       });
       dispatch({ type: 'ADD_ELEMENT', payload: {} });
     });
-
     state = result.current.state;
-
-    const elementD = Object.values(state.elementsCache).find(
+    const elementD = getAllElements(state).find(
       (elm: Element) => elm.parentId === elementB.id,
     ) as Element;
 
@@ -65,10 +67,8 @@ describe('ドラッグ＆ドロップ', () => {
         type: 'DROP_ELEMENT',
         payload: {
           id: elementD.id,
-          oldParentId: elementB.id,
           newParentId: elementC.id,
           newOrder: 0, // draggingElementOrder → newOrderに修正
-          depth: elementC.depth + 1,
         },
       });
     });
@@ -76,20 +76,18 @@ describe('ドラッグ＆ドロップ', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     state = result.current.state;
-    const oldParentB = Object.values(state.elementsCache).find(
+    const oldParentB = getAllElements(state).find(
       (elm: Element) => elm.id === elementB.id,
     ) as Element;
-    const newParentC = Object.values(state.elementsCache).find(
+    const newParentC = getAllElements(state).find(
       (elm: Element) => elm.id === elementC.id,
     ) as Element;
-    const movedElement = Object.values(state.elementsCache).find(
+    const movedElement = getAllElements(state).find(
       (elm: Element) => elm.id === elementD.id,
     ) as Element;
 
     // 移動元の子要素数確認
-    const oldSiblings = Object.values(state.elementsCache).filter(
-      (e) => e.parentId === elementB.id,
-    );
+    const oldSiblings = getAllElements(state).filter((e) => e.parentId === elementB.id);
 
     expect(oldSiblings.length).toBe(0);
     expect(movedElement.parentId).toBe(newParentC.id);
@@ -112,10 +110,9 @@ describe('ドラッグ＆ドロップ', () => {
     });
 
     const initialState = result.current.state;
-    const parentElement = initialState.elementsCache['1'];
-    const childElement = Object.values(initialState.elementsCache).find(
-      (elm: Element) => elm.parentId === '1',
-    ) as Element;
+    const allInitialElements = getAllElements(initialState);
+    const parentElement = allInitialElements.find((elm: Element) => elm.id === '1') as Element;
+    const childElement = allInitialElements.find((elm: Element) => elm.parentId === '1') as Element;
 
     // 親ノードを子ノードにドロップしようとする
     await act(async () => {
@@ -123,10 +120,8 @@ describe('ドラッグ＆ドロップ', () => {
         type: 'DROP_ELEMENT',
         payload: {
           id: parentElement.id,
-          oldParentId: null,
           newParentId: childElement.id,
           newOrder: 0,
-          depth: childElement.depth + 1,
         },
       });
     });

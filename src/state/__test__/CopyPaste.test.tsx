@@ -1,6 +1,12 @@
 // src/state/__test__/copyPaste.test.ts
 import { renderHook, act } from '@testing-library/react';
 import { Element } from '../../types/types';
+import { getAllElementsFromHierarchy } from '../../utils/hierarchical/hierarchicalConverter';
+
+// テスト用ヘルパー：StateからElement配列を取得
+const getAllElements = (state: any): Element[] => {
+  return state.hierarchicalData ? getAllElementsFromHierarchy(state.hierarchicalData) : [];
+};
 import { useStore } from './textUtils';
 import * as clipboardHelpers from '../../utils/clipboard/clipboardHelpers';
 
@@ -72,7 +78,7 @@ describe('切り取り、コピー、貼り付け操作', () => {
     });
 
     const state = result.current.state;
-    const childElement = Object.values(state.elementsCache).find(
+    const childElement = getAllElements(state).find(
       (elm: Element) => elm.parentId === '1',
     ) as Element;
 
@@ -90,7 +96,7 @@ describe('切り取り、コピー、貼り付け操作', () => {
     expect(clipboardData).not.toBeNull();
     expect(clipboardData).not.toBe('');
 
-    const parentElement = Object.values(result.current.state.elementsCache).find(
+    const parentElement = getAllElements(result.current.state).find(
       (elm: Element) => elm.id === '1',
     ) as Element;
 
@@ -102,7 +108,7 @@ describe('切り取り、コピー、貼り付け操作', () => {
 
     // 貼り付け後の要素を確認
     const afterPasteState = result.current.state;
-    const pastedElements = Object.values(afterPasteState.elementsCache).filter(
+    const pastedElements = getAllElements(afterPasteState).filter(
       (elm: Element) => elm.parentId === parentElement.id && elm.id !== childElement.id,
     );
 
@@ -124,12 +130,12 @@ describe('切り取り、コピー、貼り付け操作', () => {
     });
 
     const state = result.current.state;
-    const childElement = Object.values(state.elementsCache).find(
+    const childElement = getAllElements(state).find(
       (elm: Element) => elm.parentId === '1',
     ) as Element;
 
     // 切り取り前の要素数を確認
-    const elementsCountBeforeCut = Object.keys(state.elementsCache).length;
+    const elementsCountBeforeCut = getAllElements(state).length;
     expect(elementsCountBeforeCut).toBeGreaterThan(1);
 
     // 子要素を選択して切り取り
@@ -145,10 +151,10 @@ describe('切り取り、コピー、貼り付け操作', () => {
     const afterCutState = result.current.state;
 
     // 要素が削除されたことを確認
-    expect(Object.keys(afterCutState.elementsCache).length).toBeLessThan(elementsCountBeforeCut);
-    expect(
-      Object.values(afterCutState.elementsCache).some((elm: Element) => elm.id === childElement.id),
-    ).toBe(false);
+    expect(getAllElements(afterCutState).length).toBeLessThan(elementsCountBeforeCut);
+    expect(getAllElements(afterCutState).some((elm: Element) => elm.id === childElement.id)).toBe(
+      false,
+    );
 
     // localStorage に要素が保存されたことを確認
     const clipboardDataCut = localStorage.getItem('cutElements');
@@ -175,7 +181,7 @@ describe('切り取り、コピー、貼り付け操作', () => {
     });
 
     let state = result.current.state;
-    const childElement = Object.values(state.elementsCache).find(
+    const childElement = getAllElements(state).find(
       (elm: Element) => elm.parentId === '1',
     ) as Element;
 
@@ -191,9 +197,9 @@ describe('切り取り、コピー、貼り付け操作', () => {
     const afterCutState = result.current.state;
 
     // 要素が削除されたことを確認
-    expect(
-      Object.values(afterCutState.elementsCache).some((elm: Element) => elm.id === childElement.id),
-    ).toBe(false);
+    expect(getAllElements(afterCutState).some((elm: Element) => elm.id === childElement.id)).toBe(
+      false,
+    );
 
     // localStorage に要素が保存されたことを確認
     const clipboardDataCut2 = localStorage.getItem('cutElements');
@@ -206,7 +212,7 @@ describe('切り取り、コピー、貼り付け操作', () => {
     });
 
     state = result.current.state;
-    const newParentElement = Object.values(state.elementsCache).find(
+    const newParentElement = getAllElements(state).find(
       (elm: Element) => elm.parentId === '1',
     ) as Element;
 
@@ -221,19 +227,19 @@ describe('切り取り、コピー、貼り付け操作', () => {
 
     // 貼り付け後の状態を確認
     const afterPasteState = result.current.state;
-    const pastedElements = Object.values(afterPasteState.elementsCache).filter(
+    const pastedElements = getAllElements(afterPasteState).filter(
       (elm: Element) => elm.parentId === newParentElement.id,
     );
 
     expect(pastedElements.length).toBeGreaterThan(0);
 
     // 親要素に子要素が追加されていることを確認
-    const updatedParentElement = Object.values(afterPasteState.elementsCache).find(
+    const updatedParentElement = getAllElements(afterPasteState).find(
       (elm: Element) => elm.id === newParentElement.id,
     ) as Element;
 
     // 階層構造では children プロパティが自動的に計算されるため、実際の子要素数を確認
-    const actualChildren = Object.values(afterPasteState.elementsCache).filter(
+    const actualChildren = getAllElements(afterPasteState).filter(
       (elm: Element) => elm.parentId === updatedParentElement.id,
     ).length;
     expect(actualChildren).toBeGreaterThan(0);
@@ -254,7 +260,7 @@ describe('切り取り、コピー、貼り付け操作', () => {
     });
 
     let state = result.current.state;
-    const childElement = Object.values(state.elementsCache).find(
+    const childElement = getAllElements(state).find(
       (elm: Element) => elm.parentId === '1',
     ) as Element;
 
@@ -277,7 +283,7 @@ describe('切り取り、コピー、貼り付け操作', () => {
 
     // 選択状態を確認
     const stateAfterSelect = result.current.state;
-    Object.values(stateAfterSelect.elementsCache).find((e) => e.selected);
+    getAllElements(stateAfterSelect).find((e) => e.selected);
 
     await act(async () => {
       dispatch({ type: 'CUT_ELEMENT' });
@@ -293,7 +299,9 @@ describe('切り取り、コピー、貼り付け操作', () => {
     if (!clipboardData) {
       // 選択が正しくできていない可能性があるので、直接的に要素の存在を確認
       const stateAfterCut = result.current.state;
-      const elementStillExists = !!stateAfterCut.elementsCache[childElement.id];
+      const elementStillExists =
+        !!stateAfterCut.hierarchicalData &&
+        findElementInHierarchy(state.hierarchicalData, childElement.id);
 
       // 要素が削除されていれば、切り取りは成功していると判断（localStorageが動作しない環境を考慮）
       if (!elementStillExists) {
@@ -306,7 +314,9 @@ describe('切り取り、コピー、貼り付け操作', () => {
 
     // 切り取り後、元の要素が削除されていることを確認
     state = result.current.state;
-    expect(state.elementsCache[childElement.id]).toBeUndefined();
+    expect(
+      state.hierarchicalData && findElementInHierarchy(state.hierarchicalData, childElement.id),
+    ).toBeUndefined();
 
     // ルート要素を選択して新しい子要素を追加
     act(() => {
@@ -315,7 +325,7 @@ describe('切り取り、コピー、貼り付け操作', () => {
     });
 
     state = result.current.state;
-    const newElements = Object.values(state.elementsCache).filter(
+    const newElements = getAllElements(state).filter(
       (elm: Element) => elm.parentId === '1' && elm.id !== childElement.id,
     );
     expect(newElements.length).toBeGreaterThan(0);
@@ -333,14 +343,14 @@ describe('切り取り、コピー、貼り付け操作', () => {
 
     // 貼り付け後の状態を確認
     const afterPasteState = result.current.state;
-    const pastedElements = Object.values(afterPasteState.elementsCache).filter(
+    const pastedElements = getAllElements(afterPasteState).filter(
       (elm: Element) => elm.parentId === newParentElement.id,
     );
 
     expect(pastedElements.length).toBeGreaterThan(0);
 
     // 要素IDがすべて一意であることを確認
-    const ids = Object.values(afterPasteState.elementsCache).map((elm: Element) => elm.id);
+    const ids = getAllElements(afterPasteState).map((elm: Element) => elm.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
@@ -360,9 +370,7 @@ describe('切り取り、コピー、貼り付け操作', () => {
 
     // 子要素に子要素を追加するためにもう一度
     let state = result.current.state;
-    const childElements = Object.values(state.elementsCache).filter(
-      (elm: Element) => elm.parentId === '1',
-    );
+    const childElements = getAllElements(state).filter((elm: Element) => elm.parentId === '1');
     expect(childElements.length).toBeGreaterThan(0);
 
     const childElement = childElements[0];
@@ -378,7 +386,7 @@ describe('切り取り、コピー、貼り付け操作', () => {
 
     // 現在の状態を確認
     state = result.current.state;
-    const grandchildElements = Object.values(state.elementsCache).filter(
+    const grandchildElements = getAllElements(state).filter(
       (elm: Element) => elm.parentId === childElement.id,
     );
     expect(grandchildElements.length).toBeGreaterThan(0);
@@ -395,7 +403,7 @@ describe('切り取り、コピー、貼り付け操作', () => {
 
     // 選択状態を確認
     const stateAfterSelect2 = result.current.state;
-    Object.values(stateAfterSelect2.elementsCache).find((e) => e.selected);
+    getAllElements(stateAfterSelect2).find((e) => e.selected);
 
     await act(async () => {
       dispatch({ type: 'COPY_ELEMENT' });
@@ -411,7 +419,9 @@ describe('切り取り、コピー、貼り付け操作', () => {
     if (!clipboardData2) {
       // 選択が正しくできていない可能性があるので、直接的に要素の存在を確認
       const stateAfterCopy = result.current.state;
-      const elementStillExists = !!stateAfterCopy.elementsCache[childElement.id];
+      const elementStillExists =
+        !!stateAfterCopy.hierarchicalData &&
+        findElementInHierarchy(state.hierarchicalData, childElement.id);
 
       // コピーの場合は元の要素は残るべきなので、存在確認だけして続行
       if (elementStillExists) {
@@ -438,7 +448,7 @@ describe('切り取り、コピー、貼り付け操作', () => {
 
     // 貼り付け後の状態を確認
     state = result.current.state;
-    const pastedElements = Object.values(state.elementsCache).filter(
+    const pastedElements = getAllElements(state).filter(
       (elm: Element) => elm.parentId === grandchildElement.id,
     );
 

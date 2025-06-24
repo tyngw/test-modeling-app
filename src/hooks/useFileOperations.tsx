@@ -85,8 +85,6 @@ export function useFileOperations({
           return {
             ...prevState,
             hierarchicalData,
-            elementsCache: result.elements,
-            cacheValid: true,
           };
         });
 

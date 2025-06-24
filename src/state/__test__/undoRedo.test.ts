@@ -1,34 +1,51 @@
 // src/state/__test__/undoRedo.test.ts
 import { renderHook, act } from '@testing-library/react';
 import { useStore } from './textUtils';
+import {
+  getAllElementsFromHierarchy,
+  findElementInHierarchy,
+} from '../../utils/hierarchical/hierarchicalConverter';
+
+// ヘルパー関数: hierarchicalDataから要素の配列を取得
+const getElementsFromState = (state: any) => {
+  if (!state.hierarchicalData) return [];
+  return getAllElementsFromHierarchy(state.hierarchicalData);
+};
+
+// ヘルパー関数: hierarchicalDataから特定の要素を取得
+const getElementById = (state: any, id: string) => {
+  if (!state.hierarchicalData) return null;
+  return findElementInHierarchy(state.hierarchicalData, id);
+};
 
 describe('UNDO/REDO機能', () => {
   it('ノード追加時、UNDO/REDOできることを確認する', () => {
     const { result } = renderHook(() => useStore());
     const { dispatch } = result.current;
 
-    const initialElements = result.current.state.elementsCache;
+    const initialElements = getElementsFromState(result.current.state);
     act(() => {
       dispatch({ type: 'ADD_ELEMENT', payload: {} });
     });
-    const afterAddState = result.current.state.elementsCache;
+    const afterAddState = getElementsFromState(result.current.state);
 
     act(() => {
       dispatch({ type: 'UNDO' });
     });
-    expect(result.current.state.elementsCache).toEqual(initialElements);
+    expect(getElementsFromState(result.current.state)).toEqual(initialElements);
 
     act(() => {
       dispatch({ type: 'REDO' });
     });
-    expect(result.current.state.elementsCache).toEqual(afterAddState);
+    expect(getElementsFromState(result.current.state)).toEqual(afterAddState);
   });
 
   it('UNDO/REDOがテキスト更新後に動作することを確認する', () => {
     const { result } = renderHook(() => useStore());
     const { dispatch } = result.current;
 
-    const initialText = result.current.state.elementsCache['1'].texts[0];
+    const initialElement = getElementById(result.current.state, '1');
+    const initialText = initialElement?.texts[0] || '';
     const newText = 'Updated text';
 
     act(() => {
@@ -41,11 +58,13 @@ describe('UNDO/REDO機能', () => {
     act(() => {
       dispatch({ type: 'UNDO' });
     });
-    expect(result.current.state.elementsCache['1'].texts[0]).toBe(initialText);
+    const elementAfterUndo = getElementById(result.current.state, '1');
+    expect(elementAfterUndo?.texts[0]).toBe(initialText);
 
     act(() => {
       dispatch({ type: 'REDO' });
     });
-    expect(result.current.state.elementsCache['1'].texts[0]).toBe(newText);
+    const elementAfterRedo = getElementById(result.current.state, '1');
+    expect(elementAfterRedo?.texts[0]).toBe(newText);
   });
 });

@@ -414,20 +414,9 @@ const actionHandlers: Record<string, ActionHandler> = {
       return state;
     }
 
-    const elementsCache = Object.values(payload).reduce<ElementsMap>((acc, element) => {
-      if (!element.id) {
-        debugLog('Skipping invalid element without id:', element);
-        return acc;
-      }
-      acc[element.id] = element.parentId === null ? { ...element, visible: true } : element;
-      return acc;
-    }, {});
-
     return {
       ...state,
       hierarchicalData,
-      elementsCache,
-      cacheValid: true,
     };
   }),
 
@@ -759,12 +748,9 @@ const actionHandlers: Record<string, ActionHandler> = {
           currentHierarchy = result.hierarchicalData;
         }
 
-        const elementsCache = convertHierarchicalToFlat(currentHierarchy);
         return {
           ...state,
           hierarchicalData: currentHierarchy,
-          elementsCache,
-          cacheValid: true,
         };
       }
 
@@ -801,8 +787,14 @@ const actionHandlers: Record<string, ActionHandler> = {
       const result = updateElementInHierarchy(state.hierarchicalData, id, updatedElement);
 
       // 位置調整を行う
+      const allElements = getAllElementsFromHierarchy(result.hierarchicalData);
+      const elementsMap = allElements.reduce<ElementsMap>((acc, element) => {
+        acc[element.id] = element;
+        return acc;
+      }, {});
+
       const adjustedElementsCache = adjustElementPositions(
-        result.elementsCache,
+        elementsMap,
         () => state.numberOfSections,
         state.layoutMode,
         state.width || 0,
@@ -815,8 +807,6 @@ const actionHandlers: Record<string, ActionHandler> = {
       return {
         ...state,
         hierarchicalData: finalHierarchicalData,
-        elementsCache: adjustedElementsCache,
-        cacheValid: true,
       };
     },
   ),
@@ -887,12 +877,13 @@ const actionHandlers: Record<string, ActionHandler> = {
       }
 
       // 既存の要素の選択状態を解除し、新しい要素のみを選択状態にする
+      const allElementsForSelection = getAllElementsFromHierarchy(result.hierarchicalData);
       const elementsWithUpdatedSelection: { [id: string]: Element } = {};
-      Object.entries(result.elementsCache).forEach(([id, element]) => {
-        elementsWithUpdatedSelection[id] = {
+      allElementsForSelection.forEach((element) => {
+        elementsWithUpdatedSelection[element.id] = {
           ...element,
-          selected: id === newElement.id, // 新しい要素のみを選択状態に
-          editing: id === newElement.id, // 新しい要素を編集状態に
+          selected: element.id === newElement.id, // 新しい要素のみを選択状態に
+          editing: element.id === newElement.id, // 新しい要素を編集状態に
         };
       });
 
@@ -928,8 +919,6 @@ const actionHandlers: Record<string, ActionHandler> = {
       return {
         ...state,
         hierarchicalData: finalHierarchicalData,
-        elementsCache: adjustedElementsCache,
-        cacheValid: true,
       };
     },
   ),

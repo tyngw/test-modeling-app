@@ -3,14 +3,31 @@ import { renderHook, act } from '@testing-library/react';
 import { useStore } from './textUtils';
 import { Element } from '../../types/types';
 import { SIZE } from '../../config/elementSettings';
+import {
+  getAllElementsFromHierarchy,
+  findElementInHierarchy,
+} from '../../utils/hierarchical/hierarchicalConverter';
+
+// ヘルパー関数: hierarchicalDataから要素の配列を取得
+const getElementsFromState = (state: any) => {
+  if (!state.hierarchicalData) return [];
+  return getAllElementsFromHierarchy(state.hierarchicalData);
+};
+
+// ヘルパー関数: hierarchicalDataから特定の要素を取得
+const getElementById = (state: any, id: string) => {
+  if (!state.hierarchicalData) return null;
+  return findElementInHierarchy(state.hierarchicalData, id);
+};
 
 describe('基本操作', () => {
   it('初期状態', () => {
     const { result } = renderHook(() => useStore());
     const state = result.current.state;
 
-    expect(Object.keys(state.elementsCache)).toHaveLength(1);
-    const [rootElement] = Object.values(state.elementsCache) as Element[];
+    const elements = getElementsFromState(state);
+    expect(elements).toHaveLength(1);
+    const [rootElement] = elements as Element[];
     expect(rootElement).toMatchObject({
       parentId: null,
       selected: true,
@@ -25,19 +42,20 @@ describe('基本操作', () => {
     const { result } = renderHook(() => useStore());
     const { dispatch } = result.current;
 
-    const initialElement = Object.values(result.current.state.elementsCache)[0] as Element;
-    const initialElementLength = Object.keys(result.current.state.elementsCache).length;
+    const initialElements = getElementsFromState(result.current.state);
+    const initialElement = initialElements[0] as Element;
+    const initialElementLength = initialElements.length;
 
     act(() => {
       dispatch({ type: 'ADD_ELEMENT', payload: {} });
     });
 
     const afterState = result.current.state;
-    const elements = Object.values(afterState.elementsCache) as Element[];
+    const elements = getElementsFromState(afterState);
     const addedElement = elements.find((e) => e.id !== initialElement.id)!;
     const parentElement = elements.find((e) => e.id === initialElement.id)!;
 
-    expect(Object.keys(afterState.elementsCache)).toHaveLength(initialElementLength + 1);
+    expect(elements).toHaveLength(initialElementLength + 1);
     expect(parentElement).toMatchObject({
       children: 1,
       selected: false,
@@ -52,18 +70,18 @@ describe('基本操作', () => {
     const { result } = renderHook(() => useStore());
     const { dispatch } = result.current;
 
-    const initialElementLength = Object.keys(result.current.state.elementsCache).length;
+    const initialElements = getElementsFromState(result.current.state);
+    const initialElementLength = initialElements.length;
 
     act(() => {
       dispatch({ type: 'ADD_ELEMENT', payload: {} });
     });
 
     const afterAddState = result.current.state;
-    expect(Object.keys(afterAddState.elementsCache).length).toBe(initialElementLength + 1);
+    const afterAddElements = getElementsFromState(afterAddState);
+    expect(afterAddElements.length).toBe(initialElementLength + 1);
 
-    const addedElement = Object.values(afterAddState.elementsCache).find(
-      (elm: Element) => elm.id !== '1',
-    ) as Element;
+    const addedElement = afterAddElements.find((elm: Element) => elm.id !== '1') as Element;
     const elementId = addedElement.id;
 
     act(() => {
@@ -71,13 +89,12 @@ describe('基本操作', () => {
     });
 
     const afterDeleteState = result.current.state;
-    expect(Object.keys(afterDeleteState.elementsCache)).toHaveLength(initialElementLength);
-    expect(Object.values(afterDeleteState.elementsCache)[0]).toMatchObject({
+    const afterDeleteElements = getElementsFromState(afterDeleteState);
+    expect(afterDeleteElements).toHaveLength(initialElementLength);
+    expect(afterDeleteElements[0]).toMatchObject({
       children: 0,
     });
-    expect(
-      Object.values(afterDeleteState.elementsCache).some((elm: Element) => elm.id === elementId),
-    ).toBe(false);
+    expect(afterDeleteElements.some((elm: Element) => elm.id === elementId)).toBe(false);
   });
 
   it('子ノードを持つノードを削除する', () => {
@@ -91,9 +108,9 @@ describe('基本操作', () => {
     });
 
     let state = result.current.state;
-    expect(Object.keys(state.elementsCache).length).toBe(2); // ルート + 子要素
+    expect(getElementsFromState(state).length).toBe(2); // ルート + 子要素
 
-    let childElement = Object.values(state.elementsCache).find(
+    let childElement = getElementsFromState(state).find(
       (elm: Element) => elm.id !== '1',
     ) as Element;
     expect(childElement).toBeTruthy(); // 子要素が存在することを確認
@@ -109,7 +126,7 @@ describe('基本操作', () => {
 
     // 子要素が選択されているか確認
     state = result.current.state;
-    const selectedAfterSelect = Object.values(state.elementsCache).find((e) => e.selected);
+    const selectedAfterSelect = getElementsFromState(state).find((e) => e.selected);
     expect(selectedAfterSelect?.id).toBe(childElement.id);
 
     // 編集状態をクリアしてから要素を追加
@@ -121,14 +138,14 @@ describe('基本操作', () => {
     state = result.current.state;
 
     // 実際に作成された要素数を確認（最低でもルート+子要素は存在するはず）
-    const actualElementCount = Object.keys(state.elementsCache).length;
+    const actualElementCount = getElementsFromState(state).length;
     expect(actualElementCount).toBeGreaterThanOrEqual(2); // ルート + 子要素
 
     // 更新された子要素を取得
-    childElement = Object.values(state.elementsCache).find(
+    childElement = getElementsFromState(state).find(
       (elm: Element) => elm.id === childElement.id,
     ) as Element;
-    const grandchildElement = Object.values(state.elementsCache).find(
+    const grandchildElement = getElementsFromState(state).find(
       (elm: Element) => elm.parentId === childElement.id,
     ) as Element;
 
@@ -140,7 +157,7 @@ describe('基本操作', () => {
     }
 
     // ステップ3: 子要素を削除（孫要素も一緒に削除される）
-    const childElementToDelete = Object.values(state.elementsCache).find(
+    const childElementToDelete = getElementsFromState(state).find(
       (elm: Element) => elm.parentId === '1',
     ) as Element;
 
@@ -158,23 +175,18 @@ describe('基本操作', () => {
     });
 
     const afterState = result.current.state;
-    expect(Object.keys(afterState.elementsCache).length).toBe(1); // ルート要素のみ残る
-    expect(Object.values(afterState.elementsCache).some((elm: Element) => elm.id === '1')).toBe(
-      true,
+    const afterStateElements = getElementsFromState(afterState);
+    expect(afterStateElements.length).toBe(1); // ルート要素のみ残る
+    expect(afterStateElements.some((elm: Element) => elm.id === '1')).toBe(true);
+    expect(afterStateElements.some((elm: Element) => elm.id === childElementToDelete.id)).toBe(
+      false,
     );
-    expect(
-      Object.values(afterState.elementsCache).some(
-        (elm: Element) => elm.id === childElementToDelete.id,
-      ),
-    ).toBe(false);
 
     // 孫要素が存在していた場合、それも削除されているか確認
     if (actualElementCount >= 3 && grandchildElement) {
-      expect(
-        Object.values(afterState.elementsCache).some(
-          (elm: Element) => elm.id === grandchildElement.id,
-        ),
-      ).toBe(false);
+      expect(afterStateElements.some((elm: Element) => elm.id === grandchildElement.id)).toBe(
+        false,
+      );
     }
   });
 
@@ -193,7 +205,7 @@ describe('基本操作', () => {
     });
 
     const newState = result.current.state;
-    const element = Object.values(newState.elementsCache)[0] as Element;
+    const element = getElementsFromState(newState)[0] as Element;
     expect(element.texts[index]).toBe(newText);
     expect(element.editing).toBe(false);
   });
@@ -217,9 +229,9 @@ describe('基本操作', () => {
       });
     });
 
-    const element = result.current.state.elementsCache['1'];
+    const element = getElementById(result.current.state, '1');
     testData.forEach(({ index, value }) => {
-      expect(element.texts[index]).toBe(value);
+      expect(element?.texts[index]).toBe(value);
     });
   });
 });
