@@ -32,6 +32,8 @@ import {
   getCanvasBackgroundColor,
 } from '../../utils/storage/localStorageHelpers';
 import { calculateDropCoordinates } from '../../utils/dropCoordinateHelpers';
+import { getAllElementsFromHierarchy } from '../../utils/hierarchical/hierarchicalConverter';
+import { ElementsMap } from '../../types/elementTypes';
 
 // デバッグログ機能
 const DEBUG_ENABLED = true;
@@ -82,7 +84,16 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
   const svgRef = useRef<SVGSVGElement>(null);
   const [isClient, setIsClient] = useState(false);
   const { state, dispatch } = useCanvas();
-  const { elementsCache } = state;
+  // ElementsMapをuseMemoで安定化 - hierarchicalDataが変更された時のみ再計算
+  const elementsCache = useMemo(() => {
+    if (!state.hierarchicalData) return {};
+
+    const allElements = getAllElementsFromHierarchy(state.hierarchicalData);
+    return allElements.reduce<ElementsMap>((acc, element) => {
+      acc[element.id] = element;
+      return acc;
+    }, {});
+  }, [state.hierarchicalData]);
   const [connectionPathColor, setConnectionPathColor] = useState(DEFAULT_CONNECTION_PATH_COLOR);
   const [connectionPathStroke, setConnectionPathStroke] = useState(DEFAULT_CONNECTION_PATH_STROKE);
   const [canvasBackgroundColor, setCanvasBackgroundColor] = useState(
@@ -131,10 +142,8 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
   useResizeEffect({
     setCanvasSize,
     setDisplayArea,
-    state: {
-      elements: elementsCache,
-      zoomRatio: state.zoomRatio,
-    },
+    elements: elementsCache,
+    zoomRatio: state.zoomRatio,
     isClient,
     isDragInProgress, // ドラッグ中のフラグを追加
   });

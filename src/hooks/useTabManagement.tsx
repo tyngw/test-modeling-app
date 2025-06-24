@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback } from 'react';
+import { getAllElementsFromHierarchy } from '../utils/hierarchical/hierarchicalConverter';
 import { useTabs } from '../context/TabsContext';
 import { extractRootElementTextFromElements } from '../utils/file';
 import { determineFileName } from '../utils/file/fileHelpers';
@@ -33,9 +34,9 @@ export function useTabManagement() {
 
         // 編集終了時にタブ名を更新
         if (action.type === 'END_EDITING') {
-          const elements = Object.values(
-            newState.elementsCache || {},
-          ) as unknown as import('../types/types').Element[];
+          const elements = newState.hierarchicalData
+            ? getAllElementsFromHierarchy(newState.hierarchicalData)
+            : [];
           const rootElementText = extractRootElementTextFromElements(elements);
 
           if (rootElementText) {
@@ -56,9 +57,9 @@ export function useTabManagement() {
   const updateTabNameFromRootElement = useCallback(() => {
     if (!currentTab || !currentTabId) return;
 
-    const elements = Object.values(
-      currentTab.state.elementsCache || {},
-    ) as unknown as import('../types/types').Element[];
+    const elements = currentTab.state.hierarchicalData
+      ? getAllElementsFromHierarchy(currentTab.state.hierarchicalData)
+      : [];
     const rootElementText = extractRootElementTextFromElements(elements);
 
     if (rootElementText) {

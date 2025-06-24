@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+import { getAllElementsFromHierarchy } from '../utils/hierarchical/hierarchicalConverter';
 import { useToast } from '../context/ToastContext';
 import { ToastMessages } from '../constants/toastMessages';
 import { generateWithGemini } from '../utils/api';
@@ -38,12 +39,13 @@ export function useAIGeneration({ currentTab, dispatch }: UseAIGenerationParams)
       }
 
       // AI生成開始時点での選択要素を固定
-      const selectedElement = Object.values(currentTab.state.elementsCache || {}).find(
-        (el): el is Element => {
-          const element = el as Element;
-          return element.selected;
-        },
-      );
+      const allElements = currentTab.state.hierarchicalData
+        ? getAllElementsFromHierarchy(currentTab.state.hierarchicalData)
+        : [];
+      const selectedElement = allElements.find((el): el is Element => {
+        const element = el as Element;
+        return element.selected;
+      });
 
       if (!selectedElement) {
         addToast(ToastMessages.noSelect);
@@ -67,10 +69,16 @@ export function useAIGeneration({ currentTab, dispatch }: UseAIGenerationParams)
         return;
       }
 
-      const structureText = formatElementsForPrompt(
-        currentTab.state.elementsCache || {},
-        targetElementId,
+      // allElementsをElementsMapに変換
+      const elementsMap = allElements.reduce(
+        (acc, element) => {
+          acc[element.id] = element;
+          return acc;
+        },
+        {} as Record<string, Element>,
       );
+
+      const structureText = formatElementsForPrompt(elementsMap, targetElementId);
 
       // ユーザープロンプト（実際のデータ）を作成
       const userPrompt = createUserPrompt({ structureText, inputText });

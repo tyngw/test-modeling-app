@@ -15,7 +15,8 @@
  * - ドラッグ中の位置プレビューとハイライト効果
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { getAllElementsFromHierarchy } from '../utils/hierarchical/hierarchicalConverter';
 import { Element, DropPosition, DirectionType } from '../types/types';
 import { useCanvas } from '../context/CanvasContext';
 import { isDescendant } from '../utils/element/elementHelpers';
@@ -70,6 +71,21 @@ export interface ElementDragEffectResult {
 export const useElementDragEffect = (): ElementDragEffectResult => {
   const { state, dispatch } = useCanvas();
   const { addToast } = useToast();
+
+  // hierarchicalDataからelementsMapを生成
+  const elementsMap = useMemo(() => {
+    if (!state.hierarchicalData) return {};
+
+    const allElements = getAllElementsFromHierarchy(state.hierarchicalData);
+    return allElements.reduce(
+      (acc, element) => {
+        acc[element.id] = element;
+        return acc;
+      },
+      {} as Record<string, Element>,
+    );
+  }, [state.hierarchicalData]);
+
   const [draggingElement, setDraggingElement] = useState<Element | null>(null);
   const [dragStartOffset, setDragStartOffset] = useState<Position>({ x: 0, y: 0 });
   const [currentDropTarget, setCurrentDropTarget] = useState<DropTargetInfo>(null);
@@ -1061,7 +1077,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
 
       // ドラッグ開始時に選択されている全要素の元の位置を保存
       elementOriginalPositions.current.clear();
-      const selectedElements = Object.values(state.elementsCache).filter((el): el is Element => {
+      const selectedElements = Object.values(elementsMap).filter((el): el is Element => {
         const element = el as Element;
         return element.selected;
       });
@@ -1071,11 +1087,11 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
         elementOriginalPositions.current.set(element.id, { x: element.x, y: element.y });
       });
     },
-    [convertToZoomCoordinates, state.elementsCache, dispatch],
+    [convertToZoomCoordinates, elementsMap, dispatch],
   );
 
   const resetElementsPosition = useCallback(() => {
-    const selectedElements = Object.values(state.elementsCache).filter((el): el is Element => {
+    const selectedElements = Object.values(elementsMap).filter((el): el is Element => {
       const element = el as Element;
       return element.selected;
     });
@@ -1092,7 +1108,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
     // 状態をリセット
     setDraggingElement(null);
     elementOriginalPositions.current.clear();
-  }, [state.elementsCache, dispatch]);
+  }, [elementsMap, dispatch]);
 
   // 要素をドロップする際の親変更を検証する関数
   const validateParentChange = useCallback(
@@ -1114,9 +1130,9 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
       }
 
       // 自身の子孫要素に移動しようとしている場合は無効
-      if (isDescendant(state.elementsCache, element.id, newParentId)) {
+      if (isDescendant(elementsMap, element.id, newParentId)) {
         // 直接の子要素への移動かどうかを判定
-        const isDirectChild = state.elementsCache[newParentId]?.parentId === element.id;
+        const isDirectChild = elementsMap[newParentId]?.parentId === element.id;
         debugLog(
           `無効な操作: ${isDirectChild ? '自身の子要素' : '循環参照'} element=${element.id}, newParentId=${newParentId}`,
         );
@@ -1129,7 +1145,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
       }
 
       // 階層構造の制約チェック
-      const newParentDepth = newParentId ? state.elementsCache[newParentId]?.depth || 0 : 0;
+      const newParentDepth = newParentId ? elementsMap[newParentId]?.depth || 0 : 0;
       const maxAllowedDepth = 10; // 最大深さの制限値
       if (newParentDepth >= maxAllowedDepth) {
         debugLog(`無効な操作: 最大深さ超過 currentDepth=${newParentDepth}, max=${maxAllowedDepth}`);
@@ -1141,7 +1157,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
 
       return { isValid: true };
     },
-    [state.elementsCache],
+    [elementsMap],
   );
 
   // 子要素としてドロップする処理
@@ -1298,7 +1314,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
         let newDirection: DirectionType | undefined = undefined;
 
         if (newParentId) {
-          const newParent = state.elementsCache[newParentId];
+          const newParent = elementsMap[newParentId];
           const isNewParentRoot = newParent?.direction === 'none' && newParent?.parentId === null;
 
           if (isNewParentRoot) {
@@ -1378,7 +1394,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
       addToast,
       resetElementsPosition,
       dispatch,
-      state.elementsCache,
+      elementsMap,
     ],
   );
 
@@ -1411,9 +1427,9 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
         const draggedElementIds = draggedElements.map((el) => el.id);
 
         // 同じ親を持つ兄弟要素を取得（ドラッグ中の要素を除外）
-        const siblings = Object.values(state.elementsCache)
+        const siblings = Object.values(elementsMap)
           .filter(
-            (el) =>
+            (el): el is Element =>
               el.visible && el.parentId === targetParentId && !draggedElementIds.includes(el.id), // ドラッグ中の要素を除外
           )
           .sort((a, b) => a.y - b.y); // Y座標で並び替え
@@ -1437,8 +1453,8 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
       } else if (dropTarget) {
         // child ドロップの場合
         const targetParentId = dropTarget.element.id;
-        const siblings = Object.values(state.elementsCache).filter(
-          (el) => el.visible && el.parentId === targetParentId,
+        const siblings = Object.values(elementsMap).filter(
+          (el): el is Element => el.visible && el.parentId === targetParentId,
         );
         baseOrder = siblings.length; // 末尾に追加
         console.log(
@@ -1452,7 +1468,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
       console.log('[calculateTargetOrderValues] Final baseOrder:', baseOrder);
       return { baseOrder };
     },
-    [state.elementsCache],
+    [elementsMap],
   );
 
   // 階層構造での要素移動時の配列順序調整関数（現在は階層操作で自動処理されるため削除予定）
@@ -1477,7 +1493,9 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
     if (!draggingElement) return;
 
     try {
-      const selectedElements = Object.values(state.elementsCache).filter((el) => el.selected);
+      const selectedElements = Object.values(elementsMap).filter(
+        (el): el is Element => el.selected,
+      );
 
       if (currentDropTarget) {
         const { element: target, position } = currentDropTarget;
@@ -1523,7 +1541,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
   }, [
     draggingElement,
     currentDropTarget,
-    state.elementsCache,
+    elementsMap,
     dispatch,
     addToast,
     resetElementsPosition,
@@ -1541,7 +1559,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
         e.preventDefault();
       }
 
-      const dropTarget = findDropTarget(e, state.elementsCache);
+      const dropTarget = findDropTarget(e, elementsMap);
 
       // 新しいドロップターゲットと現在のドロップターゲットを比較し、
       // 実際に変更がある場合のみステートを更新する
@@ -1581,7 +1599,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
     [
       draggingElement,
       currentDropTarget,
-      state.elementsCache,
+      elementsMap,
       findDropTarget,
       convertToZoomCoordinates,
       dragStartOffset,
