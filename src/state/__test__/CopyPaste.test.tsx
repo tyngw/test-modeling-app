@@ -45,12 +45,14 @@ describe('切り取り、コピー、貼り付け操作', () => {
     mockDateNow.mockImplementation(() => counter++);
 
     // Mock clipboard functions
-    jest.spyOn(clipboardHelpers, 'copyToClipboard').mockImplementation((elements: ElementsMap) => {
+    jest.spyOn(clipboardHelpers, 'copyToClipboard').mockImplementation(async (elements: ElementsMap) => {
       localStorage.setItem('copiedElements', JSON.stringify(elements));
+      return true;
     });
 
-    jest.spyOn(clipboardHelpers, 'cutToClipboard').mockImplementation((elements: ElementsMap) => {
+    jest.spyOn(clipboardHelpers, 'cutToClipboard').mockImplementation(async (elements: ElementsMap) => {
       localStorage.setItem('cutElements', JSON.stringify(elements));
+      return true;
     });
   });
 

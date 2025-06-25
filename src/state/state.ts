@@ -1468,7 +1468,10 @@ const actionHandlers: Record<string, ActionHandler> = {
       currentHierarchy = result.hierarchicalData;
     });
 
-    cutToClipboard(cutElementsMap);
+    // 非同期でクリップボードに保存（エラーハンドリング付き）
+    cutToClipboard(cutElementsMap).catch((error) => {
+      console.error('Failed to cut elements to clipboard:', error);
+    });
 
     return {
       ...state,
@@ -1489,8 +1492,12 @@ const actionHandlers: Record<string, ActionHandler> = {
     }, {});
     const elementsToCopy = getSelectedAndChildren(elementsMapForCopy, selectedElement);
 
+    // 非同期でクリップボードに保存（エラーハンドリング付き）
+    copyToClipboard(elementsToCopy).catch((error) => {
+      console.error('Failed to copy elements to clipboard:', error);
+    });
+
     // getSelectedAndChildrenが既に適切なparentId=nullとselected=trueを設定している
-    copyToClipboard(elementsToCopy);
     return state;
   }),
 

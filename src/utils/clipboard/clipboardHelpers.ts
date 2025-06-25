@@ -60,7 +60,7 @@ const createClipboardText = (elements: ElementsMap, type: 'copy' | 'cut'): strin
   const getElementText = (element: Element, depth = 0): string => {
     const children = Object.values(elements).filter((el) => el.parentId === element.id);
     const tabs = '\t'.repeat(depth);
-    let result = `${tabs}${element.texts[0]}`;
+    let result = `${tabs}${element.texts[0] || ''}`;
 
     if (children.length > 0) {
       result += '\n';
@@ -71,10 +71,26 @@ const createClipboardText = (elements: ElementsMap, type: 'copy' | 'cut'): strin
     return result;
   };
 
+  // デバッグ情報を追加
+  const elementCount = Object.keys(elements).length;
+  if (elementCount === 0) {
+    console.warn('createClipboardText: No elements provided');
+    return '';
+  }
+
   const selectedElement = Object.values(elements).find((el) => el.selected);
-  if (!selectedElement) return '';
+  if (!selectedElement) {
+    console.warn('createClipboardText: No selected element found in elements map');
+    console.debug('Elements:', elements);
+    return '';
+  }
 
   const textRepresentation = getElementText(selectedElement);
+  if (!textRepresentation || textRepresentation.trim() === '') {
+    console.warn('createClipboardText: Generated text representation is empty');
+    console.debug('Selected element:', selectedElement);
+  }
+
   const marker = type === 'copy' ? CLIPBOARD_MARKER_COPY : CLIPBOARD_MARKER_CUT;
   const elementData = JSON.stringify(elements);
 
@@ -116,32 +132,28 @@ export const getSelectedAndChildren = (
  * 要素データを特別なマーカーと共にクリップボードに保存
  *
  * @param elements コピーする要素のマップ
+ * @returns Promise<boolean> コピーが成功したかどうか
  */
-export const copyToClipboard = (elements: ElementsMap): void => {
+export const copyToClipboard = async (elements: ElementsMap): Promise<boolean> => {
   const textToCopy = createClipboardText(elements, 'copy');
 
-  if (navigator.clipboard && window.isSecureContext) {
-    navigator.clipboard
-      .writeText(textToCopy)
-      .then(() => {
-        // Success: text copied to clipboard
-      })
-      .catch((err) => {
-        console.error('Failed to copy to clipboard:', err);
-      });
-  } else {
-    const textArea = document.createElement('textarea');
-    textArea.value = textToCopy;
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
-    try {
-      document.execCommand('copy');
-      // Success: text copied to clipboard
-    } catch (err) {
-      console.error('Failed to copy to clipboard:', err);
+  // 空のテキストの場合は失敗として扱う
+  if (!textToCopy || textToCopy.trim() === '') {
+    console.error('No text to copy - elements may be empty or invalid');
+    return false;
+  }
+
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(textToCopy);
+      return true;
+    } else {
+      // フォールバック処理の改善
+      return await fallbackCopyToClipboard(textToCopy);
     }
-    document.body.removeChild(textArea);
+  } catch (err) {
+    console.error('Failed to copy to clipboard:', err);
+    return false;
   }
 };
 
@@ -149,33 +161,61 @@ export const copyToClipboard = (elements: ElementsMap): void => {
  * 要素を切り取ってクリップボードに保存する
  *
  * @param elements 切り取る要素のマップ
+ * @returns Promise<boolean> 切り取りが成功したかどうか
  */
-export const cutToClipboard = (elements: ElementsMap): void => {
+export const cutToClipboard = async (elements: ElementsMap): Promise<boolean> => {
   const textToCopy = createClipboardText(elements, 'cut');
 
-  if (navigator.clipboard && window.isSecureContext) {
-    navigator.clipboard
-      .writeText(textToCopy)
-      .then(() => {
-        // Text copied to clipboard successfully
-      })
-      .catch((err) => {
-        console.error('Failed to copy text to clipboard:', err);
-      });
-  } else {
-    // Fallback for older browsers or non-secure contexts
-    const textArea = document.createElement('textarea');
-    textArea.value = textToCopy;
-    document.body.appendChild(textArea);
-    textArea.select();
-    try {
-      document.execCommand('copy');
-      // Text copied to clipboard using fallback method
-    } catch (err) {
-      console.error('Failed to copy text to clipboard:', err);
-    }
-    document.body.removeChild(textArea);
+  // 空のテキストの場合は失敗として扱う
+  if (!textToCopy || textToCopy.trim() === '') {
+    console.error('No text to cut - elements may be empty or invalid');
+    return false;
   }
+
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(textToCopy);
+      return true;
+    } else {
+      // フォールバック処理の改善
+      return await fallbackCopyToClipboard(textToCopy);
+    }
+  } catch (err) {
+    console.error('Failed to cut to clipboard:', err);
+    return false;
+  }
+};
+
+/**
+ * フォールバック用のクリップボードコピー処理
+ * @param text コピーするテキスト
+ * @returns Promise<boolean> コピーが成功したかどうか
+ */
+const fallbackCopyToClipboard = (text: string): Promise<boolean> => {
+  return new Promise((resolve) => {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    textArea.style.top = '-999999px';
+    document.body.appendChild(textArea);
+    
+    try {
+      textArea.focus();
+      textArea.select();
+      
+      // iOS Safari対応
+      textArea.setSelectionRange(0, 99999);
+      
+      const successful = document.execCommand('copy');
+      document.body.removeChild(textArea);
+      resolve(successful);
+    } catch (err) {
+      console.error('Fallback copy failed:', err);
+      document.body.removeChild(textArea);
+      resolve(false);
+    }
+  });
 };
 
 /**
