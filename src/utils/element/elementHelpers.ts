@@ -18,10 +18,24 @@ export interface NewElementParams {
   direction?: DirectionType;
 }
 
+/**
+ * 新しい要素を作成する
+ * 
+ * ⚠️ 重要: numSectionsパラメータについて
+ * - 新しいタブ作成時は、必ず設定で指定されたnumberOfSectionsを渡すこと
+ * - デフォルト値のNUMBER_OF_SECTIONSは固定値(3)なので、設定値を無視してしまう
+ * - このリグレッションが過去に何度か発生しているため、呼び出し元で設定値を明示的に渡すことを徹底する
+ * 
+ * @param parentId 親要素のID（nullの場合はルート要素）
+ * @param depth 要素の深さ（デフォルト: 1、ルート要素は0）
+ * @param numSections セクション数（⚠️必ず設定値を渡すこと！デフォルトは固定値3）
+ * @param direction 要素の方向（デフォルト: parentIdがnullなら'none'、そうでなければ'right'）
+ * @returns 新しく作成された要素
+ */
 export const createNewElement = ({
   parentId = null,
   depth = 1,
-  numSections = NUMBER_OF_SECTIONS,
+  numSections = NUMBER_OF_SECTIONS, // ⚠️ この固定値に依存せず、呼び出し元で設定値を明示的に渡すこと
   direction = parentId === null ? 'none' : 'right',
 }: NewElementParams = {}): Element => {
   const markerType = getMarkerType();

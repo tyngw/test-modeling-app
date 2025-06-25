@@ -18,6 +18,7 @@ import { createNewElement } from '../utils/element/elementHelpers';
 import { convertLegacyElement } from '../utils/file/fileHelpers';
 import { getTabsState, setTabsState } from '../utils/storage/localStorageHelpers';
 import { TabState, TabsStorage, TabsContextValue, LayoutMode } from '../types/tabTypes';
+import { convertFlatToHierarchical } from '../utils/hierarchical/hierarchicalConverter';
 
 const TabsContext = createContext<TabsContextValue | undefined>(undefined);
 
@@ -38,21 +39,22 @@ const createInitialTabState = (currentSections?: number): TabState => {
     },
   };
 
+  const hierarchicalData = convertFlatToHierarchical(initialElements);
+
   return {
     id: uuidv4(),
     name: '無題',
     isSaved: false,
     lastSavedElements: JSON.stringify(initialElements),
     state: {
-      ...initialState,
+      hierarchicalData,
+      width: typeof window !== 'undefined' ? window.innerWidth : 0,
+      height: typeof window !== 'undefined' ? window.innerHeight : 0,
+      zoomRatio: 1,
       numberOfSections: numSections,
-      // elementsをelementsCacheに変換
-      ...(Object.keys(initialElements).length > 0 && {
-        elementsCache: initialElements,
-      }),
-      layoutMode: defaultLayoutMode, // state.layoutModeも同じ値を設定
+      layoutMode: defaultLayoutMode,
     },
-    layoutMode: defaultLayoutMode, // tab.layoutModeも同じ値を設定
+    layoutMode: defaultLayoutMode,
   };
 };
 
