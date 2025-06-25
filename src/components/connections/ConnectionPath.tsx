@@ -80,14 +80,14 @@ export const ConnectionPath: React.FC<ConnectionPathProps> = ({
     // 子要素の方向に応じて接続パスを計算
     if (direction === 'left') {
       pathCommands = [
-        `M ${parentPos.x},${parentPos.y + parentElement.height / 2}`,
+        `M ${parentPos.x - startOffset},${parentPos.y + parentElement.height / 2}`,
         `C ${parentPos.x - CURVE_CONTROL_OFFSET},${parentPos.y + parentElement.height / 2}`,
         `${elementPos.x + element.width + CURVE_CONTROL_OFFSET},${elementPos.y + totalHeight / 2}`,
         `${elementPos.x + element.width + endOffset},${elementPos.y + totalHeight / 2}`,
       ].join(' ');
     } else {
       pathCommands = [
-        `M ${parentPos.x + parentElement.width},${parentPos.y + parentElement.height / 2}`,
+        `M ${parentPos.x + parentElement.width + startOffset},${parentPos.y + parentElement.height / 2}`,
         `C ${parentPos.x + parentElement.width + CURVE_CONTROL_OFFSET},${parentPos.y + parentElement.height / 2}`,
         `${elementPos.x - CURVE_CONTROL_OFFSET},${elementPos.y + totalHeight / 2}`,
         `${elementPos.x - endOffset},${elementPos.y + totalHeight / 2}`,
