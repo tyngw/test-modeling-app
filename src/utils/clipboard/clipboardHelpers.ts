@@ -199,14 +199,14 @@ const fallbackCopyToClipboard = (text: string): Promise<boolean> => {
     textArea.style.left = '-999999px';
     textArea.style.top = '-999999px';
     document.body.appendChild(textArea);
-    
+
     try {
       textArea.focus();
       textArea.select();
-      
+
       // iOS Safari対応
       textArea.setSelectionRange(0, 99999);
-      
+
       const successful = document.execCommand('copy');
       document.body.removeChild(textArea);
       resolve(successful);

@@ -16,7 +16,7 @@ import { sanitizeText } from '../security/sanitization';
 import { validateSettingValue } from '../security/validation';
 
 // Style settings interface to define structure of the "styles" key
-interface StyleSettings {
+export interface StyleSettings {
   canvasBackgroundColor: string;
   connectionPathColor: string;
   elementColor: string;

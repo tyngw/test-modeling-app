@@ -161,6 +161,57 @@ Parent Item
 
 ---
 
+## VSCode拡張として使用する
+
+このアプリケーションは、通常のWebアプリケーションとしてだけでなく、Visual Studio Codeの拡張機能としても利用できます。
+
+### 拡張機能のビルドとインストール
+
+1. **拡張機能をビルドする**
+   ```bash
+   npm run build:extension
+   ```
+
+2. **VSCodeで拡張機能を開発モードで実行する**
+   - VSCodeでこのプロジェクトを開く
+   - `F5`キーを押すか、「Run and Debug」パネルから「Run Extension」を選択
+   - 新しいVSCodeウィンドウ（Extension Development Host）が開きます
+
+3. **拡張機能を使用する**
+   - コマンドパレット（`Ctrl/Cmd + Shift + P`）を開く
+   - `Test Modeling App: Open Modeling Editor` を実行
+   - エディターでモデリング図を作成・編集できます
+
+### VSCode拡張版の特長
+
+#### ファイル操作の統合
+- **ワークスペース内での保存**: 図のデータはワークスペースのファイルとして保存されます
+- **リアルタイム保存**: 編集内容は自動的にJSONファイルとして保存されます
+- **ファイル履歴**: VSCodeのファイル履歴機能を利用できます
+
+#### 設定の統合
+- **VSCode設定との統合**: アプリの設定はVSCodeの設定システムで管理されます
+- **テーマの自動適用**: VSCodeのテーマ設定に連動してアプリのテーマが変更されます
+- **ワークスペース固有設定**: プロジェクトごとに異なる設定を保持できます
+
+#### 開発者向け機能
+- **プロジェクトとの連携**: コードとモデリング図を同じワークスペースで管理
+- **Git統合**: 図のファイルもバージョン管理対象に含めることができます
+- **拡張可能性**: 他のVSCode拡張との連携が可能
+
+### 設定項目
+
+VSCodeの設定画面（`Ctrl/Cmd + ,`）で以下の項目を設定できます：
+
+- `testModelingApp.theme`: アプリケーションのテーマ（light/dark/auto）
+- `testModelingApp.autoSave`: 自動保存の有効/無効
+- `testModelingApp.autoSaveInterval`: 自動保存の間隔（ミリ秒）
+- `testModelingApp.defaultFileName`: 新しいファイルのデフォルト名
+- `testModelingApp.canvasBackgroundColor`: キャンバスの背景色
+- `testModelingApp.elementColor`: 要素の色
+
+---
+
 ## ライセンス
 
 このプロジェクトはMITライセンスで公開されています。詳細は [LICENSE](./LICENSE) をご覧ください。

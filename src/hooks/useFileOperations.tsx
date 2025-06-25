@@ -7,6 +7,8 @@ import { saveSvg, saveElements, loadElements } from '../utils/file';
 import { convertFlatToHierarchical } from '../utils/hierarchical/hierarchicalConverter';
 import { TabState } from '../types/tabTypes';
 import { State } from '../state/state';
+import { fileOperationAdapter } from '../utils/file/fileOperationAdapter';
+import { isVSCodeExtension } from '../utils/environment/environmentDetector';
 
 interface UseFileOperationsParams {
   currentTab: TabState | undefined;
@@ -31,14 +33,20 @@ export function useFileOperations({
 }: UseFileOperationsParams) {
   const { addToast } = useToast();
 
-  const handleSaveSvg = useCallback(() => {
+  const handleSaveSvg = useCallback(async () => {
     const svgElement = document.querySelector('.svg-element') as SVGSVGElement;
     if (svgElement) {
-      saveSvg(svgElement, 'download.svg');
+      if (isVSCodeExtension()) {
+        // VSCode拡張環境では適応されたファイル操作を使用
+        await fileOperationAdapter.saveSvg(svgElement, 'download.svg');
+      } else {
+        // ブラウザ環境では既存の処理を使用
+        saveSvg(svgElement, 'download.svg');
+      }
     }
   }, []);
 
-  const handleSaveElements = useCallback(() => {
+  const handleSaveElements = useCallback(async () => {
     if (!currentTab) return;
 
     // hierarchicalDataから要素を取得
@@ -46,7 +54,13 @@ export function useFileOperations({
       ? getAllElementsFromHierarchy(currentTab.state.hierarchicalData)
       : [];
 
-    saveElements(allElements, currentTab.name);
+    if (isVSCodeExtension()) {
+      // VSCode拡張環境では適応されたファイル操作を使用
+      await fileOperationAdapter.saveElements(allElements, currentTab.name);
+    } else {
+      // ブラウザ環境では既存の処理を使用
+      saveElements(allElements, currentTab.name);
+    }
 
     // JSON保存後にタブを保存済みとしてマーク
     if (currentTab.id) {
@@ -69,7 +83,15 @@ export function useFileOperations({
   const handleLoadElements = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       try {
-        const result = await loadElements(event.nativeEvent);
+        let result;
+
+        if (isVSCodeExtension()) {
+          // VSCode拡張環境では適応されたファイル操作を使用
+          result = await fileOperationAdapter.loadElements();
+        } else {
+          // ブラウザ環境では既存の処理を使用
+          result = await loadElements(event.nativeEvent);
+        }
 
         // 新しいタブを作成して、読み込んだ要素をそのタブに適用
         const newTabId = addTab();

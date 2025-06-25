@@ -1,0 +1,95 @@
+{
+  "name": "test-modeling-app-vscode",
+  "displayName": "Test Modeling App",
+  "description": "モデリング図作成ツール - VSCode拡張版",
+  "version": "0.1.0",
+  "publisher": "test-modeling-app",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Visualization",
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "testModelingApp.openEditor",
+        "title": "Open Modeling Editor",
+        "category": "Test Modeling App"
+      }
+    ],
+    "configuration": {
+      "title": "Test Modeling App",
+      "properties": {
+        "testModelingApp.theme": {
+          "type": "string",
+          "default": "auto",
+          "enum": [
+            "light",
+            "dark",
+            "auto"
+          ],
+          "enumDescriptions": [
+            "ライトテーマ",
+            "ダークテーマ",
+            "VSCodeのテーマに合わせる"
+          ],
+          "description": "アプリケーションのテーマ設定"
+        },
+        "testModelingApp.autoSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "自動保存を有効にする"
+        },
+        "testModelingApp.autoSaveInterval": {
+          "type": "number",
+          "default": 5000,
+          "minimum": 1000,
+          "maximum": 60000,
+          "description": "自動保存の間隔（ミリ秒）"
+        },
+        "testModelingApp.defaultFileName": {
+          "type": "string",
+          "default": "modeling-diagram",
+          "description": "新しいファイルのデフォルト名"
+        },
+        "testModelingApp.canvasBackgroundColor": {
+          "type": "string",
+          "default": "#ffffff",
+          "description": "キャンバスの背景色"
+        },
+        "testModelingApp.elementColor": {
+          "type": "string",
+          "default": "#000000",
+          "description": "要素の色"
+        }
+      }
+    },
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "testModelingApp.openEditor",
+          "group": "navigation",
+          "when": "explorerResourceIsFolder"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.74.0",
+    "@types/node": "16.x",
+    "typescript": "^5.0.0"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}
