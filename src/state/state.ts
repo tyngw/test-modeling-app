@@ -20,7 +20,7 @@ import {
 } from '../config/elementSettings';
 import { Action } from '../types/actionTypes';
 import { debugLog } from '../utils/debugLogHelpers';
-import { createNewElement, getChildrenFromHierarchy } from '../utils/element/elementHelpers';
+import { createNewElement } from '../utils/element/elementHelpers';
 import { calculateElementWidth, wrapText } from '../utils/textareaHelpers';
 import { ElementsMap } from '../types/elementTypes';
 import { adjustElementPositions } from '../utils/layoutHelpers';
@@ -36,6 +36,11 @@ import { HierarchicalStructure, HierarchicalOperationResult } from '../types/hie
 import {
   convertFlatToHierarchical,
   convertHierarchicalToFlat,
+  findElementInHierarchy,
+  findNodeInHierarchy,
+  getSelectedElementsFromHierarchy,
+  getEditingElementsFromHierarchy,
+  getAllElementsFromHierarchy,
 } from '../utils/hierarchical/hierarchicalConverter';
 import {
   addElementToHierarchy,
@@ -68,8 +73,8 @@ interface UpdateElementSizePayload {
 
 interface UpdateMarkerPayload {
   id: string;
-  connectionPathType?: any;
-  endConnectionPathType?: any;
+  connectionPathType?: string;
+  endConnectionPathType?: string;
   [key: string]: unknown;
 }
 
@@ -107,7 +112,7 @@ const isSelectElementPayload = (payload: unknown): payload is SelectElementPaylo
     typeof payload === 'object' &&
     payload !== null &&
     'id' in payload &&
-    typeof (payload as any).id === 'string'
+    typeof (payload as { id: unknown }).id === 'string'
   );
 };
 
@@ -118,9 +123,9 @@ const isMoveElementPayload = (payload: unknown): payload is MoveElementPayload =
     'id' in payload &&
     'x' in payload &&
     'y' in payload &&
-    typeof (payload as any).id === 'string' &&
-    typeof (payload as any).x === 'number' &&
-    typeof (payload as any).y === 'number'
+    typeof (payload as { id: unknown }).id === 'string' &&
+    typeof (payload as { x: unknown }).x === 'number' &&
+    typeof (payload as { y: unknown }).y === 'number'
   );
 };
 
@@ -132,10 +137,10 @@ const isUpdateElementSizePayload = (payload: unknown): payload is UpdateElementS
     'width' in payload &&
     'height' in payload &&
     'sectionHeights' in payload &&
-    typeof (payload as any).id === 'string' &&
-    typeof (payload as any).width === 'number' &&
-    typeof (payload as any).height === 'number' &&
-    Array.isArray((payload as any).sectionHeights)
+    typeof (payload as { id: unknown }).id === 'string' &&
+    typeof (payload as { width: unknown }).width === 'number' &&
+    typeof (payload as { height: unknown }).height === 'number' &&
+    Array.isArray((payload as { sectionHeights: unknown }).sectionHeights)
   );
 };
 
@@ -144,21 +149,21 @@ const isUpdateMarkerPayload = (payload: unknown): payload is UpdateMarkerPayload
     typeof payload === 'object' &&
     payload !== null &&
     'id' in payload &&
-    typeof (payload as any).id === 'string'
+    typeof (payload as { id: unknown }).id === 'string'
   );
 };
 
 const isDropElementPayload = (payload: unknown): payload is DropElementPayload => {
+  const p = payload as Record<string, unknown>;
   return (
     typeof payload === 'object' &&
     payload !== null &&
     'id' in payload &&
     'newOrder' in payload &&
-    typeof (payload as any).id === 'string' &&
-    typeof (payload as any).newOrder === 'number' &&
+    typeof p.id === 'string' &&
+    typeof p.newOrder === 'number' &&
     // direction は省略可能なので存在チェックのみ
-    (('direction' in payload && typeof (payload as any).direction === 'string') ||
-      !('direction' in payload))
+    (('direction' in payload && typeof p.direction === 'string') || !('direction' in payload))
   );
 };
 
@@ -171,7 +176,7 @@ const isElementsMapPayload = (payload: unknown): payload is ElementsMap => {
         typeof item === 'object' &&
         item !== null &&
         'id' in item &&
-        typeof (item as any).id === 'string',
+        typeof (item as Record<string, unknown>).id === 'string',
     )
   );
 };
@@ -182,7 +187,7 @@ const isAddElementPayload = (payload: unknown): payload is AddElementPayload => 
     payload === undefined ||
     (typeof payload === 'object' &&
       payload !== null &&
-      (!('text' in payload) || typeof (payload as any).text === 'string'))
+      (!('text' in payload) || typeof (payload as Record<string, unknown>).text === 'string'))
   );
 };
 
@@ -192,10 +197,13 @@ const isAddElementsSilentPayload = (payload: unknown): payload is AddElementsSil
     payload === undefined ||
     (typeof payload === 'object' &&
       payload !== null &&
-      (!('texts' in payload) || Array.isArray((payload as any).texts)) &&
-      (!('tentative' in payload) || typeof (payload as any).tentative === 'boolean') &&
-      (!('parentId' in payload) || typeof (payload as any).parentId === 'string') &&
-      (!('onError' in payload) || typeof (payload as any).onError === 'function'))
+      (!('texts' in payload) || Array.isArray((payload as Record<string, unknown>).texts)) &&
+      (!('tentative' in payload) ||
+        typeof (payload as Record<string, unknown>).tentative === 'boolean') &&
+      (!('parentId' in payload) ||
+        typeof (payload as Record<string, unknown>).parentId === 'string') &&
+      (!('onError' in payload) ||
+        typeof (payload as Record<string, unknown>).onError === 'function'))
   );
 };
 
@@ -206,17 +214,18 @@ const isAddHierarchicalElementsPayload = (
     typeof payload === 'object' &&
     payload !== null &&
     'hierarchicalItems' in payload &&
-    Array.isArray((payload as any).hierarchicalItems) &&
-    (payload as any).hierarchicalItems.every(
-      (item: any) =>
+    Array.isArray((payload as Record<string, unknown>).hierarchicalItems) &&
+    ((payload as Record<string, unknown>).hierarchicalItems as unknown[]).every(
+      (item: unknown) =>
         typeof item === 'object' &&
         item !== null &&
-        typeof item.text === 'string' &&
-        typeof item.level === 'number' &&
-        typeof item.originalLine === 'string',
+        typeof (item as Record<string, unknown>).text === 'string' &&
+        typeof (item as Record<string, unknown>).level === 'number' &&
+        typeof (item as Record<string, unknown>).originalLine === 'string',
     ) &&
-    (!('parentId' in payload) || typeof (payload as any).parentId === 'string') &&
-    (!('onError' in payload) || typeof (payload as any).onError === 'function')
+    (!('parentId' in payload) ||
+      typeof (payload as Record<string, unknown>).parentId === 'string') &&
+    (!('onError' in payload) || typeof (payload as Record<string, unknown>).onError === 'function')
   );
 };
 
@@ -228,8 +237,8 @@ const isPasteClipboardElementsPayload = (
     payload !== null &&
     'elements' in payload &&
     'targetElementId' in payload &&
-    typeof (payload as any).targetElementId === 'string' &&
-    typeof (payload as any).elements === 'object'
+    typeof (payload as Record<string, unknown>).targetElementId === 'string' &&
+    typeof (payload as Record<string, unknown>).elements === 'object'
   );
 };
 
@@ -239,10 +248,6 @@ const isPasteClipboardElementsPayload = (
 export interface State {
   /** 階層構造のルート */
   hierarchicalData: HierarchicalStructure | null;
-  /** フラット構造のキャッシュ（互換性用） */
-  elementsCache: ElementsMap;
-  /** キャッシュが最新かどうか */
-  cacheValid: boolean;
   /** キャンバス幅 */
   width: number;
   /** キャンバス高さ */
@@ -277,8 +282,6 @@ const createInitialState = (): State => {
 
   return {
     hierarchicalData,
-    elementsCache: initialElementsMap,
-    cacheValid: true,
     width: typeof window !== 'undefined' ? window.innerWidth : 0,
     height: typeof window !== 'undefined' ? window.innerHeight : 0,
     zoomRatio: 1,
@@ -287,26 +290,6 @@ const createInitialState = (): State => {
 };
 
 export const initialState: State = createInitialState();
-
-/**
- * 階層構造からキャッシュを更新するヘルパー関数
- */
-const updateCacheFromHierarchy = (state: State): State => {
-  if (!state.hierarchicalData) {
-    return {
-      ...state,
-      elementsCache: {},
-      cacheValid: true,
-    };
-  }
-
-  const elementsCache = convertHierarchicalToFlat(state.hierarchicalData);
-  return {
-    ...state,
-    elementsCache,
-    cacheValid: true,
-  };
-};
 
 /**
  * 階層構造操作結果から新しい状態を作成するヘルパー関数
@@ -318,8 +301,6 @@ const createStateFromHierarchicalResult = (
   return {
     ...state,
     hierarchicalData: result.hierarchicalData,
-    elementsCache: result.elementsCache,
-    cacheValid: true,
   };
 };
 
@@ -327,11 +308,7 @@ const createStateFromHierarchicalResult = (
  * 階層構造ベースで選択された要素を取得するヘルパー関数
  */
 const getSelectedElementsFromState = (state: State): Element[] => {
-  if (!state.cacheValid) {
-    const updatedState = updateCacheFromHierarchy(state);
-    return Object.values(updatedState.elementsCache).filter((e) => e.selected);
-  }
-  return Object.values(state.elementsCache).filter((e) => e.selected);
+  return getSelectedElementsFromHierarchy(state.hierarchicalData);
 };
 
 /**
@@ -370,7 +347,13 @@ function handleArrowAction(
     }
 
     // 単一選択時の矢印操作
-    const selectedId = handler(state.elementsCache);
+    const allElements = getAllElementsFromHierarchy(state.hierarchicalData);
+    const elementsMap = allElements.reduce<ElementsMap>((acc, element) => {
+      acc[element.id] = element;
+      return acc;
+    }, {});
+
+    const selectedId = handler(elementsMap);
     if (!selectedId || !state.hierarchicalData) return state;
 
     const result = setSelectionInHierarchy(state.hierarchicalData, [selectedId]);
@@ -436,20 +419,9 @@ const actionHandlers: Record<string, ActionHandler> = {
       return state;
     }
 
-    const elementsCache = Object.values(payload).reduce<ElementsMap>((acc, element) => {
-      if (!element.id) {
-        debugLog('Skipping invalid element without id:', element);
-        return acc;
-      }
-      acc[element.id] = element.parentId === null ? { ...element, visible: true } : element;
-      return acc;
-    }, {});
-
     return {
       ...state,
       hierarchicalData,
-      elementsCache,
-      cacheValid: true,
     };
   }),
 
@@ -460,7 +432,7 @@ const actionHandlers: Record<string, ActionHandler> = {
 
       if (!state.hierarchicalData) return state;
 
-      const selectedElement = state.elementsCache[id];
+      const selectedElement = findElementInHierarchy(state.hierarchicalData, id);
       // Debug: SELECT_ELEMENT action details
 
       if (!selectedElement) {
@@ -469,20 +441,18 @@ const actionHandlers: Record<string, ActionHandler> = {
       }
 
       // 編集中の要素がある場合は、先に編集を終了する
-      const editingElements = Object.values(state.elementsCache).filter((e) => e.editing);
+      const editingElements = getEditingElementsFromHierarchy(state.hierarchicalData);
       let workingState = state;
 
       if (editingElements.length > 0) {
         debugLog(`SELECT_ELEMENT: Ending editing for ${editingElements.length} elements`);
 
         // すべての要素の編集状態を終了
-        const updatedElementsCache = Object.values(workingState.elementsCache).reduce<ElementsMap>(
-          (acc, element) => {
-            acc[element.id] = { ...element, editing: false };
-            return acc;
-          },
-          {},
-        );
+        const allElements = getAllElementsFromHierarchy(workingState.hierarchicalData);
+        const updatedElementsCache = allElements.reduce<ElementsMap>((acc, element) => {
+          acc[element.id] = { ...element, editing: false };
+          return acc;
+        }, {});
 
         // 階層構造に反映し、位置調整を行う
         const hierarchicalData = convertFlatToHierarchical(updatedElementsCache);
@@ -501,8 +471,6 @@ const actionHandlers: Record<string, ActionHandler> = {
             workingState = {
               ...workingState,
               hierarchicalData: finalHierarchicalData,
-              elementsCache: adjustedElementsCache,
-              cacheValid: true,
             };
           }
         }
@@ -524,7 +492,8 @@ const actionHandlers: Record<string, ActionHandler> = {
 
       if (shiftKey && currentSelected.length > 0) {
         const parentId = firstSelected.parentId;
-        const siblings = Object.values(workingState.elementsCache)
+        const allElements = getAllElementsFromHierarchy(workingState.hierarchicalData);
+        const siblings = allElements
           .filter((e) => e.parentId === parentId)
           .sort((a, b) => a.id.localeCompare(b.id)); // IDでソート
 
@@ -542,8 +511,9 @@ const actionHandlers: Record<string, ActionHandler> = {
       }
 
       const parentId = selectedElement.parentId;
+      const allElements = getAllElementsFromHierarchy(workingState.hierarchicalData);
       const validSelectedIds = newSelectedIds.filter((id) => {
-        const elem = workingState.elementsCache[id];
+        const elem = allElements.find((e) => e.id === id);
         return elem && elem.parentId === parentId;
       });
 
@@ -571,20 +541,22 @@ const actionHandlers: Record<string, ActionHandler> = {
         'id' in payload &&
         'index' in payload &&
         'value' in payload &&
-        typeof (payload as any).id === 'string' &&
-        typeof (payload as any).index === 'number' &&
-        typeof (payload as any).value === 'string'
+        typeof (payload as Record<string, unknown>).id === 'string' &&
+        typeof (payload as Record<string, unknown>).index === 'number' &&
+        typeof (payload as Record<string, unknown>).value === 'string'
       );
     },
     (state: State, payload: { id: string; index: number; value: string }) => {
       if (!state.hierarchicalData) return state;
 
-      const element = state.elementsCache[payload.id];
+      const element = findElementInHierarchy(state.hierarchicalData, payload.id);
       if (!element) return state;
 
       const updatedElement = {
         ...element,
-        texts: element.texts.map((text, idx) => (idx === payload.index ? payload.value : text)),
+        texts: element.texts.map((text: string, idx: number) =>
+          idx === payload.index ? payload.value : text,
+        ),
       };
 
       const result = updateElementInHierarchy(state.hierarchicalData, payload.id, updatedElement);
@@ -598,14 +570,14 @@ const actionHandlers: Record<string, ActionHandler> = {
         typeof payload === 'object' &&
         payload !== null &&
         'id' in payload &&
-        typeof (payload as any).id === 'string' &&
+        typeof (payload as Record<string, unknown>).id === 'string' &&
         'startMarker' in payload
       );
     },
     (state: State, payload: { id: string; startMarker: MarkerType }) => {
       if (!state.hierarchicalData) return state;
 
-      const element = state.elementsCache[payload.id];
+      const element = findElementInHierarchy(state.hierarchicalData, payload.id);
       if (!element) return state;
 
       const updatedElement = {
@@ -624,14 +596,14 @@ const actionHandlers: Record<string, ActionHandler> = {
         typeof payload === 'object' &&
         payload !== null &&
         'id' in payload &&
-        typeof (payload as any).id === 'string' &&
+        typeof (payload as Record<string, unknown>).id === 'string' &&
         'endMarker' in payload
       );
     },
     (state: State, payload: { id: string; endMarker: MarkerType }) => {
       if (!state.hierarchicalData) return state;
 
-      const element = state.elementsCache[payload.id];
+      const element = findElementInHierarchy(state.hierarchicalData, payload.id);
       if (!element) return state;
 
       const updatedElement = {
@@ -654,13 +626,13 @@ const actionHandlers: Record<string, ActionHandler> = {
         return state;
       }
 
-      const element = state.elementsCache[id];
+      const element = findElementInHierarchy(state.hierarchicalData, id);
       if (!element) return state;
 
       const updatedElement = {
         ...element,
-        startMarker: connectionPathType as any,
-        connectionPathType: connectionPathType as any,
+        startMarker: connectionPathType as MarkerType,
+        connectionPathType: connectionPathType as MarkerType,
       };
 
       const result = updateElementInHierarchy(state.hierarchicalData, id, updatedElement);
@@ -678,13 +650,13 @@ const actionHandlers: Record<string, ActionHandler> = {
         return state;
       }
 
-      const element = state.elementsCache[id];
+      const element = findElementInHierarchy(state.hierarchicalData, id);
       if (!element) return state;
 
       const updatedElement = {
         ...element,
-        endMarker: endConnectionPathType as any,
-        endConnectionPathType: endConnectionPathType as any,
+        endMarker: endConnectionPathType as MarkerType,
+        endConnectionPathType: endConnectionPathType as MarkerType,
       };
 
       const result = updateElementInHierarchy(state.hierarchicalData, id, updatedElement);
@@ -711,10 +683,12 @@ const actionHandlers: Record<string, ActionHandler> = {
       updatedElement,
     );
 
-    debugLog(`EDIT_ELEMENT: Result elements cache`, {
-      editingElements: Object.values(result.elementsCache)
-        .filter((e) => e.editing)
-        .map((e) => e.id),
+    debugLog(`EDIT_ELEMENT: Result hierarchy updated`, {
+      editingElements: result.hierarchicalData
+        ? getAllElementsFromHierarchy(result.hierarchicalData)
+            .filter((e) => e.editing)
+            .map((e) => e.id)
+        : [],
     });
 
     return createStateFromHierarchicalResult(state, result);
@@ -724,13 +698,11 @@ const actionHandlers: Record<string, ActionHandler> = {
     if (!state.hierarchicalData) return state;
 
     // すべての要素の編集状態を終了
-    const updatedElementsCache = Object.values(state.elementsCache).reduce<ElementsMap>(
-      (acc, element) => {
-        acc[element.id] = { ...element, editing: false };
-        return acc;
-      },
-      {},
-    );
+    const allElements = getAllElementsFromHierarchy(state.hierarchicalData);
+    const updatedElementsCache = allElements.reduce<ElementsMap>((acc, element) => {
+      acc[element.id] = { ...element, editing: false };
+      return acc;
+    }, {});
 
     // 階層構造に反映し、位置調整を行う
     const hierarchicalData = convertFlatToHierarchical(updatedElementsCache);
@@ -750,8 +722,6 @@ const actionHandlers: Record<string, ActionHandler> = {
     return {
       ...state,
       hierarchicalData: finalHierarchicalData,
-      elementsCache: adjustedElementsCache,
-      cacheValid: true,
     };
   }),
 
@@ -762,15 +732,16 @@ const actionHandlers: Record<string, ActionHandler> = {
       const selectedElements = getSelectedElementsFromState(state);
 
       // 要素が存在するかチェック
-      if (!state.elementsCache[id] || !state.hierarchicalData) {
+      const elementToMove = findElementInHierarchy(state.hierarchicalData, id);
+      if (!elementToMove || !state.hierarchicalData) {
         debugLog(`Element with id ${id} not found for move operation`);
         return state;
       }
 
       // 複数要素移動の場合
       if (selectedElements.length > 1 && selectedElements.some((e) => e.id === id)) {
-        const deltaX = x - state.elementsCache[id].x;
-        const deltaY = y - state.elementsCache[id].y;
+        const deltaX = x - elementToMove.x;
+        const deltaY = y - elementToMove.y;
 
         // 各選択要素を移動
         let currentHierarchy = state.hierarchicalData;
@@ -784,18 +755,14 @@ const actionHandlers: Record<string, ActionHandler> = {
           currentHierarchy = result.hierarchicalData;
         }
 
-        const elementsCache = convertHierarchicalToFlat(currentHierarchy);
         return {
           ...state,
           hierarchicalData: currentHierarchy,
-          elementsCache,
-          cacheValid: true,
         };
       }
 
       // 単一要素移動
-      const element = state.elementsCache[id];
-      const updatedElement = { ...element, x, y };
+      const updatedElement = { ...elementToMove, x, y };
       const result = updateElementInHierarchy(state.hierarchicalData, id, updatedElement);
       return createStateFromHierarchicalResult(state, result);
     },
@@ -805,7 +772,7 @@ const actionHandlers: Record<string, ActionHandler> = {
     isUpdateElementSizePayload,
     (state: State, payload: UpdateElementSizePayload) => {
       const { id, width, height, sectionHeights } = payload;
-      const element = state.elementsCache[id];
+      const element = findElementInHierarchy(state.hierarchicalData, id);
       if (!element || !state.hierarchicalData) {
         debugLog(`Element with id ${id} not found for size update`);
         return state;
@@ -827,8 +794,14 @@ const actionHandlers: Record<string, ActionHandler> = {
       const result = updateElementInHierarchy(state.hierarchicalData, id, updatedElement);
 
       // 位置調整を行う
+      const allElements = getAllElementsFromHierarchy(result.hierarchicalData);
+      const elementsMap = allElements.reduce<ElementsMap>((acc, element) => {
+        acc[element.id] = element;
+        return acc;
+      }, {});
+
       const adjustedElementsCache = adjustElementPositions(
-        result.elementsCache,
+        elementsMap,
         () => state.numberOfSections,
         state.layoutMode,
         state.width || 0,
@@ -841,8 +814,6 @@ const actionHandlers: Record<string, ActionHandler> = {
       return {
         ...state,
         hierarchicalData: finalHierarchicalData,
-        elementsCache: adjustedElementsCache,
-        cacheValid: true,
       };
     },
   ),
@@ -854,16 +825,18 @@ const actionHandlers: Record<string, ActionHandler> = {
       if (!selectedElement || !state.hierarchicalData) return state;
 
       // Undoスナップショットを保存
-      saveSnapshot(state.elementsCache);
+      const allElementsForSnapshot = getAllElementsFromHierarchy(state.hierarchicalData);
+      const elementsMapForSnapshot = allElementsForSnapshot.reduce<ElementsMap>((acc, element) => {
+        acc[element.id] = element;
+        return acc;
+      }, {});
+      saveSnapshot(elementsMapForSnapshot);
 
       const text = payload?.text;
 
       // 階層構造から親要素の既存の子要素を順序通りに取得
-      const siblings = state.hierarchicalData
-        ? getChildrenFromHierarchy(selectedElement.id, state.hierarchicalData, state.elementsCache)
-        : Object.values(state.elementsCache).filter(
-            (el) => el.parentId === selectedElement.id && el.visible,
-          );
+      const allElements = getAllElementsFromHierarchy(state.hierarchicalData);
+      const siblings = allElements.filter((el) => el.parentId === selectedElement.id && el.visible);
 
       // 新しい要素の初期座標を計算
       let initialX: number;
@@ -911,12 +884,13 @@ const actionHandlers: Record<string, ActionHandler> = {
       }
 
       // 既存の要素の選択状態を解除し、新しい要素のみを選択状態にする
+      const allElementsForSelection = getAllElementsFromHierarchy(result.hierarchicalData);
       const elementsWithUpdatedSelection: { [id: string]: Element } = {};
-      Object.entries(result.elementsCache).forEach(([id, element]) => {
-        elementsWithUpdatedSelection[id] = {
+      allElementsForSelection.forEach((element) => {
+        elementsWithUpdatedSelection[element.id] = {
           ...element,
-          selected: id === newElement.id, // 新しい要素のみを選択状態に
-          editing: id === newElement.id, // 新しい要素を編集状態に
+          selected: element.id === newElement.id, // 新しい要素のみを選択状態に
+          editing: element.id === newElement.id, // 新しい要素を編集状態に
         };
       });
 
@@ -952,8 +926,6 @@ const actionHandlers: Record<string, ActionHandler> = {
       return {
         ...state,
         hierarchicalData: finalHierarchicalData,
-        elementsCache: adjustedElementsCache,
-        cacheValid: true,
       };
     },
   ),
@@ -966,7 +938,7 @@ const actionHandlers: Record<string, ActionHandler> = {
 
       if (payload?.parentId) {
         // 指定されたIDの要素を検索
-        targetElement = state.elementsCache[payload.parentId];
+        targetElement = findElementInHierarchy(state.hierarchicalData, payload.parentId);
       } else {
         // 従来の動作：現在選択されている要素を使用
         targetElement = getSelectedElementFromState(state);
@@ -987,21 +959,24 @@ const actionHandlers: Record<string, ActionHandler> = {
       const safeTargetElement: Element = targetElement;
 
       // Undoスナップショットを保存
-      saveSnapshot(state.elementsCache);
+      const allElementsForSnapshot2 = getAllElementsFromHierarchy(state.hierarchicalData);
+      const elementsMapForSnapshot2 = allElementsForSnapshot2.reduce<ElementsMap>(
+        (acc, element) => {
+          acc[element.id] = element;
+          return acc;
+        },
+        {},
+      );
+      saveSnapshot(elementsMapForSnapshot2);
 
       const texts = payload?.texts || [];
       const tentative = payload?.tentative || false;
 
       // 階層構造から親要素の既存の子要素を順序通りに取得
-      const siblings = state.hierarchicalData
-        ? getChildrenFromHierarchy(
-            safeTargetElement.id,
-            state.hierarchicalData,
-            state.elementsCache,
-          )
-        : Object.values(state.elementsCache).filter(
-            (el) => el.parentId === safeTargetElement.id && el.visible,
-          );
+      const allElementsForSiblings = getAllElementsFromHierarchy(state.hierarchicalData);
+      const siblings = allElementsForSiblings.filter(
+        (el) => el.parentId === safeTargetElement.id && el.visible,
+      );
 
       // 初期座標を計算
       let currentX: number;
@@ -1086,8 +1061,6 @@ const actionHandlers: Record<string, ActionHandler> = {
       return {
         ...state,
         hierarchicalData: finalHierarchicalData,
-        elementsCache: adjustedElementsCache,
-        cacheValid: true,
       };
     },
   ),
@@ -1097,18 +1070,18 @@ const actionHandlers: Record<string, ActionHandler> = {
     if (!selectedElement || !state.hierarchicalData) return state;
 
     // Undoスナップショットを保存
-    saveSnapshot(state.elementsCache);
+    const allElementsForSnapshot3 = getAllElementsFromHierarchy(state.hierarchicalData);
+    const elementsMapForSnapshot3 = allElementsForSnapshot3.reduce<ElementsMap>((acc, element) => {
+      acc[element.id] = element;
+      return acc;
+    }, {});
+    saveSnapshot(elementsMapForSnapshot3);
 
     // 同じ階層の兄弟要素を取得
-    const siblings = state.hierarchicalData
-      ? getChildrenFromHierarchy(
-          selectedElement.parentId,
-          state.hierarchicalData,
-          state.elementsCache,
-        )
-      : Object.values(state.elementsCache).filter(
-          (el) => el.parentId === selectedElement.parentId && el.visible,
-        );
+    const allElementsForSiblings2 = getAllElementsFromHierarchy(state.hierarchicalData);
+    const siblings = allElementsForSiblings2.filter(
+      (el) => el.parentId === selectedElement.parentId && el.visible,
+    );
 
     // 新しい要素の初期座標を計算
     let initialX: number;
@@ -1154,12 +1127,13 @@ const actionHandlers: Record<string, ActionHandler> = {
     }
 
     // 既存の要素の選択状態を解除し、新しい要素のみを選択状態にする
+    const allElements = getAllElementsFromHierarchy(result.hierarchicalData);
     const elementsWithUpdatedSelection: { [id: string]: Element } = {};
-    Object.entries(result.elementsCache).forEach(([id, element]) => {
-      elementsWithUpdatedSelection[id] = {
+    allElements.forEach((element) => {
+      elementsWithUpdatedSelection[element.id] = {
         ...element,
-        selected: id === newElement.id, // 新しい要素のみを選択状態に
-        editing: id === newElement.id, // 新しい要素を編集状態に
+        selected: element.id === newElement.id, // 新しい要素のみを選択状態に
+        editing: element.id === newElement.id, // 新しい要素を編集状態に
       };
     });
 
@@ -1207,11 +1181,17 @@ const actionHandlers: Record<string, ActionHandler> = {
     debugLog(`DELETE_ELEMENT開始: 削除対象要素数=${selectedElements.length}`);
 
     // Undoスナップショットを保存
-    saveSnapshot(state.elementsCache);
+    const allElementsForSnapshot4 = getAllElementsFromHierarchy(state.hierarchicalData);
+    const elementsMapForSnapshot4 = allElementsForSnapshot4.reduce<ElementsMap>((acc, element) => {
+      acc[element.id] = element;
+      return acc;
+    }, {});
+    saveSnapshot(elementsMapForSnapshot4);
 
     // 削除後に選択する要素の候補を探す
     const firstElement = selectedElements[0];
-    const siblings = Object.values(state.elementsCache)
+    const allElementsForSiblings3 = getAllElementsFromHierarchy(state.hierarchicalData);
+    const siblings = allElementsForSiblings3
       .filter((e) => e.parentId === firstElement.parentId && !e.selected)
       .sort((a, b) => a.id.localeCompare(b.id)); // IDでソート
 
@@ -1260,17 +1240,15 @@ const actionHandlers: Record<string, ActionHandler> = {
       if (!state.hierarchicalData) return state;
 
       // 指定されたparentIdを持つtentative要素のみをfalseにする
-      const updatedElementsCache = Object.values(state.elementsCache).reduce<ElementsMap>(
-        (acc, element) => {
-          if (element.tentative && element.parentId === parentId) {
-            acc[element.id] = { ...element, tentative: false };
-          } else {
-            acc[element.id] = element;
-          }
-          return acc;
-        },
-        {},
-      );
+      const allElements = getAllElementsFromHierarchy(state.hierarchicalData);
+      const updatedElementsCache = allElements.reduce<ElementsMap>((acc, element) => {
+        if (element.tentative && element.parentId === parentId) {
+          acc[element.id] = { ...element, tentative: false };
+        } else {
+          acc[element.id] = element;
+        }
+        return acc;
+      }, {});
 
       const hierarchicalData = convertFlatToHierarchical(updatedElementsCache);
       if (!hierarchicalData) return state;
@@ -1290,15 +1268,13 @@ const actionHandlers: Record<string, ActionHandler> = {
       if (!state.hierarchicalData) return state;
 
       // tentativeな要素を削除
-      const filteredElementsCache = Object.values(state.elementsCache).reduce<ElementsMap>(
-        (acc, element) => {
-          if (!(element.tentative && element.parentId === parentId)) {
-            acc[element.id] = element;
-          }
-          return acc;
-        },
-        {},
-      );
+      const allElements = getAllElementsFromHierarchy(state.hierarchicalData);
+      const filteredElementsCache = allElements.reduce<ElementsMap>((acc, element) => {
+        if (!(element.tentative && element.parentId === parentId)) {
+          acc[element.id] = element;
+        }
+        return acc;
+      }, {});
 
       const hierarchicalData = convertFlatToHierarchical(filteredElementsCache);
       if (!hierarchicalData) return state;
@@ -1325,7 +1301,13 @@ const actionHandlers: Record<string, ActionHandler> = {
   ),
 
   UNDO: createNoPayloadHandler((state) => {
-    const undoElements = Undo(state.elementsCache);
+    const allElementsForUndo = getAllElementsFromHierarchy(state.hierarchicalData);
+    const elementsMapForUndo = allElementsForUndo.reduce<ElementsMap>((acc, element) => {
+      acc[element.id] = element;
+      return acc;
+    }, {});
+
+    const undoElements = Undo(elementsMapForUndo);
     if (!undoElements) return state;
 
     const hierarchicalData = convertFlatToHierarchical(undoElements);
@@ -1346,13 +1328,17 @@ const actionHandlers: Record<string, ActionHandler> = {
     return {
       ...state,
       hierarchicalData: finalHierarchicalData,
-      elementsCache: adjustedElementsCache,
-      cacheValid: true,
     };
   }),
 
   REDO: createNoPayloadHandler((state) => {
-    const redoElements = Redo(state.elementsCache);
+    const allElementsForRedo = getAllElementsFromHierarchy(state.hierarchicalData);
+    const elementsMapForRedo = allElementsForRedo.reduce<ElementsMap>((acc, element) => {
+      acc[element.id] = element;
+      return acc;
+    }, {});
+
+    const redoElements = Redo(elementsMapForRedo);
     if (!redoElements) return state;
 
     const hierarchicalData = convertFlatToHierarchical(redoElements);
@@ -1379,7 +1365,12 @@ const actionHandlers: Record<string, ActionHandler> = {
   }),
 
   SNAPSHOT: createNoPayloadHandler((state) => {
-    saveSnapshot(state.elementsCache);
+    const allElementsForSnapshot5 = getAllElementsFromHierarchy(state.hierarchicalData);
+    const elementsMapForSnapshot5 = allElementsForSnapshot5.reduce<ElementsMap>((acc, element) => {
+      acc[element.id] = element;
+      return acc;
+    }, {});
+    saveSnapshot(elementsMapForSnapshot5);
     return state;
   }),
 
@@ -1389,7 +1380,8 @@ const actionHandlers: Record<string, ActionHandler> = {
       const { id, newParentId, newOrder, direction } = payload;
 
       // 基本的な妥当性チェック
-      if (!state.elementsCache[id] || !state.hierarchicalData) {
+      const elementToDrop = findElementInHierarchy(state.hierarchicalData, id);
+      if (!elementToDrop || !state.hierarchicalData) {
         debugLog(`Element with id ${id} not found for drop operation`);
         return state;
       }
@@ -1408,24 +1400,33 @@ const actionHandlers: Record<string, ActionHandler> = {
       const result = moveElementInHierarchy(state.hierarchicalData, id, newParentId, newOrder);
 
       // direction の更新を適用
-      if (direction !== undefined && result.elementsCache[id]) {
-        result.elementsCache[id] = {
-          ...result.elementsCache[id],
-          direction,
-        };
-        debugLog(`Element ${id} direction updated to: ${direction}`);
+      if (direction !== undefined) {
+        const targetNode = findNodeInHierarchy(result.hierarchicalData, id);
+        if (targetNode) {
+          targetNode.data = {
+            ...targetNode.data,
+            direction,
+          };
+          debugLog(`Element ${id} direction updated to: ${direction}`);
+        }
       }
 
       // 位置調整を行う
-      const adjustedElementsCache = adjustElementPositions(
-        result.elementsCache,
+      const allElements = getAllElementsFromHierarchy(result.hierarchicalData);
+      const adjustedElementsCache = allElements.reduce<ElementsMap>((acc, element) => {
+        acc[element.id] = element;
+        return acc;
+      }, {});
+
+      const adjustedElements = adjustElementPositions(
+        adjustedElementsCache,
         () => state.numberOfSections,
         state.layoutMode,
         state.width || 0,
         state.height || 0,
       );
 
-      const finalHierarchicalData = convertFlatToHierarchical(adjustedElementsCache);
+      const finalHierarchicalData = convertFlatToHierarchical(adjustedElements);
       if (!finalHierarchicalData) return state;
 
       return {
@@ -1446,7 +1447,12 @@ const actionHandlers: Record<string, ActionHandler> = {
 
     selectedElements.forEach((selectedElement) => {
       // 選択された要素とその子要素を取得
-      const elementsToCut = getSelectedAndChildren(state.elementsCache, selectedElement);
+      const allElementsForCut = getAllElementsFromHierarchy(state.hierarchicalData);
+      const elementsMapForCut = allElementsForCut.reduce<ElementsMap>((acc, element) => {
+        acc[element.id] = element;
+        return acc;
+      }, {});
+      const elementsToCut = getSelectedAndChildren(elementsMapForCut, selectedElement);
 
       // 選択状態をリセット
       Object.keys(elementsToCut).forEach((id) => {
@@ -1464,13 +1470,9 @@ const actionHandlers: Record<string, ActionHandler> = {
 
     cutToClipboard(cutElementsMap);
 
-    const elementsCache = convertHierarchicalToFlat(currentHierarchy);
-
     return {
       ...state,
       hierarchicalData: currentHierarchy,
-      elementsCache,
-      cacheValid: true,
     };
   }),
 
@@ -1480,7 +1482,12 @@ const actionHandlers: Record<string, ActionHandler> = {
       return state;
     }
 
-    const elementsToCopy = getSelectedAndChildren(state.elementsCache, selectedElement);
+    const allElementsForCopy = getAllElementsFromHierarchy(state.hierarchicalData);
+    const elementsMapForCopy = allElementsForCopy.reduce<ElementsMap>((acc, element) => {
+      acc[element.id] = element;
+      return acc;
+    }, {});
+    const elementsToCopy = getSelectedAndChildren(elementsMapForCopy, selectedElement);
 
     // getSelectedAndChildrenが既に適切なparentId=nullとselected=trueを設定している
     copyToClipboard(elementsToCopy);
@@ -1501,15 +1508,21 @@ const actionHandlers: Record<string, ActionHandler> = {
     const result = setVisibilityInHierarchy(state.hierarchicalData, selectedElement.id, true);
 
     // 位置調整を行う
-    const adjustedElementsCache = adjustElementPositions(
-      result.elementsCache,
+    const allElements = getAllElementsFromHierarchy(result.hierarchicalData);
+    const adjustedElementsCache = allElements.reduce<ElementsMap>((acc, element) => {
+      acc[element.id] = element;
+      return acc;
+    }, {});
+
+    const adjustedElements = adjustElementPositions(
+      adjustedElementsCache,
       () => state.numberOfSections,
       state.layoutMode,
       state.width || 0,
       state.height || 0,
     );
 
-    const finalHierarchicalData = convertFlatToHierarchical(adjustedElementsCache);
+    const finalHierarchicalData = convertFlatToHierarchical(adjustedElements);
     if (!finalHierarchicalData) return state;
 
     return {
@@ -1528,15 +1541,21 @@ const actionHandlers: Record<string, ActionHandler> = {
     const result = setVisibilityInHierarchy(state.hierarchicalData, selectedElement.id, false);
 
     // 位置調整を行う
-    const adjustedElementsCache = adjustElementPositions(
-      result.elementsCache,
+    const allElements = getAllElementsFromHierarchy(result.hierarchicalData);
+    const adjustedElementsCache = allElements.reduce<ElementsMap>((acc, element) => {
+      acc[element.id] = element;
+      return acc;
+    }, {});
+
+    const adjustedElements = adjustElementPositions(
+      adjustedElementsCache,
       () => state.numberOfSections,
       state.layoutMode,
       state.width || 0,
       state.height || 0,
     );
 
-    const finalHierarchicalData = convertFlatToHierarchical(adjustedElementsCache);
+    const finalHierarchicalData = convertFlatToHierarchical(adjustedElements);
     if (!finalHierarchicalData) return state;
 
     return {
@@ -1554,7 +1573,15 @@ const actionHandlers: Record<string, ActionHandler> = {
       if (!state.hierarchicalData) return state;
 
       // Undoスナップショットを保存
-      saveSnapshot(state.elementsCache);
+      const allElementsForSnapshot6 = getAllElementsFromHierarchy(state.hierarchicalData);
+      const elementsMapForSnapshot6 = allElementsForSnapshot6.reduce<ElementsMap>(
+        (acc, element) => {
+          acc[element.id] = element;
+          return acc;
+        },
+        {},
+      );
+      saveSnapshot(elementsMapForSnapshot6);
 
       const { parentId, hierarchicalItems } = payload;
 
@@ -1562,7 +1589,7 @@ const actionHandlers: Record<string, ActionHandler> = {
       let baseParentElement: Element | undefined;
 
       if (parentId) {
-        baseParentElement = state.elementsCache[parentId];
+        baseParentElement = findElementInHierarchy(state.hierarchicalData, parentId);
       } else {
         baseParentElement = getSelectedElementFromState(state);
       }
@@ -1667,7 +1694,7 @@ const actionHandlers: Record<string, ActionHandler> = {
     const { elements: elementsToAdd, targetElementId } = payload;
     if (!state.hierarchicalData) return state;
 
-    const selectedElement = state.elementsCache[targetElementId];
+    const selectedElement = findElementInHierarchy(state.hierarchicalData, targetElementId);
     if (!selectedElement) return state;
 
     let currentHierarchy = state.hierarchicalData;
@@ -1805,13 +1832,9 @@ export const reducer = (state: State, action: Action): State => {
       return state;
     }
 
-    // hierarchicalDataとelementsCache が存在することを確認
-    if (
-      newState.hierarchicalData === undefined ||
-      !newState.elementsCache ||
-      typeof newState.elementsCache !== 'object'
-    ) {
-      debugLog(`Invalid hierarchical structure or cache in state for action ${action.type}`);
+    // hierarchicalData が存在することを確認
+    if (newState.hierarchicalData === undefined) {
+      debugLog(`Invalid hierarchical structure in state for action ${action.type}`);
       return state;
     }
 

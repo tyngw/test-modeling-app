@@ -7,11 +7,7 @@ import {
   HierarchicalOperationResult,
   HierarchicalSearchOptions,
 } from '../../types/hierarchicalTypes';
-import {
-  convertHierarchicalToFlat,
-  findNodeInHierarchy,
-  findParentNodeInHierarchy,
-} from './hierarchicalConverter';
+import { findNodeInHierarchy, findParentNodeInHierarchy } from './hierarchicalConverter';
 
 /**
  * 階層構造で要素を追加
@@ -70,11 +66,8 @@ export function addElementToHierarchy(
     parentNode.data.children = parentNode.children.length;
   }
 
-  const elementsCache = convertHierarchicalToFlat(clonedHierarchy);
-
   return {
     hierarchicalData: clonedHierarchy,
-    elementsCache,
   };
 }
 
@@ -111,11 +104,8 @@ export function deleteElementFromHierarchy(
   // 親ノードのchildren数を更新
   parentNode.data.children = parentNode.children.length;
 
-  const elementsCache = convertHierarchicalToFlat(clonedHierarchy);
-
   return {
     hierarchicalData: clonedHierarchy,
-    elementsCache,
   };
 }
 
@@ -205,11 +195,8 @@ export function moveElementInHierarchy(
     newParentId ? findNodeInHierarchy(clonedHierarchy, newParentId)!.data.depth + 1 : 1,
   );
 
-  const elementsCache = convertHierarchicalToFlat(clonedHierarchy);
-
   return {
     hierarchicalData: clonedHierarchy,
-    elementsCache,
   };
 }
 
@@ -239,11 +226,8 @@ export function updateElementInHierarchy(
     ...updates,
   };
 
-  const elementsCache = convertHierarchicalToFlat(clonedHierarchy);
-
   return {
     hierarchicalData: clonedHierarchy,
-    elementsCache,
   };
 }
 
@@ -320,11 +304,8 @@ export function setVisibilityInHierarchy(
 
   setVisibilityRecursive(parentNode);
 
-  const elementsCache = convertHierarchicalToFlat(clonedHierarchy);
-
   return {
     hierarchicalData: clonedHierarchy,
-    elementsCache,
   };
 }
 
@@ -352,11 +333,8 @@ export function setSelectionInHierarchy(
 
   updateSelectionRecursive(clonedHierarchy.root);
 
-  const elementsCache = convertHierarchicalToFlat(clonedHierarchy);
-
   return {
     hierarchicalData: clonedHierarchy,
-    elementsCache,
   };
 }
 

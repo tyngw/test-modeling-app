@@ -1,7 +1,7 @@
 // src/hooks/useResizeEffect.tsx
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { calculateCanvasSize } from '../utils/layoutUtilities';
 import { HEADER_HEIGHT } from '../config/elementSettings';
 
@@ -20,10 +20,8 @@ interface ResizeEffectProps {
     }>
   >;
   setDisplayArea: React.Dispatch<React.SetStateAction<string>>;
-  state: {
-    elements: { [key: string]: ElementWithDimensions };
-    zoomRatio: number;
-  };
+  elements: { [key: string]: ElementWithDimensions };
+  zoomRatio: number;
   isClient?: boolean;
   isDragInProgress?: boolean; // ドラッグ中フラグを追加
 }
@@ -31,10 +29,17 @@ interface ResizeEffectProps {
 const useResizeEffect = ({
   setCanvasSize,
   setDisplayArea,
-  state,
+  elements,
+  zoomRatio,
   isClient,
   isDragInProgress,
 }: ResizeEffectProps) => {
+  // elementsの変更を安定的に検出するため、要素の情報をハッシュ化
+  const elementsSignature = useMemo(() => {
+    const entries = Object.entries(elements);
+    return entries.map(([id, el]) => `${id}:${el.x},${el.y},${el.width},${el.height}`).join('|');
+  }, [elements]);
+
   useEffect(() => {
     if (typeof window === 'undefined' || !isClient) return;
 
@@ -44,7 +49,7 @@ const useResizeEffect = ({
       return;
     }
 
-    const newCanvasSize = calculateCanvasSize(state.elements);
+    const newCanvasSize = calculateCanvasSize(elements);
     const maxHeight = window.innerHeight - HEADER_HEIGHT;
     newCanvasSize.width = Math.max(newCanvasSize.width, window.innerWidth);
     newCanvasSize.height = Math.max(newCanvasSize.height, maxHeight);
@@ -52,12 +57,20 @@ const useResizeEffect = ({
       width: newCanvasSize.width,
       height: newCanvasSize.height,
     };
-    newCanvasSize.width *= state.zoomRatio;
-    newCanvasSize.height *= state.zoomRatio;
+    newCanvasSize.width *= zoomRatio;
+    newCanvasSize.height *= zoomRatio;
 
     setCanvasSize(newCanvasSize);
     setDisplayArea(`0 0 ${newViewSize.width} ${newViewSize.height}`);
-  }, [state.elements, state.zoomRatio, setCanvasSize, setDisplayArea, isClient, isDragInProgress]);
+  }, [
+    elementsSignature,
+    zoomRatio,
+    setCanvasSize,
+    setDisplayArea,
+    isClient,
+    isDragInProgress,
+    elements,
+  ]);
 };
 
 export default useResizeEffect;

@@ -33,9 +33,12 @@ const layoutNode = (
       }
       // 明示的に方向が指定されている場合はその方向を維持
       debugLog(`Mindmap mode: direction=${node.direction} (explicit or default right)`);
-    } else if (node.direction !== parent.direction) {
-      // 通常モード：親の方向を継承
-      node.direction = parent.direction;
+    } else {
+      // 通常モード：子要素が方向を持っていない場合のみ親の方向を継承
+      // 既に明示的に設定された方向は維持する
+      if (!node.direction || node.direction === 'none') {
+        node.direction = parent.direction;
+      }
     }
 
     // 方向に応じてX座標を計算

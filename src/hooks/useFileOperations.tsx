@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback } from 'react';
+import { getAllElementsFromHierarchy } from '../utils/hierarchical/hierarchicalConverter';
 import { useToast } from '../context/ToastContext';
 import { saveSvg, saveElements, loadElements } from '../utils/file';
 import { convertFlatToHierarchical } from '../utils/hierarchical/hierarchicalConverter';
@@ -40,12 +41,24 @@ export function useFileOperations({
   const handleSaveElements = useCallback(() => {
     if (!currentTab) return;
 
-    saveElements(Object.values(currentTab.state.elementsCache || {}), currentTab.name);
+    // hierarchicalDataから要素を取得
+    const allElements = currentTab.state.hierarchicalData
+      ? getAllElementsFromHierarchy(currentTab.state.hierarchicalData)
+      : [];
+
+    saveElements(allElements, currentTab.name);
 
     // JSON保存後にタブを保存済みとしてマーク
     if (currentTab.id) {
       // 現在の要素の状態をJSON文字列として保存（整形して比較）
-      const normalizedElements = JSON.parse(JSON.stringify(currentTab.state.elementsCache || {}));
+      const elementsMap = allElements.reduce(
+        (acc, element) => {
+          acc[element.id] = element;
+          return acc;
+        },
+        {} as Record<string, any>,
+      );
+      const normalizedElements = JSON.parse(JSON.stringify(elementsMap));
       const currentElementsJson = JSON.stringify(normalizedElements);
 
       // タブを保存済みとしてマークし、最後に保存された要素の状態を更新
@@ -72,8 +85,6 @@ export function useFileOperations({
           return {
             ...prevState,
             hierarchicalData,
-            elementsCache: result.elements,
-            cacheValid: true,
           };
         });
 

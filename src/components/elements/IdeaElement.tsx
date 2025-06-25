@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
+import { getAllElementsFromHierarchy } from '../../utils/hierarchical/hierarchicalConverter';
 import { useCanvas } from '../../context/CanvasContext';
 import TextDisplayArea from '../TextDisplayArea';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
@@ -194,9 +195,10 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
   ]);
 
   const hiddenChildren = useMemo(() => {
-    // 型ガードで新しいState型であることを確認
-    if ('elementsCache' in tabState) {
-      return Object.values(tabState.elementsCache).filter((el): el is CanvasElement => {
+    // hierarchicalDataから要素を取得
+    if ('hierarchicalData' in tabState && tabState.hierarchicalData) {
+      const allElements = getAllElementsFromHierarchy(tabState.hierarchicalData);
+      return allElements.filter((el): el is CanvasElement => {
         const canvasElement = el as CanvasElement;
         return canvasElement.parentId === element.id && !canvasElement.visible;
       });
@@ -204,12 +206,26 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
     return [];
   }, [tabState, element.id]);
 
-  const isDraggedOrDescendant = draggingElement
-    ? draggingElement.id === element.id ||
-      ('elementsCache' in tabState
-        ? isDescendant(tabState.elementsCache, draggingElement.id, element.id)
-        : false)
-    : false;
+  const isDraggedOrDescendant = useMemo(() => {
+    if (!draggingElement) return false;
+
+    if (draggingElement.id === element.id) return true;
+
+    // hierarchicalDataから要素を取得してisDescendantを実行
+    if ('hierarchicalData' in tabState && tabState.hierarchicalData) {
+      const allElements = getAllElementsFromHierarchy(tabState.hierarchicalData);
+      const elementsMap = allElements.reduce(
+        (acc, el) => {
+          acc[el.id] = el;
+          return acc;
+        },
+        {} as Record<string, CanvasElement>,
+      );
+      return isDescendant(elementsMap, draggingElement.id, element.id);
+    }
+
+    return false;
+  }, [draggingElement, element.id, tabState]);
 
   const handleHeightChange = useCallback(
     (sectionIndex: number, newHeight: number) => {
@@ -284,7 +300,9 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
         {renderActionButtons(
           element,
           dispatch,
-          'elementsCache' in tabState ? Object.values(tabState.elementsCache) : [],
+          'hierarchicalData' in tabState && tabState.hierarchicalData
+            ? getAllElementsFromHierarchy(tabState.hierarchicalData)
+            : [],
         )}
         {hiddenChildren.length > 0 && (
           <>

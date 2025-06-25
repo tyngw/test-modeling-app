@@ -11,6 +11,7 @@ import React, {
   useEffect,
 } from 'react';
 import { State, initialState } from '../state/state';
+import { getAllElementsFromHierarchy } from '../utils/hierarchical/hierarchicalConverter';
 import { v4 as uuidv4 } from 'uuid';
 import { DEFAULT_POSITION, NUMBER_OF_SECTIONS } from '../config/elementSettings';
 import { createNewElement } from '../utils/element/elementHelpers';
@@ -174,8 +175,18 @@ export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (tab.id === tabId) {
           const updatedState = updater(tab.state);
 
-          // 現在の要素の状態をJSON文字列に変換（整形して比較）
-          const normalizedElements = JSON.parse(JSON.stringify(updatedState.elementsCache || {}));
+          // hierarchicalDataから要素を取得してJSON文字列に変換（整形して比較）
+          const allElements = updatedState.hierarchicalData
+            ? getAllElementsFromHierarchy(updatedState.hierarchicalData)
+            : [];
+          const elementsMap = allElements.reduce(
+            (acc, element) => {
+              acc[element.id] = element;
+              return acc;
+            },
+            {} as Record<string, any>,
+          );
+          const normalizedElements = JSON.parse(JSON.stringify(elementsMap));
           const currentElementsJson = JSON.stringify(normalizedElements);
 
           // 最後に保存された要素の状態と比較して、変更があるかどうかを判断

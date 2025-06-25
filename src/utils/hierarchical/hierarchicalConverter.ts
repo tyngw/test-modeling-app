@@ -280,3 +280,106 @@ export function findParentNodeInHierarchy(
 
   return searchParent(hierarchical.root);
 }
+
+/**
+ * 階層構造から指定されたIDの要素を取得
+ * @param hierarchical 階層構造
+ * @param elementId 要素ID
+ * @returns 見つかった要素、または undefined
+ */
+export function findElementInHierarchy(
+  hierarchical: HierarchicalStructure | null,
+  elementId: string,
+): Element | undefined {
+  if (!hierarchical) {
+    return undefined;
+  }
+
+  function searchNode(node: HierarchicalNode): Element | undefined {
+    if (node.data.id === elementId) {
+      return node.data;
+    }
+
+    if (node.children) {
+      for (const child of node.children) {
+        const found = searchNode(child);
+        if (found) {
+          return found;
+        }
+      }
+    }
+
+    return undefined;
+  }
+
+  return searchNode(hierarchical.root);
+}
+
+/**
+ * 階層構造から選択されている要素一覧を取得
+ * @param hierarchical 階層構造
+ * @returns 選択されている要素の配列
+ */
+export function getSelectedElementsFromHierarchy(
+  hierarchical: HierarchicalStructure | null,
+): Element[] {
+  if (!hierarchical) {
+    return [];
+  }
+
+  const selectedElements: Element[] = [];
+
+  function collectSelectedElements(node: HierarchicalNode): void {
+    if (node.data.selected) {
+      selectedElements.push(node.data);
+    }
+
+    if (node.children) {
+      node.children.forEach(collectSelectedElements);
+    }
+  }
+
+  collectSelectedElements(hierarchical.root);
+  return selectedElements;
+}
+
+/**
+ * 階層構造から編集中の要素一覧を取得
+ * @param hierarchical 階層構造
+ * @returns 編集中の要素の配列
+ */
+export function getEditingElementsFromHierarchy(
+  hierarchical: HierarchicalStructure | null,
+): Element[] {
+  if (!hierarchical) {
+    return [];
+  }
+
+  const editingElements: Element[] = [];
+
+  function collectEditingElements(node: HierarchicalNode): void {
+    if (node.data.editing) {
+      editingElements.push(node.data);
+    }
+
+    if (node.children) {
+      node.children.forEach(collectEditingElements);
+    }
+  }
+
+  collectEditingElements(hierarchical.root);
+  return editingElements;
+}
+
+/**
+ * 階層構造から全要素を配列として取得
+ * @param hierarchical 階層構造
+ * @returns 全要素の配列
+ */
+export function getAllElementsFromHierarchy(hierarchical: HierarchicalStructure | null): Element[] {
+  if (!hierarchical) {
+    return [];
+  }
+
+  return convertHierarchicalToArray(hierarchical);
+}
