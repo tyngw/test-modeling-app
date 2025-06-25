@@ -117,8 +117,6 @@ export interface HierarchicalState {
 export interface HierarchicalOperationResult {
   /** 更新された階層構造 */
   hierarchicalData: HierarchicalStructure;
-  /** 更新されたフラット構造のキャッシュ */
-  elementsCache: Record<string, Element>;
 }
 
 /**

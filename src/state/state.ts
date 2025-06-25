@@ -37,6 +37,7 @@ import {
   convertFlatToHierarchical,
   convertHierarchicalToFlat,
   findElementInHierarchy,
+  findNodeInHierarchy,
   getSelectedElementsFromHierarchy,
   getEditingElementsFromHierarchy,
   getAllElementsFromHierarchy,
@@ -72,8 +73,8 @@ interface UpdateElementSizePayload {
 
 interface UpdateMarkerPayload {
   id: string;
-  connectionPathType?: any;
-  endConnectionPathType?: any;
+  connectionPathType?: string;
+  endConnectionPathType?: string;
   [key: string]: unknown;
 }
 
@@ -111,7 +112,7 @@ const isSelectElementPayload = (payload: unknown): payload is SelectElementPaylo
     typeof payload === 'object' &&
     payload !== null &&
     'id' in payload &&
-    typeof (payload as any).id === 'string'
+    typeof (payload as { id: unknown }).id === 'string'
   );
 };
 
@@ -122,9 +123,9 @@ const isMoveElementPayload = (payload: unknown): payload is MoveElementPayload =
     'id' in payload &&
     'x' in payload &&
     'y' in payload &&
-    typeof (payload as any).id === 'string' &&
-    typeof (payload as any).x === 'number' &&
-    typeof (payload as any).y === 'number'
+    typeof (payload as { id: unknown }).id === 'string' &&
+    typeof (payload as { x: unknown }).x === 'number' &&
+    typeof (payload as { y: unknown }).y === 'number'
   );
 };
 
@@ -136,10 +137,10 @@ const isUpdateElementSizePayload = (payload: unknown): payload is UpdateElementS
     'width' in payload &&
     'height' in payload &&
     'sectionHeights' in payload &&
-    typeof (payload as any).id === 'string' &&
-    typeof (payload as any).width === 'number' &&
-    typeof (payload as any).height === 'number' &&
-    Array.isArray((payload as any).sectionHeights)
+    typeof (payload as { id: unknown }).id === 'string' &&
+    typeof (payload as { width: unknown }).width === 'number' &&
+    typeof (payload as { height: unknown }).height === 'number' &&
+    Array.isArray((payload as { sectionHeights: unknown }).sectionHeights)
   );
 };
 
@@ -148,21 +149,21 @@ const isUpdateMarkerPayload = (payload: unknown): payload is UpdateMarkerPayload
     typeof payload === 'object' &&
     payload !== null &&
     'id' in payload &&
-    typeof (payload as any).id === 'string'
+    typeof (payload as { id: unknown }).id === 'string'
   );
 };
 
 const isDropElementPayload = (payload: unknown): payload is DropElementPayload => {
+  const p = payload as Record<string, unknown>;
   return (
     typeof payload === 'object' &&
     payload !== null &&
     'id' in payload &&
     'newOrder' in payload &&
-    typeof (payload as any).id === 'string' &&
-    typeof (payload as any).newOrder === 'number' &&
+    typeof p.id === 'string' &&
+    typeof p.newOrder === 'number' &&
     // direction は省略可能なので存在チェックのみ
-    (('direction' in payload && typeof (payload as any).direction === 'string') ||
-      !('direction' in payload))
+    (('direction' in payload && typeof p.direction === 'string') || !('direction' in payload))
   );
 };
 
@@ -175,7 +176,7 @@ const isElementsMapPayload = (payload: unknown): payload is ElementsMap => {
         typeof item === 'object' &&
         item !== null &&
         'id' in item &&
-        typeof (item as any).id === 'string',
+        typeof (item as Record<string, unknown>).id === 'string',
     )
   );
 };
@@ -186,7 +187,7 @@ const isAddElementPayload = (payload: unknown): payload is AddElementPayload => 
     payload === undefined ||
     (typeof payload === 'object' &&
       payload !== null &&
-      (!('text' in payload) || typeof (payload as any).text === 'string'))
+      (!('text' in payload) || typeof (payload as Record<string, unknown>).text === 'string'))
   );
 };
 
@@ -196,10 +197,13 @@ const isAddElementsSilentPayload = (payload: unknown): payload is AddElementsSil
     payload === undefined ||
     (typeof payload === 'object' &&
       payload !== null &&
-      (!('texts' in payload) || Array.isArray((payload as any).texts)) &&
-      (!('tentative' in payload) || typeof (payload as any).tentative === 'boolean') &&
-      (!('parentId' in payload) || typeof (payload as any).parentId === 'string') &&
-      (!('onError' in payload) || typeof (payload as any).onError === 'function'))
+      (!('texts' in payload) || Array.isArray((payload as Record<string, unknown>).texts)) &&
+      (!('tentative' in payload) ||
+        typeof (payload as Record<string, unknown>).tentative === 'boolean') &&
+      (!('parentId' in payload) ||
+        typeof (payload as Record<string, unknown>).parentId === 'string') &&
+      (!('onError' in payload) ||
+        typeof (payload as Record<string, unknown>).onError === 'function'))
   );
 };
 
@@ -210,17 +214,18 @@ const isAddHierarchicalElementsPayload = (
     typeof payload === 'object' &&
     payload !== null &&
     'hierarchicalItems' in payload &&
-    Array.isArray((payload as any).hierarchicalItems) &&
-    (payload as any).hierarchicalItems.every(
-      (item: any) =>
+    Array.isArray((payload as Record<string, unknown>).hierarchicalItems) &&
+    ((payload as Record<string, unknown>).hierarchicalItems as unknown[]).every(
+      (item: unknown) =>
         typeof item === 'object' &&
         item !== null &&
-        typeof item.text === 'string' &&
-        typeof item.level === 'number' &&
-        typeof item.originalLine === 'string',
+        typeof (item as Record<string, unknown>).text === 'string' &&
+        typeof (item as Record<string, unknown>).level === 'number' &&
+        typeof (item as Record<string, unknown>).originalLine === 'string',
     ) &&
-    (!('parentId' in payload) || typeof (payload as any).parentId === 'string') &&
-    (!('onError' in payload) || typeof (payload as any).onError === 'function')
+    (!('parentId' in payload) ||
+      typeof (payload as Record<string, unknown>).parentId === 'string') &&
+    (!('onError' in payload) || typeof (payload as Record<string, unknown>).onError === 'function')
   );
 };
 
@@ -232,8 +237,8 @@ const isPasteClipboardElementsPayload = (
     payload !== null &&
     'elements' in payload &&
     'targetElementId' in payload &&
-    typeof (payload as any).targetElementId === 'string' &&
-    typeof (payload as any).elements === 'object'
+    typeof (payload as Record<string, unknown>).targetElementId === 'string' &&
+    typeof (payload as Record<string, unknown>).elements === 'object'
   );
 };
 
@@ -536,9 +541,9 @@ const actionHandlers: Record<string, ActionHandler> = {
         'id' in payload &&
         'index' in payload &&
         'value' in payload &&
-        typeof (payload as any).id === 'string' &&
-        typeof (payload as any).index === 'number' &&
-        typeof (payload as any).value === 'string'
+        typeof (payload as Record<string, unknown>).id === 'string' &&
+        typeof (payload as Record<string, unknown>).index === 'number' &&
+        typeof (payload as Record<string, unknown>).value === 'string'
       );
     },
     (state: State, payload: { id: string; index: number; value: string }) => {
@@ -565,7 +570,7 @@ const actionHandlers: Record<string, ActionHandler> = {
         typeof payload === 'object' &&
         payload !== null &&
         'id' in payload &&
-        typeof (payload as any).id === 'string' &&
+        typeof (payload as Record<string, unknown>).id === 'string' &&
         'startMarker' in payload
       );
     },
@@ -591,7 +596,7 @@ const actionHandlers: Record<string, ActionHandler> = {
         typeof payload === 'object' &&
         payload !== null &&
         'id' in payload &&
-        typeof (payload as any).id === 'string' &&
+        typeof (payload as Record<string, unknown>).id === 'string' &&
         'endMarker' in payload
       );
     },
@@ -626,8 +631,8 @@ const actionHandlers: Record<string, ActionHandler> = {
 
       const updatedElement = {
         ...element,
-        startMarker: connectionPathType as any,
-        connectionPathType: connectionPathType as any,
+        startMarker: connectionPathType as MarkerType,
+        connectionPathType: connectionPathType as MarkerType,
       };
 
       const result = updateElementInHierarchy(state.hierarchicalData, id, updatedElement);
@@ -650,8 +655,8 @@ const actionHandlers: Record<string, ActionHandler> = {
 
       const updatedElement = {
         ...element,
-        endMarker: endConnectionPathType as any,
-        endConnectionPathType: endConnectionPathType as any,
+        endMarker: endConnectionPathType as MarkerType,
+        endConnectionPathType: endConnectionPathType as MarkerType,
       };
 
       const result = updateElementInHierarchy(state.hierarchicalData, id, updatedElement);
@@ -678,10 +683,12 @@ const actionHandlers: Record<string, ActionHandler> = {
       updatedElement,
     );
 
-    debugLog(`EDIT_ELEMENT: Result elements cache`, {
-      editingElements: Object.values(result.elementsCache)
-        .filter((e) => e.editing)
-        .map((e) => e.id),
+    debugLog(`EDIT_ELEMENT: Result hierarchy updated`, {
+      editingElements: result.hierarchicalData
+        ? getAllElementsFromHierarchy(result.hierarchicalData)
+            .filter((e) => e.editing)
+            .map((e) => e.id)
+        : [],
     });
 
     return createStateFromHierarchicalResult(state, result);
@@ -1054,8 +1061,6 @@ const actionHandlers: Record<string, ActionHandler> = {
       return {
         ...state,
         hierarchicalData: finalHierarchicalData,
-        elementsCache: adjustedElementsCache,
-        cacheValid: true,
       };
     },
   ),
@@ -1122,12 +1127,13 @@ const actionHandlers: Record<string, ActionHandler> = {
     }
 
     // 既存の要素の選択状態を解除し、新しい要素のみを選択状態にする
+    const allElements = getAllElementsFromHierarchy(result.hierarchicalData);
     const elementsWithUpdatedSelection: { [id: string]: Element } = {};
-    Object.entries(result.elementsCache).forEach(([id, element]) => {
-      elementsWithUpdatedSelection[id] = {
+    allElements.forEach((element) => {
+      elementsWithUpdatedSelection[element.id] = {
         ...element,
-        selected: id === newElement.id, // 新しい要素のみを選択状態に
-        editing: id === newElement.id, // 新しい要素を編集状態に
+        selected: element.id === newElement.id, // 新しい要素のみを選択状態に
+        editing: element.id === newElement.id, // 新しい要素を編集状態に
       };
     });
 
@@ -1394,24 +1400,33 @@ const actionHandlers: Record<string, ActionHandler> = {
       const result = moveElementInHierarchy(state.hierarchicalData, id, newParentId, newOrder);
 
       // direction の更新を適用
-      if (direction !== undefined && result.elementsCache[id]) {
-        result.elementsCache[id] = {
-          ...result.elementsCache[id],
-          direction,
-        };
-        debugLog(`Element ${id} direction updated to: ${direction}`);
+      if (direction !== undefined) {
+        const targetNode = findNodeInHierarchy(result.hierarchicalData, id);
+        if (targetNode) {
+          targetNode.data = {
+            ...targetNode.data,
+            direction,
+          };
+          debugLog(`Element ${id} direction updated to: ${direction}`);
+        }
       }
 
       // 位置調整を行う
-      const adjustedElementsCache = adjustElementPositions(
-        result.elementsCache,
+      const allElements = getAllElementsFromHierarchy(result.hierarchicalData);
+      const adjustedElementsCache = allElements.reduce<ElementsMap>((acc, element) => {
+        acc[element.id] = element;
+        return acc;
+      }, {});
+
+      const adjustedElements = adjustElementPositions(
+        adjustedElementsCache,
         () => state.numberOfSections,
         state.layoutMode,
         state.width || 0,
         state.height || 0,
       );
 
-      const finalHierarchicalData = convertFlatToHierarchical(adjustedElementsCache);
+      const finalHierarchicalData = convertFlatToHierarchical(adjustedElements);
       if (!finalHierarchicalData) return state;
 
       return {
@@ -1455,13 +1470,9 @@ const actionHandlers: Record<string, ActionHandler> = {
 
     cutToClipboard(cutElementsMap);
 
-    const elementsCache = convertHierarchicalToFlat(currentHierarchy);
-
     return {
       ...state,
       hierarchicalData: currentHierarchy,
-      elementsCache,
-      cacheValid: true,
     };
   }),
 
@@ -1497,15 +1508,21 @@ const actionHandlers: Record<string, ActionHandler> = {
     const result = setVisibilityInHierarchy(state.hierarchicalData, selectedElement.id, true);
 
     // 位置調整を行う
-    const adjustedElementsCache = adjustElementPositions(
-      result.elementsCache,
+    const allElements = getAllElementsFromHierarchy(result.hierarchicalData);
+    const adjustedElementsCache = allElements.reduce<ElementsMap>((acc, element) => {
+      acc[element.id] = element;
+      return acc;
+    }, {});
+
+    const adjustedElements = adjustElementPositions(
+      adjustedElementsCache,
       () => state.numberOfSections,
       state.layoutMode,
       state.width || 0,
       state.height || 0,
     );
 
-    const finalHierarchicalData = convertFlatToHierarchical(adjustedElementsCache);
+    const finalHierarchicalData = convertFlatToHierarchical(adjustedElements);
     if (!finalHierarchicalData) return state;
 
     return {
@@ -1524,15 +1541,21 @@ const actionHandlers: Record<string, ActionHandler> = {
     const result = setVisibilityInHierarchy(state.hierarchicalData, selectedElement.id, false);
 
     // 位置調整を行う
-    const adjustedElementsCache = adjustElementPositions(
-      result.elementsCache,
+    const allElements = getAllElementsFromHierarchy(result.hierarchicalData);
+    const adjustedElementsCache = allElements.reduce<ElementsMap>((acc, element) => {
+      acc[element.id] = element;
+      return acc;
+    }, {});
+
+    const adjustedElements = adjustElementPositions(
+      adjustedElementsCache,
       () => state.numberOfSections,
       state.layoutMode,
       state.width || 0,
       state.height || 0,
     );
 
-    const finalHierarchicalData = convertFlatToHierarchical(adjustedElementsCache);
+    const finalHierarchicalData = convertFlatToHierarchical(adjustedElements);
     if (!finalHierarchicalData) return state;
 
     return {

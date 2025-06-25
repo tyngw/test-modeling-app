@@ -7,15 +7,16 @@ import {
   getAllElementsFromHierarchy,
   findElementInHierarchy,
 } from '../../utils/hierarchical/hierarchicalConverter';
+import { HierarchicalStructure } from '../../types/hierarchicalTypes';
 
 // ヘルパー関数: hierarchicalDataから要素の配列を取得
-const getElementsFromState = (state: any) => {
+const getElementsFromState = (state: { hierarchicalData: HierarchicalStructure | null }) => {
   if (!state.hierarchicalData) return [];
   return getAllElementsFromHierarchy(state.hierarchicalData);
 };
 
 // ヘルパー関数: hierarchicalDataから特定の要素を取得
-const getElementById = (state: any, id: string) => {
+const getElementById = (state: { hierarchicalData: HierarchicalStructure | null }, id: string) => {
   if (!state.hierarchicalData) return null;
   return findElementInHierarchy(state.hierarchicalData, id);
 };
