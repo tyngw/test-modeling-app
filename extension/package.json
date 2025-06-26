@@ -1,0 +1,38 @@
+{
+  "name": "test-modeling-app-extension",
+  "displayName": "Test Modeling App",
+  "description": "VSCode extension for Test Modeling App",
+  "version": "0.1.0",
+  "publisher": "your-publisher-name",
+  "engines": {
+    "vscode": "^1.60.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:testModelingApp.openModeler"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "testModelingApp.openModeler",
+        "title": "Open Test Modeling App",
+        "category": "Test Modeling"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "build": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^16.x",
+    "@types/vscode": "^1.60.0",
+    "typescript": "^4.9.4"
+  },
+  "dependencies": {}
+}

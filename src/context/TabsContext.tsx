@@ -10,7 +10,7 @@ import React, {
   useMemo,
   useEffect,
 } from 'react';
-import { State, initialState } from '../state/state';
+import { State } from '../state/state';
 import { getAllElementsFromHierarchy } from '../utils/hierarchical/hierarchicalConverter';
 import { v4 as uuidv4 } from 'uuid';
 import { DEFAULT_POSITION, NUMBER_OF_SECTIONS } from '../config/elementSettings';

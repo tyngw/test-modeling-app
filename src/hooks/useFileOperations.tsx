@@ -4,9 +4,12 @@ import React, { useCallback } from 'react';
 import { getAllElementsFromHierarchy } from '../utils/hierarchical/hierarchicalConverter';
 import { useToast } from '../context/ToastContext';
 import { saveSvg, saveElements, loadElements } from '../utils/file';
+import { fileOperationAdapter } from '../utils/file/fileOperationAdapter';
 import { convertFlatToHierarchical } from '../utils/hierarchical/hierarchicalConverter';
 import { TabState } from '../types/tabTypes';
 import { State } from '../state/state';
+import { isVSCodeExtension } from '../utils/environment/environmentDetector';
+import { storageAdapter } from '../utils/storage/storageAdapter';
 
 interface UseFileOperationsParams {
   currentTab: TabState | undefined;
@@ -38,7 +41,7 @@ export function useFileOperations({
     }
   }, []);
 
-  const handleSaveElements = useCallback(() => {
+  const handleSaveElements = useCallback(async () => {
     if (!currentTab) return;
 
     // hierarchicalDataから要素を取得
@@ -46,7 +49,16 @@ export function useFileOperations({
       ? getAllElementsFromHierarchy(currentTab.state.hierarchicalData)
       : [];
 
-    saveElements(allElements, currentTab.name);
+    // VSCode拡張機能の場合は、現在のファイル名を使用
+    let fileName = currentTab.name;
+    if (isVSCodeExtension() && storageAdapter.getCurrentFileName) {
+      const currentFileName = await storageAdapter.getCurrentFileName();
+      if (currentFileName) {
+        fileName = currentFileName.replace(/\.json$/, ''); // 拡張子を除去
+      }
+    }
+
+    saveElements(allElements, fileName);
 
     // JSON保存後にタブを保存済みとしてマーク
     if (currentTab.id) {
@@ -67,9 +79,20 @@ export function useFileOperations({
   }, [currentTab, updateTabSaveStatus]);
 
   const handleLoadElements = useCallback(
-    async (event: React.ChangeEvent<HTMLInputElement>) => {
+    async (event?: React.ChangeEvent<HTMLInputElement>) => {
       try {
-        const result = await loadElements(event.nativeEvent);
+        let result;
+
+        // VSCode拡張環境の場合は、eventを使わずにfileOperationAdapterを直接呼び出し
+        if (isVSCodeExtension()) {
+          result = await fileOperationAdapter.loadElements();
+        } else {
+          // ブラウザ環境の場合は、eventが必要
+          if (!event) {
+            throw new Error('ブラウザ環境ではイベントが必要です');
+          }
+          result = await loadElements(event.nativeEvent);
+        }
 
         // 新しいタブを作成して、読み込んだ要素をそのタブに適用
         const newTabId = addTab();
@@ -89,7 +112,13 @@ export function useFileOperations({
         });
 
         // タブ名を設定
-        const newTabName = result.fileName.replace('.json', '');
+        let newTabName = result.fileName.replace('.json', '');
+
+        // VSCode拡張機能の場合は、ファイル名をそのまま使用（拡張子あり）
+        if (isVSCodeExtension()) {
+          newTabName = result.fileName;
+        }
+
         updateTabName(newTabId, newTabName);
 
         // 現在の要素の状態をJSON文字列として保存

@@ -20,12 +20,12 @@ export interface NewElementParams {
 
 /**
  * 新しい要素を作成する
- * 
+ *
  * ⚠️ 重要: numSectionsパラメータについて
  * - 新しいタブ作成時は、必ず設定で指定されたnumberOfSectionsを渡すこと
  * - デフォルト値のNUMBER_OF_SECTIONSは固定値(3)なので、設定値を無視してしまう
  * - このリグレッションが過去に何度か発生しているため、呼び出し元で設定値を明示的に渡すことを徹底する
- * 
+ *
  * @param parentId 親要素のID（nullの場合はルート要素）
  * @param depth 要素の深さ（デフォルト: 1、ルート要素は0）
  * @param numSections セクション数（⚠️必ず設定値を渡すこと！デフォルトは固定値3）

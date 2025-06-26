@@ -27,6 +27,7 @@ import { getCanvasBackgroundColor } from '../../utils/storage/localStorageHelper
 import { useIsMounted } from '../../hooks/UseIsMounted';
 import LoadingIndicator from '../LoadingIndicator';
 import { tooltipTexts } from '../../constants/tooltipTexts';
+import { isVSCodeExtension } from '../../utils/environment/environmentDetector';
 
 // 基本コンポーネントのインポート
 import IconButton from '../menuBar/IconButton';
@@ -34,7 +35,7 @@ import Divider from '../menuBar/Divider';
 
 interface QuickMenuBarProps {
   saveSvg: () => void;
-  loadElements: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  loadElements: (event?: React.ChangeEvent<HTMLInputElement>) => void;
   saveElements: () => void;
   toggleHelp: () => void;
   toggleSettings: () => void;
@@ -63,6 +64,7 @@ const QuickMenuBar = ({
 }: QuickMenuBarProps) => {
   const { dispatch } = useCanvas();
   const { addTab } = useTabs();
+  // VSCode環境では fileInput は使用しない
   const fileInput = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const isMounted = useIsMounted();
@@ -101,7 +103,13 @@ const QuickMenuBar = ({
   const theme = getCurrentTheme(backgroundColor);
 
   const handleFileOpen = () => {
-    fileInput.current?.click();
+    if (isVSCodeExtension()) {
+      // VSCode環境では直接loadElementsを呼び出す
+      loadElements();
+    } else {
+      // ブラウザ環境では隠しinputをクリック
+      fileInput.current?.click();
+    }
   };
 
   return (
@@ -129,7 +137,16 @@ const QuickMenuBar = ({
             minWidth: 'max-content', // コンテンツ幅を維持
           }}
         >
-          <input type="file" ref={fileInput} onChange={loadElements} style={{ display: 'none' }} />
+          {/* VSCode環境では隠しinputは完全に除外 */}
+          {!isVSCodeExtension() && (
+            <input
+              type="file"
+              ref={fileInput}
+              onChange={loadElements}
+              style={{ display: 'none' }}
+              accept=".json"
+            />
+          )}
 
           {/* ファイル操作グループ */}
           <IconButton

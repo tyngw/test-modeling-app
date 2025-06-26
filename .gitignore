@@ -29,3 +29,17 @@ yarn-error.log*
 
 .github/copilot-instructions.md
 
+# VSCode extension development
+extension/out/
+extension/node_modules/
+extension/webview/
+extension/package-lock.json
+extension/*.vsix
+
+# Extension build artifacts
+*.vsix
+
+# Documentation build outputs
+docs/build/
+docs/.docusaurus/
+docs/node_modules/
