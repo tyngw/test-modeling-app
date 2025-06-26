@@ -1,89 +1,371 @@
+// extension/src/extension.ts
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 
 /**
- * VSCode拡張のメインエントリーポイント
- * 既存のWebアプリをVSCode拡張として動作させる
+ * VSCode拡張機能のメインエントリーポイント
  */
 export function activate(context: vscode.ExtensionContext) {
-  console.log('Test Modeling App extension is now active!');
+  console.log('Test Modeling App extension が起動しました');
 
-  // モデリングエディターを開くコマンドを登録
-  const openEditorCommand = vscode.commands.registerCommand('testModelingApp.openEditor', () => {
-    openModelingEditor(context);
-  });
+  // Webviewパネル参照を保持
+  let currentPanel: vscode.WebviewPanel | undefined = undefined;
+  let currentFileName: string | null = null;
+  let settingsFilePath: string | null = null;
 
-  context.subscriptions.push(openEditorCommand);
-
-  // ファイル保存の監視（自動保存機能用）
-  const saveWatcher = vscode.workspace.onDidSaveTextDocument((document) => {
-    if (document.fileName.endsWith('.modeling.json')) {
-      console.log('Modeling file saved:', document.fileName);
+  // コマンドの登録
+  const openModelerCommand = vscode.commands.registerCommand('testModelingApp.openModeler', () => {
+    if (currentPanel) {
+      // 既存のパネルがある場合は前面に表示
+      currentPanel.reveal();
+      return;
     }
+
+    // 新しいWebviewパネルを作成
+    currentPanel = vscode.window.createWebviewPanel(
+      'testModelingApp',
+      'Test Modeling App',
+      vscode.ViewColumn.One,
+      {
+        enableScripts: true,
+        retainContextWhenHidden: true,
+        localResourceRoots: [vscode.Uri.file(path.join(context.extensionPath, 'webview'))],
+      },
+    );
+
+    // Webviewのコンテンツを設定
+    currentPanel.webview.html = getWebviewContent(currentPanel.webview, context);
+
+    // 設定ファイルのパスを設定
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    if (workspaceFolder) {
+      const extensionFolder = path.join(workspaceFolder.uri.fsPath, '.vscode', 'test-modeling-app');
+      settingsFilePath = path.join(extensionFolder, 'app-settings.json');
+    }
+
+    // Webviewからのメッセージを処理
+    currentPanel.webview.onDidReceiveMessage(
+      async (message) => {
+        await handleWebviewMessage(message);
+      },
+      undefined,
+      context.subscriptions,
+    );
+
+    // パネルが閉じられたときの処理
+    currentPanel.onDidDispose(() => {
+      currentPanel = undefined;
+      currentFileName = null;
+    });
   });
 
-  context.subscriptions.push(saveWatcher);
-}
+  context.subscriptions.push(openModelerCommand);
 
-/**
- * モデリングエディターのWebviewを作成・表示
- */
-function openModelingEditor(context: vscode.ExtensionContext) {
-  // Webviewパネルを作成
-  const panel = vscode.window.createWebviewPanel(
-    'testModelingApp',
-    'Modeling Editor',
-    vscode.ViewColumn.One,
-    {
-      // Webviewでスクリプトの実行を許可
-      enableScripts: true,
-      // ローカルリソースへのアクセスを許可
-      localResourceRoots: [vscode.Uri.file(path.join(context.extensionPath, 'webview'))],
-      // パネルが非表示になってもWebviewの状態を保持
-      retainContextWhenHidden: true,
-    },
-  );
+  /**
+   * Webviewからのメッセージを処理
+   */
+  async function handleWebviewMessage(message: any): Promise<void> {
+    switch (message.type) {
+      case 'saveFile':
+        await handleSaveFile(message.data, message.fileName);
+        break;
 
-  // Webviewのコンテンツを設定
-  panel.webview.html = getWebviewContent(panel.webview, context);
+      case 'loadFile':
+        await handleLoadFile(message.fileName);
+        break;
 
-  // Webviewからのメッセージを処理
-  panel.webview.onDidReceiveMessage(
-    async (message) => {
-      switch (message.type) {
-        case 'saveFile':
-          await handleSaveFile(message.data);
-          break;
-        case 'loadFile':
-          await handleLoadFile(message.fileName, panel.webview);
-          break;
-        case 'getConfig':
-          await handleGetConfig(panel.webview);
-          break;
-        case 'setConfig':
-          await handleSetConfig(message.config);
-          break;
-        case 'showError':
-          vscode.window.showErrorMessage(message.message);
-          break;
-        case 'showInfo':
-          vscode.window.showInformationMessage(message.message);
-          break;
+      case 'getConfig':
+        await handleGetConfig();
+        break;
+
+      case 'setConfig':
+        await handleSetConfig(message.config);
+        break;
+
+      case 'showError':
+        vscode.window.showErrorMessage(message.message);
+        break;
+
+      case 'showInfo':
+        vscode.window.showInformationMessage(message.message);
+        break;
+
+      case 'readSettingsFile':
+        await handleReadSettingsFile();
+        break;
+
+      case 'writeSettingsFile':
+        await handleWriteSettingsFile(message.data);
+        break;
+
+      case 'getCurrentFileName':
+        await handleGetCurrentFileName();
+        break;
+
+      default:
+        console.error('未知のメッセージタイプ:', message.type);
+    }
+  }
+
+  /**
+   * ファイル保存処理
+   */
+  async function handleSaveFile(data: any, fileName?: string): Promise<void> {
+    try {
+      let saveFileName = fileName;
+
+      // ファイル保存ダイアログを表示
+      const filters: { [name: string]: string[] } = {};
+      if (data.type === 'elements') {
+        filters['JSON Files'] = ['json'];
+      } else if (data.type === 'svg') {
+        filters['SVG Files'] = ['svg'];
       }
-    },
-    undefined,
-    context.subscriptions,
-  );
 
-  // パネルが破棄された時の処理
-  panel.onDidDispose(
-    () => {
-      console.log('Modeling editor panel disposed');
-    },
-    null,
-    context.subscriptions,
-  );
+      // デフォルトファイル名を生成
+      let defaultFileName = fileName || 'modeling-diagram';
+      if (data.type === 'elements' && !defaultFileName.endsWith('.json')) {
+        defaultFileName += '.json';
+      } else if (data.type === 'svg' && !defaultFileName.endsWith('.svg')) {
+        defaultFileName += '.svg';
+      }
+
+      // 保存ダイアログを表示
+      const saveUri = await vscode.window.showSaveDialog({
+        filters,
+        defaultUri: vscode.workspace.workspaceFolders?.[0]
+          ? vscode.Uri.joinPath(vscode.workspace.workspaceFolders[0].uri, defaultFileName)
+          : undefined,
+      });
+
+      if (!saveUri) {
+        return; // ユーザーがキャンセルした場合
+      }
+
+      saveFileName = path.basename(saveUri.fsPath);
+
+      // ファイル内容を準備
+      let content: string;
+      if (data.type === 'elements') {
+        // JSON要素データの場合
+        const jsonData = {
+          fileName: saveFileName,
+          elements: data.content,
+          version: '0.1.0',
+          createdAt: new Date().toISOString(),
+        };
+        content = JSON.stringify(jsonData, null, 2);
+      } else if (data.type === 'svg') {
+        // SVGデータの場合
+        content = data.content;
+      } else {
+        throw new Error('サポートされていないファイルタイプです');
+      }
+
+      // ファイルを保存
+      await fs.promises.writeFile(saveUri.fsPath, content, 'utf8');
+
+      // 要素データの場合は現在のファイル名を更新
+      if (data.type === 'elements') {
+        currentFileName = saveFileName;
+
+        // Webviewにファイル名変更を通知
+        currentPanel?.webview.postMessage({
+          type: 'fileNameChanged',
+          fileName: saveFileName,
+        });
+      }
+
+      vscode.window.showInformationMessage(`ファイルが保存されました: ${saveFileName}`);
+    } catch (error) {
+      console.error('ファイル保存エラー:', error);
+      vscode.window.showErrorMessage(`ファイルの保存に失敗しました: ${error}`);
+    }
+  }
+
+  /**
+   * ファイル読み込み処理
+   */
+  async function handleLoadFile(fileName?: string): Promise<void> {
+    try {
+      let loadUri: vscode.Uri;
+
+      if (fileName) {
+        // ファイル名が指定されている場合
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        if (!workspaceFolder) {
+          throw new Error('ワークスペースフォルダが見つかりません');
+        }
+        loadUri = vscode.Uri.file(path.join(workspaceFolder.uri.fsPath, fileName));
+      } else {
+        // ファイルダイアログで選択
+        const openUris = await vscode.window.showOpenDialog({
+          filters: {
+            'JSON Files': ['json'],
+          },
+          canSelectMany: false,
+          defaultUri: vscode.workspace.workspaceFolders?.[0]?.uri,
+        });
+
+        if (!openUris || openUris.length === 0) {
+          return; // ユーザーがキャンセルした場合
+        }
+
+        loadUri = openUris[0];
+      }
+
+      // ファイルを読み込み
+      const content = await fs.promises.readFile(loadUri.fsPath, 'utf8');
+      const data = JSON.parse(content);
+
+      // ファイル名を更新
+      const loadedFileName = path.basename(loadUri.fsPath);
+      currentFileName = loadedFileName;
+
+      // Webviewにデータを送信（アプリ側の期待する形式に合わせる）
+      currentPanel?.webview.postMessage({
+        type: 'fileLoaded',
+        data: {
+          fileName: loadedFileName,
+          content: data.elements || data, // elementsプロパティがあればそれを、なければ全体を送信
+        },
+      });
+
+      vscode.window.showInformationMessage(`ファイルが読み込まれました: ${loadedFileName}`);
+    } catch (error) {
+      console.error('ファイル読み込みエラー:', error);
+      vscode.window.showErrorMessage(`ファイルの読み込みに失敗しました: ${error}`);
+    }
+  }
+
+  /**
+   * 設定ファイル読み込み処理
+   */
+  async function handleReadSettingsFile(): Promise<void> {
+    try {
+      if (!settingsFilePath) {
+        // 設定ファイルが存在しない場合はデフォルト設定を返す
+        currentPanel?.webview.postMessage({
+          type: 'settingsLoaded',
+          data: null,
+        });
+        return;
+      }
+
+      // ディレクトリが存在しない場合は作成
+      const settingsDir = path.dirname(settingsFilePath);
+      if (!fs.existsSync(settingsDir)) {
+        await fs.promises.mkdir(settingsDir, { recursive: true });
+      }
+
+      // ファイルが存在しない場合はnullを返す
+      if (!fs.existsSync(settingsFilePath)) {
+        currentPanel?.webview.postMessage({
+          type: 'settingsLoaded',
+          data: null,
+        });
+        return;
+      }
+
+      const content = await fs.promises.readFile(settingsFilePath, 'utf8');
+      const settings = JSON.parse(content);
+
+      currentPanel?.webview.postMessage({
+        type: 'settingsLoaded',
+        data: settings,
+      });
+    } catch (error) {
+      console.error('設定ファイル読み込みエラー:', error);
+      currentPanel?.webview.postMessage({
+        type: 'settingsLoaded',
+        data: null,
+      });
+    }
+  }
+
+  /**
+   * 設定ファイル書き込み処理
+   */
+  async function handleWriteSettingsFile(data: any): Promise<void> {
+    try {
+      if (!settingsFilePath) {
+        throw new Error('設定ファイルのパスが設定されていません');
+      }
+
+      // ディレクトリが存在しない場合は作成
+      const settingsDir = path.dirname(settingsFilePath);
+      if (!fs.existsSync(settingsDir)) {
+        await fs.promises.mkdir(settingsDir, { recursive: true });
+      }
+
+      const content = JSON.stringify(data, null, 2);
+      await fs.promises.writeFile(settingsFilePath, content, 'utf8');
+
+      currentPanel?.webview.postMessage({
+        type: 'settingsWritten',
+        success: true,
+      });
+    } catch (error) {
+      console.error('設定ファイル書き込みエラー:', error);
+      currentPanel?.webview.postMessage({
+        type: 'settingsWritten',
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  /**
+   * 現在のファイル名を取得
+   */
+  async function handleGetCurrentFileName(): Promise<void> {
+    currentPanel?.webview.postMessage({
+      type: 'currentFileName',
+      fileName: currentFileName,
+    });
+  }
+
+  /**
+   * 設定取得処理
+   */
+  async function handleGetConfig(): Promise<void> {
+    try {
+      const config = vscode.workspace.getConfiguration('testModelingApp');
+      const configData = {
+        theme: config.get('theme'),
+        autoSave: config.get('autoSave'),
+        autoSaveInterval: config.get('autoSaveInterval'),
+        defaultFileName: config.get('defaultFileName'),
+        canvasBackgroundColor: config.get('canvasBackgroundColor'),
+        elementColor: config.get('elementColor'),
+      };
+
+      currentPanel?.webview.postMessage({
+        type: 'configLoaded',
+        config: configData,
+      });
+    } catch (error) {
+      console.error('Get config error:', error);
+      vscode.window.showErrorMessage(`設定取得エラー: ${error}`);
+    }
+  }
+
+  /**
+   * 設定更新処理
+   */
+  async function handleSetConfig(configUpdate: any): Promise<void> {
+    try {
+      const config = vscode.workspace.getConfiguration('testModelingApp');
+      for (const [key, value] of Object.entries(configUpdate)) {
+        await config.update(key, value, vscode.ConfigurationTarget.Workspace);
+      }
+      vscode.window.showInformationMessage('設定を更新しました');
+    } catch (error) {
+      console.error('Set config error:', error);
+      vscode.window.showErrorMessage(`設定更新エラー: ${error}`);
+    }
+  }
 }
 
 /**
@@ -191,152 +473,8 @@ function getWebviewContent(webview: vscode.Webview, context: vscode.ExtensionCon
 }
 
 /**
- * ファイル保存処理
- */
-async function handleSaveFile(data: any): Promise<void> {
-  try {
-    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-    if (!workspaceFolder) {
-      vscode.window.showErrorMessage('ワークスペースフォルダが見つかりません');
-      return;
-    }
-
-    // ファイル名の入力を求める
-    const fileName = await vscode.window.showInputBox({
-      prompt: 'ファイル名を入力してください',
-      value: 'modeling-diagram.json',
-      validateInput: (input) => {
-        if (!input.trim()) {
-          return 'ファイル名は必須です';
-        }
-        if (!input.endsWith('.json')) {
-          return 'ファイル拡張子は.jsonである必要があります';
-        }
-        return null;
-      },
-    });
-
-    if (!fileName) {
-      return;
-    }
-
-    // ファイルパスを構築
-    const filePath = vscode.Uri.file(path.join(workspaceFolder.uri.fsPath, fileName));
-
-    // JSONデータを文字列に変換
-    const jsonContent = JSON.stringify(data, null, 2);
-    const uint8Array = Buffer.from(jsonContent, 'utf8');
-
-    // ファイルに書き込み
-    await vscode.workspace.fs.writeFile(filePath, uint8Array);
-    vscode.window.showInformationMessage(`ファイルを保存しました: ${fileName}`);
-  } catch (error) {
-    console.error('Save file error:', error);
-    vscode.window.showErrorMessage(`ファイル保存エラー: ${error}`);
-  }
-}
-
-/**
- * ファイル読み込み処理
- */
-async function handleLoadFile(fileName: string, webview: vscode.Webview): Promise<void> {
-  try {
-    let filePath: vscode.Uri;
-
-    if (fileName) {
-      // 指定されたファイル名のファイルを読み込み
-      const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-      if (!workspaceFolder) {
-        vscode.window.showErrorMessage('ワークスペースフォルダが見つかりません');
-        return;
-      }
-      filePath = vscode.Uri.file(path.join(workspaceFolder.uri.fsPath, fileName));
-    } else {
-      // ファイル選択ダイアログを表示
-      const selectedFiles = await vscode.window.showOpenDialog({
-        canSelectFiles: true,
-        canSelectFolders: false,
-        canSelectMany: false,
-        filters: {
-          'JSON Files': ['json'],
-        },
-      });
-
-      if (!selectedFiles || selectedFiles.length === 0) {
-        return;
-      }
-
-      filePath = selectedFiles[0];
-    }
-
-    // ファイルを読み込み
-    const fileContent = await vscode.workspace.fs.readFile(filePath);
-    const jsonContent = Buffer.from(fileContent).toString('utf8');
-    const data = JSON.parse(jsonContent);
-
-    // Webviewにファイルデータを送信
-    webview.postMessage({
-      type: 'fileLoaded',
-      data: data,
-      fileName: path.basename(filePath.fsPath),
-    });
-
-    vscode.window.showInformationMessage(
-      `ファイルを読み込みました: ${path.basename(filePath.fsPath)}`,
-    );
-  } catch (error) {
-    console.error('Load file error:', error);
-    vscode.window.showErrorMessage(`ファイル読み込みエラー: ${error}`);
-  }
-}
-
-/**
- * 設定取得処理
- */
-async function handleGetConfig(webview: vscode.Webview): Promise<void> {
-  try {
-    const config = vscode.workspace.getConfiguration('testModelingApp');
-
-    const configData = {
-      theme: config.get('theme'),
-      autoSave: config.get('autoSave'),
-      autoSaveInterval: config.get('autoSaveInterval'),
-      defaultFileName: config.get('defaultFileName'),
-      canvasBackgroundColor: config.get('canvasBackgroundColor'),
-      elementColor: config.get('elementColor'),
-    };
-
-    webview.postMessage({
-      type: 'configLoaded',
-      config: configData,
-    });
-  } catch (error) {
-    console.error('Get config error:', error);
-    vscode.window.showErrorMessage(`設定取得エラー: ${error}`);
-  }
-}
-
-/**
- * 設定更新処理
- */
-async function handleSetConfig(configUpdate: any): Promise<void> {
-  try {
-    const config = vscode.workspace.getConfiguration('testModelingApp');
-
-    for (const [key, value] of Object.entries(configUpdate)) {
-      await config.update(key, value, vscode.ConfigurationTarget.Workspace);
-    }
-
-    vscode.window.showInformationMessage('設定を更新しました');
-  } catch (error) {
-    console.error('Set config error:', error);
-    vscode.window.showErrorMessage(`設定更新エラー: ${error}`);
-  }
-}
-
-/**
- * 拡張機能の非アクティブ化時の処理
+ * 拡張機能の非アクティブ化処理
  */
 export function deactivate() {
-  console.log('Test Modeling App extension is now deactivated');
+  console.log('Test Modeling App extension が非アクティブ化されました');
 }

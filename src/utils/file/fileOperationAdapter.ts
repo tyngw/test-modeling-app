@@ -109,16 +109,56 @@ class VSCodeFileOperations implements FileOperationAdapter {
       try {
         const vscodeAPI = this.getVSCodeAPI();
 
-        // ファイル読み込み完了時のコールバックを設定
-        (window as any).handleFileLoaded = (data: any) => {
-          try {
-            resolve({
-              elements: data.content,
-              fileName: data.fileName,
-            });
-          } catch (error) {
-            reject(error);
+        // メッセージハンドラーを一時的に設定
+        const messageHandler = (event: MessageEvent) => {
+          if (event.data.type === 'fileLoaded') {
+            // イベントリスナーを削除
+            window.removeEventListener('message', messageHandler);
+
+            try {
+              // データの形式を確認・変換
+              let elements = event.data.data.content;
+              let fileName = event.data.data.fileName;
+
+              // contentがオブジェクトの場合は、elementsプロパティを探す
+              if (elements && typeof elements === 'object' && !Array.isArray(elements)) {
+                if (elements.elements) {
+                  elements = elements.elements;
+                  fileName = elements.fileName || fileName;
+                }
+              }
+
+              resolve({
+                elements: elements,
+                fileName: fileName,
+              });
+            } catch (error) {
+              console.error('📂 Error processing loaded file:', error);
+              reject(error);
+            }
           }
+        };
+
+        // メッセージリスナーを追加
+        window.addEventListener('message', messageHandler);
+
+        // タイムアウトを設定（30秒）
+        const timeoutId = setTimeout(() => {
+          window.removeEventListener('message', messageHandler);
+          reject(new Error('ファイル読み込みがタイムアウトしました'));
+        }, 30000);
+
+        // 成功時にタイムアウトをクリア
+        const originalResolve = resolve;
+        resolve = (value) => {
+          clearTimeout(timeoutId);
+          originalResolve(value);
+        };
+
+        const originalReject = reject;
+        reject = (reason) => {
+          clearTimeout(timeoutId);
+          originalReject(reason);
         };
 
         // VSCode拡張のファイル読み込みAPIを呼び出し
@@ -144,5 +184,19 @@ export function createFileOperationAdapter(): FileOperationAdapter {
 
 /**
  * グローバルなファイル操作インスタンス
+ * 毎回動的に生成して最新の環境判定を確実に反映
  */
-export const fileOperationAdapter = createFileOperationAdapter();
+export const fileOperationAdapter = {
+  get loadElements() {
+    const adapter = createFileOperationAdapter();
+    return adapter.loadElements.bind(adapter);
+  },
+  get saveElements() {
+    const adapter = createFileOperationAdapter();
+    return adapter.saveElements.bind(adapter);
+  },
+  get saveSvg() {
+    const adapter = createFileOperationAdapter();
+    return adapter.saveSvg.bind(adapter);
+  },
+};

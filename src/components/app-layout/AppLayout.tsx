@@ -35,7 +35,7 @@ interface AppLayoutProps {
   // ファイル操作関連
   handleSaveSvg: () => void;
   handleSaveElements: () => void;
-  handleLoadElements: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  handleLoadElements: (event?: React.ChangeEvent<HTMLInputElement>) => void;
 
   // AI機能
   handleAIClick: () => void;

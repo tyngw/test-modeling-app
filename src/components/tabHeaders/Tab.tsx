@@ -1,12 +1,43 @@
 // src/components/TabHeaders/tab.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TabHeaderProps } from '../../types/tabTypes';
 import { useIsMounted } from '../../hooks/UseIsMounted';
+import { isVSCodeExtension } from '../../utils/environment/environmentDetector';
+import { storageAdapter } from '../../utils/storage/storageAdapter';
 
 const Tab: React.FC<TabHeaderProps> = React.memo(
   ({ tab, isCurrent, closeTab, switchTab, theme }) => {
     const isMounted = useIsMounted();
     const [isHovered, setIsHovered] = useState(false);
+    const [displayName, setDisplayName] = useState(tab.name);
+
+    // VSCode拡張機能でファイル名が変更された場合の処理
+    useEffect(() => {
+      if (isVSCodeExtension() && isCurrent && storageAdapter.getCurrentFileName) {
+        // ファイル名変更のリスナーを設定
+        const handleFileNameChange = async () => {
+          try {
+            const currentFileName = await storageAdapter.getCurrentFileName!();
+            if (currentFileName && currentFileName !== tab.name) {
+              setDisplayName(currentFileName);
+            }
+          } catch (error) {
+            console.error('ファイル名の取得に失敗しました:', error);
+          }
+        };
+
+        // VSCode拡張機能のファイル名変更イベントを監視
+        if (typeof window !== 'undefined' && (window as any).handleFileNameChanged) {
+          (window as any).handleFileNameChanged = (fileName: string) => {
+            setDisplayName(fileName);
+          };
+        }
+
+        handleFileNameChange();
+      } else {
+        setDisplayName(tab.name);
+      }
+    }, [tab.name, isCurrent]);
 
     if (!isMounted) return null;
 
@@ -50,7 +81,7 @@ const Tab: React.FC<TabHeaderProps> = React.memo(
               minWidth: '0',
             }}
           >
-            {tab.name}
+            {displayName}
           </span>
           {!tab.isSaved && (
             <span
