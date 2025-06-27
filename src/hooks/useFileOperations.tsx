@@ -10,6 +10,7 @@ import { TabState } from '../types/tabTypes';
 import { State } from '../state/state';
 import { isVSCodeExtension } from '../utils/environment/environmentDetector';
 import { storageAdapter } from '../utils/storage/storageAdapter';
+import { Element as DiagramElement } from '../types/types';
 
 interface UseFileOperationsParams {
   currentTab: TabState | undefined;
@@ -34,49 +35,77 @@ export function useFileOperations({
 }: UseFileOperationsParams) {
   const { addToast } = useToast();
 
-  const handleSaveSvg = useCallback(() => {
-    const svgElement = document.querySelector('.svg-element') as SVGSVGElement;
-    if (svgElement) {
-      saveSvg(svgElement, 'download.svg');
+  const handleSaveSvg = useCallback(async () => {
+    try {
+      const svgElement = document.querySelector('.svg-element') as SVGSVGElement;
+      if (!svgElement) {
+        addToast('SVG要素が見つかりませんでした');
+        return;
+      }
+
+      if (isVSCodeExtension()) {
+        // VSCode拡張機能環境ではfileOperationAdapterを使用
+        await fileOperationAdapter.saveSvg(svgElement, 'download.svg');
+        addToast('SVGファイルが正常に保存されました');
+      } else {
+        // ブラウザ環境では従来の関数を使用
+        saveSvg(svgElement, 'download.svg');
+        addToast('SVGファイルが正常に保存されました');
+      }
+    } catch (error) {
+      console.error('[handleSaveSvg] Error during SVG save:', error);
+      addToast(error instanceof Error ? error.message : 'SVGの保存中にエラーが発生しました');
     }
-  }, []);
+  }, [addToast]);
 
   const handleSaveElements = useCallback(async () => {
     if (!currentTab) return;
 
-    // hierarchicalDataから要素を取得
-    const allElements = currentTab.state.hierarchicalData
-      ? getAllElementsFromHierarchy(currentTab.state.hierarchicalData)
-      : [];
+    try {
+      // hierarchicalDataから要素を取得
+      const allElements = currentTab.state.hierarchicalData
+        ? getAllElementsFromHierarchy(currentTab.state.hierarchicalData)
+        : [];
 
-    // VSCode拡張機能の場合は、現在のファイル名を使用
-    let fileName = currentTab.name;
-    if (isVSCodeExtension() && storageAdapter.getCurrentFileName) {
-      const currentFileName = await storageAdapter.getCurrentFileName();
-      if (currentFileName) {
-        fileName = currentFileName.replace(/\.json$/, ''); // 拡張子を除去
+      // VSCode拡張機能の場合は、現在のファイル名を使用
+      let fileName = currentTab.name;
+      if (isVSCodeExtension()) {
+        if (storageAdapter.getCurrentFileName) {
+          const currentFileName = await storageAdapter.getCurrentFileName();
+          if (currentFileName) {
+            fileName = currentFileName.replace(/\.json$/, ''); // 拡張子を除去
+          }
+        }
+        // VSCode拡張機能環境ではfileOperationAdapterを使用
+        await fileOperationAdapter.saveElements(allElements, fileName);
+        addToast('ファイルが正常に保存されました');
+      } else {
+        // ブラウザ環境では従来の関数を使用
+        saveElements(allElements, fileName);
+        addToast('ファイルが正常に保存されました');
       }
+
+      // JSON保存後にタブを保存済みとしてマーク
+      if (currentTab.id) {
+        // 現在の要素の状態をJSON文字列として保存（整形して比較）
+        const elementsMap = allElements.reduce(
+          (acc, element) => {
+            acc[element.id] = element;
+            return acc;
+          },
+          {} as Record<string, DiagramElement>,
+        );
+        const normalizedElements = JSON.parse(JSON.stringify(elementsMap));
+        const currentElementsJson = JSON.stringify(normalizedElements);
+
+        // タブを保存済みとしてマークし、最後に保存された要素の状態を更新
+        updateTabSaveStatus(currentTab.id, true, currentElementsJson);
+      }
+    } catch (error) {
+      console.error('[handleSaveElements] Error during file save:', error);
+      addToast(error instanceof Error ? error.message : 'ファイルの保存中にエラーが発生しました');
     }
-
-    saveElements(allElements, fileName);
-
-    // JSON保存後にタブを保存済みとしてマーク
-    if (currentTab.id) {
-      // 現在の要素の状態をJSON文字列として保存（整形して比較）
-      const elementsMap = allElements.reduce(
-        (acc, element) => {
-          acc[element.id] = element;
-          return acc;
-        },
-        {} as Record<string, any>,
-      );
-      const normalizedElements = JSON.parse(JSON.stringify(elementsMap));
-      const currentElementsJson = JSON.stringify(normalizedElements);
-
-      // タブを保存済みとしてマークし、最後に保存された要素の状態を更新
-      updateTabSaveStatus(currentTab.id, true, currentElementsJson);
-    }
-  }, [currentTab, updateTabSaveStatus]);
+  }, [currentTab, updateTabSaveStatus, addToast]);
 
   const handleLoadElements = useCallback(
     async (event?: React.ChangeEvent<HTMLInputElement>) => {
@@ -129,9 +158,11 @@ export function useFileOperations({
 
         // 新しいタブに切り替え
         switchTab(newTabId);
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('[handleLoadElements] Error during file load:', error);
-        addToast(error.message);
+        addToast(
+          error instanceof Error ? error.message : 'ファイルの読み込み中にエラーが発生しました',
+        );
       }
     },
     [addTab, updateTabState, updateTabName, switchTab, updateTabSaveStatus, addToast],

@@ -23,7 +23,10 @@ export function detectEnvironment(): EnvironmentInfo {
   }
 
   // VSCode拡張環境の場合
-  if (typeof window !== 'undefined' && (window as any).isVSCodeExtension) {
+  if (
+    typeof window !== 'undefined' &&
+    (window as { isVSCodeExtension?: boolean }).isVSCodeExtension
+  ) {
     return {
       isVSCodeExtension: true,
       isBrowser: false,

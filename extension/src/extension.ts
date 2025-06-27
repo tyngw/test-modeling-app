@@ -65,7 +65,13 @@ export function activate(context: vscode.ExtensionContext) {
   /**
    * Webviewからのメッセージを処理
    */
-  async function handleWebviewMessage(message: any): Promise<void> {
+  async function handleWebviewMessage(message: {
+    type: string;
+    data?: unknown;
+    fileName?: string;
+    config?: unknown;
+    message?: string;
+  }): Promise<void> {
     switch (message.type) {
       case 'saveFile':
         await handleSaveFile(message.data, message.fileName);
@@ -84,11 +90,15 @@ export function activate(context: vscode.ExtensionContext) {
         break;
 
       case 'showError':
-        vscode.window.showErrorMessage(message.message);
+        if (message.message) {
+          vscode.window.showErrorMessage(message.message);
+        }
         break;
 
       case 'showInfo':
-        vscode.window.showInformationMessage(message.message);
+        if (message.message) {
+          vscode.window.showInformationMessage(message.message);
+        }
         break;
 
       case 'readSettingsFile':
@@ -111,23 +121,29 @@ export function activate(context: vscode.ExtensionContext) {
   /**
    * ファイル保存処理
    */
-  async function handleSaveFile(data: any, fileName?: string): Promise<void> {
+  async function handleSaveFile(data: unknown, fileName?: string): Promise<void> {
     try {
+      // 型ガード
+      if (!data || typeof data !== 'object' || !('type' in data) || !('content' in data)) {
+        throw new Error('無効なデータ形式です');
+      }
+
+      const saveData = data as { type: string; content: unknown };
       let saveFileName = fileName;
 
       // ファイル保存ダイアログを表示
       const filters: { [name: string]: string[] } = {};
-      if (data.type === 'elements') {
+      if (saveData.type === 'elements') {
         filters['JSON Files'] = ['json'];
-      } else if (data.type === 'svg') {
+      } else if (saveData.type === 'svg') {
         filters['SVG Files'] = ['svg'];
       }
 
       // デフォルトファイル名を生成
       let defaultFileName = fileName || 'modeling-diagram';
-      if (data.type === 'elements' && !defaultFileName.endsWith('.json')) {
+      if (saveData.type === 'elements' && !defaultFileName.endsWith('.json')) {
         defaultFileName += '.json';
-      } else if (data.type === 'svg' && !defaultFileName.endsWith('.svg')) {
+      } else if (saveData.type === 'svg' && !defaultFileName.endsWith('.svg')) {
         defaultFileName += '.svg';
       }
 
@@ -140,34 +156,40 @@ export function activate(context: vscode.ExtensionContext) {
       });
 
       if (!saveUri) {
-        return; // ユーザーがキャンセルした場合
+        // キャンセルをWebviewに通知
+        currentPanel?.webview.postMessage({
+          type: 'saveCompleted',
+          success: false,
+          cancelled: true,
+        });
+        return;
       }
 
       saveFileName = path.basename(saveUri.fsPath);
 
       // ファイル内容を準備
       let content: string;
-      if (data.type === 'elements') {
+      if (saveData.type === 'elements') {
         // JSON要素データの場合
         const jsonData = {
           fileName: saveFileName,
-          elements: data.content,
+          elements: saveData.content,
           version: '0.1.0',
           createdAt: new Date().toISOString(),
         };
         content = JSON.stringify(jsonData, null, 2);
-      } else if (data.type === 'svg') {
+      } else if (saveData.type === 'svg') {
         // SVGデータの場合
-        content = data.content;
+        content = saveData.content as string;
       } else {
         throw new Error('サポートされていないファイルタイプです');
       }
 
-      // ファイルを保存
-      await fs.promises.writeFile(saveUri.fsPath, content, 'utf8');
+      // VSCode APIを使ってファイルシステムに保存
+      await vscode.workspace.fs.writeFile(saveUri, Buffer.from(content, 'utf8'));
 
       // 要素データの場合は現在のファイル名を更新
-      if (data.type === 'elements') {
+      if (saveData.type === 'elements') {
         currentFileName = saveFileName;
 
         // Webviewにファイル名変更を通知
@@ -177,9 +199,24 @@ export function activate(context: vscode.ExtensionContext) {
         });
       }
 
+      // 保存完了をWebviewに通知
+      currentPanel?.webview.postMessage({
+        type: 'saveCompleted',
+        success: true,
+        fileName: saveFileName,
+      });
+
       vscode.window.showInformationMessage(`ファイルが保存されました: ${saveFileName}`);
     } catch (error) {
       console.error('ファイル保存エラー:', error);
+
+      // エラーをWebviewに通知
+      currentPanel?.webview.postMessage({
+        type: 'saveCompleted',
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      });
+
       vscode.window.showErrorMessage(`ファイルの保存に失敗しました: ${error}`);
     }
   }
@@ -287,7 +324,7 @@ export function activate(context: vscode.ExtensionContext) {
   /**
    * 設定ファイル書き込み処理
    */
-  async function handleWriteSettingsFile(data: any): Promise<void> {
+  async function handleWriteSettingsFile(data: unknown): Promise<void> {
     try {
       if (!settingsFilePath) {
         throw new Error('設定ファイルのパスが設定されていません');
@@ -354,10 +391,14 @@ export function activate(context: vscode.ExtensionContext) {
   /**
    * 設定更新処理
    */
-  async function handleSetConfig(configUpdate: any): Promise<void> {
+  async function handleSetConfig(configUpdate: unknown): Promise<void> {
     try {
+      if (!configUpdate || typeof configUpdate !== 'object') {
+        throw new Error('無効な設定データです');
+      }
+
       const config = vscode.workspace.getConfiguration('testModelingApp');
-      for (const [key, value] of Object.entries(configUpdate)) {
+      for (const [key, value] of Object.entries(configUpdate as Record<string, unknown>)) {
         await config.update(key, value, vscode.ConfigurationTarget.Workspace);
       }
       vscode.window.showInformationMessage('設定を更新しました');

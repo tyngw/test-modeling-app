@@ -57,49 +57,147 @@ class BrowserFileOperations implements FileOperationAdapter {
  * VSCode拡張環境でのファイル操作実装
  */
 class VSCodeFileOperations implements FileOperationAdapter {
-  private getVSCodeAPI(): any {
-    if (typeof window !== 'undefined' && (window as any).vscodeFileAPI) {
-      return (window as any).vscodeFileAPI;
+  private getVSCodeAPI(): {
+    saveFile: (data: { type: string; content: unknown }, fileName: string) => void;
+    loadFile: (fileName?: string) => void;
+  } {
+    const win = window as unknown as {
+      vscodeFileAPI?: {
+        saveFile: (data: { type: string; content: unknown }, fileName: string) => void;
+        loadFile: (fileName?: string) => void;
+      };
+    };
+
+    if (typeof window !== 'undefined' && win.vscodeFileAPI) {
+      return win.vscodeFileAPI;
     }
     throw new Error('VSCode API が利用できません');
   }
 
   async saveSvg(svgElement: SVGSVGElement, fileName: string): Promise<void> {
-    try {
-      // SVGを文字列に変換
-      const svgData = new XMLSerializer().serializeToString(svgElement);
-      const vscodeAPI = this.getVSCodeAPI();
+    return new Promise((resolve, reject) => {
+      try {
+        // SVGを文字列に変換（現在のfileHelpers.tsと同じロジック）
+        const svgElementClone = svgElement.cloneNode(true) as SVGElement;
+        // SVGから不要な属性を削除
+        svgElementClone.removeAttribute('style');
+        svgElementClone.removeAttribute('transform');
 
-      // VSCode拡張のファイル保存APIを呼び出し
-      vscodeAPI.saveFile(
-        {
-          type: 'svg',
-          content: svgData,
-        },
-        fileName,
-      );
-    } catch (error) {
-      console.error('SVG保存エラー:', error);
-      throw error;
-    }
+        const svgData = new XMLSerializer().serializeToString(svgElementClone);
+        const preface = '<?xml version="1.0" standalone="no"?>\r\n';
+        const fullSvgContent = preface + svgData;
+
+        const vscodeAPI = this.getVSCodeAPI();
+
+        // メッセージハンドラーを一時的に設定
+        const messageHandler = (event: MessageEvent) => {
+          if (event.data.type === 'saveCompleted') {
+            // イベントリスナーを削除
+            window.removeEventListener('message', messageHandler);
+
+            if (event.data.success) {
+              resolve();
+            } else if (event.data.cancelled) {
+              reject(new Error('SVG保存がキャンセルされました'));
+            } else {
+              reject(new Error(event.data.error || 'SVGの保存に失敗しました'));
+            }
+          }
+        };
+
+        // メッセージリスナーを追加
+        window.addEventListener('message', messageHandler);
+
+        // タイムアウトを設定（30秒）
+        const timeoutId = setTimeout(() => {
+          window.removeEventListener('message', messageHandler);
+          reject(new Error('SVG保存がタイムアウトしました'));
+        }, 30000);
+
+        // 成功時にタイムアウトをクリア
+        const originalResolve = resolve;
+        resolve = () => {
+          clearTimeout(timeoutId);
+          originalResolve();
+        };
+
+        const originalReject = reject;
+        reject = (reason) => {
+          clearTimeout(timeoutId);
+          originalReject(reason);
+        };
+
+        // VSCode拡張のファイル保存APIを呼び出し
+        vscodeAPI.saveFile(
+          {
+            type: 'svg',
+            content: fullSvgContent,
+          },
+          fileName,
+        );
+      } catch (error) {
+        console.error('SVG保存エラー:', error);
+        reject(error);
+      }
+    });
   }
 
   async saveElements(elements: Element[], fileName: string): Promise<void> {
-    try {
-      const vscodeAPI = this.getVSCodeAPI();
+    return new Promise((resolve, reject) => {
+      try {
+        const vscodeAPI = this.getVSCodeAPI();
 
-      // 要素データをJSONとして保存
-      vscodeAPI.saveFile(
-        {
-          type: 'elements',
-          content: elements,
-        },
-        fileName,
-      );
-    } catch (error) {
-      console.error('要素保存エラー:', error);
-      throw error;
-    }
+        // メッセージハンドラーを一時的に設定
+        const messageHandler = (event: MessageEvent) => {
+          if (event.data.type === 'saveCompleted') {
+            // イベントリスナーを削除
+            window.removeEventListener('message', messageHandler);
+
+            if (event.data.success) {
+              resolve();
+            } else if (event.data.cancelled) {
+              reject(new Error('ファイル保存がキャンセルされました'));
+            } else {
+              reject(new Error(event.data.error || 'ファイルの保存に失敗しました'));
+            }
+          }
+        };
+
+        // メッセージリスナーを追加
+        window.addEventListener('message', messageHandler);
+
+        // タイムアウトを設定（30秒）
+        const timeoutId = setTimeout(() => {
+          window.removeEventListener('message', messageHandler);
+          reject(new Error('ファイル保存がタイムアウトしました'));
+        }, 30000);
+
+        // 成功時にタイムアウトをクリア
+        const originalResolve = resolve;
+        resolve = () => {
+          clearTimeout(timeoutId);
+          originalResolve();
+        };
+
+        const originalReject = reject;
+        reject = (reason) => {
+          clearTimeout(timeoutId);
+          originalReject(reason);
+        };
+
+        // 要素データをJSONとして保存
+        vscodeAPI.saveFile(
+          {
+            type: 'elements',
+            content: elements,
+          },
+          fileName,
+        );
+      } catch (error) {
+        console.error('要素保存エラー:', error);
+        reject(error);
+      }
+    });
   }
 
   async loadElements(
