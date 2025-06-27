@@ -1,69 +1,69 @@
 # Test Modeling App
 
-## 概要
+## Overview
 
-UMLクラス図に似た記法でテストアーキテクチャを記述できるアプリケーションです。
+This application allows you to describe test architectures using a notation similar to UML class diagrams.
 
-## 使い方
+## Usage
 
-### ローカルでの実行
+### Running Locally
 
-1. リポジトリをクローンします
-2. 依存パッケージをインストールするために `npm install` を実行します
-3. アプリを起動するには `npm start` を実行します
-4. Webブラウザで `http://localhost:3000` にアクセスします
+1. Clone the repository
+2. Run `npm install` to install dependencies
+3. Start the app with `npm start`
+4. Open `http://localhost:3000` in your web browser
 
-### GitHub Pagesへのデプロイ
+### Deploying to GitHub Pages
 
-mainブランチにプッシュすると、自動的にアプリがデプロイされます。
+Push to the main branch to automatically deploy the app.
 
-### 公開中のアプリ
+### Live Demo
 
-アプリは [https://tyngw.github.io/test-modeling-app/](https://tyngw.github.io/test-modeling-app/) で公開されています。
+The app is available at [https://tyngw.github.io/test-modeling-app/](https://tyngw.github.io/test-modeling-app/)
 
-### アプリの操作方法
+### How to Use the App
 
-#### キーボードショートカット
+#### Keyboard Shortcuts
 
-- `Tab`: 選択中の要素に子要素を追加
-- `Delete`: 選択中の要素を削除
-- `Enter`: 選択中の要素を編集
-- `Esc`: 編集モードを終了
-- 編集中に `Tab`: 次のテキストボックスにフォーカス移動
-- `Ctrl + Z`: 直前の操作を元に戻す
-- `Shift + Ctrl + Z`: 元に戻した操作をやり直す
-- `Ctrl + X`: 選択中の要素をカット
-- `Ctrl + C`: 選択中の要素をコピー
-- `Ctrl + V`: コピーした要素をペースト
-- `Ctrl + ←`: 選択中の要素の子を折りたたむ
-- `Ctrl + →`: 選択中の要素の子を展開
+- `Tab`: Add a child element to the selected item
+- `Delete`: Delete the selected element
+- `Enter`: Edit the selected element
+- `Esc`: Exit edit mode
+- While editing, `Tab`: Move focus to the next textbox
+- `Ctrl + Z`: Undo the last action
+- `Shift + Ctrl + Z`: Redo the last undone action
+- `Ctrl + X`: Cut the selected element
+- `Ctrl + C`: Copy the selected element
+- `Ctrl + V`: Paste the copied element
+- `Ctrl + ←`: Collapse children of the selected element
+- `Ctrl + →`: Expand children of the selected element
 
-#### マウス操作
+#### Mouse Operations
 
-- `クリック`: 要素を選択
-- `ダブルクリック`: 要素を編集
-  - 要素外をクリックすると編集モードが終了します
-- `ドラッグ`: 選択中の要素を移動
+- `Click`: Select an element
+- `Double-click`: Edit an element
+  - Clicking outside the element exits edit mode
+- `Drag`: Move the selected element
 
-#### メニュー操作
+#### Menu Operations
 
-- `新規作成`: 新しい図を作成します。未保存の変更は破棄されます。
-- `開く`: 保存済みデータを読み込みます。現在のデータは破棄されます。
-- `名前を付けて保存`: 図のデータをJSON形式で保存します
-- `エクスポート`: 図をSVG形式でエクスポートします
+- `New`: Create a new diagram (unsaved changes will be discarded)
+- `Open`: Load saved data (current data will be discarded)
+- `Save As`: Save diagram data as JSON
+- `Export`: Export the diagram as SVG
 
 ---
 
-### 階層付きクリップボード貼り付け（自動インデント構造復元）
+### Hierarchical Clipboard Paste (Auto Indent Structure Restoration)
 
-このアプリは、インデント（タブやスペース）で階層化されたテキストをクリップボードから貼り付けると、自動的に階層構造を再現してくれます。
+This app can automatically reconstruct hierarchical structures from indented text pasted from the clipboard.
 
-#### 使い方
-1. 階層構造を持つテキスト（アウトラインや箇条書きなど）をコピーします
-2. アプリ上で貼り付け（`Ctrl + V` または `⌘ + V`）します
-3. インデントに基づいて親子関係が自動的に作成されます
+#### How to Use
+1. Copy text with a hierarchical structure (such as an outline or bulleted list)
+2. Paste it into the app (`Ctrl + V` or `⌘ + V`)
+3. Parent-child relationships are automatically created based on indentation
 
-#### 例
+#### Example
 ```
 Parent Item
   Child Item 1
@@ -71,151 +71,147 @@ Parent Item
   Child Item 2
 ```
 
-#### 結果
+#### Result
 - Parent Item
   - Child Item 1
     - Grandchild Item 1
   - Child Item 2
 
-- インデントはタブまたは2つ以上のスペースで認識されます
-- タブとスペースの混在も自動判別します
-- インデントが不正または深すぎる場合、貼り付けた項目が1つのリストに平坦化されることがあります
+- Indentation is recognized by tabs or two or more spaces
+- Mixed tabs and spaces are automatically detected
+- If indentation is invalid or too deep, pasted items may be flattened into a single list
 
 ---
 
-## 要素の階層構造と表示順序の仕様
+## Element Hierarchy and Display Order Specifications
 
-このアプリは、要素の階層構造と表示順序を2つの仕組みで管理しています。
+This app manages element hierarchy and display order using two mechanisms.
 
-### 1. 階層データ構造
-- 要素は階層的なツリー構造（`HierarchicalStructure`）で管理されます
-- 各親要素は `children` 配列を持ち、子要素の**実際の順序**を保持します
-- この構造が要素の順序と関係の**唯一の正解**です
+### 1. Hierarchical Data Structure
+- Elements are managed in a hierarchical tree structure (`HierarchicalStructure`)
+- Each parent element has a `children` array that maintains the **actual order** of child elements
+- This structure is the **single source of truth** for element order and relationships
 
-### 2. 表示順序ロジック
-- 要素の表示位置はY座標で計算されます
-- 階層構造のchildren配列順序が**論理的な順序**を決定します
-- 要素の追加や移動時は、まず階層構造に挿入し、その後位置を再計算します
+### 2. Display Order Logic
+- Element display positions are calculated by Y coordinate
+- The order of the `children` array in the hierarchy determines the **logical order**
+- When adding or moving elements, they are first inserted into the hierarchy, then positions are recalculated
 
-### 3. ドラッグ＆ドロップ時の順序決定
+### 3. Order Determination During Drag & Drop
 
-#### betweenモード（要素間ドロップ）
-1. **順序計算**: 
-   - Y座標順ではなく、階層構造のchildren配列順序を使用
-   - `prevElement`と`nextElement`の兄弟要素から挿入位置を計算
-   - 論理順序と物理配置の一貫性を保ちます
+#### between mode (dropping between elements)
+1. **Order Calculation**:
+   - Uses the order of the `children` array in the hierarchy, not Y coordinate
+   - Calculates insertion position from siblings of `prevElement` and `nextElement`
+   - Maintains consistency between logical order and physical placement
 
-2. **位置計算**:
-   - `insertY`: 表示位置のY座標を計算
-   - `insertX`: 親要素や方向継承からX座標を計算
-   - `baseOrder`: 階層構造配列の位置で決定
+2. **Position Calculation**:
+   - `insertY`: Calculates Y coordinate for display position
+   - `insertX`: Calculates X coordinate from parent or inherited direction
+   - `baseOrder`: Determined by position in the hierarchy array
 
-3. **要素挿入**:
-   - `moveElementInHierarchy`関数が階層構造への挿入を担当
-   - 計算された`baseOrder`位置にchildren配列へ挿入
-   - レイアウトを再計算し、表示位置を更新
+3. **Element Insertion**:
+   - The `moveElementInHierarchy` function handles insertion into the hierarchy
+   - Inserts into the `children` array at the calculated `baseOrder` position
+   - Recalculates layout and updates display positions
 
-### 4. 一貫性ルール
+### 4. Consistency Rules
 
-- **ADD_ELEMENT / ADD_SIBLING_ELEMENT**: 新要素はchildren配列の末尾に追加、その後位置決定
-- **ドラッグ＆ドロップ**: 順序はY座標でなく階層構造で決定
-- **コピー＆ペースト**: 複数要素の貼り付けでも階層構造を維持
-- **レイアウト計算**: 常にchildren配列順序を尊重
+- **ADD_ELEMENT / ADD_SIBLING_ELEMENT**: New elements are added to the end of the `children` array, then positioned
+- **Drag & Drop**: Order is determined by the hierarchy, not Y coordinate
+- **Copy & Paste**: Hierarchy is preserved even when pasting multiple elements
+- **Layout Calculation**: Always respects the order of the `children` array
 
-### 5. デバッグと検証
-- ブラウザのDevToolsで `state.hierarchicalData` を確認し、実際の順序をチェック
-- 表示とデータの順序が一致しているか比較
-- 階層が取得できない場合も、`getChildren`関数はID順で一貫したソートを行います
+### 5. Debugging and Verification
+- Check `state.hierarchicalData` in browser DevTools to verify actual order
+- Compare display and data order for consistency
+- If hierarchy cannot be obtained, the `getChildren` function returns a consistently sorted list by ID
 
-この仕様により、どんな操作でも要素の順序が崩れず、論理階層と表示順序が常に一致します！
-
----
-
-#### 要素の階層構造と順序管理
-
-要素の階層構造と順序管理は以下の仕様に従います：
-
-##### 階層構造の順序管理
-- **階層構造（HierarchicalStructure）のchildren配列順序が唯一の正式な並び順**です
-- LocalStorageでの保存時も、この配列順序が維持されます
-- 表示時のY座標は、階層構造のchildren配列順序に基づいて計算されます
-- orderプロパティは存在せず、純粋に配列のインデックス位置で順序が決まります
-
-##### 要素の追加（ADD_ELEMENT / ADD_SIBLING_ELEMENT）
-- 新しい要素は親要素のchildren配列の**末尾**に追加されます
-- 画面上では、既存の子要素の下に表示されます
-- LocalStorageの階層構造と画面表示順序は常に一致します
-
-##### ドラッグ＆ドロップでの順序変更
-- **betweenモード**: 要素を他の要素間にドロップする際、children配列での正確なインデックス位置に挿入されます
-  - 前の要素（prevElement）の次の位置、または次の要素（nextElement）の位置に挿入
-  - 視覚的な順序と階層構造の配列順序の混同を避け、常にchildren配列順序を基準とします
-- **childモード**: 要素を親要素の子として追加する際、children配列の末尾に追加されます
-- moveElementInHierarchy関数がchildren配列の操作（splice）により順序を正確に管理します
-
-##### 順序の一貫性
-- 階層構造のchildren配列順序が **単一の正確な順序** として扱われます
-- すべての操作（追加、移動、コピー&ペースト）でこの順序が維持されます
-- Y座標は表示位置の計算値であり、順序決定の基準には使用されません
-- getChildrenFromHierarchy関数により、children配列の順序がそのまま保持されて要素リストが返されます
+This ensures that element order is never broken, and logical hierarchy always matches display order!
 
 ---
 
-## VSCode拡張として使用する
+#### Element Hierarchy and Order Management
 
-このアプリケーションは、通常のWebアプリケーションとしてだけでなく、Visual Studio Codeの拡張機能としても利用できます。
+Element hierarchy and order management follow these specifications:
 
-### 拡張機能のビルドとインストール
+##### Hierarchy Order Management
+- **The order of the `children` array in the hierarchical structure is the only official order**
+- This array order is preserved even when saving to LocalStorage
+- Y coordinate for display is calculated based on the order of the `children` array
+- There is no `order` property; order is determined purely by array index
 
-1. **拡張機能をビルドする**
+##### Adding Elements (ADD_ELEMENT / ADD_SIBLING_ELEMENT)
+- New elements are added to the **end** of the parent's `children` array
+- On screen, they appear below existing children
+- LocalStorage hierarchy and display order always match
+
+##### Changing Order by Drag & Drop
+- **between mode**: When dropping between elements, inserts at the exact index in the `children` array
+  - Insert after `prevElement` or at the position of `nextElement`
+  - Always uses the `children` array as the basis for order, not visual order or Y coordinate
+- **child mode**: When adding as a child, inserts at the end of the `children` array
+- The `moveElementInHierarchy` function manages order precisely via array `splice`
+
+##### Order Consistency
+- The order of the `children` array in the hierarchy is **the single correct order**
+- All operations (add, move, copy & paste) maintain this order
+- Y coordinate is only for display calculation, not for determining order
+- The `getChildrenFromHierarchy` function returns the element list in the order of the `children` array
+
+---
+
+## Using as a VSCode Extension
+
+This application can be used not only as a regular web app, but also as a Visual Studio Code extension.
+
+### Building and Installing the Extension
+
+1. **Build the extension**
    ```bash
    npm run build:extension
    ```
 
-2. **VSCodeで拡張機能を開発モードで実行する**
-   - VSCodeでこのプロジェクトを開く
-   - `F5`キーを押すか、「Run and Debug」パネルから「Run Extension」を選択
-   - 新しいVSCodeウィンドウ（Extension Development Host）が開きます
+2. **Run the extension in development mode in VSCode**
+   - Open this project in VSCode
+   - Press `F5` or select "Run Extension" from the "Run and Debug" panel
+   - A new VSCode window (Extension Development Host) will open
 
-3. **拡張機能を使用する**
-   - コマンドパレット（`Ctrl/Cmd + Shift + P`）を開く
-   - `Test Modeling App: Open Modeling Editor` を実行
-   - エディターでモデリング図を作成・編集できます
+3. **Use the extension**
+   - Open the command palette (`Ctrl/Cmd + Shift + P`)
+   - Run `Test Modeling App: Open Modeling Editor`
+   - You can create and edit modeling diagrams in the editor
 
-### VSCode拡張版の特長
+### Features of the VSCode Extension Version
 
-#### ファイル操作の統合
-- **ワークスペース内での保存**: 図のデータはワークスペースのファイルとして保存されます
-- **リアルタイム保存**: 編集内容は自動的にJSONファイルとして保存されます
-- **ファイル履歴**: VSCodeのファイル履歴機能を利用できます
+#### Integrated File Operations
+- **Save within workspace**: Diagram data is saved as files in your workspace
+- **Real-time saving**: Edits are automatically saved as JSON files
+- **File history**: Leverage VSCode's file history features
 
-#### 設定の統合
-- **VSCode設定との統合**: アプリの設定はVSCodeの設定システムで管理されます
-- **テーマの自動適用**: VSCodeのテーマ設定に連動してアプリのテーマが変更されます
-- **ワークスペース固有設定**: プロジェクトごとに異なる設定を保持できます
+#### Integrated Settings
+- **Integration with VSCode settings**: App settings are managed via VSCode's settings system
+- **Automatic theme application**: App theme changes according to VSCode's theme
+- **Workspace-specific settings**: Different settings can be kept for each project
 
-#### 開発者向け機能
-- **プロジェクトとの連携**: コードとモデリング図を同じワークスペースで管理
-- **Git統合**: 図のファイルもバージョン管理対象に含めることができます
-- **拡張可能性**: 他のVSCode拡張との連携が可能
+#### Developer Features
+- **Project integration**: Manage code and modeling diagrams in the same workspace
+- **Git integration**: Diagram files can be included in version control
+- **Extensibility**: Can be integrated with other VSCode extensions
 
-### 設定項目
+### Settings
 
-VSCodeの設定画面（`Ctrl/Cmd + ,`）で以下の項目を設定できます：
+You can configure the following items in VSCode's settings screen (`Ctrl/Cmd + ,`):
 
-- `testModelingApp.theme`: アプリケーションのテーマ（light/dark/auto）
-- `testModelingApp.autoSave`: 自動保存の有効/無効
-- `testModelingApp.autoSaveInterval`: 自動保存の間隔（ミリ秒）
-- `testModelingApp.defaultFileName`: 新しいファイルのデフォルト名
-- `testModelingApp.canvasBackgroundColor`: キャンバスの背景色
-- `testModelingApp.elementColor`: 要素の色
-
----
-
-## ライセンス
-
-このプロジェクトはMITライセンスで公開されています。詳細は [LICENSE](./LICENSE) をご覧ください。
+- `testModelingApp.theme`: Application theme (light/dark/auto)
+- `testModelingApp.autoSave`: Enable/disable auto-save
+- `testModelingApp.autoSaveInterval`: Auto-save interval (ms)
+- `testModelingApp.defaultFileName`: Default name for new files
+- `testModelingApp.canvasBackgroundColor`: Canvas background color
+- `testModelingApp.elementColor`: Element color
 
 ---
 
-もし分かりにくい箇所や追加で知りたいことがあれば、どんどん質問してくださいね！一緒に楽しく学んでいきましょう！
+## License
+
+This project is licensed under the MIT License. See [LICENSE](./LICENSE) for details.
