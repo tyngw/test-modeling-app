@@ -148,7 +148,7 @@ export function sanitizeObject<T>(obj: T): T {
   }
 
   if (typeof obj === 'object') {
-    const sanitized: any = {};
+    const sanitized: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(obj)) {
       // キー名もサニタイズ
       const sanitizedKey = sanitizeText(key);
@@ -166,8 +166,8 @@ export function sanitizeObject<T>(obj: T): T {
  * @returns サニタイズされたレスポンス
  */
 export function sanitizeApiResponse(response: string): string;
-export function sanitizeApiResponse(response: any): any;
-export function sanitizeApiResponse(response: any): any {
+export function sanitizeApiResponse(response: unknown): unknown;
+export function sanitizeApiResponse(response: unknown): unknown {
   if (typeof response === 'string') {
     // 基本的なHTMLタグは保持しつつ、危険なスクリプトを除去
     return (

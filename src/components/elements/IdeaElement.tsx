@@ -4,6 +4,7 @@
 import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { getAllElementsFromHierarchy } from '../../utils/hierarchical/hierarchicalConverter';
 import { useCanvas } from '../../context/CanvasContext';
+import { Action } from '../../types/actionTypes';
 import TextDisplayArea from '../TextDisplayArea';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import DoneIcon from '@mui/icons-material/Done';
@@ -43,7 +44,7 @@ interface IdeaElementProps {
 
 const renderActionButtons = (
   element: CanvasElement,
-  dispatch: React.Dispatch<any>,
+  dispatch: React.Dispatch<Action>,
   elements: CanvasElement[],
 ) => {
   const shouldShowButtons = (element: CanvasElement, elements: CanvasElement[]) => {
@@ -88,7 +89,7 @@ const renderActionButtons = (
             }}
             style={{ width: '100%', height: '100%' }}
             onClick={() =>
-              dispatch({ type: 'CONFIRM_TENTATIVE_ELEMENTS', payload: element.parentId })
+              dispatch({ type: 'CONFIRM_TENTATIVE_ELEMENTS', payload: element.parentId || 'root' })
             }
           />
         </foreignObject>
@@ -115,7 +116,7 @@ const renderActionButtons = (
             }}
             style={{ width: '100%', height: '100%' }}
             onClick={() =>
-              dispatch({ type: 'CANCEL_TENTATIVE_ELEMENTS', payload: element.parentId })
+              dispatch({ type: 'CANCEL_TENTATIVE_ELEMENTS', payload: element.parentId || 'root' })
             }
           />
         </foreignObject>

@@ -378,7 +378,7 @@ export const withPositionAdjustment = (
 export const createElementPropertyHandler = <T extends { id: string } & Record<string, unknown>>(
   updateFn: (element: Element, payload: T) => Partial<Element>,
 ) => {
-  return (state: StateWithElements, action: { payload?: any }): StateWithElements => {
+  return (state: StateWithElements, action: { payload?: unknown }): StateWithElements => {
     if (!action.payload) return state;
     const { id } = action.payload as T;
     const element = state.elements[id];
@@ -401,7 +401,7 @@ export const createSelectedElementHandler = (
   updateFn: (element: Element, payload?: unknown) => Partial<Element>,
   adjustPosition = false,
 ) => {
-  return (state: any, action?: { payload?: any }) => {
+  return (state: StateWithElements, action?: { payload?: unknown }) => {
     const selectedElements = Object.values(state.elements) as Element[];
     const filteredElements = selectedElements.filter((e) => e.selected);
 
@@ -450,10 +450,10 @@ export const createSelectedElementHandler = (
  * @returns アクションハンドラー
  */
 export const createSimplePropertyHandler = (propertyName: string) => {
-  return (state: StateWithElements, action: { payload?: any }): StateWithElements => {
+  return (state: StateWithElements, action: { payload?: unknown }): StateWithElements => {
     if (!action.payload) return state;
-    const { id } = action.payload;
-    const value = action.payload[propertyName];
+    const { id } = action.payload as { id: string; [key: string]: unknown };
+    const value = (action.payload as Record<string, unknown>)[propertyName];
 
     return {
       ...state,

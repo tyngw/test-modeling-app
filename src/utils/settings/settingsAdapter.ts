@@ -50,11 +50,11 @@ class BrowserSettingsAdapter implements SettingsAdapter {
  * VSCode拡張環境での設定操作実装
  */
 class VSCodeSettingsAdapter implements SettingsAdapter {
-  private vscodeConfig: any = null;
+  private vscodeConfig: Record<string, unknown> | null = null;
 
-  private getVSCodeAPI(): any {
-    if (typeof window !== 'undefined' && (window as any).vscodeFileAPI) {
-      return (window as any).vscodeFileAPI;
+  private getVSCodeAPI(): unknown {
+    if (typeof window !== 'undefined' && (window as { vscodeFileAPI?: unknown }).vscodeFileAPI) {
+      return (window as unknown as { vscodeFileAPI: unknown }).vscodeFileAPI;
     }
     throw new Error('VSCode API が利用できません');
   }
@@ -68,13 +68,17 @@ class VSCodeSettingsAdapter implements SettingsAdapter {
       const vscodeAPI = this.getVSCodeAPI();
 
       // 設定読み込み完了時のコールバックを設定
-      (window as any).handleConfigLoaded = (config: any) => {
+      (
+        window as {
+          handleConfigLoaded?: (config: Record<string, unknown>) => void;
+        }
+      ).handleConfigLoaded = (config: Record<string, unknown>) => {
         this.vscodeConfig = config;
         resolve();
       };
 
       // VSCode拡張の設定取得APIを呼び出し
-      vscodeAPI.getConfig();
+      (vscodeAPI as { getConfig: () => void }).getConfig();
     });
   }
 
@@ -83,8 +87,8 @@ class VSCodeSettingsAdapter implements SettingsAdapter {
 
     // VSCodeの設定から対応する値を取得
     const styles: StyleSettings = {
-      canvasBackgroundColor: this.vscodeConfig?.canvasBackgroundColor || '#ffffff',
-      elementColor: this.vscodeConfig?.elementColor || '#000000',
+      canvasBackgroundColor: (this.vscodeConfig?.canvasBackgroundColor as string) || '#ffffff',
+      elementColor: (this.vscodeConfig?.elementColor as string) || '#000000',
       connectionPathColor: '#666666',
       fontFamily: 'Arial, sans-serif',
       markerType: 'arrow',
@@ -104,7 +108,7 @@ class VSCodeSettingsAdapter implements SettingsAdapter {
     const vscodeAPI = this.getVSCodeAPI();
 
     // VSCode設定にマッピング
-    const configUpdate: any = {};
+    const configUpdate: Record<string, unknown> = {};
 
     if (styles.canvasBackgroundColor !== undefined) {
       configUpdate.canvasBackgroundColor = styles.canvasBackgroundColor;
@@ -114,7 +118,7 @@ class VSCodeSettingsAdapter implements SettingsAdapter {
     }
 
     // VSCode拡張の設定更新APIを呼び出し
-    vscodeAPI.setConfig(configUpdate);
+    (vscodeAPI as { setConfig: (config: Record<string, unknown>) => void }).setConfig(configUpdate);
 
     // ローカルキャッシュも更新
     this.vscodeConfig = { ...this.vscodeConfig, ...configUpdate };
@@ -122,7 +126,7 @@ class VSCodeSettingsAdapter implements SettingsAdapter {
 
   async getSetting<T>(key: string, defaultValue: T): Promise<T> {
     await this.loadConfig();
-    return this.vscodeConfig?.[key] ?? defaultValue;
+    return (this.vscodeConfig?.[key] as T) ?? defaultValue;
   }
 
   async setSetting<T>(key: string, value: T): Promise<void> {
@@ -131,7 +135,7 @@ class VSCodeSettingsAdapter implements SettingsAdapter {
     const vscodeAPI = this.getVSCodeAPI();
     const configUpdate = { [key]: value };
 
-    vscodeAPI.setConfig(configUpdate);
+    (vscodeAPI as { setConfig: (config: Record<string, unknown>) => void }).setConfig(configUpdate);
     this.vscodeConfig = { ...this.vscodeConfig, ...configUpdate };
   }
 }

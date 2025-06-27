@@ -123,8 +123,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         loadedValues['selectedStrokeColor'] = getSelectedStrokeColor();
 
         setValues(loadedValues);
-      } catch (error) {
-        // console.error('Failed to load settings:', error);
+      } catch {
+        // 設定の読み込みに失敗した場合はデフォルト値を使用
       }
     })();
   }, [isMounted, isOpen, getCurrentTabNumberOfSections, getCurrentTabLayoutMode]);
@@ -349,8 +349,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         if (event.target) {
           event.target.value = '';
         }
-      } catch (error) {
-        // console.error('Failed to parse imported settings:', error);
+      } catch {
+        // 設定ファイルの解析に失敗
         alert('Failed to parse imported settings. Please check the file format.');
         // Reset file input on error
         if (event.target) event.target.value = '';

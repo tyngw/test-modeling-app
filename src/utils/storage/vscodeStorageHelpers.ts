@@ -21,8 +21,8 @@ import type { StyleSettings } from './localStorageHelpers';
 
 // VSCode API関連のタイプ定義
 interface VSCodeAPI {
-  readSettingsFile: () => Promise<any>;
-  writeSettingsFile: (data: any) => Promise<void>;
+  readSettingsFile: () => Promise<unknown>;
+  writeSettingsFile: (data: unknown) => Promise<void>;
   getCurrentFileName: () => Promise<string | null>;
 }
 
@@ -71,8 +71,8 @@ const MODEL_ENDPOINTS: { [key: string]: string } = {
  * VSCode拡張機能のAPIを取得
  */
 function getVSCodeAPI(): VSCodeAPI | null {
-  if (typeof window !== 'undefined' && (window as any).vscodeAPI) {
-    return (window as any).vscodeAPI;
+  if (typeof window !== 'undefined' && (window as { vscodeAPI?: VSCodeAPI }).vscodeAPI) {
+    return (window as unknown as { vscodeAPI: VSCodeAPI }).vscodeAPI;
   }
   return null;
 }
@@ -91,7 +91,7 @@ async function loadSettings(): Promise<AppSettings> {
     const data = await vscodeAPI.readSettingsFile();
 
     // バージョンチェック
-    if (data?.version !== VERSION) {
+    if ((data as { version?: string })?.version !== VERSION) {
       console.log('設定ファイルのバージョンが古いため、デフォルト設定でリセットします');
       return DEFAULT_SETTINGS;
     }
@@ -99,8 +99,8 @@ async function loadSettings(): Promise<AppSettings> {
     // データのマージとバリデーション
     const settings: AppSettings = {
       ...DEFAULT_SETTINGS,
-      ...data,
-      styles: { ...DEFAULT_STYLES, ...data.styles },
+      ...(data as Record<string, unknown>),
+      styles: { ...DEFAULT_STYLES, ...(data as { styles?: Record<string, unknown> }).styles },
     };
 
     return settings;

@@ -3,6 +3,7 @@ import { OFFSET, DEFAULT_POSITION, SIZE } from '../config/elementSettings';
 import { debugLog } from './debugLogHelpers';
 import { getChildren, getChildrenFromHierarchy } from './element/elementHelpers';
 import { LayoutMode } from '../types/tabTypes';
+import { HierarchicalStructure } from '../types/hierarchicalTypes';
 
 type ElementsMap = { [key: string]: Element };
 
@@ -13,7 +14,7 @@ const layoutNode = (
   depth: number,
   getNumberOfSections: () => number,
   layoutMode: LayoutMode = 'default',
-  hierarchicalData: any = null,
+  hierarchicalData: HierarchicalStructure | null = null,
 ): { newY: number; leftMaxY?: number; rightMaxY?: number } => {
   debugLog(`[layoutNode]「${node.texts}」 id=${node.id}, depth=${depth}, startY=${startY} ---`);
 
@@ -160,7 +161,7 @@ export const adjustElementPositions = (
   layoutMode: LayoutMode = 'default',
   canvasWidth = 0,
   canvasHeight = 0,
-  hierarchicalData: any = null,
+  hierarchicalData: HierarchicalStructure | null = null,
 ): ElementsMap => {
   debugLog(
     `adjustElementPositions開始: 要素数=${Object.keys(elements).length}, モード=${layoutMode}`,

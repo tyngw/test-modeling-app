@@ -879,7 +879,7 @@ const actionHandlers: Record<string, ActionHandler> = {
       let result: HierarchicalOperationResult;
       try {
         result = addElementToHierarchy(state.hierarchicalData, selectedElement.id, newElement);
-      } catch (error) {
+      } catch {
         return state; // エラー時は元の状態を返す
       }
 
@@ -1122,7 +1122,7 @@ const actionHandlers: Record<string, ActionHandler> = {
     let result: HierarchicalOperationResult;
     try {
       result = addElementToHierarchy(state.hierarchicalData, selectedElement.parentId, newElement);
-    } catch (error) {
+    } catch {
       return state; // エラー時は元の状態を返す
     }
 

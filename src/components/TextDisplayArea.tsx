@@ -240,13 +240,13 @@ const TextDisplayArea = memo<TextDisplayAreaProps>(function TextDisplayArea({
     if (isMobile && isSelected) {
       event.preventDefault();
       event.stopPropagation();
-      handleUrlAction(url, event as any);
+      handleUrlAction(url, event as React.MouseEvent);
       return;
     }
 
     // それ以外の場合は要素選択
     if (onElementClick) {
-      onElementClick(event as any);
+      onElementClick(event as React.MouseEvent);
     }
   };
 

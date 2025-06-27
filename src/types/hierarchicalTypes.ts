@@ -42,7 +42,7 @@ export type DataStructure = HierarchicalStructure | FlatStructure;
  * @param data パースされたJSONデータ
  * @returns 階層構造かどうか
  */
-export function isHierarchicalStructure(data: any): data is HierarchicalStructure {
+export function isHierarchicalStructure(data: unknown): data is HierarchicalStructure {
   return (
     typeof data === 'object' &&
     data !== null &&
@@ -59,7 +59,7 @@ export function isHierarchicalStructure(data: any): data is HierarchicalStructur
  * @param data パースされたJSONデータ
  * @returns フラット構造かどうか
  */
-export function isFlatStructure(data: any): data is FlatStructure {
+export function isFlatStructure(data: unknown): data is FlatStructure {
   return (
     typeof data === 'object' &&
     data !== null &&
@@ -74,7 +74,7 @@ export function isFlatStructure(data: any): data is FlatStructure {
  * @param data パースされたJSONデータ
  * @returns レガシー形式かどうか
  */
-export function isLegacyArrayFormat(data: any): data is Element[] {
+export function isLegacyArrayFormat(data: unknown): data is Element[] {
   return Array.isArray(data);
 }
 
@@ -83,7 +83,7 @@ export function isLegacyArrayFormat(data: any): data is Element[] {
  * @param data パースされたJSONデータ
  * @returns レガシー形式かどうか
  */
-export function isLegacyMapFormat(data: any): data is Record<string, Element> {
+export function isLegacyMapFormat(data: unknown): data is Record<string, Element> {
   return (
     typeof data === 'object' &&
     data !== null &&
@@ -131,7 +131,7 @@ export interface HierarchicalSearchOptions {
   /** 検索対象のプロパティ */
   property?: keyof Element;
   /** 検索値 */
-  value?: any;
+  value?: unknown;
   /** 深度制限 */
   maxDepth?: number;
   /** 条件関数 */

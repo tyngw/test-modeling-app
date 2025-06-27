@@ -27,10 +27,13 @@ const Tab: React.FC<TabHeaderProps> = React.memo(
         };
 
         // VSCode拡張機能のファイル名変更イベントを監視
-        if (typeof window !== 'undefined' && (window as any).handleFileNameChanged) {
-          (window as any).handleFileNameChanged = (fileName: string) => {
-            setDisplayName(fileName);
-          };
+        if (typeof window !== 'undefined') {
+          const win = window as unknown as { handleFileNameChanged?: (fileName: string) => void };
+          if (win.handleFileNameChanged) {
+            win.handleFileNameChanged = (fileName: string) => {
+              setDisplayName(fileName);
+            };
+          }
         }
 
         handleFileNameChange();

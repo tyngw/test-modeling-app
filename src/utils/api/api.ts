@@ -71,7 +71,7 @@ export const generateWithGemini = async (
     const rawTextResponse = response.data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
     // AIレスポンスのセキュリティチェックとサニタイゼーション
-    const sanitizedResponse = sanitizeApiResponse(rawTextResponse);
+    const sanitizedResponse = sanitizeApiResponse(rawTextResponse) as string;
 
     // // console.log('Sanitized response:', sanitizedResponse);
     return sanitizedResponse;
@@ -172,12 +172,12 @@ export const generateElementSuggestions = async (
 
       // // console.log('JSON Response:', jsonResponse);
       return jsonResponse;
-    } catch (parseError) {
+    } catch {
       // // console.error('JSON parse error:', parseError);
       // JSON解析エラーの場合は空の応答を返す
       return { suggestions: [] };
     }
-  } catch (error) {
+  } catch {
     // // console.error('Gemini API Error:', error);
     throw new Error('API呼び出しに失敗しました');
   }
@@ -188,7 +188,7 @@ export const generateWithGeminiJson = async <T>(
   prompt: string,
   apiKey: string,
   _modelType: string,
-  _responseSchema: any, // JSONスキーマ（現在未使用）
+  _responseSchema: unknown, // JSONスキーマ（現在未使用）
 ): Promise<ApiResponse<T>> => {
   try {
     // // console.log('prompt: \n', prompt);
@@ -240,11 +240,11 @@ export const generateWithGeminiJson = async <T>(
       const parsedResponse = JSON.parse(jsonResponse);
       const sanitizedResponse = sanitizeApiResponse(parsedResponse);
       return sanitizedResponse as T;
-    } catch (parseError) {
+    } catch {
       // console.error('JSON parse error:', parseError);
       throw new Error('JSONの解析に失敗しました');
     }
-  } catch (error) {
+  } catch {
     // console.error('Gemini API Error:', error);
     throw new Error('API呼び出しに失敗しました');
   }
@@ -301,11 +301,11 @@ export const generateWithGeminiMultipleMessages = async (
     const rawTextResponse = response.data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
     // AIレスポンスのセキュリティチェックとサニタイゼーション
-    const sanitizedResponse = sanitizeApiResponse(rawTextResponse);
+    const sanitizedResponse = sanitizeApiResponse(rawTextResponse) as string;
 
     // console.log('Sanitized multiple messages response:', sanitizedResponse);
     return sanitizedResponse;
-  } catch (error) {
+  } catch {
     // console.error('Gemini API Error:', error);
     throw new Error('API呼び出しに失敗しました');
   }
@@ -317,7 +317,7 @@ export const generateWithGeminiMultipleMessagesJson = async <T>(
   systemInstruction: string,
   apiKey: string,
   _modelType: string,
-  responseSchema: any, // JSONスキーマ
+  responseSchema: unknown, // JSONスキーマ
 ): Promise<ApiResponse<T>> => {
   try {
     const endpoint = `${getApiEndpoint()}?key=${apiKey}`;
@@ -368,11 +368,11 @@ export const generateWithGeminiMultipleMessagesJson = async <T>(
       const parsedResponse = JSON.parse(rawJsonResponse);
       const sanitizedResponse = sanitizeApiResponse(parsedResponse);
       return sanitizedResponse as T;
-    } catch (parseError) {
+    } catch {
       // console.error('JSON parse error:', parseError);
       throw new Error('JSONの解析に失敗しました');
     }
-  } catch (error) {
+  } catch {
     // console.error('Gemini API Error:', error);
     throw new Error('API呼び出しに失敗しました');
   }

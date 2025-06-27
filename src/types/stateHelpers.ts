@@ -11,7 +11,7 @@ export type StateGetter = () => State;
 /**
  * 要素の更新関数の型
  */
-export type ElementUpdaterFunction = (element: Element, payload: any) => Partial<Element>;
+export type ElementUpdaterFunction = (element: Element, payload: unknown) => Partial<Element>;
 
 /**
  * 要素プロパティをバッチで更新する際の型
@@ -36,7 +36,7 @@ export interface PositionAdjustmentOptions {
  */
 export interface StateUpdateResult {
   elements: ElementsMap;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**

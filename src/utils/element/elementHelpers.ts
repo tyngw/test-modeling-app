@@ -5,7 +5,7 @@ import { getMarkerType } from '../storage/localStorageHelpers';
 import { SIZE, NUMBER_OF_SECTIONS } from '../../config/elementSettings';
 import { debugLog } from '../debugLogHelpers';
 import { ElementsMap } from '../../types/elementTypes';
-import { HierarchicalStructure } from '../../types/hierarchicalTypes';
+import { HierarchicalStructure, HierarchicalNode } from '../../types/hierarchicalTypes';
 
 /**
  * 新規要素作成のパラメータ
@@ -193,7 +193,7 @@ export const isDescendant = (
 };
 
 export const formatElementsForPrompt = (
-  elements: { [key: string]: any },
+  elements: Record<string, Element>,
   selectedElementId: string,
 ): string => {
   // 型定義を明確化
@@ -207,7 +207,7 @@ export const formatElementsForPrompt = (
   const elementMap: { [key: string]: ElementInfo } = {};
 
   // 要素情報のマッピング
-  Object.values(elements).forEach((element: any) => {
+  Object.values(elements).forEach((element: Element) => {
     elementMap[element.id] = {
       id: element.id, // idを明示的に追加
       text: element.texts[0] || '',
@@ -254,12 +254,15 @@ export const getChildrenFromHierarchy = (
   /**
    * ノードを再帰的に検索して子要素を配列順序で取得
    */
-  const findNodeAndGetChildren = (node: any, targetParentId: string | null): Element[] => {
+  const findNodeAndGetChildren = (
+    node: HierarchicalNode,
+    targetParentId: string | null,
+  ): Element[] => {
     if (node.data.id === targetParentId) {
       // 目的の親ノードを発見、その子要素を配列の順序通りに返す
       if (node.children && node.children.length > 0) {
         return node.children
-          .map((child: any) => child.data)
+          .map((child: HierarchicalNode) => child.data)
           .filter((element: Element) => element.visible);
       }
       return [];

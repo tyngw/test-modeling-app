@@ -10,6 +10,7 @@ import React, {
   useMemo,
   useEffect,
 } from 'react';
+import { Element as DiagramElement } from '../types/types';
 import { State } from '../state/state';
 import { getAllElementsFromHierarchy } from '../utils/hierarchical/hierarchicalConverter';
 import { v4 as uuidv4 } from 'uuid';
@@ -76,10 +77,9 @@ const loadTabsState = (): TabsStorage => {
             // 古いelements形式を新しいelementsCache形式に変換
             ...('elements' in tab.state && {
               elementsCache: Object.fromEntries(
-                Object.entries((tab.state as any).elements).map(([id, element]) => [
-                  id,
-                  convertLegacyElement(element),
-                ]),
+                Object.entries(
+                  (tab.state as { elements: Record<string, DiagramElement> }).elements,
+                ).map(([id, element]) => [id, convertLegacyElement(element)]),
               ),
             }),
           },
@@ -96,7 +96,7 @@ const loadTabsState = (): TabsStorage => {
         };
       }
     }
-  } catch (e) {
+  } catch {
     // エラーが発生した場合は新規作成
   }
 
@@ -186,7 +186,7 @@ export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               acc[element.id] = element;
               return acc;
             },
-            {} as Record<string, any>,
+            {} as Record<string, DiagramElement>,
           );
           const normalizedElements = JSON.parse(JSON.stringify(elementsMap));
           const currentElementsJson = JSON.stringify(normalizedElements);

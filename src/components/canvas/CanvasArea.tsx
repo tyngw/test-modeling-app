@@ -37,7 +37,7 @@ import { ElementsMap } from '../../types/elementTypes';
 
 // デバッグログ機能
 const DEBUG_ENABLED = true;
-const debugLog = (message: string, ...args: any[]) => {
+const debugLog = (message: string, ...args: unknown[]) => {
   if (DEBUG_ENABLED) {
     console.log(message, ...args);
   }
@@ -156,7 +156,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
 
   // キーボード操作のハンドラーをカスタムフックから取得
   const handleKeyDown = useKeyboardHandler({
-    dispatch,
+    dispatch: dispatch as (action: { type: string; payload?: unknown }) => void,
     elements: elementsCache,
     addToast,
   });
@@ -563,7 +563,10 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
       draggingElement,
       dropPosition,
       dropInsertY,
-      dropInsertX: (currentDropTarget as any)?.insertX, // insertX情報を渡す
+      dropInsertX:
+        currentDropTarget && typeof currentDropTarget === 'object' && 'insertX' in currentDropTarget
+          ? (currentDropTarget as { insertX: number }).insertX
+          : undefined,
       siblingInfo,
     });
 

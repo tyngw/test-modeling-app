@@ -6,7 +6,7 @@ import { getClipboardDataForPaste } from '../utils/clipboard/clipboardHelpers';
 import { ToastMessages } from '../constants/toastMessages';
 
 interface UseKeyboardHandlerProps {
-  dispatch: (action: any) => void;
+  dispatch: (action: { type: string; payload?: unknown }) => void;
   elements: Record<string, CanvasElement>;
   addToast: (message: string) => void;
 }

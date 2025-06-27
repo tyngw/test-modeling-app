@@ -17,7 +17,7 @@ export interface Theme {
     ADD_BUTTON_BACKGROUND: string;
     ADD_BUTTON_TEXT: string;
   };
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**
