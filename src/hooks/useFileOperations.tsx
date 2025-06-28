@@ -46,11 +46,9 @@ export function useFileOperations({
       if (isVSCodeExtension()) {
         // VSCode拡張機能環境ではfileOperationAdapterを使用
         await fileOperationAdapter.saveSvg(svgElement, 'download.svg');
-        addToast('SVGファイルが正常に保存されました');
       } else {
         // ブラウザ環境では従来の関数を使用
         saveSvg(svgElement, 'download.svg');
-        addToast('SVGファイルが正常に保存されました');
       }
     } catch (error) {
       console.error('[handleSaveSvg] Error during SVG save:', error);
@@ -78,11 +76,9 @@ export function useFileOperations({
         }
         // VSCode拡張機能環境ではfileOperationAdapterを使用
         await fileOperationAdapter.saveElements(allElements, fileName);
-        addToast('ファイルが正常に保存されました');
       } else {
         // ブラウザ環境では従来の関数を使用
         saveElements(allElements, fileName);
-        addToast('ファイルが正常に保存されました');
       }
 
       // JSON保存後にタブを保存済みとしてマーク
