@@ -1,2 +1,2 @@
 // src/utils/settings/index.ts
-export * from './settingsAdapter';
+// settingsAdapterは削除済み - すべての設定はLocalStorageに統一

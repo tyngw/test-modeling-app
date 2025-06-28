@@ -46,19 +46,6 @@ function prepareWebviewHTML() {
           });
         },
         
-        getConfig: () => {
-          vscode.postMessage({
-            type: 'getConfig'
-          });
-        },
-        
-        setConfig: (config) => {
-          vscode.postMessage({
-            type: 'setConfig',
-            config: config
-          });
-        },
-        
         showError: (message) => {
           vscode.postMessage({
             type: 'showError',
@@ -70,6 +57,16 @@ function prepareWebviewHTML() {
           vscode.postMessage({
             type: 'showInfo',
             message: message
+          });
+        },
+
+        getCurrentFileName: () => {
+          return new Promise((resolve) => {
+            vscode.postMessage({
+              type: 'getCurrentFileName'
+            });
+            // レスポンス待ちの処理は省略（現在のファイル名取得用）
+            resolve(null);
           });
         }
       };
@@ -151,13 +148,6 @@ function prepareWebviewHTML() {
       // アプリケーション初期化の完了を待つ
       document.addEventListener('DOMContentLoaded', () => {
         console.log('VSCode拡張環境でのモデリングアプリを初期化');
-        
-        // 少し待ってから設定を読み込み
-        setTimeout(() => {
-          if (window.vscodeFileAPI) {
-            window.vscodeFileAPI.getConfig();
-          }
-        }, 1000);
       });
     </script>
   `;

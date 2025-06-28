@@ -93,40 +93,37 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   useEffect(() => {
     if (!isMounted || !isOpen) return;
 
-    // 即時実行関数を使用して非同期処理を正しく実行
-    (async () => {
+    // 設定値の読み込み
+    try {
       const loadedValues: Record<string, string | number> = {};
 
-      try {
-        // APIキーは非同期で取得
-        const apiKey = await getApiKey();
-        loadedValues['apiKey'] = apiKey;
+      // APIキーは同期的に取得
+      loadedValues['apiKey'] = getApiKey();
 
-        // 他の設定項目は同期的に取得
-        loadedValues['systemPromptTemplate'] = getSystemPromptTemplate();
-        loadedValues['modelType'] = getModelType();
-        loadedValues['prompt'] = getPrompt();
+      // 他の設定項目は同期的に取得
+      loadedValues['systemPromptTemplate'] = getSystemPromptTemplate();
+      loadedValues['modelType'] = getModelType();
+      loadedValues['prompt'] = getPrompt();
 
-        // Get numberOfSections and layoutMode from the current tab
-        loadedValues['numberOfSections'] = getCurrentTabNumberOfSections();
-        loadedValues['layoutMode'] = getCurrentTabLayoutMode();
+      // Get numberOfSections and layoutMode from the current tab
+      loadedValues['numberOfSections'] = getCurrentTabNumberOfSections();
+      loadedValues['layoutMode'] = getCurrentTabLayoutMode();
 
-        loadedValues['elementColor'] = getElementColor();
-        loadedValues['strokeColor'] = getStrokeColor();
-        loadedValues['strokeWidth'] = getStrokeWidth();
-        loadedValues['fontFamily'] = getFontFamily();
-        loadedValues['markerType'] = getMarkerType();
-        loadedValues['connectionPathColor'] = getConnectionPathColor();
-        loadedValues['connectionPathStroke'] = getConnectionPathStroke();
-        loadedValues['canvasBackgroundColor'] = getCanvasBackgroundColor();
-        loadedValues['textColor'] = getTextColor();
-        loadedValues['selectedStrokeColor'] = getSelectedStrokeColor();
+      loadedValues['elementColor'] = getElementColor();
+      loadedValues['strokeColor'] = getStrokeColor();
+      loadedValues['strokeWidth'] = getStrokeWidth();
+      loadedValues['fontFamily'] = getFontFamily();
+      loadedValues['markerType'] = getMarkerType();
+      loadedValues['connectionPathColor'] = getConnectionPathColor();
+      loadedValues['connectionPathStroke'] = getConnectionPathStroke();
+      loadedValues['canvasBackgroundColor'] = getCanvasBackgroundColor();
+      loadedValues['textColor'] = getTextColor();
+      loadedValues['selectedStrokeColor'] = getSelectedStrokeColor();
 
-        setValues(loadedValues);
-      } catch {
-        // 設定の読み込みに失敗した場合はデフォルト値を使用
-      }
-    })();
+      setValues(loadedValues);
+    } catch {
+      // 設定の読み込みに失敗した場合はデフォルト値を使用
+    }
   }, [isMounted, isOpen, getCurrentTabNumberOfSections, getCurrentTabLayoutMode]);
 
   // 設定が読み込まれる前はレンダリングしない
@@ -194,7 +191,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     }));
   };
 
-  const handleSave = async () => {
+  const handleSave = () => {
     let hasError = false;
 
     // 全フィールドの検証
@@ -210,10 +207,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
     if (hasError) return;
 
-    // APIKeyは非同期で保存
+    // APIKeyは同期的に保存
     const apiKeyValue = values['apiKey'];
     if (apiKeyValue !== undefined) {
-      await setApiKey(String(apiKeyValue));
+      setApiKey(String(apiKeyValue));
     }
 
     // 他の設定は同期的に保存

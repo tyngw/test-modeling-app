@@ -86,7 +86,7 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       case 'warn':
         return {
           backgroundColor: 'rgba(255, 193, 7, 0.9)',
-          color: 'black',
+          color: '#000000',
         };
       case 'error':
         return {

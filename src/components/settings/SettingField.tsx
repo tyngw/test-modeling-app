@@ -42,14 +42,20 @@ export const SettingField: React.FC<SettingFieldProps> = ({
   const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = e.target.value;
 
+    // APIキーの場合は特別な処理（検証とサニタイズをスキップ）
+    if (field.key === 'apiKey') {
+      onChange(rawValue);
+      return;
+    }
+
     // 設定値の検証
     if (!validateSettingValue(field.key, rawValue)) {
       console.warn(`設定値が無効です: ${field.key}`);
       return;
     }
 
-    // APIキー以外はサニタイズ（APIキーは元の値を保持）
-    const safeValue = field.key === 'apiKey' ? rawValue : sanitizeText(rawValue);
+    // APIキー以外はサニタイズ
+    const safeValue = sanitizeText(rawValue);
     onChange(safeValue);
   };
 

@@ -29,8 +29,8 @@ export function validateApiKey(apiKey: string): boolean {
     return false;
   }
 
-  // 一般的なAPIキーの長さ制限（8-128文字）
-  if (apiKey.length < 8 || apiKey.length > 128) {
+  // 一般的なAPIキーの長さ制限（6-256文字に拡張、GoogleのAPIキーに対応）
+  if (apiKey.length < 6 || apiKey.length > 256) {
     return false;
   }
 

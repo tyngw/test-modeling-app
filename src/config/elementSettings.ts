@@ -38,7 +38,7 @@ export const ELEM_STYLE = {
   STROKE_WIDTH: 2,
 };
 export const CONNECTION_PATH_STYLE = {
-  COLOR: 'black',
+  COLOR: '#000000',
   DRAGGING_COLOR: 'rgba(0, 0, 255, 0.3)',
   STROKE: 0.5,
 };
@@ -81,7 +81,7 @@ export const MARKER_TYPES: Record<string, MarkerType> = {
 
 export const DEFAULT_MARKER_TYPE = MARKER_TYPES.NONE;
 
-export const DEFAULT_CONNECTION_PATH_COLOR = 'black';
+export const DEFAULT_CONNECTION_PATH_COLOR = '#000000';
 export const DEFAULT_CONNECTION_PATH_STROKE = 0.5;
 export const DEFAULT_CANVAS_BACKGROUND_COLOR = '#ffffff';
 export const DEFAULT_TEXT_COLOR = '#000000';

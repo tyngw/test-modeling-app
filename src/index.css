@@ -26,7 +26,7 @@ code {
 /* .rectangle {
   width: 100px;
   height: 100px;
-  border: 1px solid black;
+  border: 1px solid #000000;
   margin: 10px;
   display: flex;
   align-items: center;
@@ -50,7 +50,7 @@ code {
 
 /* ノードが選択されていないときのスタイル */
 /* .element-unselected {
-  stroke: black;
+  stroke: #000000;
 } */
 
 /* .iconbar-button {

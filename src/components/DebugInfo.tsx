@@ -38,7 +38,7 @@ const DebugInfo: React.FC<DebugInfoProps> = ({
       <div
         style={{
           fontSize: '11px',
-          color: 'black',
+          color: '#000000',
           backgroundColor: 'white',
           border: '1px solid #ccc',
           padding: '5px',
