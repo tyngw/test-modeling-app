@@ -33,6 +33,7 @@
     "start": "npx serve@latest ./build",
     "build": "tsc && next build",
     "build:extension": "chmod +x scripts/build-extension.sh && ./scripts/build-extension.sh",
+    "build:all": "npm run build && npm run build:extension",
     "test": "react-scripts test --watchAll=false",
     "test:watch": "react-scripts test",
     "eject": "react-scripts eject",
