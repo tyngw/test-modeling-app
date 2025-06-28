@@ -3,7 +3,7 @@
   "displayName": "Test Modeling App",
   "description": "VSCode extension for Test Modeling App",
   "version": "0.1.0",
-  "publisher": "your-publisher-name",
+  "publisher": "tyngw",
   "engines": {
     "vscode": "^1.60.0"
   },
