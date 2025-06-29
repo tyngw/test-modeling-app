@@ -2,7 +2,12 @@
 'use client';
 
 import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
-import { getAllElementsFromHierarchy } from '../../utils/hierarchical/hierarchicalConverter';
+import {
+  getAllElementsFromHierarchy,
+  findParentNodeInHierarchy,
+  getChildrenFromHierarchy,
+} from '../../utils/hierarchical/hierarchicalConverter';
+import { HierarchicalStructure } from '../../types/hierarchicalTypes';
 import { useCanvas } from '../../context/CanvasContext';
 import { Action } from '../../types/actionTypes';
 import TextDisplayArea from '../canvas/TextDisplayArea';
@@ -46,14 +51,24 @@ const renderActionButtons = (
   element: CanvasElement,
   dispatch: React.Dispatch<Action>,
   elements: CanvasElement[],
+  hierarchicalData: HierarchicalStructure | null,
 ) => {
   const shouldShowButtons = (element: CanvasElement, elements: CanvasElement[]) => {
     if (!element.tentative) return false;
 
-    // 同じparentIdを持つtentative要素をすべて取得
-    const tentativeSiblings = elements.filter(
-      (el) => el.parentId === element.parentId && el.tentative,
-    );
+    // 階層データから親要素を取得して同じ親を持つtentative要素をすべて取得
+    const parentNode = hierarchicalData
+      ? findParentNodeInHierarchy(hierarchicalData, element.id)
+      : null;
+    const parentId = parentNode ? parentNode.data.id : null;
+
+    const tentativeSiblings = elements.filter((el) => {
+      const elParentNode = hierarchicalData
+        ? findParentNodeInHierarchy(hierarchicalData, el.id)
+        : null;
+      const elParentId = elParentNode ? elParentNode.data.id : null;
+      return elParentId === parentId && el.tentative;
+    });
 
     // 自身も含めて最初の要素かどうかをIDで判定（作成順）
     const minId = Math.min(...tentativeSiblings.map((el) => parseInt(el.id)));
@@ -88,9 +103,13 @@ const renderActionButtons = (
               transition: 'color 0.2s ease-in-out',
             }}
             style={{ width: '100%', height: '100%' }}
-            onClick={() =>
-              dispatch({ type: 'CONFIRM_TENTATIVE_ELEMENTS', payload: element.parentId || 'root' })
-            }
+            onClick={() => {
+              const parentNode = hierarchicalData
+                ? findParentNodeInHierarchy(hierarchicalData, element.id)
+                : null;
+              const parentId = parentNode ? parentNode.data.id : 'root';
+              dispatch({ type: 'CONFIRM_TENTATIVE_ELEMENTS', payload: parentId });
+            }}
           />
         </foreignObject>
       </g>
@@ -115,9 +134,13 @@ const renderActionButtons = (
               transition: 'color 0.2s ease-in-out',
             }}
             style={{ width: '100%', height: '100%' }}
-            onClick={() =>
-              dispatch({ type: 'CANCEL_TENTATIVE_ELEMENTS', payload: element.parentId || 'root' })
-            }
+            onClick={() => {
+              const parentNode = hierarchicalData
+                ? findParentNodeInHierarchy(hierarchicalData, element.id)
+                : null;
+              const parentId = parentNode ? parentNode.data.id : 'root';
+              dispatch({ type: 'CANCEL_TENTATIVE_ELEMENTS', payload: parentId });
+            }}
           />
         </foreignObject>
       </g>
@@ -137,7 +160,10 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
 }) => {
   const { dispatch } = useCanvas();
   const { getCurrentTabState } = useTabs();
-  const tabState = getCurrentTabState() || { elements: {}, zoomRatio: 1 };
+  const tabState = useMemo(
+    () => getCurrentTabState() || { elements: {}, zoomRatio: 1 },
+    [getCurrentTabState],
+  );
   const isMounted = useIsMounted();
   const currentDropTargetId = currentDropTarget?.id || -1;
   const [isHovered, setIsHovered] = useState(false);
@@ -193,16 +219,14 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
     dispatch,
     element.id,
     tabState.zoomRatio,
+    isMounted,
   ]);
 
   const hiddenChildren = useMemo(() => {
     // hierarchicalDataから要素を取得
     if ('hierarchicalData' in tabState && tabState.hierarchicalData) {
-      const allElements = getAllElementsFromHierarchy(tabState.hierarchicalData);
-      return allElements.filter((el): el is CanvasElement => {
-        const canvasElement = el as CanvasElement;
-        return canvasElement.parentId === element.id && !canvasElement.visible;
-      });
+      const children = getChildrenFromHierarchy(tabState.hierarchicalData, element.id);
+      return children.filter((child) => !child.visible);
     }
     return [];
   }, [tabState, element.id]);
@@ -304,6 +328,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
           'hierarchicalData' in tabState && tabState.hierarchicalData
             ? getAllElementsFromHierarchy(tabState.hierarchicalData)
             : [],
+          'hierarchicalData' in tabState ? tabState.hierarchicalData : null,
         )}
         {hiddenChildren.length > 0 && (
           <>
@@ -397,14 +422,12 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
             console.log(`[DEBUG] onMouseDown triggered for element ${element.id}`, {
               button: e.button,
               selected: element.selected,
-              parentId: element.parentId,
             });
             handleMouseDown(e, element);
           }}
           onTouchStart={(e) => {
             console.log(`[DEBUG] onTouchStart triggered for element ${element.id}`, {
               selected: element.selected,
-              parentId: element.parentId,
             });
             // TouchEventをMouseEventに変換
             const touch = e.touches[0];

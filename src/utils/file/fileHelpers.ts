@@ -89,9 +89,6 @@ export const convertLegacyElement = (element: unknown): Element => {
       y: element.y !== undefined ? Number(element.y) : base.y,
       width: element.width !== undefined ? Number(element.width) : base.width,
       height: element.height !== undefined ? Number(element.height) : base.height,
-      parentId: element.parentId !== undefined ? element.parentId : base.parentId,
-      depth: element.depth !== undefined ? Number(element.depth) : base.depth,
-      children: element.children !== undefined ? Number(element.children) : base.children,
       editing: element.editing !== undefined ? Boolean(element.editing) : base.editing,
       selected: element.selected !== undefined ? Boolean(element.selected) : base.selected,
       visible: element.visible !== undefined ? Boolean(element.visible) : base.visible,
@@ -138,21 +135,13 @@ export const convertLegacyElement = (element: unknown): Element => {
     y: element.y !== undefined ? Number(element.y) : 0,
     width: element.width !== undefined ? Number(element.width) : base.width,
     height: element.height !== undefined ? Number(element.height) : base.height,
-    parentId: element.parentId !== undefined ? element.parentId : base.parentId,
-    depth: element.depth !== undefined ? Number(element.depth) : base.depth,
-    children: element.children !== undefined ? Number(element.children) : base.children,
     editing: element.editing !== undefined ? Boolean(element.editing) : base.editing,
     selected: element.selected !== undefined ? Boolean(element.selected) : base.selected,
     visible: element.visible !== undefined ? Boolean(element.visible) : base.visible,
     tentative: element.tentative !== undefined ? Boolean(element.tentative) : base.tentative,
     startMarker: base.startMarker,
     endMarker: base.endMarker,
-    direction:
-      element.direction !== undefined
-        ? element.direction
-        : element.parentId === null
-          ? 'none'
-          : 'right',
+    direction: element.direction !== undefined ? element.direction : base.direction || 'right', // parentIdがnullかの判定を削除し、base.directionかデフォルト値を使用
   };
 
   // connectionPathType が存在する場合、startMarker に変換
@@ -238,19 +227,8 @@ export const loadElements = (
           // 要素を変換
           const convertedElements = validRawElements.map((elem) => convertLegacyElement(elem));
 
-          // 有効なIDのセットを作成
-          const validIds = new Set(convertedElements.map((elem) => elem.id));
-
-          // 存在しないparentIdを参照している要素をフィルタリング
-          const validElements = convertedElements.filter((elem) => {
-            if (elem.parentId && !validIds.has(elem.parentId)) {
-              console.warn(
-                `存在しないparentId "${elem.parentId}" を参照している要素 "${elem.id}" を削除します`,
-              );
-              return false;
-            }
-            return true;
-          });
+          // 要素の有効性チェック（階層構造では親子関係はツリーで管理）
+          const validElements = convertedElements;
 
           // 要素をIDをキーとしたオブジェクトに変換
           elementsMap = validElements.reduce(
@@ -276,19 +254,8 @@ export const loadElements = (
           // 要素を変換
           const convertedElements = validRawElements.map((elem) => convertLegacyElement(elem));
 
-          // 有効なIDのセットを作成
-          const validIds = new Set(convertedElements.map((elem) => elem.id));
-
-          // 存在しないparentIdを参照している要素をフィルタリング
-          const validElements = convertedElements.filter((elem) => {
-            if (elem.parentId && !validIds.has(elem.parentId)) {
-              console.warn(
-                `存在しないparentId "${elem.parentId}" を参照している要素 "${elem.id}" を削除します`,
-              );
-              return false;
-            }
-            return true;
-          });
+          // 要素の有効性チェック（階層構造では親子関係はツリーで管理）
+          const validElements = convertedElements;
 
           // 要素をIDをキーとしたオブジェクトに変換
           elementsMap = validElements.reduce(
@@ -314,19 +281,8 @@ export const loadElements = (
           // 要素を変換
           const convertedElements = validRawElements.map((elem) => convertLegacyElement(elem));
 
-          // 有効なIDのセットを作成
-          const validIds = new Set(convertedElements.map((elem) => elem.id));
-
-          // 存在しないparentIdを参照している要素をフィルタリング
-          const validElements = convertedElements.filter((elem) => {
-            if (elem.parentId && !validIds.has(elem.parentId)) {
-              console.warn(
-                `存在しないparentId "${elem.parentId}" を参照している要素 "${elem.id}" を削除します`,
-              );
-              return false;
-            }
-            return true;
-          });
+          // 要素の有効性チェック（階層構造では親子関係はツリーで管理）
+          const validElements = convertedElements;
 
           // 要素をIDをキーとしたオブジェクトに変換
           elementsMap = validElements.reduce(
@@ -380,12 +336,13 @@ export const extractRootElementTextFromSvg = (svgElement: SVGSVGElement): string
  * 要素配列からルート要素のテキストを抽出する
  * @param elements 要素の配列
  * @returns ルート要素のテキスト（存在する場合）
+ * @deprecated 階層構造では直接的なルート要素の概念は使用せず、階層ユーティリティを使用してください
  */
 export const extractRootElementTextFromElements = (elements: Element[]): string | undefined => {
   if (elements.length === 0) return undefined;
 
-  // ルート要素を探す（parentIdがない最初の要素）
-  const rootElement = elements.find((elem) => !elem.parentId);
+  // 階層構造では最初の要素をルート要素として扱う
+  const rootElement = elements[0];
   if (rootElement && rootElement.texts && rootElement.texts.length > 0) {
     const text = rootElement.texts[0];
     return text && typeof text === 'string' ? text : undefined;

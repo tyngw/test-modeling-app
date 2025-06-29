@@ -4,6 +4,7 @@ import { debugLog } from './debugLogHelpers';
 import { getChildren, getChildrenFromHierarchy } from './element/elementHelpers';
 import { LayoutMode } from '../types/tabTypes';
 import { HierarchicalStructure } from '../types/hierarchicalTypes';
+import { findParentNodeInHierarchy } from './hierarchical/hierarchicalConverter';
 
 type ElementsMap = { [key: string]: Element };
 
@@ -19,11 +20,14 @@ const layoutNode = (
   debugLog(`[layoutNode]「${node.texts}」 id=${node.id}, depth=${depth}, startY=${startY} ---`);
 
   // X座標の計算
-  if (node.parentId === null) {
+  // 階層構造から親要素を取得
+  const parentNode = hierarchicalData ? findParentNodeInHierarchy(hierarchicalData, node.id) : null;
+
+  if (!parentNode) {
     // ルート要素の場合は既に配置済み
     debugLog(`Root element: ${node.id}`);
   } else {
-    const parent = elements[node.parentId];
+    const parent = parentNode.data;
 
     // 親の方向に基づいて子要素の方向を継承
     if (parent.direction === 'none') {
@@ -52,7 +56,7 @@ const layoutNode = (
 
   // 階層構造から配列順序で子要素を取得
   const children = hierarchicalData
-    ? getChildrenFromHierarchy(node.id, hierarchicalData, elements)
+    ? getChildrenFromHierarchy(hierarchicalData, node.id)
     : getChildren(node.id, elements); // フォールバック
   debugLog(`children=${children.length}`);
   let currentY = startY;
@@ -67,8 +71,8 @@ const layoutNode = (
 
     if (layoutMode === 'mindmap') {
       // マインドマップモード：direction別に分けて配置
-      const leftChildren = children.filter((child) => child.direction === 'left');
-      const rightChildren = children.filter((child) => child.direction === 'right');
+      const leftChildren = children.filter((child: Element) => child.direction === 'left');
+      const rightChildren = children.filter((child: Element) => child.direction === 'right');
 
       let leftCurrentY = currentY;
       let rightCurrentY = currentY;
@@ -106,7 +110,7 @@ const layoutNode = (
       // 親要素の位置調整（子要素の中央に配置）
       if (children.length > 0) {
         // 元のorder順序を保ったまま、配置済みの子要素の範囲を計算
-        const sortedChildren = children.filter((child) => child.y !== undefined);
+        const sortedChildren = children.filter((child: Element) => child.y !== undefined);
         if (sortedChildren.length > 0) {
           const firstChild = sortedChildren[0];
           const lastChild = sortedChildren[sortedChildren.length - 1];
@@ -170,9 +174,12 @@ export const adjustElementPositions = (
   const updatedElements = { ...elements };
 
   // 階層構造から配列順序でルート要素を取得
-  const rootElements = hierarchicalData
-    ? getChildrenFromHierarchy(null, hierarchicalData, updatedElements)
-    : getChildren(null, updatedElements).sort((a, b) => a.id.localeCompare(b.id)); // フォールバック
+  const rootElements =
+    hierarchicalData && hierarchicalData.root
+      ? [hierarchicalData.root.data]
+      : getChildren(null, updatedElements).sort((a: Element, b: Element) =>
+          a.id.localeCompare(b.id),
+        ); // フォールバック
 
   let currentY = DEFAULT_POSITION.Y;
 

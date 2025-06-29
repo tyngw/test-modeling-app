@@ -1,6 +1,8 @@
 import React from 'react';
 import { Element as CanvasElement } from '../../types/types';
 import { MARKER } from '../../config/elementSettings';
+import { useCanvas } from '../../context/CanvasContext';
+import { findParentNodeInHierarchy } from '../../utils/hierarchical/hierarchicalConverter';
 
 interface MarkerButtonProps {
   element: CanvasElement;
@@ -21,10 +23,15 @@ export const MarkerButton: React.FC<MarkerButtonProps> = ({
   onShowMenu,
   _isInGroup = false,
 }) => {
+  const { state } = useCanvas();
+
   // ボタン表示条件のチェック
   if (isEndMarker) {
     // 終点マーカーの場合：親要素が存在するかチェック
-    if (!element.parentId) return null;
+    const hasParent =
+      state.hierarchicalData &&
+      findParentNodeInHierarchy(state.hierarchicalData, element.id) !== null;
+    if (!hasParent) return null;
   } else {
     // 始点マーカーの場合：子要素があるかチェック
     // 注意: この条件チェックは外部でおこなう必要があるため、

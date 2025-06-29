@@ -126,7 +126,8 @@ export function useAIGeneration({ currentTab, dispatch }: UseAIGenerationParams)
       dispatch({
         type: 'ADD_ELEMENTS_SILENT',
         payload: {
-          parentId: targetElementId,
+          targetNodeId: targetElementId,
+          targetPosition: 'child',
           texts: childNodes,
           tentative: true,
           onError: (errorMessage: string) => {

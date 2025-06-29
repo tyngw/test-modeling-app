@@ -27,6 +27,13 @@ import { Element as CanvasElement, MarkerType } from '../../types/types';
 import { isDescendant } from '../../utils/element/elementHelpers';
 import { useToast } from '../../context/ToastContext';
 import {
+  findParentNodeInHierarchy,
+  getChildrenFromHierarchy,
+  getDepthFromHierarchy,
+  // findNodeInHierarchy, // 未使用のため一時的にコメントアウト
+} from '../../utils/hierarchical/hierarchicalConverter';
+// import { getChildrenInHierarchy } from '../../utils/hierarchical/hierarchicalOperations'; // 未使用のため一時的にコメントアウト
+import {
   getConnectionPathColor,
   getConnectionPathStroke,
   getCanvasBackgroundColor,
@@ -35,11 +42,11 @@ import { calculateDropCoordinates } from '../../utils/dropCoordinateHelpers';
 import { getAllElementsFromHierarchy } from '../../utils/hierarchical/hierarchicalConverter';
 import { ElementsMap } from '../../types/elementTypes';
 
-// デバッグログ機能
-const DEBUG_ENABLED = true;
-const debugLog = (message: string, ...args: unknown[]) => {
-  if (DEBUG_ENABLED) {
-    console.log(message, ...args);
+// デバッグログ機能（開発時のデバッグ用）
+const DEBUG_ENABLED = false; // 本番環境ではfalseに設定
+const debugLog = (_message: string, ..._args: unknown[]) => {
+  if (DEBUG_ENABLED && process.env.NODE_ENV === 'development') {
+    // console.log(_message, ..._args); // 一時的にコメントアウト
   }
 };
 
@@ -108,7 +115,8 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
       (element): element is CanvasElement => (element as CanvasElement).editing,
     ) as CanvasElement | undefined;
 
-    console.log('[DEBUG] CanvasArea: editingNode search', {
+    // デバッグ情報（必要に応じてdebugLogを使用）
+    debugLog('[DEBUG] CanvasArea: editingNode search', {
       totalElements: Object.keys(elementsCache).length,
       editingElements: Object.values(elementsCache)
         .filter((e) => e.editing)
@@ -184,7 +192,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
   }, []);
 
   const handleMarkerSelect = (elementId: string, markerType: MarkerType, isEndMarker: boolean) => {
-    console.log('[DEBUG] CanvasArea: handleMarkerSelect called', {
+    debugLog('[DEBUG] CanvasArea: handleMarkerSelect called', {
       elementId,
       markerType,
       isEndMarker,
@@ -253,10 +261,16 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
       .filter((element): element is CanvasElement => (element as CanvasElement).visible)
       .forEach((element) => {
         const canvasElement = element as CanvasElement;
+        // 階層データから親要素と深度を取得
+        const parentNode = state.hierarchicalData
+          ? findParentNodeInHierarchy(state.hierarchicalData, canvasElement.id)
+          : null;
+        const depth = state.hierarchicalData
+          ? getDepthFromHierarchy(state.hierarchicalData, canvasElement.id)
+          : 1;
+
         // グループキーの生成（ルート要素は特別扱い）
-        const groupKey = canvasElement.parentId
-          ? `${canvasElement.parentId}_${canvasElement.depth}`
-          : 'root';
+        const groupKey = parentNode ? `${parentNode.data.id}_${depth}` : 'root';
 
         // グループが存在しない場合は初期化
         if (!elementGroups[groupKey]) {
@@ -265,13 +279,10 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
         elementGroups[groupKey].push(canvasElement);
 
         // 子要素を持つ非ルート要素を記録（始点マーカーボタン用）
-        if (
-          canvasElement.parentId &&
-          Object.values(elementsCache).some((el): el is CanvasElement => {
-            const childElement = el as CanvasElement;
-            return childElement.parentId === canvasElement.id && childElement.visible;
-          })
-        ) {
+        const children = state.hierarchicalData
+          ? getChildrenFromHierarchy(state.hierarchicalData, canvasElement.id)
+          : [];
+        if (parentNode && children.some((child) => child.visible)) {
           nonRootElementsWithChildren.push(canvasElement);
         }
       });
@@ -284,10 +295,10 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
           if (groupKey === 'root') {
             return groupElements.map((element) => {
               // 始点マーカーボタンを表示するかどうかの条件チェック
-              const hasChildren = Object.values(elementsCache).some((el): el is CanvasElement => {
-                const childElement = el as CanvasElement;
-                return childElement.parentId === element.id && childElement.visible;
-              });
+              const children = state.hierarchicalData
+                ? getChildrenFromHierarchy(state.hierarchicalData, element.id)
+                : [];
+              const hasChildren = children.some((child) => child.visible);
 
               return (
                 <React.Fragment key={element.id}>
@@ -326,6 +337,9 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
           // グループの基準位置計算（親要素の右端 + OFFSET）
           const groupX = parentElement.x + parentElement.width + OFFSET.X;
           const groupY = parentElement.y;
+          const groupDepth = state.hierarchicalData
+            ? getDepthFromHierarchy(state.hierarchicalData, groupElements[0].id)
+            : 1;
 
           // グループ全体をSVGグループ要素でラップ
           return [
@@ -334,7 +348,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
               transform={`translate(${groupX}, ${groupY})`}
               className="element-group"
               data-parent-id={parentId}
-              data-depth={groupElements[0].depth}
+              data-depth={groupDepth}
             >
               {groupElements.map((element) => {
                 // グループ内相対座標に変換
@@ -386,14 +400,19 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     return Object.values(elementsCache)
       .filter((element): element is CanvasElement => {
         const canvasElement = element as CanvasElement;
-        return canvasElement.visible && !!canvasElement.parentId;
+        const parentNode = state.hierarchicalData
+          ? findParentNodeInHierarchy(state.hierarchicalData, canvasElement.id)
+          : null;
+        return canvasElement.visible && !!parentNode;
       })
       .map((element) => {
         const canvasElement = element as CanvasElement;
-        const parentId = canvasElement.parentId;
-        if (!parentId) return null;
+        const parentNode = state.hierarchicalData
+          ? findParentNodeInHierarchy(state.hierarchicalData, canvasElement.id)
+          : null;
+        if (!parentNode) return null;
 
-        const parent = elementsCache[parentId] as CanvasElement;
+        const parent = elementsCache[parentNode.data.id] as CanvasElement;
         if (
           draggingElement &&
           (canvasElement.id === draggingElement.id ||
@@ -503,6 +522,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     // ドロップ座標を計算（ユーティリティ関数を使用）
     const coordinates = calculateDropCoordinates({
       elements: elementsCache,
+      hierarchicalData: state.hierarchicalData,
       currentDropTarget: target,
       draggingElement,
       dropPosition,
@@ -516,7 +536,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     debugLog('[DropPreview] Calculated coordinates:', coordinates);
 
     if (!coordinates) {
-      console.log('[DropPreview] No coordinates calculated');
+      debugLog('[DropPreview] No coordinates calculated');
       return null;
     }
 
@@ -551,14 +571,19 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     // 型ガード: currentDropTarget がCanvasElement であることを確認
     const target = currentDropTarget as CanvasElement;
 
+    const parentNode =
+      state.hierarchicalData && dropPosition !== 'child'
+        ? findParentNodeInHierarchy(state.hierarchicalData, target.id)
+        : null;
     const newParent =
-      dropPosition === 'child' ? target : target.parentId ? elementsCache[target.parentId] : null;
+      dropPosition === 'child' ? target : parentNode ? elementsCache[parentNode.data.id] : null;
 
     if (!newParent) return null;
 
     // ドロップ座標を計算（ユーティリティ関数を使用）
     const coordinates = calculateDropCoordinates({
       elements: elementsCache,
+      hierarchicalData: state.hierarchicalData,
       currentDropTarget: target,
       draggingElement,
       dropPosition,
@@ -596,7 +621,12 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
       }
     } else if (dropPosition === 'child') {
       // childモードでは、ドロップ先要素の設定に基づいて決定
-      if (target.direction === 'none' && target.parentId === null) {
+      const targetParentNode = state.hierarchicalData
+        ? findParentNodeInHierarchy(state.hierarchicalData, target.id)
+        : null;
+      const isTargetRoot = target.direction === 'none' && !targetParentNode;
+
+      if (isTargetRoot) {
         // ルート要素への子要素追加の場合、座標位置で判定
         const rootCenterX = target.x + target.width / 2;
         previewDirection = coordinates.x < rootCenterX ? 'left' : 'right';

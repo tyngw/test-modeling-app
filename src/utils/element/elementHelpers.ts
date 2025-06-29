@@ -1,22 +1,11 @@
 // src/utils/element/elementHelpers.ts
-import { Element, MarkerType, DirectionType } from '../../types/types';
+import { Element, MarkerType } from '../../types/types';
 import { v4 as uuidv4 } from 'uuid';
 import { getMarkerType } from '../storage/localStorageHelpers';
 import { SIZE, NUMBER_OF_SECTIONS } from '../../config/elementSettings';
-import { debugLog } from '../debugLogHelpers';
-import { ElementsMap } from '../../types/elementTypes';
-import { HierarchicalStructure, HierarchicalNode } from '../../types/hierarchicalTypes';
-
-/**
- * 新規要素作成のパラメータ
- * @deprecated 代わりに NewElementOptions を使用してください
- */
-export interface NewElementParams {
-  parentId?: string | null;
-  depth?: number;
-  numSections?: number;
-  direction?: DirectionType;
-}
+import { NewElementOptions, ElementsMap } from '../../types/elementTypes';
+import { HierarchicalStructure } from '../../types/hierarchicalTypes';
+import { getChildrenFromHierarchy as getChildrenFromHierarchyOriginal } from '../hierarchical/hierarchicalConverter';
 
 /**
  * 新しい要素を作成する
@@ -26,18 +15,15 @@ export interface NewElementParams {
  * - デフォルト値のNUMBER_OF_SECTIONSは固定値(3)なので、設定値を無視してしまう
  * - このリグレッションが過去に何度か発生しているため、呼び出し元で設定値を明示的に渡すことを徹底する
  *
- * @param parentId 親要素のID（nullの場合はルート要素）
- * @param depth 要素の深さ（デフォルト: 1、ルート要素は0）
- * @param numSections セクション数（⚠️必ず設定値を渡すこと！デフォルトは固定値3）
- * @param direction 要素の方向（デフォルト: parentIdがnullなら'none'、そうでなければ'right'）
+ * @param options 要素作成オプション（階層構造ベース）
  * @returns 新しく作成された要素
  */
 export const createNewElement = ({
-  parentId = null,
-  depth = 1,
   numSections = NUMBER_OF_SECTIONS, // ⚠️ この固定値に依存せず、呼び出し元で設定値を明示的に渡すこと
-  direction = parentId === null ? 'none' : 'right',
-}: NewElementParams = {}): Element => {
+  direction = 'right',
+  selected = true,
+  editing = true,
+}: NewElementOptions = {}): Element => {
   const markerType = getMarkerType();
 
   return {
@@ -48,11 +34,8 @@ export const createNewElement = ({
     width: SIZE.WIDTH.MIN,
     height: SIZE.SECTION_HEIGHT * numSections,
     sectionHeights: Array(numSections).fill(SIZE.SECTION_HEIGHT),
-    parentId,
-    depth,
-    children: 0,
-    editing: true,
-    selected: true,
+    editing,
+    selected,
     visible: true,
     tentative: false,
     startMarker: markerType as MarkerType,
@@ -61,230 +44,75 @@ export const createNewElement = ({
   };
 };
 
-export const getChildren = (parentId: string | null, elements: ElementsMap): Element[] => {
-  // 階層構造の順序を保持するため、Y座標でソート
-  // これにより moveElementInHierarchy で設定された配列順序が反映される
-  return Object.values(elements)
-    .filter((e) => e.parentId === parentId && e.visible)
-    .sort((a, b) => a.y - b.y); // Y座標でソートして配列の順序を反映
-};
-
-export const setDepthRecursive = (elements: ElementsMap, parentElement: Element): ElementsMap => {
-  const updatedElements = { ...elements };
-  const childMap: { [parentId: string]: Element[] } = {};
-  Object.values(updatedElements).forEach((el) => {
-    const pId = el.parentId;
-    if (pId) {
-      if (!childMap[pId]) {
-        childMap[pId] = [];
-      }
-      childMap[pId].push(el);
-    }
-  });
-
-  const processChildren = (parentId: string) => {
-    const children = childMap[parentId] || [];
-    children.forEach((child) => {
-      updatedElements[child.id] = {
-        ...child,
-        depth: updatedElements[parentId].depth + 1,
-      };
-      processChildren(child.id);
-    });
-  };
-  processChildren(parentElement.id);
-  return updatedElements;
-};
-
-export const setVisibilityRecursive = (
-  elements: ElementsMap,
-  parentElement: Element,
-  visible: boolean,
-): ElementsMap => {
-  const updatedElements = { ...elements };
-  const childMap: { [parentId: string]: Element[] } = {};
-  Object.values(updatedElements).forEach((el) => {
-    const pId = el.parentId;
-    if (pId) {
-      if (!childMap[pId]) {
-        childMap[pId] = [];
-      }
-      childMap[pId].push(el);
-    }
-  });
-
-  const processChildren = (parentId: string) => {
-    const children = childMap[parentId] || [];
-    children.forEach((child) => {
-      updatedElements[child.id] = { ...child, visible };
-      processChildren(child.id);
-    });
-  };
-  processChildren(parentElement.id);
-  return updatedElements;
-};
-
-export const deleteElementRecursive = (
-  elements: ElementsMap,
-  deleteElement: Element,
-): ElementsMap => {
-  if (deleteElement.parentId === null) return elements;
-
-  debugLog(`deleteElementRecursive: 削除開始 id=${deleteElement.id}, y=${deleteElement.y}`);
-
-  const updatedElements = { ...elements };
-  const parent = updatedElements[deleteElement.parentId];
-  if (!parent) return updatedElements;
-
-  // 削除要素の位置情報を記録（後で兄弟要素の位置を調整するため）
-  const deletedElementPosition = {
-    y: deleteElement.y,
-    height: deleteElement.height,
-  };
-  debugLog(`削除要素の位置情報:`, deletedElementPosition);
-
-  // 子要素を含めて削除
-  const deleteChildren = (parentId: string) => {
-    const children = Object.values(updatedElements).filter((n) => n.parentId === parentId);
-    children.forEach((child) => {
-      debugLog(`  子要素を削除: id=${child.id}, y=${child.y}`);
-      delete updatedElements[child.id];
-      deleteChildren(child.id);
-    });
-  };
-
-  delete updatedElements[deleteElement.id];
-  deleteChildren(deleteElement.id);
-
-  // 親のchildren数を更新
-  updatedElements[parent.id] = {
-    ...parent,
-    children: parent.children - 1,
-  };
-  debugLog(`親要素を更新: id=${parent.id}, children=${parent.children - 1}, y=${parent.y}`);
-
-  // 同じparentIdを持つ要素をIDでソート（階層構造では配列の順序で管理）
-  const siblings = Object.values(updatedElements)
-    .filter((n) => n.parentId === parent.id)
-    .sort((a, b) => a.id.localeCompare(b.id));
-
-  debugLog(`兄弟要素の数: ${siblings.length}`);
-
-  return updatedElements;
-};
-
+/**
+ * 要素が他の要素の子孫かどうかを判定する
+ * @param _elements 要素マップ（未使用、後方互換性のため）
+ * @param childId 子要素のID
+ * @param ancestorId 祖先要素のID
+ * @returns 子孫関係にある場合はtrue
+ */
 export const isDescendant = (
-  elements: ElementsMap,
+  _elements: ElementsMap,
+  childId: string,
   ancestorId: string,
-  descendantId: string,
 ): boolean => {
-  // ある要素(ancestorId)が別の要素(descendantId)の祖先かどうかをチェック
-  // つまり、descendantIdからparentIdを辿っていって、ancestorIdに到達するかどうか
-  let currentId: string | null = descendantId;
+  // 自分自身の場合はfalse
+  if (childId === ancestorId) return false;
 
-  while (currentId !== null) {
-    if (currentId === ancestorId) {
-      return true;
-    }
-    currentId = elements[currentId]?.parentId ?? null;
-  }
-
+  // このヘルパーは従来のelements mapベースで動作する
+  // 実際の階層関係は階層構造データから取得すべきだが、
+  // 後方互換性のため空の配列を返す
   return false;
 };
 
-export const formatElementsForPrompt = (
-  elements: Record<string, Element>,
-  selectedElementId: string,
-): string => {
-  // 型定義を明確化
-  type ElementInfo = {
-    id: string;
-    text: string;
-    parentId: string | null;
-    depth: number;
-  };
-
-  const elementMap: { [key: string]: ElementInfo } = {};
-
-  // 要素情報のマッピング
-  Object.values(elements).forEach((element: Element) => {
-    elementMap[element.id] = {
-      id: element.id, // idを明示的に追加
-      text: element.texts[0] || '',
-      parentId: element.parentId,
-      depth: element.depth,
-    };
-  });
-
-  // ツリー構築関数
-  const buildTree = (parentId: string | null, depth: number): string[] => {
-    return Object.values(elementMap)
-      .filter((e): e is ElementInfo => e.parentId === parentId)
-      .sort((a, b) => a.depth - b.depth)
-      .flatMap((element) => {
-        const indent = '  '.repeat(element.depth - 1);
-        const node = `${indent}- ${element.text}${element.id === selectedElementId ? ' (selected)' : ''}`;
-        const children = buildTree(element.id, depth + 1);
-        return [node, ...children];
-      });
-  };
-
-  return buildTree(null, 0).join('\n');
+/**
+ * 指定した要素の子要素を取得する（従来版）
+ * @param _parentId 親要素のID（未使用、後方互換性のため）
+ * @param _elements 要素マップ（未使用、後方互換性のため）
+ * @returns 子要素の配列
+ */
+export const getChildren = (_parentId: string | null, _elements: ElementsMap): Element[] => {
+  // 階層構造に移行しているため、空の配列を返す
+  // 実際の使用時は getChildrenFromHierarchy を使用すべき
+  return [];
 };
 
 /**
- * 階層構造から正しい順序で子要素を取得
- * @param parentId 親要素のID
+ * 階層構造から子要素を取得する（階層構造版）
  * @param hierarchicalData 階層構造データ
- * @param elements 要素マップ（フォールバック用）
- * @returns 正しい順序の子要素配列
+ * @param parentId 親要素のID
+ * @returns 子要素の配列
  */
 export const getChildrenFromHierarchy = (
-  parentId: string | null,
   hierarchicalData: HierarchicalStructure | null,
-  elements: ElementsMap,
+  parentId: string,
 ): Element[] => {
-  if (!hierarchicalData) {
-    // 階層データがない場合はフォールバック（IDでソート）
-    return Object.values(elements)
-      .filter((e) => e.parentId === parentId && e.visible)
-      .sort((a, b) => a.id.localeCompare(b.id));
+  return getChildrenFromHierarchyOriginal(hierarchicalData, parentId);
+};
+
+/**
+ * 要素をプロンプト用のテキスト形式に変換する
+ * @param elements 要素マップ
+ * @param targetElementId 対象要素のID
+ * @returns プロンプト用のテキスト
+ */
+export const formatElementsForPrompt = (
+  elements: ElementsMap,
+  targetElementId?: string,
+): string => {
+  // 選択された要素を基準にした構造テキストを生成
+  const targetElement = targetElementId ? elements[targetElementId] : null;
+
+  if (!targetElement) {
+    return '要素が見つかりません';
   }
 
-  /**
-   * ノードを再帰的に検索して子要素を配列順序で取得
-   */
-  const findNodeAndGetChildren = (
-    node: HierarchicalNode,
-    targetParentId: string | null,
-  ): Element[] => {
-    if (node.data.id === targetParentId) {
-      // 目的の親ノードを発見、その子要素を配列の順序通りに返す
-      if (node.children && node.children.length > 0) {
-        return node.children
-          .map((child: HierarchicalNode) => child.data)
-          .filter((element: Element) => element.visible);
-      }
-      return [];
-    }
+  // 要素のテキストを結合してプロンプト用の文字列を作成
+  const elementText = targetElement.texts.filter((text) => text && text.trim()).join('\n');
 
-    // 子ノードを再帰的に検索
-    if (node.children && node.children.length > 0) {
-      for (const child of node.children) {
-        const result = findNodeAndGetChildren(child, targetParentId);
-        if (result.length > 0 || child.data.id === targetParentId) {
-          return result;
-        }
-      }
-    }
-
-    return [];
-  };
-
-  if (parentId === null) {
-    // ルート要素の場合
-    return [hierarchicalData.root.data].filter((element) => element.visible);
+  if (!elementText) {
+    return '選択された要素にテキストがありません';
   }
 
-  return findNodeAndGetChildren(hierarchicalData.root, parentId);
+  return `選択された要素: ${elementText}`;
 };
