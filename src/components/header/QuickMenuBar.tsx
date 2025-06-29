@@ -30,8 +30,8 @@ import { tooltipTexts } from '../../constants/tooltipTexts';
 import { isVSCodeExtension } from '../../utils/environment/environmentDetector';
 
 // 基本コンポーネントのインポート
-import IconButton from '../menuBar/IconButton';
-import Divider from '../menuBar/Divider';
+import IconButton from './menubar/IconButton';
+import Divider from './menubar/Divider';
 
 interface QuickMenuBarProps {
   saveSvg: () => void;

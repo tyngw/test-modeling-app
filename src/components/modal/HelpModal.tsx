@@ -1,8 +1,8 @@
 import React from 'react';
 import ModalWindow from './ModalWindow';
-import HelpIcon from './icons/HelpIcon';
-import { helpSections, type HelpSection } from '../constants/helpContent';
-import { Action } from '../types/actionTypes';
+import HelpIcon from '../icons/HelpIcon';
+import { helpSections, type HelpSection } from '../../constants/helpContent';
+import { Action } from '../../types/actionTypes';
 
 interface HelpModalProps {
   isOpen: boolean;

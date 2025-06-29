@@ -1,15 +1,15 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { CanvasProvider } from '../../context/CanvasContext';
-import { CanvasArea } from '../../components/canvas';
-import QuickMenuBar from '../../components/menus/QuickMenuBar';
-import TabHeaders from '../../components/tabHeaders/TabHeaders';
-import HelpModal from '../../components/HelpModal';
-import SettingsModal from '../../components/SettingsModal';
-import UnsaveConfirmModal from '../../components/UnsaveConfirmModal';
-import { TabState } from '../../types/tabTypes';
-import { Action } from '../../types/actionTypes';
+import { CanvasProvider } from '../context/CanvasContext';
+import { CanvasArea } from './canvas';
+import QuickMenuBar from './header/QuickMenuBar';
+import TabHeaders from './header/TabHeaders';
+import HelpModal from './modal/HelpModal';
+import SettingsModal from './modal/SettingsModal';
+import UnsaveConfirmModal from './modal/UnsaveConfirmModal';
+import { TabState } from '../types/tabTypes';
+import { Action } from '../types/actionTypes';
 
 interface AppLayoutProps {
   // タブ関連

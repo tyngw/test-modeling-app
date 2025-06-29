@@ -2,13 +2,13 @@
 'use client';
 
 import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
-import IdeaElement from '../elements/IdeaElement';
+import IdeaElement from './IdeaElement';
 import DebugInfo from '../DebugInfo';
-import InputFields from '../InputFields';
-import { MarkerElements } from '../markers/MarkerElements';
-import { MarkerMenu } from '../markers/MarkerMenu';
-import { MarkerButton } from '../markers/MarkerButton';
-import { ConnectionPath } from '../connections/ConnectionPath';
+import InputFields from './InputFields';
+import { MarkerElements } from './MarkerElements';
+import { MarkerMenu } from './MarkerMenu';
+import { MarkerButton } from './MarkerButton';
+import { ConnectionPath } from './ConnectionPath';
 import useResizeEffect from '../../hooks/UseResizeEffect';
 import { useCanvas } from '../../context/CanvasContext';
 import { useClickOutside } from '../../hooks/UseClickOutside';

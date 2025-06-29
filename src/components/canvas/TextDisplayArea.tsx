@@ -9,12 +9,12 @@ import {
   TEXTAREA_PADDING,
   DEFAULT_FONT_FAMILY,
   DEFAULT_TEXT_COLOR,
-} from '../config/elementSettings';
-import { wrapText } from '../utils/textareaHelpers';
-import { getTextColor } from '../utils/storage/localStorageHelpers';
-import { sanitizeText } from '../utils/security/sanitization';
-import { detectUrls, openUrlInNewTab, isMobileDevice } from '../utils/url/urlHelpers';
-import UrlPopup from './UrlPopup';
+} from '../../config/elementSettings';
+import { wrapText } from '../../utils/textareaHelpers';
+import { getTextColor } from '../../utils/storage/localStorageHelpers';
+import { sanitizeText } from '../../utils/security/sanitization';
+import { detectUrls, openUrlInNewTab, isMobileDevice } from '../../utils/url/urlHelpers';
+import UrlPopup from '../UrlPopup';
 
 interface TextDisplayAreaProps {
   x: number;

@@ -3,13 +3,13 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import ModalWindow from './ModalWindow';
-import SettingsIcon from './icons/SettingsIcon';
-import { SettingField } from './settings/SettingField';
+import SettingsIcon from '../icons/SettingsIcon';
+import { SettingField } from './SettingField';
 import { Box, Button, Tabs, Tab } from '@mui/material';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
-import { SETTINGS_TABS, SettingField as SettingFieldType } from '../types/settings';
+import { SETTINGS_TABS, SettingField as SettingFieldType } from '../../types/settings';
 import {
   getSystemPromptTemplate,
   getModelType,
@@ -39,14 +39,14 @@ import {
   setSelectedStrokeColor,
   getApiKey,
   setApiKey,
-} from '../utils/storage/localStorageHelpers';
-import { exportElementSettings, importElementSettings } from '../utils/settingsExportImport';
-import { useTabs } from '../context/TabsContext';
-import { getCurrentTheme, isDarkMode } from '../utils/style/colorHelpers';
-import { useIsMounted } from '../hooks/UseIsMounted';
-import { sanitizeText, sanitizeFilename } from '../utils/security/sanitization';
-import { validateJsonData, validateFileContent } from '../utils/security/validation';
-import { Action } from '../types/actionTypes';
+} from '../../utils/storage/localStorageHelpers';
+import { exportElementSettings, importElementSettings } from '../../utils/settingsExportImport';
+import { useTabs } from '../../context/TabsContext';
+import { getCurrentTheme, isDarkMode } from '../../utils/style/colorHelpers';
+import { useIsMounted } from '../../hooks/UseIsMounted';
+import { sanitizeText, sanitizeFilename } from '../../utils/security/sanitization';
+import { validateJsonData, validateFileContent } from '../../utils/security/validation';
+import { Action } from '../../types/actionTypes';
 
 interface SettingsModalProps {
   isOpen: boolean;

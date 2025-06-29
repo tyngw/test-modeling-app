@@ -1,19 +1,23 @@
 'use client';
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { useCanvas } from '../context/CanvasContext';
-import { wrapText } from '../utils/textareaHelpers';
-import { useIsMounted } from '../hooks/UseIsMounted';
+import { useCanvas } from '../../context/CanvasContext';
+import { wrapText } from '../../utils/textareaHelpers';
+import { useIsMounted } from '../../hooks/UseIsMounted';
 import {
   DEFAULT_FONT_SIZE,
   TEXTAREA_PADDING,
   LINE_HEIGHT_RATIO,
   SIZE,
-} from '../config/elementSettings';
-import { getFontFamily, getElementColor, getTextColor } from '../utils/storage/localStorageHelpers';
-import { Element } from '../types/types';
-import { inputFieldKeyActionMap } from '../config/keyActionMap';
-import { validateTextInput } from '../utils/security/validation';
+} from '../../config/elementSettings';
+import {
+  getFontFamily,
+  getElementColor,
+  getTextColor,
+} from '../../utils/storage/localStorageHelpers';
+import { Element } from '../../types/types';
+import { inputFieldKeyActionMap } from '../../config/keyActionMap';
+import { validateTextInput } from '../../utils/security/validation';
 
 interface InputFieldsProps {
   element?: Element;

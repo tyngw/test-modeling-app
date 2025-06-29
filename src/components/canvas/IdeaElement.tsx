@@ -5,7 +5,7 @@ import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react'
 import { getAllElementsFromHierarchy } from '../../utils/hierarchical/hierarchicalConverter';
 import { useCanvas } from '../../context/CanvasContext';
 import { Action } from '../../types/actionTypes';
-import TextDisplayArea from '../TextDisplayArea';
+import TextDisplayArea from '../canvas/TextDisplayArea';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import DoneIcon from '@mui/icons-material/Done';
 import ClearIcon from '@mui/icons-material/Clear';

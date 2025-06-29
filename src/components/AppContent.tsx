@@ -3,11 +3,11 @@
 
 import React, { useCallback, useMemo, useEffect, useRef } from 'react';
 import { CanvasArea } from './canvas';
-import QuickMenuBar from './menus/QuickMenuBar';
-import TabHeaders from './tabHeaders/TabHeaders';
-import SettingsModal from './SettingsModal';
-import UnsaveConfirmModal from './UnsaveConfirmModal';
-import HelpModal from './HelpModal';
+import QuickMenuBar from './header/QuickMenuBar';
+import TabHeaders from './header/TabHeaders';
+import SettingsModal from './modal/SettingsModal';
+import UnsaveConfirmModal from './modal/UnsaveConfirmModal';
+import HelpModal from './modal/HelpModal';
 import { CanvasProvider } from '../context/CanvasContext';
 import { useToast } from '../context/ToastContext';
 import { useFileOperations } from '../hooks/useFileOperations';

@@ -2,10 +2,10 @@
 import React from 'react';
 import ModalWindow from './ModalWindow';
 import { Button } from '@mui/material';
-import { getCurrentTheme } from '../utils/style/colorHelpers';
-import { getCanvasBackgroundColor } from '../utils/storage/localStorageHelpers';
-import ConfirmIcon from './icons/ConfirmIcon';
-import { Action } from '../types/actionTypes';
+import { getCurrentTheme } from '../../utils/style/colorHelpers';
+import { getCanvasBackgroundColor } from '../../utils/storage/localStorageHelpers';
+import ConfirmIcon from '../icons/ConfirmIcon';
+import { Action } from '../../types/actionTypes';
 
 interface UnsaveConfirmModalProps {
   showCloseConfirm: boolean;

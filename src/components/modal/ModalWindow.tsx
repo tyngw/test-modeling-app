@@ -2,10 +2,10 @@
 'use client';
 
 import React, { ReactNode, useState, useEffect, Dispatch, useRef } from 'react';
-import { getCurrentTheme } from '../utils/style/colorHelpers';
-import { getCanvasBackgroundColor } from '../utils/storage/localStorageHelpers';
-import { useIsMounted } from '../hooks/UseIsMounted';
-import { Action } from '../types/actionTypes';
+import { getCurrentTheme } from '../../utils/style/colorHelpers';
+import { getCanvasBackgroundColor } from '../../utils/storage/localStorageHelpers';
+import { useIsMounted } from '../../hooks/UseIsMounted';
+import { Action } from '../../types/actionTypes';
 
 interface ModalWindowProps {
   isOpen: boolean;
