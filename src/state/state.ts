@@ -490,14 +490,14 @@ const actionHandlers: Record<string, ActionHandler> = {
           return acc;
         }, {});
 
-        // 位置調整を行い、階層構造を維持
+        // 階層構造を維持したまま位置調整を行う
         if (workingState.hierarchicalData) {
           const adjustedElementsCache = adjustElementPositions(
             updatedElementsCache,
-            () => workingState.numberOfSections,
-            workingState.layoutMode,
-            workingState.width || 0,
-            workingState.height || 0,
+            () => state.numberOfSections,
+            state.layoutMode,
+            state.width || 0,
+            state.height || 0,
             workingState.hierarchicalData,
           );
 
@@ -762,31 +762,18 @@ const actionHandlers: Record<string, ActionHandler> = {
 
     // すべての要素の編集状態を終了
     const allElements = getAllElementsFromHierarchy(state.hierarchicalData);
-    const updatedElementsCache = allElements.reduce<ElementsMap>((acc, element) => {
-      acc[element.id] = { ...element, editing: false };
-      return acc;
-    }, {});
 
-    // 階層構造を維持したまま位置調整を行う
-    const adjustedElementsCache = adjustElementPositions(
-      updatedElementsCache,
-      () => state.numberOfSections,
-      state.layoutMode,
-      state.width || 0,
-      state.height || 0,
-    );
-
-    // 位置調整後の要素データで階層構造を更新（親子関係を維持）
-    const finalHierarchicalData = updateHierarchyWithElementChanges(
-      state.hierarchicalData,
-      adjustedElementsCache,
-    );
-
-    if (!finalHierarchicalData) return state;
+    // 階層構造を直接更新（位置調整は行わない）
+    let currentHierarchy = state.hierarchicalData;
+    for (const element of allElements) {
+      const updatedElement = { ...element, editing: false };
+      const result = updateElementInHierarchy(currentHierarchy, element.id, updatedElement);
+      currentHierarchy = result.hierarchicalData;
+    }
 
     return {
       ...state,
-      hierarchicalData: finalHierarchicalData,
+      hierarchicalData: currentHierarchy,
     };
   }),
 
@@ -871,6 +858,7 @@ const actionHandlers: Record<string, ActionHandler> = {
         state.layoutMode,
         state.width || 0,
         state.height || 0,
+        result.hierarchicalData,
       );
 
       // 階層構造への直接位置更新（フラット変換を避ける）
@@ -1021,6 +1009,12 @@ const actionHandlers: Record<string, ActionHandler> = {
         debugLog(`[ADD_ELEMENT] エラー: 位置調整後に新要素が見つかりません`);
       }
 
+      // デバッグログ: 位置調整後の全要素の座標を確認
+      debugLog(`[ADD_ELEMENT] 位置調整後の全要素座標:`);
+      Object.values(adjustedElementsCache).forEach((element) => {
+        debugLog(`  - 要素「${element.texts}」 id=${element.id}: X=${element.x}, Y=${element.y}`);
+      });
+
       // 階層構造内の要素の位置情報を直接更新（フラット変換を避ける）
       debugLog(`[ADD_ELEMENT] 階層構造内での位置更新開始`);
 
@@ -1029,6 +1023,13 @@ const actionHandlers: Record<string, ActionHandler> = {
         result.hierarchicalData,
         adjustedElementsCache,
       );
+
+      // デバッグログ: 最終的な階層構造内の要素座標を確認
+      debugLog(`[ADD_ELEMENT] 最終的な階層構造内の要素座標:`);
+      const finalElements = getAllElementsFromHierarchy(finalHierarchicalData);
+      finalElements.forEach((element) => {
+        debugLog(`  - 要素「${element.texts}」 id=${element.id}: X=${element.x}, Y=${element.y}`);
+      });
 
       debugLog(`[ADD_ELEMENT] 成功: 最終的なhierarchicalData:`, finalHierarchicalData);
 
@@ -1346,6 +1347,7 @@ const actionHandlers: Record<string, ActionHandler> = {
       state.layoutMode,
       state.width || 0,
       state.height || 0,
+      currentHierarchy,
     );
 
     // 位置調整後の要素データで階層構造を更新（親子関係を維持）
@@ -1421,6 +1423,7 @@ const actionHandlers: Record<string, ActionHandler> = {
         state.layoutMode,
         state.width || 0,
         state.height || 0,
+        hierarchicalData,
       );
 
       // 位置調整後の要素データで階層構造を更新（親子関係を維持）
@@ -1459,6 +1462,7 @@ const actionHandlers: Record<string, ActionHandler> = {
       state.layoutMode,
       state.width || 0,
       state.height || 0,
+      hierarchicalData,
     );
 
     // 位置調整後の要素データで階層構造を更新（親子関係を維持）
@@ -1494,6 +1498,7 @@ const actionHandlers: Record<string, ActionHandler> = {
       state.layoutMode,
       state.width || 0,
       state.height || 0,
+      hierarchicalData,
     );
 
     // 位置調整後の要素データで階層構造を更新（親子関係を維持）
@@ -1576,6 +1581,7 @@ const actionHandlers: Record<string, ActionHandler> = {
         state.layoutMode,
         state.width || 0,
         state.height || 0,
+        result.hierarchicalData,
       );
 
       // 位置調整後の要素データで階層構造を更新（親子関係を維持）
@@ -1691,6 +1697,7 @@ const actionHandlers: Record<string, ActionHandler> = {
       state.layoutMode,
       state.width || 0,
       state.height || 0,
+      result.hierarchicalData,
     );
 
     // 位置調整後の要素データで階層構造を更新（親子関係を維持）
@@ -1728,6 +1735,7 @@ const actionHandlers: Record<string, ActionHandler> = {
       state.layoutMode,
       state.width || 0,
       state.height || 0,
+      result.hierarchicalData,
     );
 
     // 位置調整後の要素データで階層構造を更新（親子関係を維持）
@@ -1973,6 +1981,7 @@ const actionHandlers: Record<string, ActionHandler> = {
       state.layoutMode,
       state.width || 0,
       state.height || 0,
+      currentHierarchy,
     );
 
     // 位置調整後の要素データで階層構造を更新（親子関係を維持）

@@ -2,6 +2,7 @@
 import { Element } from '../types/types';
 import { LayoutMode } from '../types/tabTypes';
 import { ElementsMap } from '../types/elementTypes';
+import { HierarchicalStructure } from '../types/hierarchicalTypes';
 import { adjustElementPositions } from './layoutHelpers';
 
 /**
@@ -116,10 +117,19 @@ export const withPositionAdjustment = (
     width: number;
     height: number;
     zoomRatio: number;
+    hierarchicalData?: HierarchicalStructure | null;
   },
   elementsUpdater: (elements: ElementsMap) => ElementsMap,
 ): typeof state => {
   const updatedElements = elementsUpdater(state.elements);
+
+  // hierarchicalDataがnullの場合は位置調整をスキップ
+  if (!state.hierarchicalData) {
+    return {
+      ...state,
+      elements: updatedElements,
+    };
+  }
 
   // layoutModeが存在する場合は使用、存在しない場合はmindmap
   const layoutMode = (state.layoutMode || 'mindmap') as LayoutMode;
@@ -136,6 +146,7 @@ export const withPositionAdjustment = (
       layoutMode,
       canvasWidth,
       canvasHeight,
+      state.hierarchicalData || null,
     ),
   };
 };
@@ -188,6 +199,14 @@ export const createSelectedElementHandler = (
     const updatedElements = batchUpdateElements(state.elements, updatesMap);
 
     if (adjustPosition) {
+      // hierarchicalDataがnullの場合は位置調整をスキップ
+      if (!state.hierarchicalData) {
+        return {
+          ...state,
+          elements: updatedElements,
+        };
+      }
+
       // layoutModeが存在する場合は使用、存在しない場合はdefault
       const layoutMode = state.layoutMode || 'default';
 
@@ -203,6 +222,7 @@ export const createSelectedElementHandler = (
           layoutMode,
           canvasWidth,
           canvasHeight,
+          state.hierarchicalData || null,
         ),
       };
     } else {
@@ -242,4 +262,5 @@ interface StateWithElements {
   zoomRatio: number;
   numberOfSections: number;
   layoutMode?: LayoutMode;
+  hierarchicalData?: HierarchicalStructure | null;
 }

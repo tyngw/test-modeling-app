@@ -5,6 +5,7 @@ import { getChildren, getChildrenFromHierarchy } from './element/elementHelpers'
 import { LayoutMode } from '../types/tabTypes';
 import { HierarchicalStructure } from '../types/hierarchicalTypes';
 import { findParentNodeInHierarchy } from './hierarchical/hierarchicalConverter';
+import { getAllElementsFromHierarchy } from './hierarchical/hierarchicalConverter';
 
 type ElementsMap = { [key: string]: Element };
 
@@ -17,7 +18,9 @@ const layoutNode = (
   layoutMode: LayoutMode = 'default',
   hierarchicalData: HierarchicalStructure | null = null,
 ): { newY: number; leftMaxY?: number; rightMaxY?: number } => {
-  debugLog(`[layoutNode]「${node.texts}」 id=${node.id}, depth=${depth}, startY=${startY} ---`);
+  debugLog(
+    `[layoutNode]「${node.texts}」 id=${node.id}, depth=${depth}, startY=${startY}, layoutMode=${layoutMode} ---`,
+  );
 
   // X座標の計算
   // 階層構造から親要素を取得
@@ -114,12 +117,29 @@ const layoutNode = (
         if (sortedChildren.length > 0) {
           const firstChild = sortedChildren[0];
           const lastChild = sortedChildren[sortedChildren.length - 1];
+          debugLog(
+            `[layoutNode] マインドマップ中央配置計算 - firstChild: id=${firstChild.id}, y=${firstChild.y}, height=${firstChild.height}`,
+          );
+          debugLog(
+            `[layoutNode] マインドマップ中央配置計算 - lastChild: id=${lastChild.id}, y=${lastChild.y}, height=${lastChild.height}`,
+          );
+
           const childrenMidY = (firstChild.y + lastChild.y + lastChild.height) / 2;
-          node.y = childrenMidY - node.height / 2;
+          debugLog(`[layoutNode] マインドマップ子要素中央Y座標: ${childrenMidY}`);
+
+          const parentOldY = node.y;
+          const newParentY = childrenMidY - node.height / 2;
+          node.y = newParentY;
+          debugLog(
+            `[layoutNode] マインドマップ親要素「${node.texts}」 id=${node.id} - Y座標更新: ${parentOldY} → ${node.y}`,
+          );
+
+          // 親要素の位置変更に伴う子要素の調整は行わない（絶対的な中央配置のため）
+          // maxChildBottomは子要素の実際の位置を基準に計算
+          maxChildBottom = Math.max(leftMaxY, rightMaxY);
         }
       }
 
-      maxChildBottom = Math.max(leftMaxY, rightMaxY);
       currentY = Math.max(maxChildBottom, node.y + node.height);
     } else {
       // 通常モード：従来通りの配置
@@ -137,12 +157,29 @@ const layoutNode = (
         maxChildBottom = Math.max(maxChildBottom, result.newY);
       }
 
+      // 親要素の中央配置を行った後、子要素の位置を再調整
       const firstChild = children[0];
       const lastChild = children[children.length - 1];
-      const childrenMidY = (firstChild.y + lastChild.y + lastChild.height) / 2;
-      node.y = childrenMidY - node.height / 2;
+      debugLog(
+        `[layoutNode] 通常モード中央配置計算 - firstChild: id=${firstChild.id}, y=${firstChild.y}, height=${firstChild.height}`,
+      );
+      debugLog(
+        `[layoutNode] 通常モード中央配置計算 - lastChild: id=${lastChild.id}, y=${lastChild.y}, height=${lastChild.height}`,
+      );
 
-      // Use maxChildBottom to ensure we don't overlap with any children
+      const childrenMidY = (firstChild.y + lastChild.y + lastChild.height) / 2;
+      debugLog(`[layoutNode] 通常モード子要素中央Y座標: ${childrenMidY}`);
+
+      const parentOldY = node.y;
+      const newParentY = childrenMidY - node.height / 2;
+      node.y = newParentY;
+      debugLog(
+        `[layoutNode] 通常モード親要素「${node.texts}」 id=${node.id} - Y座標更新: ${parentOldY} → ${node.y}`,
+      );
+
+      // 親要素の位置変更に伴う子要素の調整は行わない（絶対的な中央配置のため）
+      // maxChildBottomは子要素の実際の位置を基準に計算
+      maxChildBottom = Math.max(leftMaxY, rightMaxY);
       currentY = Math.max(maxChildBottom, node.y + node.height);
     }
     debugLog(
@@ -167,9 +204,19 @@ export const adjustElementPositions = (
   canvasHeight = 0,
   hierarchicalData: HierarchicalStructure | null = null,
 ): ElementsMap => {
+  // 呼び出し元を特定するためのスタックトレース
+  const stack = new Error().stack;
+  const callerLine = stack?.split('\n')[2]?.trim() || 'Unknown';
+
   debugLog(
-    `adjustElementPositions開始: 要素数=${Object.keys(elements).length}, モード=${layoutMode}`,
+    `adjustElementPositions開始: 要素数=${Object.keys(elements).length}, モード=${layoutMode}, 呼び出し元=${callerLine}`,
   );
+
+  // hierarchicalDataがnullの場合は早期リターン
+  if (!hierarchicalData) {
+    debugLog(`adjustElementPositions: hierarchicalDataがnullのため処理をスキップ`);
+    return elements;
+  }
 
   const updatedElements = { ...elements };
 
@@ -209,6 +256,13 @@ export const adjustElementPositions = (
       hierarchicalData,
     );
     currentY = result.newY + OFFSET.Y;
+
+    // layoutNode後に更新された座標をupdatedElementsに反映
+    updatedElements[rootElement.id] = rootElement;
+    const allElements = getAllElementsFromHierarchy(hierarchicalData);
+    allElements.forEach((element: Element) => {
+      updatedElements[element.id] = element;
+    });
   } else {
     // 通常モード：ルート要素を順番に配置
     for (const root of rootElements) {
@@ -223,6 +277,12 @@ export const adjustElementPositions = (
       );
       currentY = result.newY + OFFSET.Y;
     }
+
+    // layoutNode後に更新された座標をupdatedElementsに反映
+    const allElements = getAllElementsFromHierarchy(hierarchicalData);
+    allElements.forEach((element: Element) => {
+      updatedElements[element.id] = element;
+    });
   }
 
   debugLog(`adjustElementPositions終了`);

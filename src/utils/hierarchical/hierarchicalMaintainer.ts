@@ -2,6 +2,7 @@
 
 import { HierarchicalStructure, HierarchicalNode } from '../../types/hierarchicalTypes';
 import { ElementsMap } from '../../types/elementTypes';
+import { debugLog } from '../debugLogHelpers';
 
 /**
  * 既存の階層構造から親子関係を保持しながら要素を更新
@@ -13,6 +14,10 @@ export function updateHierarchyWithElementChanges(
   existingHierarchy: HierarchicalStructure,
   updatedElements: ElementsMap,
 ): HierarchicalStructure {
+  debugLog(
+    `[updateHierarchyWithElementChanges] 開始 - 更新対象要素数: ${Object.keys(updatedElements).length}`,
+  );
+
   // 深いコピーを作成
   const clonedHierarchy = JSON.parse(JSON.stringify(existingHierarchy)) as HierarchicalStructure;
 
@@ -27,9 +32,18 @@ export function updateHierarchyWithElementChanges(
     // 現在のノードの要素が更新されているかチェック
     const updatedElement = updatedElements[node.data.id];
     if (updatedElement) {
+      const oldY = node.data.y;
+      const newY = updatedElement.y;
+
       // 要素データを更新
       node.data = updatedElement;
       updated = true;
+
+      if (Math.abs(oldY - newY) > 0.1) {
+        debugLog(
+          `[updateHierarchyWithElementChanges] 要素「${node.data.texts}」 id=${node.data.id} - Y座標更新: ${oldY} → ${newY}`,
+        );
+      }
     }
 
     // 子ノードがある場合は再帰的に処理
@@ -45,8 +59,9 @@ export function updateHierarchyWithElementChanges(
   }
 
   // ルートから再帰的に更新
-  updateNodeRecursive(clonedHierarchy.root);
+  const wasUpdated = updateNodeRecursive(clonedHierarchy.root);
 
+  debugLog(`[updateHierarchyWithElementChanges] 完了 - 更新有無: ${wasUpdated}`);
   return clonedHierarchy;
 }
 
