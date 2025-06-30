@@ -8,14 +8,15 @@ export type ElementsMap = Record<string, Element>;
 
 /**
  * 新規要素作成時のオプション
+ * @description 階層構造ベースの要素作成オプション
  */
 export interface NewElementOptions {
   /** セクション数 */
   numSections?: number;
-  /** 親要素ID */
-  parentId?: string | null;
-  /** 要素の深さ */
-  depth?: number;
+  /** 追加先のノードID */
+  targetNodeId?: string | null;
+  /** 追加位置（兄弟要素の場合） */
+  targetPosition?: 'before' | 'after' | 'child';
   /** 要素の順序 */
   order?: number;
   /** 選択状態 */
@@ -68,18 +69,17 @@ export interface PositionAdjustmentOptions {
 
 /**
  * ドロップ処理情報
+ * @description 階層構造ベースのドロップ操作情報
  */
 export interface DropInfo {
   /** ドロップ対象の要素ID */
   id: string;
-  /** ドロップ前の親要素ID */
-  oldParentId: string;
-  /** ドロップ先の親要素ID */
-  newParentId: string;
+  /** ドロップ先のノードID */
+  targetNodeId: string;
+  /** ドロップ先のインデックス */
+  targetIndex?: number;
   /** ドロップ後の順序 */
   newOrder?: number;
-  /** ドロップ後の深さ */
-  depth?: number;
   /** ドロップ位置の種類 */
   position?: DropPosition;
 }

@@ -20,7 +20,7 @@ const DebugInfo: React.FC<DebugInfoProps> = ({
   dropPosition,
   isDraggedOrDescendant,
   siblingInfo,
-  elements,
+  elements: _elements,
 }) => {
   if (!isDevelopment || !isHovered) {
     return null;
@@ -86,21 +86,6 @@ const DebugInfo: React.FC<DebugInfoProps> = ({
               </td>
             </tr>
             <tr>
-              <td>parent</td>
-              <td>:</td>
-              <td>{element.parentId || 'root'}</td>
-            </tr>
-            <tr>
-              <td>depth</td>
-              <td>:</td>
-              <td>{element.depth}</td>
-            </tr>
-            <tr>
-              <td>children</td>
-              <td>:</td>
-              <td>{element.children}</td>
-            </tr>
-            <tr>
               <td>direction</td>
               <td>:</td>
               <td>{element.direction || 'none'}</td>
@@ -152,13 +137,6 @@ const DebugInfo: React.FC<DebugInfoProps> = ({
                     <td>child dir guess</td>
                     <td>:</td>
                     <td>Based on drop position</td>
-                  </tr>
-                )}
-                {element.parentId && (
-                  <tr>
-                    <td>parent dir</td>
-                    <td>:</td>
-                    <td>{elements[element.parentId]?.direction || 'none'}</td>
                   </tr>
                 )}
               </>

@@ -48,12 +48,6 @@ export interface Element {
   height: number;
   /** 各セクションの高さ */
   sectionHeights: number[];
-  /** 親要素のID (ルート要素の場合はnull) */
-  parentId: string | null;
-  /** 階層の深さ (ルート要素は1) */
-  depth: number;
-  /** 子要素の数 */
-  children: number;
   /** 編集モード中かどうか */
   editing: boolean;
   /** 選択されているかどうか */

@@ -60,7 +60,8 @@ export type AddElementAction =
   | {
       type: 'ADD_ELEMENTS_SILENT';
       payload: {
-        parentId?: string;
+        targetNodeId?: string;
+        targetPosition?: 'before' | 'after' | 'child';
         texts: string[];
         tentative: boolean;
         onError?: (message: string) => void;
@@ -74,7 +75,8 @@ export type AddElementAction =
   | {
       type: 'ADD_HIERARCHICAL_ELEMENTS';
       payload: {
-        parentId?: string;
+        targetNodeId?: string;
+        targetPosition?: 'before' | 'after' | 'child';
         hierarchicalItems: Array<{
           text: string;
           level: number;
@@ -89,8 +91,8 @@ export type DeleteElementAction = { type: 'DELETE_ELEMENT' };
 
 /** 仮置き要素の確認・キャンセルアクション */
 export type TentativeElementsAction =
-  | { type: 'CONFIRM_TENTATIVE_ELEMENTS'; payload: string } // parentId
-  | { type: 'CANCEL_TENTATIVE_ELEMENTS'; payload: string }; // parentId
+  | { type: 'CONFIRM_TENTATIVE_ELEMENTS'; payload: string } // targetNodeId
+  | { type: 'CANCEL_TENTATIVE_ELEMENTS'; payload: string }; // targetNodeId
 
 /** 要素の折りたたみアクション */
 export type CollapseExpandAction = { type: 'COLLAPSE_ELEMENT' } | { type: 'EXPAND_ELEMENT' };
@@ -113,8 +115,8 @@ export type DropElementAction = {
   type: 'DROP_ELEMENT';
   payload: {
     id: string;
-    newParentId: string | null;
-    newOrder: number;
+    targetNodeId: string | null;
+    targetIndex?: number;
     direction?: 'left' | 'right' | 'none';
   };
 };

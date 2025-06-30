@@ -2,7 +2,10 @@
 import { useStore } from './textUtils';
 import { renderHook, act } from '@testing-library/react';
 import { Element } from '../../types/types';
-import { getAllElementsFromHierarchy } from '../../utils/hierarchical/hierarchicalConverter';
+import {
+  getAllElementsFromHierarchy,
+  getChildrenFromHierarchy,
+} from '../../utils/hierarchical/hierarchicalConverter';
 import { HierarchicalStructure } from '../../types/hierarchicalTypes';
 
 // ヘルパー関数
@@ -72,11 +75,14 @@ describe('要素状態管理', () => {
     });
 
     const newState = result.current.state;
-    const allElements = getAllElements(newState);
-    const childElement = allElements.find((elm: Element) => elm.parentId === '1');
+    const childElements = newState.hierarchicalData
+      ? getChildrenFromHierarchy(newState.hierarchicalData, '1')
+      : [];
+    const childElement = childElements[0];
 
     expect(childElement).toBeDefined();
-    expect(childElement?.parentId).toBe('1');
+    // 階層構造で親子関係が正しく設定されていることを確認
+    expect(childElements.length).toBe(1);
   });
 
   it('単純なテキスト更新ができることを確認する', () => {

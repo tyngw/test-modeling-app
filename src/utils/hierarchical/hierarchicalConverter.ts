@@ -5,6 +5,16 @@ import { ElementsMap } from '../../types/elementTypes';
 import { HierarchicalNode, HierarchicalStructure } from '../../types/hierarchicalTypes';
 
 /**
+ * 古いElement型（後方互換性のため）
+ * @deprecated 新しい階層構造ベースのロジックに移行中
+ */
+interface LegacyElement extends Element {
+  parentId?: string | null;
+  depth?: number;
+  children?: number;
+}
+
+/**
  * フラット構造から階層構造への変換
  * @param elements フラット構造の要素マップ
  * @param version バージョン情報
@@ -14,31 +24,41 @@ export function convertFlatToHierarchical(
   elements: ElementsMap,
   version = '1.4.43',
 ): HierarchicalStructure | null {
-  const elementArray = Object.values(elements);
+  const elementArray = Object.values(elements) as LegacyElement[];
+
+  console.log('convertFlatToHierarchical - elementArray:', elementArray);
 
   if (elementArray.length === 0) {
+    console.log('convertFlatToHierarchical - No elements found, returning null');
     return null;
   }
 
-  // ルート要素を見つける
-  const rootElement = elementArray.find((element) => element.parentId === null);
+  // ルート要素を見つける (parentId が null または undefined の要素)
+  const rootElement = elementArray.find(
+    (element) => element.parentId === null || element.parentId === undefined,
+  );
+
+  console.log('convertFlatToHierarchical - rootElement:', rootElement);
 
   if (!rootElement) {
-    // ルート要素が見つかりません
+    // ルート要素が見つからない場合はnullを返す
+    console.log('convertFlatToHierarchical - No root element found, returning null');
     return null;
   }
 
   // 子要素のマップを作成（効率的な検索のため）
-  const childrenMap = new Map<string, Element[]>();
+  const childrenMap = new Map<string, LegacyElement[]>();
 
   elementArray.forEach((element) => {
-    if (element.parentId) {
+    if (element.parentId && element.parentId !== null) {
       if (!childrenMap.has(element.parentId)) {
         childrenMap.set(element.parentId, []);
       }
       childrenMap.get(element.parentId)!.push(element);
     }
   });
+
+  console.log('convertFlatToHierarchical - childrenMap:', childrenMap);
 
   // 階層構造では配列の順序をそのまま保持（ソートしない）
   // 各親の子要素は配列の順序通りに管理される
@@ -48,7 +68,7 @@ export function convertFlatToHierarchical(
    * @param element 現在の要素
    * @returns 階層ノード
    */
-  function buildHierarchicalNode(element: Element): HierarchicalNode {
+  function buildHierarchicalNode(element: LegacyElement): HierarchicalNode {
     const children = childrenMap.get(element.id) || [];
 
     const node: HierarchicalNode = {
@@ -68,6 +88,8 @@ export function convertFlatToHierarchical(
     version,
   };
 
+  console.log('convertFlatToHierarchical - final result:', result);
+
   return result;
 }
 
@@ -82,18 +104,25 @@ export function convertHierarchicalToFlat(hierarchical: HierarchicalStructure): 
   /**
    * 再帰的にノードを展開してフラット構造に変換
    * @param node 階層ノード
+   * @param parentId 親ノードのID（null の場合はルート）
    */
-  function flattenNode(node: HierarchicalNode): void {
-    // ノードのデータを要素マップに追加
-    elements[node.data.id] = node.data;
+  function flattenNode(node: HierarchicalNode, parentId: string | null = null): void {
+    // ノードのデータを要素マップに追加（parentId情報を含める）
+    const elementWithParentId = {
+      ...node.data,
+      parentId, // 親子関係の情報を保持
+    } as LegacyElement; // LegacyElement型として扱う
+
+    elements[node.data.id] = elementWithParentId;
 
     // 子ノードがある場合は再帰的に処理
     if (node.children && node.children.length > 0) {
-      node.children.forEach(flattenNode);
+      node.children.forEach((child) => flattenNode(child, node.data.id));
     }
   }
 
-  flattenNode(hierarchical.root);
+  // ルートノードから開始（parentIdはnull）
+  flattenNode(hierarchical.root, null);
   return elements;
 }
 
@@ -166,28 +195,30 @@ export function validateHierarchicalStructure(hierarchical: HierarchicalStructur
     }
     visitedIds.add(node.data.id);
 
-    // depthの整合性チェック
-    if (node.data.depth !== depth) {
+    // depthの整合性チェック（Legacy要素の場合のみ）
+    const legacyData = node.data as LegacyElement;
+    if (legacyData.depth !== undefined && legacyData.depth !== depth) {
       errors.push(
-        `ノード ${node.data.id} のdepth値が不正です。期待値: ${depth}, 実際の値: ${node.data.depth}`,
+        `ノード ${node.data.id} のdepth値が不正です。期待値: ${depth}, 実際の値: ${legacyData.depth}`,
       );
     }
 
-    // 子要素数の整合性チェック
+    // 子要素数の整合性チェック（Legacy要素の場合のみ）
     const childrenCount = node.children ? node.children.length : 0;
-    if (node.data.children !== childrenCount) {
+    if (legacyData.children !== undefined && legacyData.children !== childrenCount) {
       errors.push(
-        `ノード ${node.data.id} の子要素数が不正です。期待値: ${childrenCount}, 実際の値: ${node.data.children}`,
+        `ノード ${node.data.id} の子要素数が不正です。期待値: ${childrenCount}, 実際の値: ${legacyData.children}`,
       );
     }
 
     // 子ノードの再帰的バリデーション
     if (node.children && node.children.length > 0) {
       node.children.forEach((child, _index) => {
-        // parentIdの整合性チェック
-        if (child.data.parentId !== node.data.id) {
+        // parentIdの整合性チェック（Legacy要素の場合のみ）
+        const childLegacyData = child.data as LegacyElement;
+        if (childLegacyData.parentId !== undefined && childLegacyData.parentId !== node.data.id) {
           errors.push(
-            `子ノード ${child.data.id} のparentIdが不正です。期待値: ${node.data.id}, 実際の値: ${child.data.parentId}`,
+            `子ノード ${child.data.id} のparentIdが不正です。期待値: ${node.data.id}, 実際の値: ${childLegacyData.parentId}`,
           );
         }
         validateNode(child, depth + 1);
@@ -382,4 +413,78 @@ export function getAllElementsFromHierarchy(hierarchical: HierarchicalStructure 
   }
 
   return convertHierarchicalToArray(hierarchical);
+}
+
+/**
+ * 階層構造から指定ノードの子要素を取得
+ * @param hierarchical 階層構造
+ * @param nodeId ノードID
+ * @returns 子要素の配列
+ */
+export function getChildrenFromHierarchy(
+  hierarchical: HierarchicalStructure | null,
+  nodeId: string,
+): Element[] {
+  if (!hierarchical) {
+    return [];
+  }
+
+  const node = findNodeInHierarchy(hierarchical, nodeId);
+  if (!node || !node.children) {
+    return [];
+  }
+
+  return node.children.map((child) => child.data);
+}
+
+/**
+ * 階層構造から指定ノードの深さを取得
+ * @param hierarchical 階層構造
+ * @param nodeId ノードID
+ * @returns 深さ（ルートノードは0、見つからない場合は-1）
+ */
+export function getDepthFromHierarchy(
+  hierarchical: HierarchicalStructure | null,
+  nodeId: string,
+): number {
+  if (!hierarchical) {
+    return -1;
+  }
+
+  function searchDepth(node: HierarchicalNode, currentDepth: number): number {
+    if (node.data.id === nodeId) {
+      return currentDepth;
+    }
+
+    if (node.children) {
+      for (const child of node.children) {
+        const depth = searchDepth(child, currentDepth + 1);
+        if (depth >= 0) {
+          return depth;
+        }
+      }
+    }
+
+    return -1;
+  }
+
+  return searchDepth(hierarchical.root, 0);
+}
+
+/**
+ * 階層構造から指定ノードの子要素数を取得
+ * @param hierarchical 階層構造
+ * @param nodeId ノードID
+ * @returns 子要素数
+ */
+export function getChildrenCountFromHierarchy(
+  hierarchical: HierarchicalStructure | null,
+  nodeId: string,
+): number {
+  if (!hierarchical) {
+    return 0;
+  }
+
+  const node = findNodeInHierarchy(hierarchical, nodeId);
+  return node?.children?.length || 0;
 }

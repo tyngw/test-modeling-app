@@ -28,25 +28,74 @@ const createInitialTabState = (currentSections?: number): TabState => {
   const numSections = currentSections ?? NUMBER_OF_SECTIONS;
   const defaultLayoutMode: LayoutMode = 'default';
 
-  const initialElements = {
-    [newRootId]: {
-      ...createNewElement({
-        numSections: numSections,
-      }),
-      id: newRootId,
-      x: DEFAULT_POSITION.X,
-      y: DEFAULT_POSITION.Y,
-      editing: false,
-    },
+  // ルート要素を作成（変換用にparentIdを追加）
+  const rootElement = {
+    ...createNewElement({
+      numSections: numSections,
+      selected: true, // 初期ルート要素は選択状態にする
+      editing: false, // 編集状態はfalse
+    }),
+    id: newRootId,
+    x: DEFAULT_POSITION.X,
+    y: DEFAULT_POSITION.Y,
+    editing: false,
   };
 
+  // 変換用にparentIdを追加したLegacyElement型として扱う
+  const legacyRootElement = {
+    ...rootElement,
+    parentId: null as string | null,
+  };
+
+  const initialElements = {
+    [newRootId]: legacyRootElement,
+  };
+
+  console.log('createInitialTabState - initialElements:', initialElements);
+  console.log('createInitialTabState - legacyRootElement:', legacyRootElement);
+
   const hierarchicalData = convertFlatToHierarchical(initialElements);
+
+  console.log('createInitialTabState - hierarchicalData:', hierarchicalData);
+
+  // hierarchicalDataがnullの場合の追加チェック
+  if (!hierarchicalData) {
+    console.error('Failed to create hierarchical data for new tab');
+    // フォールバック：直接階層構造を作成
+    const fallbackHierarchicalData = {
+      root: {
+        data: rootElement,
+      },
+      version: '1.4.43',
+    };
+
+    console.log(
+      'createInitialTabState - using fallback hierarchicalData:',
+      fallbackHierarchicalData,
+    );
+
+    return {
+      id: uuidv4(),
+      name: '無題',
+      isSaved: false,
+      lastSavedElements: JSON.stringify({ [newRootId]: rootElement }),
+      state: {
+        hierarchicalData: fallbackHierarchicalData,
+        width: typeof window !== 'undefined' ? window.innerWidth : 0,
+        height: typeof window !== 'undefined' ? window.innerHeight : 0,
+        zoomRatio: 1,
+        numberOfSections: numSections,
+        layoutMode: defaultLayoutMode,
+      },
+      layoutMode: defaultLayoutMode,
+    };
+  }
 
   return {
     id: uuidv4(),
     name: '無題',
     isSaved: false,
-    lastSavedElements: JSON.stringify(initialElements),
+    lastSavedElements: JSON.stringify({ [newRootId]: rootElement }),
     state: {
       hierarchicalData,
       width: typeof window !== 'undefined' ? window.innerWidth : 0,

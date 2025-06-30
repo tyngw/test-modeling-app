@@ -1,7 +1,11 @@
 import { renderHook, act } from '@testing-library/react';
 import { useStore } from './textUtils';
 import { Element } from '../../types/types';
-import { getAllElementsFromHierarchy } from '../../utils/hierarchical/hierarchicalConverter';
+import {
+  getAllElementsFromHierarchy,
+  getChildrenFromHierarchy,
+  findParentNodeInHierarchy,
+} from '../../utils/hierarchical/hierarchicalConverter';
 import { HierarchicalStructure } from '../../types/hierarchicalTypes';
 
 // ヘルパー関数
@@ -40,11 +44,17 @@ describe('ドラッグ＆ドロップ', () => {
     });
 
     const state = result.current.state;
-    const allElements = getAllElements(state);
-    const childElement = allElements.find((elm: Element) => elm.parentId === '1');
+    const childElements = state.hierarchicalData
+      ? getChildrenFromHierarchy(state.hierarchicalData, '1')
+      : [];
+    const childElement = childElements[0];
 
     expect(childElement).toBeDefined();
-    expect(childElement?.parentId).toBe('1');
+    // 階層構造で親子関係が正しく設定されていることを確認
+    if (state.hierarchicalData && childElement) {
+      const parentNode = findParentNodeInHierarchy(state.hierarchicalData, childElement.id);
+      expect(parentNode?.data.id).toBe('1');
+    }
   });
 
   it('親ノードを子ノードにドロップできないことを確認する', () => {
@@ -63,7 +73,10 @@ describe('ドラッグ＆ドロップ', () => {
     const state = result.current.state;
     const allElements = getAllElements(state);
     const parentElement = allElements.find((elm) => elm.id === '1') as Element;
-    const childElement = allElements.find((elm: Element) => elm.parentId === '1') as Element;
+    const childElements = state.hierarchicalData
+      ? getChildrenFromHierarchy(state.hierarchicalData, '1')
+      : [];
+    const childElement = childElements[0] as Element;
 
     // 親要素を子要素にドロップしようとする（これは無効な操作）
     act(() => {
@@ -71,8 +84,8 @@ describe('ドラッグ＆ドロップ', () => {
         type: 'DROP_ELEMENT',
         payload: {
           id: parentElement.id,
-          newParentId: childElement.id,
-          newOrder: 0,
+          targetNodeId: childElement.id,
+          targetIndex: 0,
         },
       });
     });
@@ -83,9 +96,22 @@ describe('ドラッグ＆ドロップ', () => {
     const childAfter = afterElements.find((elm) => elm.id === childElement.id);
 
     // 状態が変化していないか、適切に処理されていることを確認
-    // 親要素は依然として子要素の親である
-    expect(parentAfter?.parentId).toBeNull();
-    expect(childAfter?.parentId).toBe(parentElement.id);
+    // 親要素は依然としてルート要素である
+    if (afterState.hierarchicalData && parentAfter) {
+      const parentNodeAfter = findParentNodeInHierarchy(
+        afterState.hierarchicalData,
+        parentAfter.id,
+      );
+      expect(parentNodeAfter).toBeNull(); // ルート要素は親を持たない
+    }
+    // 子要素は依然として親要素の子である
+    if (afterState.hierarchicalData && childAfter) {
+      const childParentNodeAfter = findParentNodeInHierarchy(
+        afterState.hierarchicalData,
+        childAfter.id,
+      );
+      expect(childParentNodeAfter?.data.id).toBe(parentElement.id);
+    }
   });
 
   it('ノードを自身にドロップできないことを確認する', () => {
@@ -98,8 +124,8 @@ describe('ドラッグ＆ドロップ', () => {
         type: 'DROP_ELEMENT',
         payload: {
           id: '1',
-          newParentId: '1',
-          newOrder: 0,
+          targetNodeId: '1',
+          targetIndex: 0,
         },
       });
     });
@@ -108,8 +134,11 @@ describe('ドラッグ＆ドロップ', () => {
     const finalElements = getAllElements(finalState);
     const finalElement = finalElements.find((elm) => elm.id === '1');
 
-    // 状態が変化していない
-    expect(finalElement?.parentId).toBeNull();
+    // 状態が変化していない（ルート要素は親を持たない）
+    if (finalState.hierarchicalData && finalElement) {
+      const parentNode = findParentNodeInHierarchy(finalState.hierarchicalData, finalElement.id);
+      expect(parentNode).toBeNull();
+    }
   });
 
   it('複数の子要素が正しく追加されることを確認', () => {
@@ -128,8 +157,9 @@ describe('ドラッグ＆ドロップ', () => {
     }
 
     const finalState = result.current.state;
-    const finalElements = getAllElements(finalState);
-    const finalChildren = finalElements.filter((e) => e.parentId === '1');
+    const finalChildren = finalState.hierarchicalData
+      ? getChildrenFromHierarchy(finalState.hierarchicalData, '1')
+      : [];
 
     // 3つの子要素が追加されていることを確認
     expect(finalChildren.length).toBe(3);

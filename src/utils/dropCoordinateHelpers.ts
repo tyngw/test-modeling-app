@@ -1,4 +1,6 @@
 import { Element as CanvasElement, DropPosition, DirectionType } from '../types/types';
+import { HierarchicalStructure } from '../types/hierarchicalTypes';
+import { findParentNodeInHierarchy } from './hierarchical/hierarchicalConverter';
 import { OFFSET } from '../config/elementSettings';
 
 interface DropCoordinates {
@@ -8,6 +10,7 @@ interface DropCoordinates {
 
 interface CalculateDropCoordinatesParams {
   elements: Record<string, CanvasElement>;
+  hierarchicalData: HierarchicalStructure | null;
   currentDropTarget: CanvasElement;
   draggingElement: CanvasElement;
   dropPosition: DropPosition;
@@ -26,6 +29,7 @@ interface CalculateDropCoordinatesParams {
  */
 export const calculateDropCoordinates = ({
   elements,
+  hierarchicalData,
   currentDropTarget,
   draggingElement,
   dropPosition,
@@ -40,8 +44,13 @@ export const calculateDropCoordinates = ({
   // 要素の方向を取得 - passedDirectionが指定されている場合はそれを最優先
   const direction =
     passedDirection || dropTargetDirection || currentDropTarget.direction || 'right';
+
+  // 階層構造からルート要素かどうかを判定
   const isRootInMindmap =
-    currentDropTarget.direction === 'none' && currentDropTarget.parentId === null;
+    currentDropTarget.direction === 'none' &&
+    (hierarchicalData
+      ? findParentNodeInHierarchy(hierarchicalData, currentDropTarget.id) === null
+      : false);
 
   console.log('[calculateDropCoordinates] Input:', {
     targetId: currentDropTarget.id,
@@ -121,7 +130,10 @@ export const calculateDropCoordinates = ({
     return { x, y };
   } else if (dropPosition === 'between' || dropPosition === 'sibling') {
     // 兄弟要素として追加する場合（between/sibling）
-    const parentElement = currentDropTarget.parentId ? elements[currentDropTarget.parentId] : null;
+    const parentNode = hierarchicalData
+      ? findParentNodeInHierarchy(hierarchicalData, currentDropTarget.id)
+      : null;
+    const parentElement = parentNode ? elements[parentNode.data.id] : null;
 
     if (parentElement) {
       // 親要素がある場合は、親の方向に応じて配置

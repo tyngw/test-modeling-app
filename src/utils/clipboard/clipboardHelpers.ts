@@ -1,6 +1,8 @@
 // src/utils/clipboard/clipboardHelpers.ts
 import { Element } from '../../types/types';
 import { ElementsMap } from '../../types/elementTypes';
+import { HierarchicalStructure } from '../../types/hierarchicalTypes';
+import { getChildrenFromHierarchy } from '../hierarchical/hierarchicalConverter';
 
 // クリップボードでの要素データ識別用マーカー
 const CLIPBOARD_MARKER_COPY = '<!-- MODELING_APP_COPY_DATA:';
@@ -53,12 +55,17 @@ const parseClipboardElementData = (
 /**
  * 要素データをクリップボード用のテキストに変換する
  * @param elements 要素マップ
+ * @param hierarchicalData 階層構造データ
  * @param type 'copy' または 'cut'
  * @returns クリップボード用のテキスト
  */
-const createClipboardText = (elements: ElementsMap, type: 'copy' | 'cut'): string => {
+const createClipboardText = (
+  elements: ElementsMap,
+  hierarchicalData: HierarchicalStructure | null,
+  type: 'copy' | 'cut',
+): string => {
   const getElementText = (element: Element, depth = 0): string => {
-    const children = Object.values(elements).filter((el) => el.parentId === element.id);
+    const children = hierarchicalData ? getChildrenFromHierarchy(hierarchicalData, element.id) : [];
     const tabs = '\t'.repeat(depth);
     let result = `${tabs}${element.texts[0] || ''}`;
 
@@ -101,26 +108,26 @@ const createClipboardText = (elements: ElementsMap, type: 'copy' | 'cut'): strin
  * 指定された要素とその子要素をすべて含む新しい要素マップを作成する
  *
  * @param elements 元の要素マップ
+ * @param hierarchicalData 階層構造データ
  * @param targetElement 選択された要素
  * @returns 選択された要素とその子要素を含むマップ
  */
 export const getSelectedAndChildren = (
   elements: ElementsMap,
+  hierarchicalData: HierarchicalStructure | null,
   targetElement: Element,
 ): ElementsMap => {
   const cutElements: ElementsMap = {};
-  const elementList = Object.values(elements);
-  const rootCopy = { ...targetElement, parentId: null, selected: true };
+  const rootCopy = { ...targetElement, selected: true };
   cutElements[rootCopy.id] = rootCopy;
 
   const collectChildren = (parentId: string) => {
-    elementList
-      .filter((e) => e.parentId === parentId)
-      .forEach((child) => {
-        const childCopy = { ...child, selected: false };
-        cutElements[childCopy.id] = childCopy;
-        collectChildren(child.id);
-      });
+    const children = hierarchicalData ? getChildrenFromHierarchy(hierarchicalData, parentId) : [];
+    children.forEach((child) => {
+      const childCopy = { ...child, selected: false };
+      cutElements[childCopy.id] = childCopy;
+      collectChildren(child.id);
+    });
   };
 
   collectChildren(targetElement.id);
@@ -132,10 +139,14 @@ export const getSelectedAndChildren = (
  * 要素データを特別なマーカーと共にクリップボードに保存
  *
  * @param elements コピーする要素のマップ
+ * @param hierarchicalData 階層構造データ
  * @returns Promise<boolean> コピーが成功したかどうか
  */
-export const copyToClipboard = async (elements: ElementsMap): Promise<boolean> => {
-  const textToCopy = createClipboardText(elements, 'copy');
+export const copyToClipboard = async (
+  elements: ElementsMap,
+  hierarchicalData: HierarchicalStructure | null,
+): Promise<boolean> => {
+  const textToCopy = createClipboardText(elements, hierarchicalData, 'copy');
 
   // 空のテキストの場合は失敗として扱う
   if (!textToCopy || textToCopy.trim() === '') {
@@ -161,10 +172,14 @@ export const copyToClipboard = async (elements: ElementsMap): Promise<boolean> =
  * 要素を切り取ってクリップボードに保存する
  *
  * @param elements 切り取る要素のマップ
+ * @param hierarchicalData 階層構造データ
  * @returns Promise<boolean> 切り取りが成功したかどうか
  */
-export const cutToClipboard = async (elements: ElementsMap): Promise<boolean> => {
-  const textToCopy = createClipboardText(elements, 'cut');
+export const cutToClipboard = async (
+  elements: ElementsMap,
+  hierarchicalData: HierarchicalStructure | null,
+): Promise<boolean> => {
+  const textToCopy = createClipboardText(elements, hierarchicalData, 'cut');
 
   // 空のテキストの場合は失敗として扱う
   if (!textToCopy || textToCopy.trim() === '') {

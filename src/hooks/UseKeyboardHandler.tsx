@@ -45,7 +45,8 @@ export const useKeyboardHandler = ({ dispatch, elements, addToast }: UseKeyboard
           dispatch({
             type: 'ADD_HIERARCHICAL_ELEMENTS',
             payload: {
-              parentId: selectedElement.id,
+              targetNodeId: selectedElement.id,
+              targetPosition: 'child',
               hierarchicalItems: hierarchicalData,
               onError: (message: string) => {
                 addToast(`エラー: ${message}`);

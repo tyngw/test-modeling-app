@@ -21,54 +21,60 @@ export function addElementToHierarchy(
   parentId: string | null,
   newElement: Element,
 ): HierarchicalOperationResult {
+  console.log(`[addElementToHierarchy] 開始 - parentId: ${parentId}, newElement:`, newElement);
+  console.log(`[addElementToHierarchy] 現在の階層構造:`, hierarchical);
+
   // structuredCloneの代わりにJSON.parse(JSON.stringify())を使用
   const clonedHierarchy = JSON.parse(JSON.stringify(hierarchical)) as HierarchicalStructure;
 
   if (parentId === null) {
+    console.log(`[addElementToHierarchy] ルート要素の置き換え（通常は発生しない）`);
     // ルート要素の置き換え（通常は発生しない）
     clonedHierarchy.root = {
       data: newElement,
       children: clonedHierarchy.root.children,
     };
   } else {
+    console.log(`[addElementToHierarchy] 親ノード検索開始 - parentId: ${parentId}`);
     // 親ノードを検索
     const parentNode = findNodeInHierarchy(clonedHierarchy, parentId);
+    console.log(`[addElementToHierarchy] 親ノード検索結果:`, parentNode);
+
     if (!parentNode) {
-      throw new Error(`親ノード ${parentId} が見つかりません`);
+      const error = `親ノード ${parentId} が見つかりません`;
+      console.error(`[addElementToHierarchy] エラー: ${error}`);
+      throw new Error(error);
     }
 
-    // 既存の子要素の最大Y座標を取得して、新しい要素を末尾に配置
-    // let maxY = parentNode.data.y || 0;
-    // if (parentNode.children && parentNode.children.length > 0) {
-    //   maxY = Math.max(...parentNode.children.map((child) => child.data.y || 0));
-    //   // 既存の子要素の下に配置するため、最大Y座標に要素の高さ分を加える
-    //   maxY += (parentNode.children[parentNode.children.length - 1]?.data.height || 60) + 20;
-    // } else {
-    //   // 初回の子要素の場合は、親要素のY座標の下に配置
-    //   maxY += (parentNode.data.height || 60) + 20;
-    // }
-
-    // // 新しい要素のY座標を設定
-    // newElement.y = maxY;
+    console.log(
+      `[addElementToHierarchy] 親ノードの現在の子要素数: ${parentNode.children?.length || 0}`,
+    );
 
     // 新しいノードを作成
     const newNode: HierarchicalNode = {
       data: newElement,
     };
+    console.log(`[addElementToHierarchy] 新しいノード作成:`, newNode);
 
     // 親ノードに子として追加
     if (!parentNode.children) {
       parentNode.children = [];
+      console.log(`[addElementToHierarchy] 親ノードにchildren配列を初期化`);
     }
     parentNode.children.push(newNode);
+    console.log(
+      `[addElementToHierarchy] 子要素追加完了 - 新しい子要素数: ${parentNode.children.length}`,
+    );
 
-    // 親ノードのchildren数を更新
-    parentNode.data.children = parentNode.children.length;
+    // 階層構造のchildren配列で管理するため、data.childrenの更新は不要
   }
 
-  return {
+  const result = {
     hierarchicalData: clonedHierarchy,
   };
+
+  console.log(`[addElementToHierarchy] 完了 - 結果:`, result);
+  return result;
 }
 
 /**
@@ -101,8 +107,7 @@ export function deleteElementFromHierarchy(
 
   parentNode.children.splice(targetIndex, 1);
 
-  // 親ノードのchildren数を更新
-  parentNode.data.children = parentNode.children.length;
+  // 階層構造のchildren配列で管理するため、data.childrenの更新は不要
 
   return {
     hierarchicalData: clonedHierarchy,
@@ -160,7 +165,7 @@ export function moveElementInHierarchy(
     const oldIndex = oldParentNode.children.findIndex((child) => child.data.id === elementId);
     if (oldIndex !== -1) {
       oldParentNode.children.splice(oldIndex, 1);
-      oldParentNode.data.children = oldParentNode.children.length;
+      // 階層構造のchildren配列で管理するため、data.childrenの更新は不要
     }
   }
 
@@ -171,7 +176,7 @@ export function moveElementInHierarchy(
       clonedHierarchy.root.children = [];
     }
     clonedHierarchy.root.children.splice(newOrder, 0, targetNode);
-    clonedHierarchy.root.data.children = clonedHierarchy.root.children.length;
+    // 階層構造のchildren配列で管理するため、data.childrenの更新は不要
   } else {
     const newParentNode = findNodeInHierarchy(clonedHierarchy, newParentId);
     if (!newParentNode) {
@@ -185,15 +190,9 @@ export function moveElementInHierarchy(
     // 指定位置に挿入
     const insertIndex = Math.min(newOrder, newParentNode.children.length);
     newParentNode.children.splice(insertIndex, 0, targetNode);
-    newParentNode.data.children = newParentNode.children.length;
   }
 
-  // 移動した要素のparentIdと深度を更新
-  targetNode.data.parentId = newParentId;
-  updateDepthRecursive(
-    targetNode,
-    newParentId ? findNodeInHierarchy(clonedHierarchy, newParentId)!.data.depth + 1 : 1,
-  );
+  // 移動が完了（深度は階層構造から動的に計算されます）
 
   return {
     hierarchicalData: clonedHierarchy,
@@ -336,19 +335,6 @@ export function setSelectionInHierarchy(
   return {
     hierarchicalData: clonedHierarchy,
   };
-}
-
-/**
- * 深度を再帰的に更新
- * @param node ノード
- * @param depth 新しい深度
- */
-function updateDepthRecursive(node: HierarchicalNode, depth: number): void {
-  node.data.depth = depth;
-
-  if (node.children) {
-    node.children.forEach((child) => updateDepthRecursive(child, depth + 1));
-  }
 }
 
 /**
