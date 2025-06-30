@@ -164,9 +164,14 @@ const isDropElementPayload = (payload: unknown): payload is DropElementPayload =
     typeof payload === 'object' &&
     payload !== null &&
     'id' in payload &&
-    'newOrder' in payload &&
     typeof p.id === 'string' &&
-    typeof p.newOrder === 'number' &&
+    // targetNodeId は省略可能 (nullも許可)
+    (('targetNodeId' in payload &&
+      (typeof p.targetNodeId === 'string' || p.targetNodeId === null)) ||
+      !('targetNodeId' in payload)) &&
+    // targetIndex は省略可能
+    (('targetIndex' in payload && typeof p.targetIndex === 'number') ||
+      !('targetIndex' in payload)) &&
     // direction は省略可能なので存在チェックのみ
     (('direction' in payload && typeof p.direction === 'string') || !('direction' in payload))
   );

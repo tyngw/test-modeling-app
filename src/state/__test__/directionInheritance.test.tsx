@@ -1,34 +1,15 @@
 import { renderHook, act } from '@testing-library/react';
 import { useStore } from './textUtils';
 import { Element } from '../../types/types';
-import {
-  getAllElementsFromHierarchy,
-  getChildrenFromHierarchy,
-} from '../../utils/hierarchical/hierarchicalConverter';
 import { HierarchicalStructure } from '../../types/hierarchicalTypes';
+import { getAllElementsFromHierarchy } from '../../utils/hierarchical/hierarchicalConverter';
+import { getChildrenFromHierarchy } from '../../utils/element/elementHelpers';
 
-// ヘルパー関数
-const getAllElements = (state: { hierarchicalData: HierarchicalStructure | null }): Element[] => {
-  return state.hierarchicalData ? getAllElementsFromHierarchy(state.hierarchicalData) : [];
-};
-
-describe('Direction Inheritance Tests', () => {
-  let mockDateNow: jest.SpyInstance;
-
-  beforeEach(() => {
-    // テスト間の状態をクリーンアップ
-    localStorage.clear();
-    sessionStorage.clear();
-
-    // Date.now() をモック
-    mockDateNow = jest.spyOn(Date, 'now');
-    let counter = 1750808871955;
-    mockDateNow.mockImplementation(() => counter++);
-  });
-
-  afterEach(() => {
-    mockDateNow.mockRestore();
-  });
+describe('direction inheritance', () => {
+  // テスト用のヘルパー関数
+  const getAllElements = (state: { hierarchicalData: HierarchicalStructure | null }): Element[] => {
+    return state.hierarchicalData ? getAllElementsFromHierarchy(state.hierarchicalData) : [];
+  };
 
   describe('ADD_ELEMENT direction inheritance', () => {
     it('direction:leftの要素を選択して子要素を追加すると、direction:leftが継承される', () => {
@@ -61,8 +42,8 @@ describe('Direction Inheritance Tests', () => {
           type: 'DROP_ELEMENT',
           payload: {
             id: firstChild.id,
-            newParentId: rootId,
-            newOrder: 0,
+            targetNodeId: rootId,
+            targetIndex: 0,
             direction: 'left' as const,
           },
         });
@@ -85,10 +66,10 @@ describe('Direction Inheritance Tests', () => {
 
       // 新しく追加された子要素を取得
       state = result.current.state;
-      const newAllElements = getAllElements(state);
-      const newChild = newAllElements.find(
-        (elm: Element) => elm.parentId === firstChild.id,
-      ) as Element;
+      const newChildElements = state.hierarchicalData
+        ? getChildrenFromHierarchy(state.hierarchicalData, firstChild.id)
+        : [];
+      const newChild = newChildElements[0] as Element;
 
       expect(newChild).toBeDefined();
       expect(newChild.direction).toBe('left'); // 親のdirection:leftが継承されている
@@ -112,8 +93,10 @@ describe('Direction Inheritance Tests', () => {
 
       // 最初の子要素を取得
       let state = result.current.state;
-      const allElements = getAllElements(state);
-      const firstChild = allElements.find((elm: Element) => elm.parentId === rootId) as Element;
+      const childElements = state.hierarchicalData
+        ? getChildrenFromHierarchy(state.hierarchicalData, rootId)
+        : [];
+      const firstChild = childElements[0] as Element;
       expect(firstChild).toBeDefined();
 
       // 最初の子要素のdirectionをrightに変更（DROP_ELEMENTを模擬）
@@ -122,8 +105,8 @@ describe('Direction Inheritance Tests', () => {
           type: 'DROP_ELEMENT',
           payload: {
             id: firstChild.id,
-            newParentId: rootId,
-            newOrder: 0,
+            targetNodeId: rootId,
+            targetIndex: 0,
             direction: 'right' as const,
           },
         });
@@ -146,10 +129,10 @@ describe('Direction Inheritance Tests', () => {
 
       // 新しく追加された子要素を取得
       state = result.current.state;
-      const newAllElements = getAllElements(state);
-      const newChild = newAllElements.find(
-        (elm: Element) => elm.parentId === firstChild.id,
-      ) as Element;
+      const newChildElements = state.hierarchicalData
+        ? getChildrenFromHierarchy(state.hierarchicalData, firstChild.id)
+        : [];
+      const newChild = newChildElements[0] as Element;
 
       expect(newChild).toBeDefined();
       expect(newChild.direction).toBe('right'); // 親のdirection:rightが継承されている
@@ -177,8 +160,10 @@ describe('Direction Inheritance Tests', () => {
 
       // 新しく追加された子要素を取得
       state = result.current.state;
-      const newAllElements = getAllElements(state);
-      const newChild = newAllElements.find((elm: Element) => elm.parentId === rootId) as Element;
+      const childElements = state.hierarchicalData
+        ? getChildrenFromHierarchy(state.hierarchicalData, rootId)
+        : [];
+      const newChild = childElements[0] as Element;
 
       expect(newChild).toBeDefined();
       expect(newChild.direction).toBe('right'); // direction:noneの場合、子要素はrightが設定される
@@ -204,8 +189,10 @@ describe('Direction Inheritance Tests', () => {
 
       // 最初の子要素を取得
       let state = result.current.state;
-      const allElements = getAllElements(state);
-      const firstChild = allElements.find((elm: Element) => elm.parentId === rootId) as Element;
+      const childElements = state.hierarchicalData
+        ? getChildrenFromHierarchy(state.hierarchicalData, rootId)
+        : [];
+      const firstChild = childElements[0] as Element;
       expect(firstChild).toBeDefined();
 
       // 最初の子要素のdirectionをleftに変更
@@ -214,8 +201,8 @@ describe('Direction Inheritance Tests', () => {
           type: 'DROP_ELEMENT',
           payload: {
             id: firstChild.id,
-            newParentId: rootId,
-            newOrder: 0,
+            targetNodeId: rootId,
+            targetIndex: 0,
             direction: 'left' as const,
           },
         });
@@ -232,14 +219,15 @@ describe('Direction Inheritance Tests', () => {
 
       // 兄弟要素を取得
       state = result.current.state;
-      const newAllElements = getAllElements(state);
-      const siblings = newAllElements.filter(
-        (elm: Element) => elm.parentId === rootId && elm.id !== firstChild.id,
-      );
+      const siblingElements = state.hierarchicalData
+        ? getChildrenFromHierarchy(state.hierarchicalData, rootId).filter(
+            (elm) => elm.id !== firstChild.id,
+          )
+        : [];
 
-      expect(siblings.length).toBeGreaterThan(0);
+      expect(siblingElements.length).toBeGreaterThan(0);
       // 兄弟要素のdirectionがleftになっていることを確認
-      expect(siblings[0].direction).toBe('left');
+      expect(siblingElements[0].direction).toBe('left');
     });
   });
 
@@ -262,8 +250,10 @@ describe('Direction Inheritance Tests', () => {
 
       // 最初の子要素を取得
       let state = result.current.state;
-      const allElements = getAllElements(state);
-      const firstChild = allElements.find((elm: Element) => elm.parentId === rootId) as Element;
+      const childElements = state.hierarchicalData
+        ? getChildrenFromHierarchy(state.hierarchicalData, rootId)
+        : [];
+      const firstChild = childElements[0] as Element;
       expect(firstChild).toBeDefined();
 
       // 最初の子要素のdirectionをleftに変更
@@ -272,8 +262,8 @@ describe('Direction Inheritance Tests', () => {
           type: 'DROP_ELEMENT',
           payload: {
             id: firstChild.id,
-            newParentId: rootId,
-            newOrder: 0,
+            targetNodeId: rootId,
+            targetIndex: 0,
             direction: 'left' as const,
           },
         });
@@ -304,8 +294,10 @@ describe('Direction Inheritance Tests', () => {
 
       // 最初の子要素を取得
       let state = result.current.state;
-      const allElements = getAllElements(state);
-      const firstChild = allElements.find((elm: Element) => elm.parentId === rootId) as Element;
+      const childElements = state.hierarchicalData
+        ? getChildrenFromHierarchy(state.hierarchicalData, rootId)
+        : [];
+      const firstChild = childElements[0] as Element;
       expect(firstChild).toBeDefined();
 
       // 最初の子要素のdirectionをrightに変更
@@ -314,8 +306,8 @@ describe('Direction Inheritance Tests', () => {
           type: 'DROP_ELEMENT',
           payload: {
             id: firstChild.id,
-            newParentId: rootId,
-            newOrder: 0,
+            targetNodeId: rootId,
+            targetIndex: 0,
             direction: 'right' as const,
           },
         });
