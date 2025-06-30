@@ -41,12 +41,9 @@ export function convertFlatToHierarchical(
   console.log('convertFlatToHierarchical - rootElement:', rootElement);
 
   if (!rootElement) {
-    // ルート要素が見つからない場合、最初の要素をルートとして扱う
-    const firstElement = elementArray[0];
-    console.warn(`ルート要素が見つかりません。要素 ${firstElement.id} をルートとして扱います。`);
-    // 明示的にparentIdをnullに設定
-    (firstElement as LegacyElement).parentId = null;
-    return convertFlatToHierarchical(elements, version);
+    // ルート要素が見つからない場合はnullを返す
+    console.log('convertFlatToHierarchical - No root element found, returning null');
+    return null;
   }
 
   // 子要素のマップを作成（効率的な検索のため）
@@ -444,14 +441,14 @@ export function getChildrenFromHierarchy(
  * 階層構造から指定ノードの深さを取得
  * @param hierarchical 階層構造
  * @param nodeId ノードID
- * @returns 深さ（ルートノードは1、見つからない場合は0）
+ * @returns 深さ（ルートノードは0、見つからない場合は-1）
  */
 export function getDepthFromHierarchy(
   hierarchical: HierarchicalStructure | null,
   nodeId: string,
 ): number {
   if (!hierarchical) {
-    return 0;
+    return -1;
   }
 
   function searchDepth(node: HierarchicalNode, currentDepth: number): number {
@@ -462,16 +459,16 @@ export function getDepthFromHierarchy(
     if (node.children) {
       for (const child of node.children) {
         const depth = searchDepth(child, currentDepth + 1);
-        if (depth > 0) {
+        if (depth >= 0) {
           return depth;
         }
       }
     }
 
-    return 0;
+    return -1;
   }
 
-  return searchDepth(hierarchical.root, 1);
+  return searchDepth(hierarchical.root, 0);
 }
 
 /**

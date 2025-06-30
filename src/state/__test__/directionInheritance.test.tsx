@@ -1,7 +1,10 @@
 import { renderHook, act } from '@testing-library/react';
 import { useStore } from './textUtils';
 import { Element } from '../../types/types';
-import { getAllElementsFromHierarchy } from '../../utils/hierarchical/hierarchicalConverter';
+import {
+  getAllElementsFromHierarchy,
+  getChildrenFromHierarchy,
+} from '../../utils/hierarchical/hierarchicalConverter';
 import { HierarchicalStructure } from '../../types/hierarchicalTypes';
 
 // ヘルパー関数
@@ -46,8 +49,10 @@ describe('Direction Inheritance Tests', () => {
 
       // 最初の子要素を取得
       let state = result.current.state;
-      const allElements = getAllElements(state);
-      const firstChild = allElements.find((elm: Element) => elm.parentId === rootId) as Element;
+      const childElements = state.hierarchicalData
+        ? getChildrenFromHierarchy(state.hierarchicalData, rootId)
+        : [];
+      const firstChild = childElements[0] as Element;
       expect(firstChild).toBeDefined();
 
       // 最初の子要素のdirectionをleftに変更（DROP_ELEMENTを模擬）

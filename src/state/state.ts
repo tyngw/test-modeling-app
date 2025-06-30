@@ -1,7 +1,7 @@
 // src/state/state.ts
 'use client';
 
-import { Undo, Redo, saveSnapshot } from './undoredo';
+import { UndoHierarchical, RedoHierarchical, saveHierarchicalSnapshot } from './undoredo';
 import {
   handleArrowUp,
   handleArrowDown,
@@ -895,12 +895,7 @@ const actionHandlers: Record<string, ActionHandler> = {
       debugLog(`[ADD_ELEMENT] 現在のhierarchicalData:`, state.hierarchicalData);
 
       // Undoスナップショットを保存
-      const allElementsForSnapshot = getAllElementsFromHierarchy(state.hierarchicalData);
-      const elementsMapForSnapshot = allElementsForSnapshot.reduce<ElementsMap>((acc, element) => {
-        acc[element.id] = element;
-        return acc;
-      }, {});
-      saveSnapshot(elementsMapForSnapshot);
+      saveHierarchicalSnapshot(state.hierarchicalData);
 
       const text = payload?.text;
 
@@ -1069,15 +1064,7 @@ const actionHandlers: Record<string, ActionHandler> = {
       const safeTargetElement: Element = targetElement;
 
       // Undoスナップショットを保存
-      const allElementsForSnapshot2 = getAllElementsFromHierarchy(state.hierarchicalData);
-      const elementsMapForSnapshot2 = allElementsForSnapshot2.reduce<ElementsMap>(
-        (acc, element) => {
-          acc[element.id] = element;
-          return acc;
-        },
-        {},
-      );
-      saveSnapshot(elementsMapForSnapshot2);
+      saveHierarchicalSnapshot(state.hierarchicalData);
 
       const texts = payload?.texts || [];
       const tentative = payload?.tentative || false;
@@ -1182,12 +1169,7 @@ const actionHandlers: Record<string, ActionHandler> = {
     if (!selectedElement || !state.hierarchicalData) return state;
 
     // Undoスナップショットを保存
-    const allElementsForSnapshot3 = getAllElementsFromHierarchy(state.hierarchicalData);
-    const elementsMapForSnapshot3 = allElementsForSnapshot3.reduce<ElementsMap>((acc, element) => {
-      acc[element.id] = element;
-      return acc;
-    }, {});
-    saveSnapshot(elementsMapForSnapshot3);
+    saveHierarchicalSnapshot(state.hierarchicalData);
 
     // 同じ階層の兄弟要素を取得
     // 選択された要素の親を取得
@@ -1299,12 +1281,7 @@ const actionHandlers: Record<string, ActionHandler> = {
     debugLog(`DELETE_ELEMENT開始: 削除対象要素数=${selectedElements.length}`);
 
     // Undoスナップショットを保存
-    const allElementsForSnapshot4 = getAllElementsFromHierarchy(state.hierarchicalData);
-    const elementsMapForSnapshot4 = allElementsForSnapshot4.reduce<ElementsMap>((acc, element) => {
-      acc[element.id] = element;
-      return acc;
-    }, {});
-    saveSnapshot(elementsMapForSnapshot4);
+    saveHierarchicalSnapshot(state.hierarchicalData);
 
     // 削除後に選択する要素の候補を探す
     const firstElement = selectedElements[0];
@@ -1443,86 +1420,29 @@ const actionHandlers: Record<string, ActionHandler> = {
   ),
 
   UNDO: createNoPayloadHandler((state) => {
-    const allElementsForUndo = getAllElementsFromHierarchy(state.hierarchicalData);
-    const elementsMapForUndo = allElementsForUndo.reduce<ElementsMap>((acc, element) => {
-      acc[element.id] = element;
-      return acc;
-    }, {});
-
-    const undoElements = Undo(elementsMapForUndo);
-    if (!undoElements) return state;
-
-    const hierarchicalData = convertFlatToHierarchical(undoElements);
-    if (!hierarchicalData) return state;
-
-    // 位置調整を行い、階層構造を維持
-    const adjustedElementsCache = adjustElementPositions(
-      undoElements,
-      () => state.numberOfSections,
-      state.layoutMode,
-      state.width || 0,
-      state.height || 0,
-      hierarchicalData,
-    );
-
-    // 位置調整後の要素データで階層構造を更新（親子関係を維持）
-    const finalHierarchicalData = updateHierarchyWithElementChanges(
-      hierarchicalData,
-      adjustedElementsCache,
-    );
-    if (!finalHierarchicalData) return state;
+    const undoHierarchicalData = UndoHierarchical(state.hierarchicalData);
+    if (!undoHierarchicalData) return state;
 
     return {
       ...state,
-      hierarchicalData: finalHierarchicalData,
+      hierarchicalData: undoHierarchicalData,
     };
   }),
 
   REDO: createNoPayloadHandler((state) => {
-    const allElementsForRedo = getAllElementsFromHierarchy(state.hierarchicalData);
-    const elementsMapForRedo = allElementsForRedo.reduce<ElementsMap>((acc, element) => {
-      acc[element.id] = element;
-      return acc;
-    }, {});
-
-    const redoElements = Redo(elementsMapForRedo);
-    if (!redoElements) return state;
-
-    const hierarchicalData = convertFlatToHierarchical(redoElements);
-    if (!hierarchicalData) return state;
-
-    // 位置調整を行い、階層構造を維持
-    const adjustedElementsCache = adjustElementPositions(
-      redoElements,
-      () => state.numberOfSections,
-      state.layoutMode,
-      state.width || 0,
-      state.height || 0,
-      hierarchicalData,
-    );
-
-    // 位置調整後の要素データで階層構造を更新（親子関係を維持）
-    const finalHierarchicalData = updateHierarchyWithElementChanges(
-      hierarchicalData,
-      adjustedElementsCache,
-    );
-    if (!finalHierarchicalData) return state;
+    const redoHierarchicalData = RedoHierarchical(state.hierarchicalData);
+    if (!redoHierarchicalData) return state;
 
     return {
       ...state,
-      hierarchicalData: finalHierarchicalData,
-      elementsCache: adjustedElementsCache,
-      cacheValid: true,
+      hierarchicalData: redoHierarchicalData,
     };
   }),
 
   SNAPSHOT: createNoPayloadHandler((state) => {
-    const allElementsForSnapshot5 = getAllElementsFromHierarchy(state.hierarchicalData);
-    const elementsMapForSnapshot5 = allElementsForSnapshot5.reduce<ElementsMap>((acc, element) => {
-      acc[element.id] = element;
-      return acc;
-    }, {});
-    saveSnapshot(elementsMapForSnapshot5);
+    if (state.hierarchicalData) {
+      saveHierarchicalSnapshot(state.hierarchicalData);
+    }
     return state;
   }),
 
@@ -1760,15 +1680,7 @@ const actionHandlers: Record<string, ActionHandler> = {
       if (!state.hierarchicalData) return state;
 
       // Undoスナップショットを保存
-      const allElementsForSnapshot6 = getAllElementsFromHierarchy(state.hierarchicalData);
-      const elementsMapForSnapshot6 = allElementsForSnapshot6.reduce<ElementsMap>(
-        (acc, element) => {
-          acc[element.id] = element;
-          return acc;
-        },
-        {},
-      );
-      saveSnapshot(elementsMapForSnapshot6);
+      saveHierarchicalSnapshot(state.hierarchicalData);
 
       const { targetNodeId, hierarchicalItems } = payload;
 

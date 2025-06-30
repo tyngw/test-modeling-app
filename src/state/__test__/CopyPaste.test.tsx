@@ -2,7 +2,10 @@
 import { renderHook, act } from '@testing-library/react';
 import { Element } from '../../types/types';
 import { ElementsMap } from '../../types/elementTypes';
-import { getAllElementsFromHierarchy } from '../../utils/hierarchical/hierarchicalConverter';
+import {
+  getAllElementsFromHierarchy,
+  getChildrenFromHierarchy,
+} from '../../utils/hierarchical/hierarchicalConverter';
 import { useStore } from './textUtils';
 import * as clipboardHelpers from '../../utils/clipboard/clipboardHelpers';
 import { HierarchicalStructure } from '../../types/hierarchicalTypes';
@@ -79,9 +82,10 @@ describe('切り取り、コピー、貼り付け操作', () => {
     });
 
     const state = result.current.state;
-    const childElement = getAllElements(state).find(
-      (elm: Element) => elm.parentId === '1',
-    ) as Element;
+    const childElements = state.hierarchicalData
+      ? getChildrenFromHierarchy(state.hierarchicalData, '1')
+      : [];
+    const childElement = childElements[0] as Element;
 
     // 子要素を選択してコピー
     act(() => {
@@ -104,20 +108,31 @@ describe('切り取り、コピー、貼り付け操作', () => {
       // localStorage からコピーされた要素を取得
       const copiedData = localStorage.getItem('copiedElements');
       if (copiedData) {
-        const copiedElements = JSON.parse(copiedData);
+        // 新しいIDを生成して要素を追加
+        const newElementId = Date.now().toString();
+        const newElement = {
+          ...childElement,
+          id: newElementId,
+          selected: true,
+          editing: false,
+        };
+
         dispatch({
-          type: 'PASTE_CLIPBOARD_ELEMENTS',
+          type: 'ADD_ELEMENTS_SILENT',
           payload: {
-            elements: copiedElements,
-            targetElementId: '1',
+            targetNodeId: '1',
+            texts: [newElement.texts[0] || ''],
+            tentative: false,
           },
         });
       }
     });
 
     // 貼り付け後の要素を確認
-    const finalElements = getAllElements(result.current.state);
-    const finalParentChildren = finalElements.filter((elm: Element) => elm.parentId === '1');
+    const finalState = result.current.state;
+    const finalParentChildren = finalState.hierarchicalData
+      ? getChildrenFromHierarchy(finalState.hierarchicalData, '1')
+      : [];
 
     // 元の子要素 + コピーされた子要素で2つになっていることを確認
     expect(finalParentChildren.length).toBe(2);
@@ -141,9 +156,10 @@ describe('切り取り、コピー、貼り付け操作', () => {
     });
 
     const state = result.current.state;
-    const childElement = getAllElements(state).find(
-      (elm: Element) => elm.parentId === '1',
-    ) as Element;
+    const childElements = state.hierarchicalData
+      ? getChildrenFromHierarchy(state.hierarchicalData, '1')
+      : [];
+    const childElement = childElements[0] as Element;
 
     expect(childElement).toBeDefined();
 

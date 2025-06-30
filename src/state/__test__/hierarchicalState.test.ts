@@ -1,7 +1,11 @@
 // src/state/__test__/hierarchicalState.test.ts
 import { renderHook, act } from '@testing-library/react';
 import { Element } from '../../types/types';
-import { getAllElementsFromHierarchy } from '../../utils/hierarchical/hierarchicalConverter';
+import {
+  getAllElementsFromHierarchy,
+  getChildrenFromHierarchy,
+  findParentNodeInHierarchy,
+} from '../../utils/hierarchical/hierarchicalConverter';
 import { useStore } from './textUtils';
 import { HierarchicalStructure } from '../../types/hierarchicalTypes';
 
@@ -45,8 +49,9 @@ describe('Hierarchical Data State Management', () => {
     });
 
     const state = result.current.state;
-    const elements = getAllElements(state);
-    const childElements = elements.filter((elm: Element) => elm.parentId === '1');
+    const childElements = state.hierarchicalData
+      ? getChildrenFromHierarchy(state.hierarchicalData, '1')
+      : [];
 
     expect(childElements.length).toBe(1);
     if (state.hierarchicalData) {
@@ -65,9 +70,10 @@ describe('Hierarchical Data State Management', () => {
     });
 
     const firstState = result.current.state;
-    const firstChild = getAllElements(firstState).find(
-      (elm: Element) => elm.parentId === '1',
-    ) as Element;
+    const firstChildElements = firstState.hierarchicalData
+      ? getChildrenFromHierarchy(firstState.hierarchicalData, '1')
+      : [];
+    const firstChild = firstChildElements[0] as Element;
 
     // 子要素に孫要素を追加
     act(() => {
@@ -79,11 +85,17 @@ describe('Hierarchical Data State Management', () => {
     });
 
     const secondState = result.current.state;
-    const elements = getAllElements(secondState);
-    const grandChild = elements.find((elm: Element) => elm.parentId === firstChild.id);
+    const grandChildElements = secondState.hierarchicalData
+      ? getChildrenFromHierarchy(secondState.hierarchicalData, firstChild.id)
+      : [];
+    const grandChild = grandChildElements[0];
 
     expect(grandChild).toBeDefined();
-    expect(grandChild?.parentId).toBe(firstChild.id);
+    // 階層構造で親子関係が正しく設定されていることを確認
+    if (secondState.hierarchicalData && grandChild) {
+      const parentNode = findParentNodeInHierarchy(secondState.hierarchicalData, grandChild.id);
+      expect(parentNode?.data.id).toBe(firstChild.id);
+    }
   });
 
   test('要素が削除された時に階層データから正しく削除されることを確認する', () => {
@@ -97,9 +109,10 @@ describe('Hierarchical Data State Management', () => {
     });
 
     const state = result.current.state;
-    const childElement = getAllElements(state).find(
-      (elm: Element) => elm.parentId === '1',
-    ) as Element;
+    const childElements = state.hierarchicalData
+      ? getChildrenFromHierarchy(state.hierarchicalData, '1')
+      : [];
+    const childElement = childElements[0] as Element;
 
     // 子要素を削除
     act(() => {
