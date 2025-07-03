@@ -965,45 +965,49 @@ const actionHandlers: Record<string, ActionHandler> = {
         return state; // エラー時は元の状態を返す
       }
 
-      // 既存の要素の選択状態を解除し、新しい要素のみを選択状態にする
-      const allElementsForSelection = getAllElementsFromHierarchy(result.hierarchicalData);
-      debugLog(`[ADD_ELEMENT] 階層追加後の全要素数:`, allElementsForSelection.length);
+      // 階層構造で選択状態を更新（新しい要素のみを選択）
+      debugLog(`[ADD_ELEMENT] 選択状態の更新開始 - 新要素ID: ${newElement.id}`);
+      const selectionResult = setSelectionInHierarchy(result.hierarchicalData, [newElement.id]);
+      debugLog(`[ADD_ELEMENT] 選択状態更新完了:`, selectionResult);
 
-      const elementsWithUpdatedSelection: { [id: string]: Element } = {};
-      allElementsForSelection.forEach((element) => {
-        elementsWithUpdatedSelection[element.id] = {
-          ...element,
-          selected: element.id === newElement.id, // 新しい要素のみを選択状態に
-          editing: element.id === newElement.id, // 新しい要素を編集状態に
-        };
+      // 全要素を取得して位置調整を行う
+      const allElementsForAdjustment = getAllElementsFromHierarchy(
+        selectionResult.hierarchicalData,
+      );
+      debugLog(`[ADD_ELEMENT] 選択状態更新後の全要素数:`, allElementsForAdjustment.length);
+
+      // フラット形式に変換して位置調整
+      const elementsForAdjustment: { [id: string]: Element } = {};
+      allElementsForAdjustment.forEach((element) => {
+        elementsForAdjustment[element.id] = element;
       });
 
-      // デバッグログ: 階層操作後の新要素の座標を確認
-      const newElementAfterHierarchy = elementsWithUpdatedSelection[newElement.id];
-      if (newElementAfterHierarchy) {
+      // デバッグログ: 選択状態更新後の新要素の座標を確認
+      const newElementAfterSelection = elementsForAdjustment[newElement.id];
+      if (newElementAfterSelection) {
         debugLog(
-          `[ADD_ELEMENT] 階層操作後の新要素: X=${newElementAfterHierarchy.x}, Y=${newElementAfterHierarchy.y}`,
+          `[ADD_ELEMENT] 選択状態更新後の新要素: X=${newElementAfterSelection.x}, Y=${newElementAfterSelection.y}, selected=${newElementAfterSelection.selected}`,
         );
       } else {
-        debugLog(`[ADD_ELEMENT] エラー: 階層操作後に新要素が見つかりません`);
+        debugLog(`[ADD_ELEMENT] エラー: 選択状態更新後に新要素が見つかりません`);
       }
 
       // 位置調整を行う
       debugLog(`[ADD_ELEMENT] 位置調整開始`);
       const adjustedElementsCache = adjustElementPositions(
-        elementsWithUpdatedSelection,
+        elementsForAdjustment,
         () => state.numberOfSections,
         state.layoutMode,
         state.width || 0,
         state.height || 0,
-        result.hierarchicalData,
+        selectionResult.hierarchicalData,
       );
 
       // デバッグログ: 位置調整後の新要素の座標を確認
       const newElementAfterAdjustment = adjustedElementsCache[newElement.id];
       if (newElementAfterAdjustment) {
         debugLog(
-          `[ADD_ELEMENT] 位置調整後の新要素: X=${newElementAfterAdjustment.x}, Y=${newElementAfterAdjustment.y}`,
+          `[ADD_ELEMENT] 位置調整後の新要素: X=${newElementAfterAdjustment.x}, Y=${newElementAfterAdjustment.y}, selected=${newElementAfterAdjustment.selected}`,
         );
       } else {
         debugLog(`[ADD_ELEMENT] エラー: 位置調整後に新要素が見つかりません`);
@@ -1012,7 +1016,9 @@ const actionHandlers: Record<string, ActionHandler> = {
       // デバッグログ: 位置調整後の全要素の座標を確認
       debugLog(`[ADD_ELEMENT] 位置調整後の全要素座標:`);
       Object.values(adjustedElementsCache).forEach((element) => {
-        debugLog(`  - 要素「${element.texts}」 id=${element.id}: X=${element.x}, Y=${element.y}`);
+        debugLog(
+          `  - 要素「${element.texts}」 id=${element.id}: X=${element.x}, Y=${element.y}, selected=${element.selected}`,
+        );
       });
 
       // 階層構造内の要素の位置情報を直接更新（フラット変換を避ける）
@@ -1020,7 +1026,7 @@ const actionHandlers: Record<string, ActionHandler> = {
 
       // 既存の階層構造を保持しながら要素の位置情報を更新
       const finalHierarchicalData = updateHierarchyWithElementChanges(
-        result.hierarchicalData,
+        selectionResult.hierarchicalData,
         adjustedElementsCache,
       );
 
