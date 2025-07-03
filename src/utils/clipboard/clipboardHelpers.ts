@@ -118,13 +118,13 @@ export const getSelectedAndChildren = (
   targetElement: Element,
 ): ElementsMap => {
   const cutElements: ElementsMap = {};
-  const rootCopy = { ...targetElement, selected: true };
+  const rootCopy = { ...targetElement, selected: true, tempParentId: null as string | null };
   cutElements[rootCopy.id] = rootCopy;
 
   const collectChildren = (parentId: string) => {
     const children = hierarchicalData ? getChildrenFromHierarchy(hierarchicalData, parentId) : [];
     children.forEach((child) => {
-      const childCopy = { ...child, selected: false };
+      const childCopy = { ...child, selected: false, tempParentId: parentId };
       cutElements[childCopy.id] = childCopy;
       collectChildren(child.id);
     });

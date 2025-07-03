@@ -1815,12 +1815,10 @@ const actionHandlers: Record<string, ActionHandler> = {
     const idMap = new Map<string, string>();
     const newElements: ElementsMap = {};
 
-    // ルート要素を特定（階層から親を持たない要素）
+    // ルート要素を特定（tempParentIdがnullまたは存在しない要素）
     const rootElement = Object.values(elementsToAdd).find((el) => {
-      // 階層データでこの要素の親が存在しないかチェック
-      if (!state.hierarchicalData) return true;
-      const parentNode = findParentNodeInHierarchy(state.hierarchicalData, el.id);
-      return !parentNode;
+      const tempParentId = (el as Element & { tempParentId?: string | null }).tempParentId;
+      return !tempParentId || tempParentId === null;
     });
     if (!rootElement) return state;
 
@@ -1837,9 +1835,9 @@ const actionHandlers: Record<string, ActionHandler> = {
       // directionを適切に設定
       let newDirection = element.direction;
 
-      // ルート要素かどうかを階層データから判断
-      const isRootElement =
-        !state.hierarchicalData || !findParentNodeInHierarchy(state.hierarchicalData, element.id);
+      // ルート要素かどうかをtempParentIdから判断
+      const tempParentId = (element as Element & { tempParentId?: string | null }).tempParentId;
+      const isRootElement = !tempParentId || tempParentId === null;
 
       if (isRootElement) {
         // ルート要素の場合
@@ -1853,8 +1851,13 @@ const actionHandlers: Record<string, ActionHandler> = {
         newDirection = element.direction;
       }
 
+      // tempParentIdを除去してnewElementsに追加
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { tempParentId: _tempParentId, ...cleanElement } = element as Element & {
+        tempParentId?: string | null;
+      };
       newElements[newId] = {
-        ...element,
+        ...cleanElement,
         id: newId,
         direction: newDirection,
         selected: false,
@@ -1871,10 +1874,9 @@ const actionHandlers: Record<string, ActionHandler> = {
     // 4. 子要素を再帰的に追加
     const addChildrenRecursively = (parentElementId: string, originalParentId: string) => {
       const childElements = Object.values(elementsToAdd).filter((el) => {
-        // 階層データから親子関係を確認
-        if (!state.hierarchicalData) return false;
-        const parentNode = findParentNodeInHierarchy(state.hierarchicalData, el.id);
-        return parentNode?.data.id === originalParentId;
+        // tempParentIdを使って親子関係を確認
+        const tempParentId = (el as Element & { tempParentId?: string | null }).tempParentId;
+        return tempParentId === originalParentId;
       });
 
       childElements.forEach((childElement) => {

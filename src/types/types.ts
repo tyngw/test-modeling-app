@@ -66,6 +66,8 @@ export interface Element {
   endConnectionPathType?: ConnectionPathType;
   /** 要素の方向 (右、左、なし) */
   direction: DirectionType;
+  /** 一時的な親ID（コピー&ペースト用） */
+  tempParentId?: string | null;
 }
 
 export interface CanvasState {
