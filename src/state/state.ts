@@ -32,7 +32,11 @@ import {
 import { LayoutMode } from '../types/tabTypes';
 
 // 階層構造の型とユーティリティをインポート
-import { HierarchicalStructure, HierarchicalOperationResult } from '../types/hierarchicalTypes';
+import {
+  HierarchicalStructure,
+  HierarchicalOperationResult,
+  HierarchicalNode,
+} from '../types/hierarchicalTypes';
 import {
   convertFlatToHierarchical,
   convertHierarchicalToFlat,
@@ -1358,26 +1362,38 @@ const actionHandlers: Record<string, ActionHandler> = {
     (state, parentId) => {
       if (!state.hierarchicalData) return state;
 
-      // 指定されたparentIdを持つtentative要素のみをfalseにする
-      const allElements = getAllElementsFromHierarchy(state.hierarchicalData);
-      const updatedElementsCache = allElements.reduce<ElementsMap>((acc, element) => {
-        const elementParent = state.hierarchicalData
-          ? findParentNodeInHierarchy(state.hierarchicalData, element.id)
-          : null;
-        if (element.tentative && (elementParent?.data.id || null) === parentId) {
-          acc[element.id] = { ...element, tentative: false };
-        } else {
-          acc[element.id] = element;
-        }
-        return acc;
-      }, {});
+      // 階層構造を直接更新してtentativeフラグを変更
+      function updateTentativeInNode(node: HierarchicalNode): HierarchicalNode {
+        const updatedNode = { ...node };
 
-      const hierarchicalData = convertFlatToHierarchical(updatedElementsCache);
-      if (!hierarchicalData) return state;
+        // 現在のノードの親をチェック
+        const nodeParent = findParentNodeInHierarchy(state.hierarchicalData!, node.data.id);
+        const nodeParentId = nodeParent?.data.id || null;
+
+        // tentativeかつ指定されたparentIdを持つ要素のフラグを更新
+        if (node.data.tentative && nodeParentId === parentId) {
+          updatedNode.data = { ...node.data, tentative: false };
+        }
+
+        // 子ノードも再帰的に処理
+        if (node.children && node.children.length > 0) {
+          updatedNode.children = node.children.map(updateTentativeInNode);
+        }
+
+        return updatedNode;
+      }
+
+      const updatedHierarchicalData = {
+        ...state.hierarchicalData,
+        root: updateTentativeInNode(state.hierarchicalData.root),
+      };
+
+      // 更新された階層構造からキャッシュを再構築
+      const updatedElementsCache = convertHierarchicalToFlat(updatedHierarchicalData);
 
       return {
         ...state,
-        hierarchicalData,
+        hierarchicalData: updatedHierarchicalData,
         elementsCache: updatedElementsCache,
         cacheValid: true,
       };
@@ -1389,34 +1405,61 @@ const actionHandlers: Record<string, ActionHandler> = {
     (state: State, parentId: string) => {
       if (!state.hierarchicalData) return state;
 
-      // tentativeな要素を削除
-      const allElements = getAllElementsFromHierarchy(state.hierarchicalData);
-      const filteredElementsCache = allElements.reduce<ElementsMap>((acc, element) => {
-        const elementParent = state.hierarchicalData
-          ? findParentNodeInHierarchy(state.hierarchicalData, element.id)
-          : null;
-        if (!(element.tentative && (elementParent?.data.id || null) === parentId)) {
-          acc[element.id] = element;
-        }
-        return acc;
-      }, {});
+      // 階層構造を直接更新してtentative要素を削除
+      function removeTentativeFromNode(node: HierarchicalNode): HierarchicalNode | null {
+        const nodeParent = findParentNodeInHierarchy(state.hierarchicalData!, node.data.id);
+        const nodeParentId = nodeParent?.data.id || null;
 
-      const hierarchicalData = convertFlatToHierarchical(filteredElementsCache);
-      if (!hierarchicalData) return state;
+        // tentativeかつ指定されたparentIdを持つ要素は削除
+        if (node.data.tentative && nodeParentId === parentId) {
+          return null; // このノードを削除
+        }
+
+        const updatedNode = { ...node };
+
+        // 子ノードも再帰的に処理（nullでないものだけ残す）
+        if (node.children && node.children.length > 0) {
+          const filteredChildren = node.children
+            .map(removeTentativeFromNode)
+            .filter((child: HierarchicalNode | null) => child !== null) as HierarchicalNode[];
+
+          if (filteredChildren.length > 0) {
+            updatedNode.children = filteredChildren;
+          } else {
+            delete updatedNode.children; // 子がいなくなった場合
+          }
+        }
+
+        return updatedNode;
+      }
+
+      const updatedRoot = removeTentativeFromNode(state.hierarchicalData.root);
+      if (!updatedRoot) {
+        // ルートが削除された場合は、状態をそのまま返す
+        return state;
+      }
+
+      const updatedHierarchicalData = {
+        ...state.hierarchicalData,
+        root: updatedRoot,
+      };
+
+      // 更新された階層構造からキャッシュを再構築
+      const updatedElementsCache = convertHierarchicalToFlat(updatedHierarchicalData);
 
       // 位置調整を行い、階層構造を維持
       const adjustedElementsCache = adjustElementPositions(
-        filteredElementsCache,
+        updatedElementsCache,
         () => state.numberOfSections,
         state.layoutMode,
         state.width || 0,
         state.height || 0,
-        hierarchicalData,
+        updatedHierarchicalData,
       );
 
       // 位置調整後の要素データで階層構造を更新（親子関係を維持）
       const finalHierarchicalData = updateHierarchyWithElementChanges(
-        hierarchicalData,
+        updatedHierarchicalData,
         adjustedElementsCache,
       );
       if (!finalHierarchicalData) return state;
