@@ -1823,9 +1823,31 @@ const actionHandlers: Record<string, ActionHandler> = {
 
       addSubtreeToHierarchy(clonedSubtree.data.id, clonedSubtree);
 
+      // 貼り付け後に位置を自動調整
+      const adjustedHierarchicalData = adjustElementPositionsFromHierarchy(
+        currentHierarchy,
+        () => state.numberOfSections,
+        state.layoutMode,
+        state.width || 0,
+        state.height || 0,
+      );
+
+      if (!adjustedHierarchicalData) {
+        // 位置調整に失敗した場合は調整前の状態を返す
+        return {
+          ...state,
+          hierarchicalData: currentHierarchy,
+        };
+      }
+
+      // 階層構造から直接ElementsMapを作成
+      const adjustedElementsCache = createElementsMapFromHierarchy(adjustedHierarchicalData);
+
       return {
         ...state,
-        hierarchicalData: currentHierarchy,
+        hierarchicalData: adjustedHierarchicalData,
+        elementsCache: adjustedElementsCache,
+        cacheValid: true,
       };
     } catch (error) {
       console.error('PASTE_CLIPBOARD_ELEMENTS: Error occurred:', error);
