@@ -151,7 +151,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
   // タッチ操作のハンドラーをカスタムフックから取得
   const { isPinching, handleTouchStart, handleTouchMove, handleTouchEnd } = useTouchHandlers({
     handleMouseDown,
-    elements: elementsCache,
+    hierarchicalData: state.hierarchicalData,
   });
 
   // キーボード操作のハンドラーをカスタムフックから取得

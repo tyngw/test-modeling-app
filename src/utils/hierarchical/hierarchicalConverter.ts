@@ -595,6 +595,32 @@ export function getVisibleElementsFromHierarchy(
 }
 
 /**
+ * 階層構造から全ての可視要素を配列として取得
+ * @param hierarchical 階層構造
+ * @returns 可視要素の配列
+ */
+export function getAllVisibleElementsFromHierarchy(
+  hierarchical: HierarchicalStructure | null,
+): Element[] {
+  if (!hierarchical) return [];
+
+  const result: Element[] = [];
+
+  function collectVisible(node: HierarchicalNode): void {
+    if (node.data.visible) {
+      result.push(node.data);
+    }
+
+    if (node.children) {
+      node.children.forEach(collectVisible);
+    }
+  }
+
+  collectVisible(hierarchical.root);
+  return result;
+}
+
+/**
  * 階層構造内の全要素の座標をデバッグログ出力
  * @param hierarchical 階層構造
  * @param prefix ログの接頭辞
@@ -758,4 +784,56 @@ export function getDescendantsFromHierarchy(
 
   targetNode.children.forEach(collectDescendants);
   return result;
+}
+
+/**
+ * 階層構造において、指定要素が別の要素の子孫かどうかを判定
+ * @param hierarchical 階層構造
+ * @param elementId 検証対象の要素ID
+ * @param ancestorId 祖先候補の要素ID
+ * @returns 子孫関係にある場合true
+ */
+export function isDescendantInHierarchy(
+  hierarchical: HierarchicalStructure | null,
+  elementId: string,
+  ancestorId: string,
+): boolean {
+  if (!hierarchical || elementId === ancestorId) {
+    return false;
+  }
+
+  const ancestorNode = findNodeInHierarchy(hierarchical, ancestorId);
+  if (!ancestorNode || !ancestorNode.children) {
+    return false;
+  }
+
+  const checkDescendant = (node: HierarchicalNode): boolean => {
+    if (node.data.id === elementId) {
+      return true;
+    }
+    if (node.children) {
+      return node.children.some(checkDescendant);
+    }
+    return false;
+  };
+
+  return ancestorNode.children.some(checkDescendant);
+}
+
+/**
+ * 階層構造から指定IDの要素を検索
+ * @param hierarchical 階層構造
+ * @param elementId 検索対象の要素ID
+ * @returns 見つかった要素、見つからない場合はnull
+ */
+export function findElementByIdInHierarchy(
+  hierarchical: HierarchicalStructure | null,
+  elementId: string,
+): Element | null {
+  if (!hierarchical) {
+    return null;
+  }
+
+  const node = findNodeInHierarchy(hierarchical, elementId);
+  return node ? node.data : null;
 }

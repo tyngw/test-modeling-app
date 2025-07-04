@@ -15,19 +15,20 @@
  * - ドラッグ中の位置プレビューとハイライト効果
  */
 
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   getChildrenFromHierarchy,
   findParentNodeInHierarchy,
   getDepthFromHierarchy,
   getChildrenCountFromHierarchy,
   getSelectedElementsFromHierarchy,
-  createElementsMapFromHierarchy,
+  isDescendantInHierarchy,
+  findElementByIdInHierarchy,
+  getAllVisibleElementsFromHierarchy,
 } from '../utils/hierarchical/hierarchicalConverter';
 import { Element, DropPosition, DirectionType } from '../types/types';
 import { HierarchicalStructure } from '../types/hierarchicalTypes';
 import { useCanvas } from '../context/CanvasContext';
-import { isDescendant } from '../utils/element/elementHelpers';
 import { ToastMessages } from '../constants/toastMessages';
 import { HEADER_HEIGHT, OFFSET } from '../config/elementSettings';
 import { useToast } from '../context/ToastContext';
@@ -112,11 +113,6 @@ export interface ElementDragEffectResult {
 export const useElementDragEffect = (): ElementDragEffectResult => {
   const { state, dispatch } = useCanvas();
   const { addToast } = useToast();
-
-  // hierarchicalDataからelementsMapを生成（階層構造ベース）
-  const elementsMap = useMemo(() => {
-    return state.hierarchicalData ? createElementsMapFromHierarchy(state.hierarchicalData) : {};
-  }, [state.hierarchicalData]);
 
   const [draggingElement, setDraggingElement] = useState<Element | null>(null);
   const [dragStartOffset, setDragStartOffset] = useState<Position>({ x: 0, y: 0 });
@@ -589,10 +585,8 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
       }
 
       // 候補となる要素を階層構造から取得し、フィルタリング - 自分自身と選択中の要素を除外
-      const allElements = state.hierarchicalData
-        ? createElementsMapFromHierarchy(state.hierarchicalData)
-        : {};
-      const candidates = Object.values(allElements).filter((element: Element) => {
+      const allElements = getAllVisibleElementsFromHierarchy(state.hierarchicalData);
+      const candidates = allElements.filter((element: Element) => {
         if (!element.visible || selectedElementIds.includes(element.id)) {
           return false;
         }
@@ -706,7 +700,10 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
         if (groupElements.length < 2) continue; // 少なくとも2つの要素が必要
 
         // 親要素を階層構造から取得してルート要素かどうかを判定
-        const parentElement = parentKey !== 'root' ? allElements[parentKey] : null;
+        const parentElement =
+          parentKey !== 'root'
+            ? findElementByIdInHierarchy(state.hierarchicalData, parentKey)
+            : null;
         const isParentRoot =
           parentElement &&
           parentElement.direction === 'none' &&
@@ -860,7 +857,10 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
         if (groupElements.length === 0) continue;
 
         // 親要素を階層構造から取得してルート要素かどうかを判定
-        const parentElement = parentKey !== 'root' ? allElements[parentKey] : null;
+        const parentElement =
+          parentKey !== 'root'
+            ? findElementByIdInHierarchy(state.hierarchicalData, parentKey)
+            : null;
         const isParentRoot =
           parentElement &&
           parentElement.direction === 'none' &&
@@ -1121,7 +1121,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
         elementOriginalPositions.current.set(element.id, { x: element.x, y: element.y });
       });
     },
-    [convertToZoomCoordinates, elementsMap, dispatch],
+    [convertToZoomCoordinates, dispatch],
   );
 
   const resetElementsPosition = useCallback(() => {
@@ -1141,7 +1141,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
     // 状態をリセット
     setDraggingElement(null);
     elementOriginalPositions.current.clear();
-  }, [elementsMap, dispatch]);
+  }, [dispatch]);
 
   // 要素をドロップする際の親変更を検証する関数
   const validateParentChange = useCallback(
@@ -1163,7 +1163,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
       }
 
       // 自身の子孫要素に移動しようとしている場合は無効
-      if (isDescendant(elementsMap, element.id, newParentId)) {
+      if (isDescendantInHierarchy(state.hierarchicalData, newParentId, element.id)) {
         // 直接の子要素への移動かどうかを判定
         const newParentNode = state.hierarchicalData
           ? findParentNodeInHierarchy(state.hierarchicalData, newParentId)
@@ -1196,7 +1196,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
 
       return { isValid: true };
     },
-    [elementsMap, state.hierarchicalData],
+    [state.hierarchicalData],
   );
 
   // 子要素としてドロップする処理
@@ -1393,7 +1393,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
         let newDirection: DirectionType | undefined = undefined;
 
         if (newParentId) {
-          const newParent = elementsMap[newParentId];
+          const newParent = findElementByIdInHierarchy(state.hierarchicalData, newParentId);
           const isNewParentRoot =
             newParent?.direction === 'none' &&
             state.hierarchicalData &&
@@ -1471,7 +1471,6 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
       addToast,
       resetElementsPosition,
       dispatch,
-      elementsMap,
       state.hierarchicalData,
     ],
   );
@@ -1550,7 +1549,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
       debugLog(`[calculateTargetOrderValues] Final baseOrder: ${baseOrder}`);
       return { baseOrder };
     },
-    [elementsMap, state.hierarchicalData],
+    [state.hierarchicalData],
   );
 
   // 階層構造での要素移動時の配列順序調整関数（現在は階層操作で自動処理されるため削除予定）
@@ -1623,7 +1622,6 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
   }, [
     draggingElement,
     currentDropTarget,
-    elementsMap,
     dispatch,
     addToast,
     resetElementsPosition,
@@ -1681,7 +1679,6 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
     [
       draggingElement,
       currentDropTarget,
-      elementsMap,
       findDropTarget,
       convertToZoomCoordinates,
       dragStartOffset,
