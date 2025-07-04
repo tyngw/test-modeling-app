@@ -1,12 +1,14 @@
 // src/utils/file/fileOperationAdapter.ts
 
 import { Element } from '../../types/types';
+import { HierarchicalStructure } from '../../types/hierarchicalTypes';
 import { isVSCodeExtension } from '../environment/environmentDetector';
 import {
   saveSvg as webSaveSvg,
   saveElements as webSaveElements,
   loadElements as webLoadElements,
 } from './fileHelpers';
+import { convertArrayToHierarchical } from '../hierarchical/hierarchicalConverter';
 
 /**
  * ファイル操作の抽象化インターフェース
@@ -15,9 +17,10 @@ import {
 export interface FileOperationAdapter {
   saveSvg: (svgElement: SVGSVGElement, fileName: string) => Promise<void>;
   saveElements: (elements: Element[], fileName: string) => Promise<void>;
-  loadElements: (
-    fileName?: string,
-  ) => Promise<{ elements: Record<string, Element>; fileName: string }>;
+  loadElements: (fileName?: string) => Promise<{
+    hierarchicalData: HierarchicalStructure;
+    fileName: string;
+  }>;
 }
 
 /**
@@ -32,7 +35,10 @@ class BrowserFileOperations implements FileOperationAdapter {
     webSaveElements(elements, fileName);
   }
 
-  async loadElements(): Promise<{ elements: Record<string, Element>; fileName: string }> {
+  async loadElements(): Promise<{
+    hierarchicalData: HierarchicalStructure;
+    fileName: string;
+  }> {
     return new Promise((resolve, reject) => {
       // ファイル入力要素を動的に作成
       const input = document.createElement('input');
@@ -200,9 +206,10 @@ class VSCodeFileOperations implements FileOperationAdapter {
     });
   }
 
-  async loadElements(
-    fileName?: string,
-  ): Promise<{ elements: Record<string, Element>; fileName: string }> {
+  async loadElements(fileName?: string): Promise<{
+    hierarchicalData: HierarchicalStructure;
+    fileName: string;
+  }> {
     return new Promise((resolve, reject) => {
       try {
         const vscodeAPI = this.getVSCodeAPI();
@@ -215,21 +222,58 @@ class VSCodeFileOperations implements FileOperationAdapter {
 
             try {
               // データの形式を確認・変換
-              let elements = event.data.data.content;
-              let fileName = event.data.data.fileName;
+              const content = event.data.data.content;
+              const fileName = event.data.data.fileName;
 
-              // contentがオブジェクトの場合は、elementsプロパティを探す
-              if (elements && typeof elements === 'object' && !Array.isArray(elements)) {
-                if (elements.elements) {
-                  elements = elements.elements;
-                  fileName = elements.fileName || fileName;
+              // 階層構造ファイルかどうかをチェック
+              if (content && typeof content === 'object' && content.root && content.version) {
+                // 階層構造の場合はそのまま返す
+                resolve({
+                  hierarchicalData: content,
+                  fileName: fileName,
+                });
+              } else {
+                // レガシー形式の場合は階層構造に変換
+                let elements = content;
+
+                // contentがオブジェクトの場合は、elementsプロパティを探す
+                if (elements && typeof elements === 'object' && !Array.isArray(elements)) {
+                  if (elements.elements) {
+                    elements = elements.elements;
+                  }
                 }
-              }
 
-              resolve({
-                elements: elements,
-                fileName: fileName,
-              });
+                // ElementsMapに変換
+                let elementsMap: Record<string, Element> = {};
+
+                if (Array.isArray(elements)) {
+                  // 配列の場合
+                  elementsMap = elements.reduce(
+                    (acc, element) => {
+                      if (element && element.id) {
+                        acc[element.id] = element;
+                      }
+                      return acc;
+                    },
+                    {} as Record<string, Element>,
+                  );
+                } else if (elements && typeof elements === 'object') {
+                  // オブジェクトの場合はそのまま使用
+                  elementsMap = elements;
+                }
+
+                // 階層構造に変換
+                const hierarchicalData = convertArrayToHierarchical(Object.values(elementsMap));
+
+                if (!hierarchicalData) {
+                  throw new Error('レガシー形式から階層構造への変換に失敗しました');
+                }
+
+                resolve({
+                  hierarchicalData,
+                  fileName: fileName,
+                });
+              }
             } catch (error) {
               console.error('📂 Error processing loaded file:', error);
               reject(error);

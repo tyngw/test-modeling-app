@@ -5,7 +5,6 @@ import { createElementsMapFromHierarchy } from '../utils/hierarchical/hierarchic
 import { useToast } from '../context/ToastContext';
 import { saveSvg, saveElements, loadElements } from '../utils/file';
 import { fileOperationAdapter } from '../utils/file/fileOperationAdapter';
-import { convertFlatToHierarchical } from '../utils/hierarchical/hierarchicalConverter';
 import { TabState } from '../types/tabTypes';
 import { State } from '../state/state';
 import { isVSCodeExtension } from '../utils/environment/environmentDetector';
@@ -118,17 +117,14 @@ export function useFileOperations({
         // 新しいタブを作成して、読み込んだ要素をそのタブに適用
         const newTabId = addTab();
 
-        // elementsMapから階層構造を構築
-        const hierarchicalData = convertFlatToHierarchical(result.elements);
-        if (!hierarchicalData) {
-          throw new Error('ファイルから階層構造を作成できませんでした');
-        }
+        // loadElementsは常に階層構造を返すため、直接使用
+        const hierarchicalData = result.hierarchicalData;
 
         // LOAD_ELEMENTSアクションと同等の処理を手動で実行
         updateTabState(newTabId, (prevState) => {
           return {
             ...prevState,
-            hierarchicalData,
+            hierarchicalData: hierarchicalData || null,
           };
         });
 
@@ -142,11 +138,11 @@ export function useFileOperations({
 
         updateTabName(newTabId, newTabName);
 
-        // 現在の要素の状態をJSON文字列として保存
-        const currentElementsJson = JSON.stringify(result.elements);
+        // 現在の階層構造の状態をJSON文字列として保存
+        const currentDataJson = JSON.stringify(hierarchicalData);
 
         // JSON形式でロードしたタブは保存済みとしてマーク
-        updateTabSaveStatus(newTabId, true, currentElementsJson);
+        updateTabSaveStatus(newTabId, true, currentDataJson);
 
         // 新しいタブに切り替え
         switchTab(newTabId);

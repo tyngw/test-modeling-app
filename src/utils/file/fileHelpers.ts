@@ -18,10 +18,7 @@ import {
   isLegacyArrayFormat,
   isLegacyMapFormat,
 } from '../../types/hierarchicalTypes';
-import {
-  convertHierarchicalToFlat,
-  convertArrayToHierarchical,
-} from '../hierarchical/hierarchicalConverter';
+import { convertArrayToHierarchical } from '../hierarchical/hierarchicalConverter';
 
 /**
  * 古いバージョンの要素データ形式を表す型
@@ -162,10 +159,13 @@ export const convertLegacyElement = (element: unknown): Element => {
   return converted;
 };
 
-// ファイル読み込み処理を階層構造対応に修正
+// ファイル読み込み処理を完全に階層構造ベースに最適化
 export const loadElements = (
   event: Event,
-): Promise<{ elements: Record<string, Element>; fileName: string }> => {
+): Promise<{
+  hierarchicalData: HierarchicalStructure;
+  fileName: string;
+}> => {
   return new Promise((resolve, reject) => {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
@@ -205,100 +205,104 @@ export const loadElements = (
         // データをサニタイズ
         const sanitizedData = sanitizeObject(parsedData);
 
-        let elementsMap: Record<string, Element> = {};
+        let hierarchicalData: HierarchicalStructure;
 
         // データ構造の判定と変換
 
         if (isHierarchicalStructure(sanitizedData)) {
-          // 新しい階層構造の場合
-          elementsMap = convertHierarchicalToFlat(sanitizedData);
-        } else if (isFlatStructure(sanitizedData)) {
-          // フラット構造（バージョン付き）の場合
-          const rawElements = sanitizedData.elements;
-
-          // IDが欠けている要素をフィルタリング
-          const validRawElements = rawElements.filter((elem) => {
-            if (!elem.id && !Object.prototype.hasOwnProperty.call(elem, 'id')) {
-              console.warn('IDが欠けている要素を削除します');
-              return false;
-            }
-            return true;
-          });
-
-          // 要素を変換
-          const convertedElements = validRawElements.map((elem) => convertLegacyElement(elem));
-
-          // 要素の有効性チェック（階層構造では親子関係はツリーで管理）
-          const validElements = convertedElements;
-
-          // 要素をIDをキーとしたオブジェクトに変換
-          elementsMap = validElements.reduce(
-            (acc, element) => {
-              acc[element.id] = element;
-              return acc;
-            },
-            {} as Record<string, Element>,
-          );
-        } else if (isLegacyArrayFormat(sanitizedData)) {
-          // レガシー配列形式の場合
-          const rawElements = sanitizedData;
-
-          // IDが欠けている要素をフィルタリング
-          const validRawElements = rawElements.filter((elem) => {
-            if (!elem.id && !Object.prototype.hasOwnProperty.call(elem, 'id')) {
-              console.warn('IDが欠けている要素を削除します');
-              return false;
-            }
-            return true;
-          });
-
-          // 要素を変換
-          const convertedElements = validRawElements.map((elem) => convertLegacyElement(elem));
-
-          // 要素の有効性チェック（階層構造では親子関係はツリーで管理）
-          const validElements = convertedElements;
-
-          // 要素をIDをキーとしたオブジェクトに変換
-          elementsMap = validElements.reduce(
-            (acc, element) => {
-              acc[element.id] = element;
-              return acc;
-            },
-            {} as Record<string, Element>,
-          );
-        } else if (isLegacyMapFormat(sanitizedData)) {
-          // レガシーマップ形式の場合
-          const rawElements = Object.values(sanitizedData);
-
-          // IDが欠けている要素をフィルタリング
-          const validRawElements = rawElements.filter((elem) => {
-            if (!elem.id && !Object.prototype.hasOwnProperty.call(elem, 'id')) {
-              console.warn('IDが欠けている要素を削除します');
-              return false;
-            }
-            return true;
-          });
-
-          // 要素を変換
-          const convertedElements = validRawElements.map((elem) => convertLegacyElement(elem));
-
-          // 要素の有効性チェック（階層構造では親子関係はツリーで管理）
-          const validElements = convertedElements;
-
-          // 要素をIDをキーとしたオブジェクトに変換
-          elementsMap = validElements.reduce(
-            (acc, element) => {
-              acc[element.id] = element;
-              return acc;
-            },
-            {} as Record<string, Element>,
-          );
+          // 新しい階層構造の場合 - そのまま使用
+          hierarchicalData = sanitizedData;
         } else {
-          console.error('認識できないデータ形式です');
-          throw new Error('認識できないデータ形式です');
+          // レガシー形式の場合は、まずElementsMapに変換してから階層構造に変換
+          let elementsMap: Record<string, Element> = {};
+
+          if (isFlatStructure(sanitizedData)) {
+            // フラット構造（バージョン付き）の場合
+            const rawElements = sanitizedData.elements;
+
+            // IDが欠けている要素をフィルタリング
+            const validRawElements = rawElements.filter((elem) => {
+              if (!elem.id && !Object.prototype.hasOwnProperty.call(elem, 'id')) {
+                console.warn('IDが欠けている要素を削除します');
+                return false;
+              }
+              return true;
+            });
+
+            // 要素を変換
+            const convertedElements = validRawElements.map((elem) => convertLegacyElement(elem));
+
+            // 要素をIDをキーとしたオブジェクトに変換
+            elementsMap = convertedElements.reduce(
+              (acc, element) => {
+                acc[element.id] = element;
+                return acc;
+              },
+              {} as Record<string, Element>,
+            );
+          } else if (isLegacyArrayFormat(sanitizedData)) {
+            // レガシー配列形式の場合
+            const rawElements = sanitizedData;
+
+            // IDが欠けている要素をフィルタリング
+            const validRawElements = rawElements.filter((elem) => {
+              if (!elem.id && !Object.prototype.hasOwnProperty.call(elem, 'id')) {
+                console.warn('IDが欠けている要素を削除します');
+                return false;
+              }
+              return true;
+            });
+
+            // 要素を変換
+            const convertedElements = validRawElements.map((elem) => convertLegacyElement(elem));
+
+            // 要素をIDをキーとしたオブジェクトに変換
+            elementsMap = convertedElements.reduce(
+              (acc, element) => {
+                acc[element.id] = element;
+                return acc;
+              },
+              {} as Record<string, Element>,
+            );
+          } else if (isLegacyMapFormat(sanitizedData)) {
+            // レガシーマップ形式の場合
+            const rawElements = Object.values(sanitizedData);
+
+            // IDが欠けている要素をフィルタリング
+            const validRawElements = rawElements.filter((elem) => {
+              if (!elem.id && !Object.prototype.hasOwnProperty.call(elem, 'id')) {
+                console.warn('IDが欠けている要素を削除します');
+                return false;
+              }
+              return true;
+            });
+
+            // 要素を変換
+            const convertedElements = validRawElements.map((elem) => convertLegacyElement(elem));
+
+            // 要素をIDをキーとしたオブジェクトに変換
+            elementsMap = convertedElements.reduce(
+              (acc, element) => {
+                acc[element.id] = element;
+                return acc;
+              },
+              {} as Record<string, Element>,
+            );
+          } else {
+            console.error('認識できないデータ形式です');
+            throw new Error('認識できないデータ形式です');
+          }
+
+          // レガシー形式を階層構造に変換
+          const converted = convertArrayToHierarchical(Object.values(elementsMap));
+          if (!converted) {
+            throw new Error('レガシー形式から階層構造への変換に失敗しました');
+          }
+          hierarchicalData = converted;
         }
 
-        resolve({ elements: elementsMap, fileName: file.name });
+        // 常に階層構造として返す
+        resolve({ hierarchicalData, fileName: file.name });
       } catch (error) {
         console.error('ファイル読み込みエラー:', error);
         reject(
