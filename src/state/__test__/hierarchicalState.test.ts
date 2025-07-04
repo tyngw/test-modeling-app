@@ -121,7 +121,7 @@ describe('Hierarchical Data State Management', () => {
 
     // 階層構造から直接削除された要素が存在しないことを確認
     const deletedElementExists = finalState.hierarchicalData
-      ? findElementInHierarchy(finalState.hierarchicalData, childElement.id) !== null
+      ? findElementInHierarchy(finalState.hierarchicalData, childElement.id) !== undefined
       : false;
 
     expect(deletedElementExists).toBe(false);

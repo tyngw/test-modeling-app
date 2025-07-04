@@ -26,10 +26,7 @@ export function convertFlatToHierarchical(
 ): HierarchicalStructure | null {
   const elementArray = Object.values(elements) as LegacyElement[];
 
-  console.log('convertFlatToHierarchical - elementArray:', elementArray);
-
   if (elementArray.length === 0) {
-    console.log('convertFlatToHierarchical - No elements found, returning null');
     return null;
   }
 
@@ -38,11 +35,8 @@ export function convertFlatToHierarchical(
     (element) => element.parentId === null || element.parentId === undefined,
   );
 
-  console.log('convertFlatToHierarchical - rootElement:', rootElement);
-
   if (!rootElement) {
     // ルート要素が見つからない場合はnullを返す
-    console.log('convertFlatToHierarchical - No root element found, returning null');
     return null;
   }
 
@@ -57,8 +51,6 @@ export function convertFlatToHierarchical(
       childrenMap.get(element.parentId)!.push(element);
     }
   });
-
-  console.log('convertFlatToHierarchical - childrenMap:', childrenMap);
 
   // 階層構造では配列の順序をそのまま保持（ソートしない）
   // 各親の子要素は配列の順序通りに管理される
@@ -87,8 +79,6 @@ export function convertFlatToHierarchical(
     root: rootNode,
     version,
   };
-
-  console.log('convertFlatToHierarchical - final result:', result);
 
   return result;
 }
@@ -635,6 +625,7 @@ export function logElementPositionsFromHierarchy(
 
   function logNodeRecursive(node: HierarchicalNode, depth = 0): void {
     const indent = '  '.repeat(depth);
+    // この関数は開発用デバッグ関数なので、ログ出力は維持
     console.log(
       `${prefix}${indent}- 要素「${node.data.texts}」 id=${node.data.id}: X=${node.data.x}, Y=${node.data.y}`,
     );

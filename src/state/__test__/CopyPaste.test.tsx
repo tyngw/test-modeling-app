@@ -2,7 +2,7 @@
 import { renderHook, act } from '@testing-library/react';
 import { Element } from '../../types/types';
 import {
-  getAllElementsFromHierarchy,
+  convertHierarchicalToArray,
   getChildrenFromHierarchy,
 } from '../../utils/hierarchical/hierarchicalConverter';
 import { useStore } from './textUtils';
@@ -11,7 +11,7 @@ import { HierarchicalStructure } from '../../types/hierarchicalTypes';
 
 // テスト用ヘルパー：StateからElement配列を取得
 const getAllElements = (state: { hierarchicalData: HierarchicalStructure | null }): Element[] => {
-  return state.hierarchicalData ? getAllElementsFromHierarchy(state.hierarchicalData) : [];
+  return state.hierarchicalData ? convertHierarchicalToArray(state.hierarchicalData) : [];
 };
 
 // Mock localStorage
@@ -100,6 +100,15 @@ describe('切り取り、コピー、貼り付け操作', () => {
     expect(clipboardData).not.toBeNull();
     expect(clipboardData).not.toBe('');
 
+    if (clipboardData) {
+      const copiedData = JSON.parse(clipboardData);
+      // ClipboardDataの構造を確認
+      expect(copiedData).toHaveProperty('type', 'copy');
+      expect(copiedData).toHaveProperty('rootElement');
+      expect(copiedData).toHaveProperty('subtree');
+      expect(copiedData.rootElement.id).toBe(childElement.id);
+    }
+
     // 親要素を選択して貼り付け
     act(() => {
       dispatch({ type: 'SELECT_ELEMENT', payload: { id: '1', ctrlKey: false, shiftKey: false } });
@@ -182,8 +191,12 @@ describe('切り取り、コピー、貼り付け操作', () => {
     expect(clipboardDataCut).not.toBe('');
 
     if (clipboardDataCut) {
-      const cutElements = JSON.parse(clipboardDataCut);
-      expect(Object.keys(cutElements)).toContain(childElement.id);
+      const cutData = JSON.parse(clipboardDataCut);
+      // ClipboardDataの構造を確認
+      expect(cutData).toHaveProperty('type', 'cut');
+      expect(cutData).toHaveProperty('rootElement');
+      expect(cutData).toHaveProperty('subtree');
+      expect(cutData.rootElement.id).toBe(childElement.id);
     }
   });
 });

@@ -4,7 +4,7 @@ import { useStore } from './textUtils';
 import { Element } from '../../types/types';
 import { SIZE } from '../../config/elementSettings';
 import {
-  getAllElementsFromHierarchy,
+  convertHierarchicalToArray,
   findElementInHierarchy,
   getChildrenCountFromHierarchy,
   findParentNodeInHierarchy,
@@ -15,7 +15,7 @@ import { HierarchicalStructure } from '../../types/hierarchicalTypes';
 // ヘルパー関数: hierarchicalDataから要素の配列を取得
 const getElementsFromState = (state: { hierarchicalData: HierarchicalStructure | null }) => {
   if (!state.hierarchicalData) return [];
-  return getAllElementsFromHierarchy(state.hierarchicalData);
+  return convertHierarchicalToArray(state.hierarchicalData);
 };
 
 // ヘルパー関数: hierarchicalDataから特定の要素を取得
