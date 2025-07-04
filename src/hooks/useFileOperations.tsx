@@ -1,7 +1,10 @@
 'use client';
 
 import React, { useCallback } from 'react';
-import { getAllElementsFromHierarchy } from '../utils/hierarchical/hierarchicalConverter';
+import {
+  getAllElementsFromHierarchy,
+  createElementsMapFromHierarchy,
+} from '../utils/hierarchical/hierarchicalConverter';
 import { useToast } from '../context/ToastContext';
 import { saveSvg, saveElements, loadElements } from '../utils/file';
 import { fileOperationAdapter } from '../utils/file/fileOperationAdapter';
@@ -10,7 +13,6 @@ import { TabState } from '../types/tabTypes';
 import { State } from '../state/state';
 import { isVSCodeExtension } from '../utils/environment/environmentDetector';
 import { storageAdapter } from '../utils/storage/storageAdapter';
-import { Element as DiagramElement } from '../types/types';
 
 interface UseFileOperationsParams {
   currentTab: TabState | undefined;
@@ -83,14 +85,10 @@ export function useFileOperations({
 
       // JSON保存後にタブを保存済みとしてマーク
       if (currentTab.id) {
-        // 現在の要素の状態をJSON文字列として保存（整形して比較）
-        const elementsMap = allElements.reduce(
-          (acc, element) => {
-            acc[element.id] = element;
-            return acc;
-          },
-          {} as Record<string, DiagramElement>,
-        );
+        // 現在の要素の状態をJSON文字列として保存（階層構造から直接ElementsMapを作成）
+        const elementsMap = currentTab.state.hierarchicalData
+          ? createElementsMapFromHierarchy(currentTab.state.hierarchicalData)
+          : {};
         const normalizedElements = JSON.parse(JSON.stringify(elementsMap));
         const currentElementsJson = JSON.stringify(normalizedElements);
 

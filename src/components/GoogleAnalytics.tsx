@@ -15,7 +15,8 @@ function GoogleAnalyticsBase() {
     if (trackingId) {
       ReactGA.initialize(trackingId);
     } else {
-      console.warn('Google Analytics tracking ID is not set.');
+      // console.warn('Google Analytics tracking ID is not set.');
+      // トラッキングIDが設定されていない場合の処理
     }
   }, [trackingId]);
 

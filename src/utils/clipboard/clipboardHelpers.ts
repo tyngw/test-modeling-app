@@ -1,8 +1,15 @@
 // src/utils/clipboard/clipboardHelpers.ts
 import { Element } from '../../types/types';
 import { ElementsMap } from '../../types/elementTypes';
-import { HierarchicalStructure } from '../../types/hierarchicalTypes';
-import { getChildrenFromHierarchy } from '../hierarchical/hierarchicalConverter';
+import { HierarchicalStructure, HierarchicalNode } from '../../types/hierarchicalTypes';
+import { findNodeInHierarchy } from '../hierarchical/hierarchicalConverter';
+
+// クリップボード用のデータ構造（階層構造ベース）
+export interface ClipboardData {
+  type: 'copy' | 'cut';
+  rootElement: Element;
+  subtree: HierarchicalNode;
+}
 
 // クリップボードでの要素データ識別用マーカー
 const CLIPBOARD_MARKER_COPY = '<!-- MODELING_APP_COPY_DATA:';
@@ -10,16 +17,11 @@ const CLIPBOARD_MARKER_CUT = '<!-- MODELING_APP_CUT_DATA:';
 const CLIPBOARD_MARKER_END = ' -->';
 
 /**
- * クリップボードに保存された要素データを解析する
+ * クリップボードに保存された要素データを解析する（階層構造ベース）
  * @param clipboardText クリップボードのテキスト
- * @returns 解析された要素データとタイプ、またはnull
+ * @returns 解析された階層データとタイプ、またはnull
  */
-const parseClipboardElementData = (
-  clipboardText: string,
-): {
-  type: 'copy' | 'cut';
-  elements: ElementsMap;
-} | null => {
+const parseClipboardElementData = (clipboardText: string): ClipboardData | null => {
   try {
     let markerStart = '';
     let type: 'copy' | 'cut' = 'copy';
@@ -43,9 +45,48 @@ const parseClipboardElementData = (
 
     const dataStart = startIndex + markerStart.length;
     const jsonData = clipboardText.substring(dataStart, endIndex);
-    const elements = JSON.parse(jsonData) as ElementsMap;
 
-    return { type, elements };
+    // 階層構造データまたは従来のElementsMapデータの両方に対応
+    let parsedData;
+    try {
+      parsedData = JSON.parse(jsonData);
+    } catch (e) {
+      console.error('Failed to parse JSON data:', e);
+      return null;
+    }
+
+    // 新しい階層構造データの場合
+    if (parsedData.rootElement && parsedData.subtree) {
+      return {
+        type,
+        rootElement: parsedData.rootElement,
+        subtree: parsedData.subtree,
+      };
+    }
+
+    // 従来のElementsMapデータの場合（後方互換性）
+    if (typeof parsedData === 'object' && !Array.isArray(parsedData)) {
+      const elements = Object.values(parsedData) as Element[];
+      const rootElement = elements.find((el) => el.selected);
+
+      if (!rootElement) {
+        return null;
+      }
+
+      // ElementsMapから階層構造に変換
+      const subtree = convertElementsMapToSubtree(parsedData as ElementsMap, rootElement.id);
+      if (!subtree) {
+        return null;
+      }
+
+      return {
+        type,
+        rootElement,
+        subtree,
+      };
+    }
+
+    return null;
   } catch (e) {
     console.error('Failed to parse clipboard element data:', e);
     return null;
@@ -53,104 +94,99 @@ const parseClipboardElementData = (
 };
 
 /**
- * 要素データをクリップボード用のテキストに変換する
- * @param elements 要素マップ
- * @param hierarchicalData 階層構造データ
- * @param type 'copy' または 'cut'
+ * 階層構造データをクリップボード用のテキストに変換する
+ * @param clipboardData クリップボードデータ
  * @returns クリップボード用のテキスト
  */
-const createClipboardText = (
-  elements: ElementsMap,
-  hierarchicalData: HierarchicalStructure | null,
-  type: 'copy' | 'cut',
-): string => {
-  const getElementText = (element: Element, depth = 0): string => {
-    const children = hierarchicalData ? getChildrenFromHierarchy(hierarchicalData, element.id) : [];
+const createClipboardText = (clipboardData: ClipboardData): string => {
+  const getElementText = (node: HierarchicalNode, depth = 0): string => {
     const tabs = '\t'.repeat(depth);
-    let result = `${tabs}${element.texts[0] || ''}`;
+    let result = `${tabs}${node.data.texts[0] || ''}`;
 
-    if (children.length > 0) {
+    if (node.children && node.children.length > 0) {
       result += '\n';
-      const childTexts = children.map((child) => getElementText(child, depth + 1));
+      const childTexts = node.children.map((child) => getElementText(child, depth + 1));
       result += childTexts.join('\n');
     }
 
     return result;
   };
 
-  // デバッグ情報を追加
-  const elementCount = Object.keys(elements).length;
-  if (elementCount === 0) {
-    console.warn('createClipboardText: No elements provided');
-    return '';
-  }
-
-  const selectedElement = Object.values(elements).find((el) => el.selected);
-  if (!selectedElement) {
-    console.warn('createClipboardText: No selected element found in elements map');
-    console.debug('Elements:', elements);
-    return '';
-  }
-
-  const textRepresentation = getElementText(selectedElement);
+  const textRepresentation = getElementText(clipboardData.subtree);
   if (!textRepresentation || textRepresentation.trim() === '') {
     console.warn('createClipboardText: Generated text representation is empty');
-    console.debug('Selected element:', selectedElement);
+    return '';
   }
 
-  const marker = type === 'copy' ? CLIPBOARD_MARKER_COPY : CLIPBOARD_MARKER_CUT;
-  const elementData = JSON.stringify(elements);
+  const marker = clipboardData.type === 'copy' ? CLIPBOARD_MARKER_COPY : CLIPBOARD_MARKER_CUT;
+  const elementData = JSON.stringify({
+    rootElement: clipboardData.rootElement,
+    subtree: clipboardData.subtree,
+  });
 
   return `${textRepresentation}\n\n${marker}${elementData}${CLIPBOARD_MARKER_END}`;
 };
 
 /**
- * 指定された要素とその子要素をすべて含む新しい要素マップを作成する
- *
- * @param elements 元の要素マップ
+ * 選択された要素とその子要素を階層構造のサブツリーとして取得
  * @param hierarchicalData 階層構造データ
- * @param targetElement 選択された要素
- * @returns 選択された要素とその子要素を含むマップ
+ * @param targetElement 対象の要素
+ * @returns クリップボードデータ
  */
 export const getSelectedAndChildren = (
-  elements: ElementsMap,
   hierarchicalData: HierarchicalStructure | null,
   targetElement: Element,
-): ElementsMap => {
-  const cutElements: ElementsMap = {};
-  const rootCopy = { ...targetElement, selected: true, tempParentId: null as string | null };
-  cutElements[rootCopy.id] = rootCopy;
+): ClipboardData | null => {
+  if (!hierarchicalData) {
+    // 階層データがない場合は単一要素のサブツリーを作成
+    return {
+      type: 'copy',
+      rootElement: { ...targetElement, selected: true },
+      subtree: {
+        data: { ...targetElement, selected: true },
+        children: undefined,
+      },
+    };
+  }
 
-  const collectChildren = (parentId: string) => {
-    const children = hierarchicalData ? getChildrenFromHierarchy(hierarchicalData, parentId) : [];
-    children.forEach((child) => {
-      const childCopy = { ...child, selected: false, tempParentId: parentId };
-      cutElements[childCopy.id] = childCopy;
-      collectChildren(child.id);
-    });
+  const targetNode = findNodeInHierarchy(hierarchicalData, targetElement.id);
+  if (!targetNode) {
+    return null;
+  }
+
+  // サブツリーをディープコピーして選択状態を設定
+  const copySubtree = (node: HierarchicalNode, isRoot = false): HierarchicalNode => {
+    const copiedData = { ...node.data, selected: isRoot, tempParentId: null };
+    const copiedChildren = node.children?.map((child) => copySubtree(child, false));
+
+    return {
+      data: copiedData,
+      children: copiedChildren && copiedChildren.length > 0 ? copiedChildren : undefined,
+    };
   };
 
-  collectChildren(targetElement.id);
-  return cutElements;
+  const subtree = copySubtree(targetNode, true);
+
+  return {
+    type: 'copy',
+    rootElement: subtree.data,
+    subtree,
+  };
 };
 
 /**
- * 要素をクリップボードにコピーする
+ * 要素をクリップボードにコピーする（階層構造ベース）
  * 要素データを特別なマーカーと共にクリップボードに保存
  *
- * @param elements コピーする要素のマップ
- * @param hierarchicalData 階層構造データ
+ * @param clipboardData コピーするクリップボードデータ
  * @returns Promise<boolean> コピーが成功したかどうか
  */
-export const copyToClipboard = async (
-  elements: ElementsMap,
-  hierarchicalData: HierarchicalStructure | null,
-): Promise<boolean> => {
-  const textToCopy = createClipboardText(elements, hierarchicalData, 'copy');
+export const copyToClipboard = async (clipboardData: ClipboardData): Promise<boolean> => {
+  const textToCopy = createClipboardText(clipboardData);
 
   // 空のテキストの場合は失敗として扱う
   if (!textToCopy || textToCopy.trim() === '') {
-    console.error('No text to copy - elements may be empty or invalid');
+    console.error('No text to copy - clipboard data may be empty or invalid');
     return false;
   }
 
@@ -169,21 +205,23 @@ export const copyToClipboard = async (
 };
 
 /**
- * 要素を切り取ってクリップボードに保存する
+ * 要素を切り取ってクリップボードに保存する（階層構造ベース）
  *
- * @param elements 切り取る要素のマップ
- * @param hierarchicalData 階層構造データ
+ * @param clipboardData 切り取るクリップボードデータ
  * @returns Promise<boolean> 切り取りが成功したかどうか
  */
-export const cutToClipboard = async (
-  elements: ElementsMap,
-  hierarchicalData: HierarchicalStructure | null,
-): Promise<boolean> => {
-  const textToCopy = createClipboardText(elements, hierarchicalData, 'cut');
+export const cutToClipboard = async (clipboardData: ClipboardData): Promise<boolean> => {
+  // 切り取り用にタイプを変更
+  const cutData: ClipboardData = {
+    ...clipboardData,
+    type: 'cut',
+  };
+
+  const textToCopy = createClipboardText(cutData);
 
   // 空のテキストの場合は失敗として扱う
   if (!textToCopy || textToCopy.trim() === '') {
-    console.error('No text to cut - elements may be empty or invalid');
+    console.error('No text to cut - clipboard data may be empty or invalid');
     return false;
   }
 
@@ -234,17 +272,17 @@ const fallbackCopyToClipboard = (text: string): Promise<boolean> => {
 };
 
 /**
- * クリップボードから保存されたコピー要素を取得する
+ * クリップボードから保存されたコピー要素を取得する（階層構造ベース）
  *
- * @returns 保存された要素マップ、存在しない場合はnull
+ * @returns 保存されたクリップボードデータ、存在しない場合はnull
  */
-export const getGlobalCopiedElements = async (): Promise<ElementsMap | null> => {
+export const getGlobalCopiedElements = async (): Promise<ClipboardData | null> => {
   try {
     const clipboardText = await navigator.clipboard.readText();
     const parsed = parseClipboardElementData(clipboardText);
 
     if (parsed && parsed.type === 'copy') {
-      return parsed.elements;
+      return parsed;
     }
     return null;
   } catch (e) {
@@ -254,17 +292,17 @@ export const getGlobalCopiedElements = async (): Promise<ElementsMap | null> => 
 };
 
 /**
- * クリップボードから保存された切り取り要素を取得する
+ * クリップボードから保存された切り取り要素を取得する（階層構造ベース）
  *
- * @returns 保存された要素マップ、存在しない場合はnull
+ * @returns 保存されたクリップボードデータ、存在しない場合はnull
  */
-export const getGlobalCutElements = async (): Promise<ElementsMap | null> => {
+export const getGlobalCutElements = async (): Promise<ClipboardData | null> => {
   try {
     const clipboardText = await navigator.clipboard.readText();
     const parsed = parseClipboardElementData(clipboardText);
 
     if (parsed && parsed.type === 'cut') {
-      return parsed.elements;
+      return parsed;
     }
     return null;
   } catch (e) {
@@ -337,13 +375,13 @@ export const parseHierarchicalText = (
 };
 
 /**
- * クリップボードベースのペースト処理
+ * クリップボードベースのペースト処理（階層構造ベース）
  *
  * @returns ペーストするデータ、またはnull
  */
 export const getClipboardDataForPaste = async (): Promise<{
   type: 'clipboard' | 'elements';
-  data: string[] | ElementsMap | Array<{ text: string; level: number; originalLine: string }>;
+  data: string[] | ClipboardData | Array<{ text: string; level: number; originalLine: string }>;
 } | null> => {
   try {
     const clipboardText = await navigator.clipboard.readText();
@@ -353,7 +391,7 @@ export const getClipboardDataForPaste = async (): Promise<{
     if (parsed) {
       return {
         type: 'elements',
-        data: parsed.elements,
+        data: parsed,
       };
     }
 
@@ -374,4 +412,40 @@ export const getClipboardDataForPaste = async (): Promise<{
     console.error('Failed to read clipboard for paste:', e);
     return null;
   }
+};
+
+/**
+ * ElementsMapから階層構造のサブツリーに変換する（後方互換性用）
+ * @param elementsMap 要素マップ
+ * @param rootElementId ルート要素のID
+ * @returns HierarchicalNode または null
+ */
+const convertElementsMapToSubtree = (
+  elementsMap: ElementsMap,
+  rootElementId: string,
+): HierarchicalNode | null => {
+  const rootElement = elementsMap[rootElementId];
+  if (!rootElement) {
+    return null;
+  }
+
+  const buildNode = (elementId: string): HierarchicalNode => {
+    const element = elementsMap[elementId];
+    const children: HierarchicalNode[] = [];
+
+    // tempParentIdを使って子要素を見つける
+    Object.values(elementsMap).forEach((el) => {
+      if (el.tempParentId === elementId) {
+        const childNode = buildNode(el.id);
+        children.push(childNode);
+      }
+    });
+
+    return {
+      data: element,
+      children: children.length > 0 ? children : undefined,
+    };
+  };
+
+  return buildNode(rootElementId);
 };

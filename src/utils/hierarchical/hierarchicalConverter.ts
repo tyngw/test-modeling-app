@@ -488,3 +488,287 @@ export function getChildrenCountFromHierarchy(
   const node = findNodeInHierarchy(hierarchical, nodeId);
   return node?.children?.length || 0;
 }
+
+/**
+ * 階層構造の総要素数を取得（フラット変換を避けて直接カウント）
+ * @param hierarchical 階層構造
+ * @returns 総要素数
+ */
+export function getElementCountFromHierarchy(hierarchical: HierarchicalStructure | null): number {
+  if (!hierarchical || !hierarchical.root) {
+    return 0;
+  }
+
+  function countNodesRecursive(node: HierarchicalNode): number {
+    let count = 1; // 現在のノード
+    if (node.children) {
+      for (const child of node.children) {
+        count += countNodesRecursive(child);
+      }
+    }
+    return count;
+  }
+
+  return countNodesRecursive(hierarchical.root);
+}
+
+/**
+ * 階層構造内の全要素の特定の属性を一括更新
+ * @param hierarchical 階層構造
+ * @param updateFn 更新関数
+ * @returns 更新された階層構造
+ */
+export function updateAllElementsInHierarchy(
+  hierarchical: HierarchicalStructure,
+  updateFn: (element: Element) => Partial<Element>,
+): HierarchicalStructure {
+  function updateNodeRecursive(node: HierarchicalNode): HierarchicalNode {
+    const updatedElement = { ...node.data, ...updateFn(node.data) };
+    const updatedChildren = node.children ? node.children.map(updateNodeRecursive) : [];
+
+    return {
+      ...node,
+      data: updatedElement,
+      children: updatedChildren,
+    };
+  }
+
+  return {
+    ...hierarchical,
+    root: hierarchical.root ? updateNodeRecursive(hierarchical.root) : hierarchical.root,
+  };
+}
+
+/**
+ * 階層構造からルート要素を直接取得
+ * @param hierarchical 階層構造
+ * @returns ルート要素（存在しない場合はnull）
+ */
+export function getRootElementFromHierarchy(
+  hierarchical: HierarchicalStructure | null,
+): Element | null {
+  if (!hierarchical || !hierarchical.root) {
+    return null;
+  }
+  return hierarchical.root.data;
+}
+
+/**
+ * 階層構造から直接ElementsMapを作成
+ * @param hierarchical 階層構造
+ * @returns ElementsMap
+ */
+export function createElementsMapFromHierarchy(
+  hierarchical: HierarchicalStructure | null,
+): Record<string, Element> {
+  if (!hierarchical) {
+    return {};
+  }
+
+  const elementsMap: Record<string, Element> = {};
+
+  function collectElementsRecursive(node: HierarchicalNode): void {
+    elementsMap[node.data.id] = node.data;
+
+    if (node.children) {
+      node.children.forEach(collectElementsRecursive);
+    }
+  }
+
+  collectElementsRecursive(hierarchical.root);
+  return elementsMap;
+}
+
+/**
+ * 階層構造から可視要素のみを取得
+ * @param hierarchical 階層構造
+ * @returns 可視要素の配列
+ */
+export function getVisibleElementsFromHierarchy(
+  hierarchical: HierarchicalStructure | null,
+): Element[] {
+  if (!hierarchical) {
+    return [];
+  }
+
+  const visibleElements: Element[] = [];
+
+  function collectVisibleElements(node: HierarchicalNode): void {
+    if (node.data.visible) {
+      visibleElements.push(node.data);
+    }
+
+    if (node.children) {
+      node.children.forEach(collectVisibleElements);
+    }
+  }
+
+  collectVisibleElements(hierarchical.root);
+  return visibleElements;
+}
+
+/**
+ * 階層構造内の全要素の座標をデバッグログ出力
+ * @param hierarchical 階層構造
+ * @param prefix ログの接頭辞
+ */
+export function logElementPositionsFromHierarchy(
+  hierarchical: HierarchicalStructure | null,
+  prefix = '',
+): void {
+  if (!hierarchical || !hierarchical.root) {
+    return;
+  }
+
+  function logNodeRecursive(node: HierarchicalNode, depth = 0): void {
+    const indent = '  '.repeat(depth);
+    console.log(
+      `${prefix}${indent}- 要素「${node.data.texts}」 id=${node.data.id}: X=${node.data.x}, Y=${node.data.y}`,
+    );
+
+    if (node.children) {
+      node.children.forEach((child) => logNodeRecursive(child, depth + 1));
+    }
+  }
+
+  logNodeRecursive(hierarchical.root);
+}
+
+/**
+ * 指定された深度の要素を階層構造から取得
+ * @param hierarchical 階層構造
+ * @param targetDepth 取得したい深度
+ * @returns 指定された深度の要素配列（Y位置→X位置でソート済み）
+ */
+export function getElementsByDepthFromHierarchy(
+  hierarchical: HierarchicalStructure | null,
+  targetDepth: number,
+): Element[] {
+  if (!hierarchical || !hierarchical.root) {
+    return [];
+  }
+
+  const elements: Element[] = [];
+
+  function collectElementsAtDepth(node: HierarchicalNode, currentDepth: number): void {
+    if (currentDepth === targetDepth) {
+      elements.push(node.data);
+    }
+
+    if (node.children && currentDepth < targetDepth) {
+      node.children.forEach((child) => collectElementsAtDepth(child, currentDepth + 1));
+    }
+  }
+
+  collectElementsAtDepth(hierarchical.root, 0);
+
+  // Y位置→X位置でソート
+  return elements.sort((a, b) => a.y - b.y || a.x - b.x);
+}
+
+/**
+ * 階層構造から指定された親IDを持つtentative要素を取得
+ * @param hierarchical 階層構造
+ * @param parentId 親要素のID（nullの場合はルートレベル）
+ * @returns tentative要素の配列
+ */
+export function getTentativeSiblingsByParentFromHierarchy(
+  hierarchical: HierarchicalStructure | null,
+  parentId: string | null,
+): Element[] {
+  if (!hierarchical) return [];
+
+  const tentativeElements: Element[] = [];
+
+  function collectTentativeRecursive(node: HierarchicalNode, currentParentId: string | null): void {
+    // 現在のノードが指定された親を持ち、tentativeならば収集
+    if (currentParentId === parentId && node.data.tentative) {
+      tentativeElements.push(node.data);
+    }
+
+    // 子要素を再帰的に処理
+    if (node.children) {
+      node.children.forEach((child) => collectTentativeRecursive(child, node.data.id));
+    }
+  }
+
+  if (hierarchical.root) {
+    // ルートレベルのtentative要素を探す場合
+    if (parentId === null && hierarchical.root.data.tentative) {
+      tentativeElements.push(hierarchical.root.data);
+    }
+
+    // 子要素から探す
+    if (hierarchical.root.children) {
+      hierarchical.root.children.forEach((child) => collectTentativeRecursive(child, null));
+    }
+  }
+
+  return tentativeElements;
+}
+
+/**
+ * 階層構造から指定された要素とその子孫要素をすべて取得
+ * @param hierarchical 階層構造
+ * @param elementId 対象要素のID
+ * @returns 要素とその子孫要素の配列（要素自身も含む）
+ */
+export function getElementAndDescendantsFromHierarchy(
+  hierarchical: HierarchicalStructure | null,
+  elementId: string,
+): Element[] {
+  if (!hierarchical) {
+    return [];
+  }
+
+  const targetNode = findNodeInHierarchy(hierarchical, elementId);
+  if (!targetNode) {
+    return [];
+  }
+
+  const result: Element[] = [];
+
+  function collectNodeAndDescendants(node: HierarchicalNode): void {
+    result.push(node.data);
+
+    if (node.children) {
+      node.children.forEach(collectNodeAndDescendants);
+    }
+  }
+
+  collectNodeAndDescendants(targetNode);
+  return result;
+}
+
+/**
+ * 階層構造から指定された要素の子孫要素のみを取得（要素自身は含まない）
+ * @param hierarchical 階層構造
+ * @param elementId 対象要素のID
+ * @returns 子孫要素の配列
+ */
+export function getDescendantsFromHierarchy(
+  hierarchical: HierarchicalStructure | null,
+  elementId: string,
+): Element[] {
+  if (!hierarchical) {
+    return [];
+  }
+
+  const targetNode = findNodeInHierarchy(hierarchical, elementId);
+  if (!targetNode || !targetNode.children) {
+    return [];
+  }
+
+  const result: Element[] = [];
+
+  function collectDescendants(node: HierarchicalNode): void {
+    result.push(node.data);
+
+    if (node.children) {
+      node.children.forEach(collectDescendants);
+    }
+  }
+
+  targetNode.children.forEach(collectDescendants);
+  return result;
+}

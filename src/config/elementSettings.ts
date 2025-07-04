@@ -15,8 +15,8 @@ export const SIZE = {
   },
 };
 export const OFFSET = {
-  X: 100,
-  Y: 10,
+  X: 100, // 要素の最大幅(300px) + 適切な間隔(50px)を考慮したオフセット
+  Y: 20, // 兄弟要素間のY軸オフセット（前の兄弟要素のY + height + 20px）- 重なり回避のため増加
 };
 export const ELEM_STYLE = {
   NORMAL: {

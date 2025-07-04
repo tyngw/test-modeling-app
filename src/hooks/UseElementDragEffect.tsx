@@ -17,11 +17,13 @@
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
-  getAllElementsFromHierarchy,
   getChildrenFromHierarchy,
   findParentNodeInHierarchy,
   getDepthFromHierarchy,
   getChildrenCountFromHierarchy,
+  getSelectedElementsFromHierarchy,
+  createElementsMapFromHierarchy,
+  getAllElementsFromHierarchy,
 } from '../utils/hierarchical/hierarchicalConverter';
 import { Element, DropPosition, DirectionType } from '../types/types';
 import { HierarchicalStructure } from '../types/hierarchicalTypes';
@@ -31,7 +33,6 @@ import { ToastMessages } from '../constants/toastMessages';
 import { HEADER_HEIGHT, OFFSET } from '../config/elementSettings';
 import { useToast } from '../context/ToastContext';
 import { debugLog } from '../utils/debugLogHelpers';
-import { ElementsMap } from '../types/elementTypes';
 
 const isTouchEvent = (event: MouseEvent | TouchEvent): event is TouchEvent => {
   return 'touches' in event;
@@ -57,7 +58,7 @@ const getChildren = (
   if (!hierarchicalData) return [];
 
   const children = getChildrenFromHierarchy(hierarchicalData, element.id);
-  return children.filter((child) => child.visible);
+  return children.filter((child) => child.visible).sort((a, b) => a.y - b.y); // Y座標でソート（配置順序を保持）
 };
 
 // 要素の親要素を取得するヘルパー関数（階層構造ベース）
@@ -113,18 +114,9 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
   const { state, dispatch } = useCanvas();
   const { addToast } = useToast();
 
-  // hierarchicalDataからelementsMapを生成
+  // hierarchicalDataからelementsMapを生成（階層構造ベース）
   const elementsMap = useMemo(() => {
-    if (!state.hierarchicalData) return {};
-
-    const allElements = getAllElementsFromHierarchy(state.hierarchicalData);
-    return allElements.reduce(
-      (acc, element) => {
-        acc[element.id] = element;
-        return acc;
-      },
-      {} as Record<string, Element>,
-    );
+    return state.hierarchicalData ? createElementsMapFromHierarchy(state.hierarchicalData) : {};
   }, [state.hierarchicalData]);
 
   const [draggingElement, setDraggingElement] = useState<Element | null>(null);
@@ -138,40 +130,16 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
       let clientX: number, clientY: number;
 
       if (isTouchEvent(e)) {
-        // タッチイベントの場合
-        clientX = e.touches[0].clientX;
-        clientY = e.touches[0].clientY;
+        clientX = e.touches[0].clientX + window.scrollX;
+        clientY = e.touches[0].clientY + window.scrollY;
       } else {
-        // マウスイベントの場合
-        clientX = e.clientX;
-        clientY = e.clientY;
+        clientX = e.clientX + window.scrollX;
+        clientY = e.clientY + window.scrollY;
       }
-
-      // キャンバスSVG要素を優先的に取得
-      const canvasSvg = document.querySelector('svg[data-testid="view-area"]');
-      if (canvasSvg) {
-        const rect = canvasSvg.getBoundingClientRect();
-        // SVG要素からの相対座標を計算
-        const relativeX = clientX - rect.left;
-        const relativeY = clientY - rect.top;
-
-        return {
-          x: relativeX / state.zoomRatio,
-          y: relativeY / state.zoomRatio,
-        };
-      }
-
-      // フォールバック: SVG要素が見つからない場合は従来の方法を使用
-      const canvasContainer = document.querySelector('[data-canvas-container]') || document.body;
-      const rect = canvasContainer.getBoundingClientRect();
-
-      // キャンバスコンテナからの相対座標を計算
-      const relativeX = clientX - rect.left;
-      const relativeY = clientY - rect.top;
 
       return {
-        x: relativeX / state.zoomRatio,
-        y: (relativeY - HEADER_HEIGHT) / state.zoomRatio,
+        x: clientX / state.zoomRatio,
+        y: (clientY - HEADER_HEIGHT) / state.zoomRatio,
       };
     },
     [state.zoomRatio],
@@ -182,7 +150,6 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
     (
       element: Element,
       _mouseY: number,
-      _elements: ElementsMap,
     ): { position: DropPosition; insertY: number; insertX?: number } => {
       const elemTop = element.y;
       const children = getChildren(element, state.hierarchicalData);
@@ -230,7 +197,6 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
       element: Element,
       mouseX: number,
       mouseY: number,
-      elements: ElementsMap,
     ): {
       position: DropPosition;
       distanceSq: number;
@@ -290,7 +256,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
       // 要素の上にある場合は子要素として追加 (child mode)
       // これを最優先で処理して、要素上のドラッグは常にchildモードになるようにする
       if (isInsideElement) {
-        result = calculateChildPosition(element, mouseY, elements);
+        result = calculateChildPosition(element, mouseY);
         // 要素の方向を設定（ルート要素の場合は右方向をデフォルトとする）
         result.direction = element.direction || 'right';
         debugLog(`Drop position mode (inside element ${element.id}):`, 'child');
@@ -446,26 +412,15 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
         const elementParentNode = state.hierarchicalData
           ? findParentNodeInHierarchy(state.hierarchicalData, element.id)
           : null;
-        const elementDepth = state.hierarchicalData
-          ? getDepthFromHierarchy(state.hierarchicalData, element.id)
-          : 1;
 
-        const siblings = Object.values(elements)
-          .filter((el) => {
-            if (!el.visible || el.id === draggingElementId) return false;
-
-            const elParentNode = state.hierarchicalData
-              ? findParentNodeInHierarchy(state.hierarchicalData, el.id)
-              : null;
-            const elDepth = state.hierarchicalData
-              ? getDepthFromHierarchy(state.hierarchicalData, el.id)
-              : 1;
-
-            const sameParent =
-              (elementParentNode?.data.id || null) === (elParentNode?.data.id || null);
-            return sameParent && elDepth === elementDepth;
-          })
-          .sort((a, b) => a.y - b.y);
+        // 同一親を持つ兄弟要素を取得（階層構造ベース）
+        const parentId = elementParentNode?.data.id || null;
+        const siblings =
+          state.hierarchicalData && parentId
+            ? getChildrenFromHierarchy(state.hierarchicalData, parentId)
+                .filter((el) => el.visible && el.id !== draggingElementId)
+                .sort((a, b) => a.y - b.y)
+            : [];
 
         debugLog(
           `[calculatePositionAndDistance] Found ${siblings.length} siblings (excluding dragging element) for element ${element.id}`,
@@ -518,7 +473,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
         const parentNodeForInsert = state.hierarchicalData
           ? findParentNodeInHierarchy(state.hierarchicalData, element.id)
           : null;
-        const parentElement = parentNodeForInsert ? elements[parentNodeForInsert.data.id] : null;
+        const parentElement = parentNodeForInsert ? parentNodeForInsert.data : null;
         if (parentElement) {
           insertX =
             siblingDirection === 'left'
@@ -601,25 +556,21 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
   );
 
   const findDropTarget = useCallback(
-    (e: MouseEvent | TouchEvent, elements: ElementsMap): DropTargetInfo => {
+    (e: MouseEvent | TouchEvent): DropTargetInfo => {
       if (!draggingElement) return null;
 
       const zoomAdjustedPos = convertToZoomCoordinates(e);
       const mouseX = zoomAdjustedPos.x;
       const mouseY = zoomAdjustedPos.y;
 
-      // 選択中の全要素のIDリストを取得（これらはドロップ先から除外する必要がある）
-      const selectedElementIds = Object.values(elements)
-        .filter((el) => el.selected)
-        .map((el) => el.id);
+      // 選択中の全要素のIDリストを階層構造から取得
+      const selectedElements = state.hierarchicalData
+        ? getSelectedElementsFromHierarchy(state.hierarchicalData)
+        : [];
+      const selectedElementIds = selectedElements.map((el: Element) => el.id);
 
-      // ルート要素を取得
-      const rootElement = Object.values(elements).find(
-        (el) =>
-          el.direction === 'none' &&
-          state.hierarchicalData &&
-          findParentNodeInHierarchy(state.hierarchicalData, el.id) === null,
-      );
+      // ルート要素を階層構造から取得
+      const rootElement = state.hierarchicalData?.root?.data || null;
 
       // ドラッグしている要素のdirectionを取得
       const draggingDirection = draggingElement?.direction || 'right';
@@ -638,8 +589,11 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
         );
       }
 
-      // 候補となる要素をフィルタリング - 自分自身と選択中の要素を除外
-      const candidates = Object.values(elements).filter((element) => {
+      // 候補となる要素を階層構造から取得し、フィルタリング - 自分自身と選択中の要素を除外
+      const allElements = state.hierarchicalData
+        ? getAllElementsFromHierarchy(state.hierarchicalData)
+        : [];
+      const candidates = allElements.filter((element) => {
         if (!element.visible || selectedElementIds.includes(element.id)) {
           return false;
         }
@@ -659,8 +613,24 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
         let isInDropArea = false;
 
         if (isRootElement) {
-          // ルート要素自体は候補から除外（子要素のみを対象とする）
-          return false;
+          // ルート要素の場合は拡張されたドロップ範囲を使用
+          const leftPadding = OFFSET.X * 2 + (draggingElement?.width ?? 0);
+          const rightPadding = OFFSET.X * 2 + (draggingElement?.width ?? 0);
+
+          const dropAreaTop = elemTop - OFFSET.Y;
+          const dropAreaBottom = elemBottom + OFFSET.Y;
+          const dropAreaLeft = elemLeft - leftPadding;
+          const dropAreaRight = elemRight + rightPadding;
+
+          isInDropArea =
+            mouseX >= dropAreaLeft &&
+            mouseX <= dropAreaRight &&
+            mouseY >= dropAreaTop &&
+            mouseY <= dropAreaBottom;
+
+          debugLog(
+            `[Root drop area] mouse(${mouseX},${mouseY}), area(${dropAreaLeft},${dropAreaTop},${dropAreaRight},${dropAreaBottom}), inArea: ${isInDropArea}`,
+          );
         } else {
           // 非ルート要素の場合
           // ルート要素の子要素の場合は、targetDirectionと一致する要素のみを候補とする
@@ -714,9 +684,9 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
       // すべての可視要素を親のIDでグループ化
       const elementsByParent: { [parentId: string]: Element[] } = {};
 
-      Object.values(elements)
-        .filter((el) => el.visible && !selectedElementIds.includes(el.id))
-        .forEach((el) => {
+      allElements
+        .filter((el: Element) => el.visible && !selectedElementIds.includes(el.id))
+        .forEach((el: Element) => {
           const parentNode = state.hierarchicalData
             ? findParentNodeInHierarchy(state.hierarchicalData, el.id)
             : null;
@@ -736,8 +706,9 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
       for (const [parentKey, groupElements] of Object.entries(elementsByParent)) {
         if (groupElements.length < 2) continue; // 少なくとも2つの要素が必要
 
-        // 親要素を取得してルート要素かどうかを判定
-        const parentElement = parentKey !== 'root' ? elements[parentKey] : null;
+        // 親要素を階層構造から取得してルート要素かどうかを判定
+        const parentElement =
+          parentKey !== 'root' ? allElements.find((el: Element) => el.id === parentKey) : null;
         const isParentRoot =
           parentElement &&
           parentElement.direction === 'none' &&
@@ -890,8 +861,9 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
       for (const [parentKey, groupElements] of Object.entries(elementsByParent)) {
         if (groupElements.length === 0) continue;
 
-        // 親要素を取得してルート要素かどうかを判定
-        const parentElement = parentKey !== 'root' ? elements[parentKey] : null;
+        // 親要素を階層構造から取得してルート要素かどうかを判定
+        const parentElement =
+          parentKey !== 'root' ? allElements.find((el: Element) => el.id === parentKey) : null;
         const isParentRoot =
           parentElement &&
           parentElement.direction === 'none' &&
@@ -1001,7 +973,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
 
       for (const element of candidates) {
         const { position, distanceSq, insertY, insertX, siblingInfo, direction } =
-          calculatePositionAndDistance(element, mouseX, mouseY, elements);
+          calculatePositionAndDistance(element, mouseX, mouseY);
 
         // ルート要素への左側または右側のドロップには優先度を与える
         const isRootElement =
@@ -1141,12 +1113,11 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
         `[Drag started] Element: ${element.id}, startPos: (${zoomAdjustedPos.x}, ${zoomAdjustedPos.y})`,
       );
 
-      // ドラッグ開始時に選択されている全要素の元の位置を保存
+      // ドラッグ開始時に選択されている全要素の元の位置を保存（階層構造ベース）
       elementOriginalPositions.current.clear();
-      const selectedElements = Object.values(elementsMap).filter((el): el is Element => {
-        const element = el as Element;
-        return element.selected;
-      });
+      const selectedElements = state.hierarchicalData
+        ? getSelectedElementsFromHierarchy(state.hierarchicalData)
+        : [];
 
       selectedElements.forEach((el) => {
         const element = el as Element;
@@ -1157,10 +1128,9 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
   );
 
   const resetElementsPosition = useCallback(() => {
-    const selectedElements = Object.values(elementsMap).filter((el): el is Element => {
-      const element = el as Element;
-      return element.selected;
-    });
+    const selectedElements = state.hierarchicalData
+      ? getSelectedElementsFromHierarchy(state.hierarchicalData)
+      : [];
     selectedElements.forEach((element) => {
       // 保存した元の位置情報を使用
       const originalPos = elementOriginalPositions.current.get(element.id);
@@ -1542,19 +1512,13 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
         // ドラッグ中の要素のIDリストを作成
         const draggedElementIds = draggedElements.map((el) => el.id);
 
-        // 同じ親を持つ兄弟要素を取得（ドラッグ中の要素を除外）
-        const siblings = Object.values(elementsMap)
-          .filter((el): el is Element => {
-            const parentNode = state.hierarchicalData
-              ? findParentNodeInHierarchy(state.hierarchicalData, el.id)
-              : null;
-            return (
-              el.visible &&
-              (parentNode?.data.id || null) === targetParentId &&
-              !draggedElementIds.includes(el.id)
-            ); // ドラッグ中の要素を除外
-          })
-          .sort((a, b) => a.y - b.y); // Y座標で並び替え
+        // 同じ親を持つ兄弟要素を取得（ドラッグ中の要素を除外、階層構造ベース）
+        const siblings =
+          state.hierarchicalData && targetParentId
+            ? getChildrenFromHierarchy(state.hierarchicalData, targetParentId)
+                .filter((el) => el.visible && !draggedElementIds.includes(el.id))
+                .sort((a, b) => a.y - b.y) // Y座標で並び替え
+            : [];
 
         if (prevElement && nextElement) {
           // 2つの要素の間にドロップする場合
@@ -1575,12 +1539,11 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
       } else if (dropTarget) {
         // child ドロップの場合
         const targetParentId = dropTarget.element.id;
-        const siblings = Object.values(elementsMap).filter((el): el is Element => {
-          const parentNode = state.hierarchicalData
-            ? findParentNodeInHierarchy(state.hierarchicalData, el.id)
-            : null;
-          return el.visible && (parentNode?.data.id || null) === targetParentId;
-        });
+        const siblings = state.hierarchicalData
+          ? getChildrenFromHierarchy(state.hierarchicalData, targetParentId).filter(
+              (el) => el.visible,
+            )
+          : [];
         baseOrder = siblings.length; // 末尾に追加
         debugLog(
           `[calculateTargetOrderValues] Child drop - siblings length: ${siblings.length}, baseOrder: ${baseOrder}`,
@@ -1615,9 +1578,9 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
     if (!draggingElement) return;
 
     try {
-      const selectedElements = Object.values(elementsMap).filter(
-        (el): el is Element => el.selected,
-      );
+      const selectedElements = state.hierarchicalData
+        ? getSelectedElementsFromHierarchy(state.hierarchicalData)
+        : [];
 
       if (currentDropTarget) {
         const { element: target, position } = currentDropTarget;
@@ -1681,7 +1644,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
         e.preventDefault();
       }
 
-      const dropTarget = findDropTarget(e, elementsMap);
+      const dropTarget = findDropTarget(e);
 
       // 新しいドロップターゲットと現在のドロップターゲットを比較し、
       // 実際に変更がある場合のみステートを更新する
@@ -1725,6 +1688,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
       findDropTarget,
       convertToZoomCoordinates,
       dragStartOffset,
+      dispatch,
     ],
   );
 

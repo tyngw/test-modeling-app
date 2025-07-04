@@ -2,6 +2,7 @@
 import { SIZE } from '../../config/elementSettings';
 import { createNewElement } from '../element/elementHelpers';
 import { Element, MarkerType, DirectionType } from '../../types/types';
+import { HierarchicalStructure } from '../../types/hierarchicalTypes';
 import {
   DEFAULT_FONT_FAMILY,
   DEFAULT_FONT_SIZE,
@@ -343,6 +344,24 @@ export const extractRootElementTextFromElements = (elements: Element[]): string 
 
   // 階層構造では最初の要素をルート要素として扱う
   const rootElement = elements[0];
+  if (rootElement && rootElement.texts && rootElement.texts.length > 0) {
+    const text = rootElement.texts[0];
+    return text && typeof text === 'string' ? text : undefined;
+  }
+  return undefined;
+};
+
+/**
+ * 階層構造から直接ルート要素のテキストを取得
+ * @param hierarchical 階層構造
+ * @returns ルート要素のテキスト（存在しない場合はundefined）
+ */
+export const extractRootElementTextFromHierarchy = (
+  hierarchical: HierarchicalStructure | null,
+): string | undefined => {
+  if (!hierarchical || !hierarchical.root) return undefined;
+
+  const rootElement = hierarchical.root.data;
   if (rootElement && rootElement.texts && rootElement.texts.length > 0) {
     const text = rootElement.texts[0];
     return text && typeof text === 'string' ? text : undefined;

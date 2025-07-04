@@ -1,7 +1,6 @@
 // src/state/__test__/copyPaste.test.ts
 import { renderHook, act } from '@testing-library/react';
 import { Element } from '../../types/types';
-import { ElementsMap } from '../../types/elementTypes';
 import {
   getAllElementsFromHierarchy,
   getChildrenFromHierarchy,
@@ -47,18 +46,18 @@ describe('切り取り、コピー、貼り付け操作', () => {
     let counter = 1750808871955;
     mockDateNow.mockImplementation(() => counter++);
 
-    // Mock clipboard functions
+    // Mock clipboard functions for new ClipboardData format
     jest
       .spyOn(clipboardHelpers, 'copyToClipboard')
-      .mockImplementation(async (elements: ElementsMap) => {
-        localStorage.setItem('copiedElements', JSON.stringify(elements));
+      .mockImplementation(async (clipboardData: unknown) => {
+        localStorage.setItem('copiedElements', JSON.stringify(clipboardData));
         return true;
       });
 
     jest
       .spyOn(clipboardHelpers, 'cutToClipboard')
-      .mockImplementation(async (elements: ElementsMap) => {
-        localStorage.setItem('cutElements', JSON.stringify(elements));
+      .mockImplementation(async (clipboardData: unknown) => {
+        localStorage.setItem('cutElements', JSON.stringify(clipboardData));
         return true;
       });
   });
