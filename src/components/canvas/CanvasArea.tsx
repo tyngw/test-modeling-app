@@ -142,7 +142,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
   useResizeEffect({
     setCanvasSize,
     setDisplayArea,
-    elements: elementsCache,
+    hierarchicalData: state.hierarchicalData,
     zoomRatio: state.zoomRatio,
     isClient,
     isDragInProgress, // ドラッグ中のフラグを追加

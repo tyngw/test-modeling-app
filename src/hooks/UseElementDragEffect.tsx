@@ -23,7 +23,6 @@ import {
   getChildrenCountFromHierarchy,
   getSelectedElementsFromHierarchy,
   createElementsMapFromHierarchy,
-  getAllElementsFromHierarchy,
 } from '../utils/hierarchical/hierarchicalConverter';
 import { Element, DropPosition, DirectionType } from '../types/types';
 import { HierarchicalStructure } from '../types/hierarchicalTypes';
@@ -591,9 +590,9 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
 
       // 候補となる要素を階層構造から取得し、フィルタリング - 自分自身と選択中の要素を除外
       const allElements = state.hierarchicalData
-        ? getAllElementsFromHierarchy(state.hierarchicalData)
-        : [];
-      const candidates = allElements.filter((element) => {
+        ? createElementsMapFromHierarchy(state.hierarchicalData)
+        : {};
+      const candidates = Object.values(allElements).filter((element: Element) => {
         if (!element.visible || selectedElementIds.includes(element.id)) {
           return false;
         }
@@ -672,7 +671,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
       });
 
       debugLog(`[findDropTarget] Found ${candidates.length} candidates`);
-      candidates.forEach((candidate) => {
+      candidates.forEach((candidate: Element) => {
         const isRoot =
           candidate.direction === 'none' &&
           state.hierarchicalData &&
@@ -684,7 +683,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
       // すべての可視要素を親のIDでグループ化
       const elementsByParent: { [parentId: string]: Element[] } = {};
 
-      allElements
+      Object.values(allElements)
         .filter((el: Element) => el.visible && !selectedElementIds.includes(el.id))
         .forEach((el: Element) => {
           const parentNode = state.hierarchicalData
@@ -707,8 +706,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
         if (groupElements.length < 2) continue; // 少なくとも2つの要素が必要
 
         // 親要素を階層構造から取得してルート要素かどうかを判定
-        const parentElement =
-          parentKey !== 'root' ? allElements.find((el: Element) => el.id === parentKey) : null;
+        const parentElement = parentKey !== 'root' ? allElements[parentKey] : null;
         const isParentRoot =
           parentElement &&
           parentElement.direction === 'none' &&
@@ -862,8 +860,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
         if (groupElements.length === 0) continue;
 
         // 親要素を階層構造から取得してルート要素かどうかを判定
-        const parentElement =
-          parentKey !== 'root' ? allElements.find((el: Element) => el.id === parentKey) : null;
+        const parentElement = parentKey !== 'root' ? allElements[parentKey] : null;
         const isParentRoot =
           parentElement &&
           parentElement.direction === 'none' &&

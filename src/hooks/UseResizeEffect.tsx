@@ -4,13 +4,7 @@
 import { useEffect, useMemo } from 'react';
 import { calculateCanvasSize } from '../utils/layoutUtilities';
 import { HEADER_HEIGHT } from '../config/elementSettings';
-
-interface ElementWithDimensions {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
+import { HierarchicalStructure } from '../types/hierarchicalTypes';
 
 interface ResizeEffectProps {
   setCanvasSize: React.Dispatch<
@@ -20,7 +14,7 @@ interface ResizeEffectProps {
     }>
   >;
   setDisplayArea: React.Dispatch<React.SetStateAction<string>>;
-  elements: { [key: string]: ElementWithDimensions };
+  hierarchicalData: HierarchicalStructure | null;
   zoomRatio: number;
   isClient?: boolean;
   isDragInProgress?: boolean; // ドラッグ中フラグを追加
@@ -29,16 +23,16 @@ interface ResizeEffectProps {
 const useResizeEffect = ({
   setCanvasSize,
   setDisplayArea,
-  elements,
+  hierarchicalData,
   zoomRatio,
-  isClient,
-  isDragInProgress,
+  isClient = true,
+  isDragInProgress = false,
 }: ResizeEffectProps) => {
-  // elementsの変更を安定的に検出するため、要素の情報をハッシュ化
-  const elementsSignature = useMemo(() => {
-    const entries = Object.entries(elements);
-    return entries.map(([id, el]) => `${id}:${el.x},${el.y},${el.width},${el.height}`).join('|');
-  }, [elements]);
+  // 階層構造のバージョンスタンプを計算してメモ化
+  const hierarchySignature = useMemo(() => {
+    if (!hierarchicalData) return 'empty';
+    return JSON.stringify(hierarchicalData.version || 'unknown');
+  }, [hierarchicalData]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !isClient) return;
@@ -49,7 +43,7 @@ const useResizeEffect = ({
       return;
     }
 
-    const newCanvasSize = calculateCanvasSize(elements);
+    const newCanvasSize = calculateCanvasSize(hierarchicalData);
     const maxHeight = window.innerHeight - HEADER_HEIGHT;
     newCanvasSize.width = Math.max(newCanvasSize.width, window.innerWidth);
     newCanvasSize.height = Math.max(newCanvasSize.height, maxHeight);
@@ -63,13 +57,13 @@ const useResizeEffect = ({
     setCanvasSize(newCanvasSize);
     setDisplayArea(`0 0 ${newViewSize.width} ${newViewSize.height}`);
   }, [
-    elementsSignature,
+    hierarchySignature,
     zoomRatio,
     setCanvasSize,
     setDisplayArea,
     isClient,
     isDragInProgress,
-    elements,
+    hierarchicalData,
   ]);
 };
 

@@ -1,10 +1,7 @@
 'use client';
 
 import React, { useCallback } from 'react';
-import {
-  getAllElementsFromHierarchy,
-  createElementsMapFromHierarchy,
-} from '../utils/hierarchical/hierarchicalConverter';
+import { createElementsMapFromHierarchy } from '../utils/hierarchical/hierarchicalConverter';
 import { useToast } from '../context/ToastContext';
 import { saveSvg, saveElements, loadElements } from '../utils/file';
 import { fileOperationAdapter } from '../utils/file/fileOperationAdapter';
@@ -63,9 +60,10 @@ export function useFileOperations({
 
     try {
       // hierarchicalDataから要素を取得
-      const allElements = currentTab.state.hierarchicalData
-        ? getAllElementsFromHierarchy(currentTab.state.hierarchicalData)
-        : [];
+      const elementsMap = currentTab.state.hierarchicalData
+        ? createElementsMapFromHierarchy(currentTab.state.hierarchicalData)
+        : {};
+      const allElements = Object.values(elementsMap);
 
       // VSCode拡張機能の場合は、現在のファイル名を使用
       let fileName = currentTab.name;

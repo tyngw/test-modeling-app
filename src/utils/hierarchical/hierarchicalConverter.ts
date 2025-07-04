@@ -403,19 +403,6 @@ export function getEditingElementsFromHierarchy(
 }
 
 /**
- * 階層構造から全要素を配列として取得
- * @param hierarchical 階層構造
- * @returns 全要素の配列
- */
-export function getAllElementsFromHierarchy(hierarchical: HierarchicalStructure | null): Element[] {
-  if (!hierarchical) {
-    return [];
-  }
-
-  return convertHierarchicalToArray(hierarchical);
-}
-
-/**
  * 階層構造から指定ノードの子要素を取得
  * @param hierarchical 階層構造
  * @param nodeId ノードID
