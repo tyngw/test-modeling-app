@@ -1,9 +1,8 @@
 // src/state/__test__/copyPaste.test.ts
 import { renderHook, act } from '@testing-library/react';
 import { Element } from '../../types/types';
-import { ElementsMap } from '../../types/elementTypes';
 import {
-  getAllElementsFromHierarchy,
+  convertHierarchicalToArray,
   getChildrenFromHierarchy,
 } from '../../utils/hierarchical/hierarchicalConverter';
 import { useStore } from './textUtils';
@@ -12,7 +11,7 @@ import { HierarchicalStructure } from '../../types/hierarchicalTypes';
 
 // テスト用ヘルパー：StateからElement配列を取得
 const getAllElements = (state: { hierarchicalData: HierarchicalStructure | null }): Element[] => {
-  return state.hierarchicalData ? getAllElementsFromHierarchy(state.hierarchicalData) : [];
+  return state.hierarchicalData ? convertHierarchicalToArray(state.hierarchicalData) : [];
 };
 
 // Mock localStorage
@@ -47,18 +46,18 @@ describe('切り取り、コピー、貼り付け操作', () => {
     let counter = 1750808871955;
     mockDateNow.mockImplementation(() => counter++);
 
-    // Mock clipboard functions
+    // Mock clipboard functions for new ClipboardData format
     jest
       .spyOn(clipboardHelpers, 'copyToClipboard')
-      .mockImplementation(async (elements: ElementsMap) => {
-        localStorage.setItem('copiedElements', JSON.stringify(elements));
+      .mockImplementation(async (clipboardData: unknown) => {
+        localStorage.setItem('copiedElements', JSON.stringify(clipboardData));
         return true;
       });
 
     jest
       .spyOn(clipboardHelpers, 'cutToClipboard')
-      .mockImplementation(async (elements: ElementsMap) => {
-        localStorage.setItem('cutElements', JSON.stringify(elements));
+      .mockImplementation(async (clipboardData: unknown) => {
+        localStorage.setItem('cutElements', JSON.stringify(clipboardData));
         return true;
       });
   });
@@ -100,6 +99,15 @@ describe('切り取り、コピー、貼り付け操作', () => {
     const clipboardData = localStorage.getItem('copiedElements');
     expect(clipboardData).not.toBeNull();
     expect(clipboardData).not.toBe('');
+
+    if (clipboardData) {
+      const copiedData = JSON.parse(clipboardData);
+      // ClipboardDataの構造を確認
+      expect(copiedData).toHaveProperty('type', 'copy');
+      expect(copiedData).toHaveProperty('rootElement');
+      expect(copiedData).toHaveProperty('subtree');
+      expect(copiedData.rootElement.id).toBe(childElement.id);
+    }
 
     // 親要素を選択して貼り付け
     act(() => {
@@ -183,8 +191,12 @@ describe('切り取り、コピー、貼り付け操作', () => {
     expect(clipboardDataCut).not.toBe('');
 
     if (clipboardDataCut) {
-      const cutElements = JSON.parse(clipboardDataCut);
-      expect(Object.keys(cutElements)).toContain(childElement.id);
+      const cutData = JSON.parse(clipboardDataCut);
+      // ClipboardDataの構造を確認
+      expect(cutData).toHaveProperty('type', 'cut');
+      expect(cutData).toHaveProperty('rootElement');
+      expect(cutData).toHaveProperty('subtree');
+      expect(cutData.rootElement.id).toBe(childElement.id);
     }
   });
 });

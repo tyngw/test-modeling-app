@@ -1,7 +1,10 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { getAllElementsFromHierarchy } from '../utils/hierarchical/hierarchicalConverter';
+import {
+  getSelectedElementsFromHierarchy,
+  createElementsMapFromHierarchy,
+} from '../utils/hierarchical/hierarchicalConverter';
 import { useToast } from '../context/ToastContext';
 import { ToastMessages } from '../constants/toastMessages';
 import { generateWithGemini } from '../utils/api';
@@ -10,7 +13,6 @@ import { formatElementsForPrompt } from '../utils/element';
 import { createUserPrompt } from '../constants/promptHelpers';
 import { TabState } from '../types/tabTypes';
 import { Action } from '../types/actionTypes';
-import { Element } from '../types/types';
 import { debugLog } from '../utils/debugLogHelpers';
 
 interface UseAIGenerationParams {
@@ -39,13 +41,10 @@ export function useAIGeneration({ currentTab, dispatch }: UseAIGenerationParams)
       }
 
       // AI生成開始時点での選択要素を固定
-      const allElements = currentTab.state.hierarchicalData
-        ? getAllElementsFromHierarchy(currentTab.state.hierarchicalData)
+      const selectedElements = currentTab.state.hierarchicalData
+        ? getSelectedElementsFromHierarchy(currentTab.state.hierarchicalData)
         : [];
-      const selectedElement = allElements.find((el): el is Element => {
-        const element = el as Element;
-        return element.selected;
-      });
+      const selectedElement = selectedElements[0];
 
       if (!selectedElement) {
         addToast(ToastMessages.noSelect);
@@ -69,14 +68,10 @@ export function useAIGeneration({ currentTab, dispatch }: UseAIGenerationParams)
         return;
       }
 
-      // allElementsをElementsMapに変換
-      const elementsMap = allElements.reduce(
-        (acc, element) => {
-          acc[element.id] = element;
-          return acc;
-        },
-        {} as Record<string, Element>,
-      );
+      // formatElementsForPrompt用にElementsMapを直接作成（階層構造ベース）
+      const elementsMap = currentTab.state.hierarchicalData
+        ? createElementsMapFromHierarchy(currentTab.state.hierarchicalData)
+        : {};
 
       const structureText = formatElementsForPrompt(elementsMap, targetElementId);
 

@@ -21,24 +21,18 @@ export function addElementToHierarchy(
   parentId: string | null,
   newElement: Element,
 ): HierarchicalOperationResult {
-  console.log(`[addElementToHierarchy] 開始 - parentId: ${parentId}, newElement:`, newElement);
-  console.log(`[addElementToHierarchy] 現在の階層構造:`, hierarchical);
-
   // structuredCloneの代わりにJSON.parse(JSON.stringify())を使用
   const clonedHierarchy = JSON.parse(JSON.stringify(hierarchical)) as HierarchicalStructure;
 
   if (parentId === null) {
-    console.log(`[addElementToHierarchy] ルート要素の置き換え（通常は発生しない）`);
     // ルート要素の置き換え（通常は発生しない）
     clonedHierarchy.root = {
       data: newElement,
       children: clonedHierarchy.root.children,
     };
   } else {
-    console.log(`[addElementToHierarchy] 親ノード検索開始 - parentId: ${parentId}`);
     // 親ノードを検索
     const parentNode = findNodeInHierarchy(clonedHierarchy, parentId);
-    console.log(`[addElementToHierarchy] 親ノード検索結果:`, parentNode);
 
     if (!parentNode) {
       const error = `親ノード ${parentId} が見つかりません`;
@@ -46,25 +40,16 @@ export function addElementToHierarchy(
       throw new Error(error);
     }
 
-    console.log(
-      `[addElementToHierarchy] 親ノードの現在の子要素数: ${parentNode.children?.length || 0}`,
-    );
-
     // 新しいノードを作成
     const newNode: HierarchicalNode = {
       data: newElement,
     };
-    console.log(`[addElementToHierarchy] 新しいノード作成:`, newNode);
 
     // 親ノードに子として追加
     if (!parentNode.children) {
       parentNode.children = [];
-      console.log(`[addElementToHierarchy] 親ノードにchildren配列を初期化`);
     }
     parentNode.children.push(newNode);
-    console.log(
-      `[addElementToHierarchy] 子要素追加完了 - 新しい子要素数: ${parentNode.children.length}`,
-    );
 
     // 階層構造のchildren配列で管理するため、data.childrenの更新は不要
   }
@@ -73,7 +58,6 @@ export function addElementToHierarchy(
     hierarchicalData: clonedHierarchy,
   };
 
-  console.log(`[addElementToHierarchy] 完了 - 結果:`, result);
   return result;
 }
 

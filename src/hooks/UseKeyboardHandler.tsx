@@ -1,17 +1,21 @@
 import { useCallback } from 'react';
-import { Element as CanvasElement } from '../types/types';
-import { ElementsMap } from '../types/elementTypes';
+import { HierarchicalStructure } from '../types/hierarchicalTypes';
 import { keyActionMap } from '../config/keyActionMap';
 import { getClipboardDataForPaste } from '../utils/clipboard/clipboardHelpers';
+import { getSelectedElementsFromHierarchy } from '../utils/hierarchical/hierarchicalConverter';
 import { ToastMessages } from '../constants/toastMessages';
 
 interface UseKeyboardHandlerProps {
   dispatch: (action: { type: string; payload?: unknown }) => void;
-  elements: Record<string, CanvasElement>;
+  hierarchicalData: HierarchicalStructure | null;
   addToast: (message: string) => void;
 }
 
-export const useKeyboardHandler = ({ dispatch, elements, addToast }: UseKeyboardHandlerProps) => {
+export const useKeyboardHandler = ({
+  dispatch,
+  hierarchicalData,
+  addToast,
+}: UseKeyboardHandlerProps) => {
   return useCallback(
     async (e: React.KeyboardEvent) => {
       e.preventDefault();
@@ -27,7 +31,11 @@ export const useKeyboardHandler = ({ dispatch, elements, addToast }: UseKeyboard
           return;
         }
 
-        const selectedElement = Object.values(elements).find((el) => el.selected);
+        // 階層構造から選択された要素を取得
+        const selectedElements = hierarchicalData
+          ? getSelectedElementsFromHierarchy(hierarchicalData)
+          : [];
+        const selectedElement = selectedElements[0]; // 最初の選択要素を使用
         if (!selectedElement) {
           addToast(ToastMessages.noSelect);
           return;
@@ -56,17 +64,17 @@ export const useKeyboardHandler = ({ dispatch, elements, addToast }: UseKeyboard
 
           addToast(`${hierarchicalData.length}個の要素を階層構造で貼り付けました`);
         } else if (pasteData.type === 'elements') {
-          // クリップボードからの要素貼り付け
+          // クリップボードからの要素貼り付け（階層構造ベース）
+          const clipboardData = pasteData.data as unknown;
           dispatch({
             type: 'PASTE_CLIPBOARD_ELEMENTS',
             payload: {
-              elements: pasteData.data as ElementsMap,
+              clipboardData: clipboardData,
               targetElementId: selectedElement.id,
             },
           });
 
-          const elementCount = Object.keys(pasteData.data as ElementsMap).length;
-          addToast(`${elementCount}個の要素を貼り付けました`);
+          addToast(`要素を貼り付けました`);
         }
       } else if (actionType) {
         if (actionType === 'ADD_ELEMENT') {
@@ -76,6 +84,6 @@ export const useKeyboardHandler = ({ dispatch, elements, addToast }: UseKeyboard
         }
       }
     },
-    [dispatch, elements, addToast],
+    [dispatch, hierarchicalData, addToast],
   );
 };

@@ -2,7 +2,7 @@ import { renderHook, act } from '@testing-library/react';
 import { useStore } from './textUtils';
 import { Element } from '../../types/types';
 import {
-  getAllElementsFromHierarchy,
+  convertHierarchicalToArray,
   getChildrenFromHierarchy,
   findParentNodeInHierarchy,
 } from '../../utils/hierarchical/hierarchicalConverter';
@@ -10,7 +10,7 @@ import { HierarchicalStructure } from '../../types/hierarchicalTypes';
 
 // ヘルパー関数
 const getAllElements = (state: { hierarchicalData: HierarchicalStructure | null }): Element[] => {
-  return state.hierarchicalData ? getAllElementsFromHierarchy(state.hierarchicalData) : [];
+  return state.hierarchicalData ? convertHierarchicalToArray(state.hierarchicalData) : [];
 };
 
 describe('ドラッグ＆ドロップ', () => {

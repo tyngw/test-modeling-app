@@ -1,9 +1,8 @@
 'use client';
 
 import { useCallback } from 'react';
-import { getAllElementsFromHierarchy } from '../utils/hierarchical/hierarchicalConverter';
 import { useTabs } from '../context/TabsContext';
-import { extractRootElementTextFromElements } from '../utils/file';
+import { extractRootElementTextFromHierarchy } from '../utils/file';
 import { determineFileName } from '../utils/file/fileHelpers';
 import { Action } from '../types/actionTypes';
 import { reducer } from '../state/state';
@@ -34,10 +33,7 @@ export function useTabManagement() {
 
         // 編集終了時にタブ名を更新
         if (action.type === 'END_EDITING') {
-          const elements = newState.hierarchicalData
-            ? getAllElementsFromHierarchy(newState.hierarchicalData)
-            : [];
-          const rootElementText = extractRootElementTextFromElements(elements);
+          const rootElementText = extractRootElementTextFromHierarchy(newState.hierarchicalData);
 
           if (rootElementText) {
             const newTabName = determineFileName(currentTab?.name || '無題', rootElementText);
@@ -57,10 +53,7 @@ export function useTabManagement() {
   const updateTabNameFromRootElement = useCallback(() => {
     if (!currentTab || !currentTabId) return;
 
-    const elements = currentTab.state.hierarchicalData
-      ? getAllElementsFromHierarchy(currentTab.state.hierarchicalData)
-      : [];
-    const rootElementText = extractRootElementTextFromElements(elements);
+    const rootElementText = extractRootElementTextFromHierarchy(currentTab.state.hierarchicalData);
 
     if (rootElementText) {
       const newTabName = determineFileName(currentTab.name, rootElementText);

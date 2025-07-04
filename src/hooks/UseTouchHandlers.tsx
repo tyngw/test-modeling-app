@@ -1,5 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Element as CanvasElement } from '../types/types';
+import { HierarchicalStructure } from '../types/hierarchicalTypes';
+import { findElementByIdInHierarchy } from '../utils/hierarchical/hierarchicalConverter';
 import { isSVGRectElement, isSVGGElement, hasDataset } from '../types/svgTypes';
 
 /**
@@ -10,13 +12,13 @@ interface UseTouchHandlersProps {
     e: React.TouchEvent<HTMLElement | SVGElement> | React.MouseEvent<HTMLElement | SVGElement>,
     element: CanvasElement,
   ) => void;
-  elements: Record<string, CanvasElement>;
+  hierarchicalData: HierarchicalStructure | null;
 }
 
 /**
  * タッチイベントを処理するためのカスタムフック
  */
-export const useTouchHandlers = ({ handleMouseDown, elements }: UseTouchHandlersProps) => {
+export const useTouchHandlers = ({ handleMouseDown, hierarchicalData }: UseTouchHandlersProps) => {
   const [isPinching, setIsPinching] = useState(false);
   const [initialPinchDistance, setInitialPinchDistance] = useState(0);
   const [initialScroll, setInitialScroll] = useState({ x: 0, y: 0 });
@@ -62,7 +64,7 @@ export const useTouchHandlers = ({ handleMouseDown, elements }: UseTouchHandlers
 
           if (elementId) {
             // IDが見つかった場合、その要素のhandleMouseDownを直接呼び出す
-            const element = elements[elementId];
+            const element = findElementByIdInHierarchy(hierarchicalData, elementId);
             if (element) {
               // TouchEventをMouseEventに変換
               const touch = e.touches[0];
@@ -90,7 +92,7 @@ export const useTouchHandlers = ({ handleMouseDown, elements }: UseTouchHandlers
         }
       }
     },
-    [elements, handleMouseDown],
+    [hierarchicalData, handleMouseDown],
   );
 
   /**

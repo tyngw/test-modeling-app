@@ -5,6 +5,8 @@ import {
   getDepthFromHierarchy,
   findParentNodeInHierarchy,
   getChildrenFromHierarchy,
+  getSelectedElementsFromHierarchy,
+  getElementsByDepthFromHierarchy,
 } from './hierarchical/hierarchicalConverter';
 
 export const getElementById = (
@@ -12,23 +14,23 @@ export const getElementById = (
   id: string,
 ): Element | undefined => elements[id];
 
-export const getSelectedElement = (elements: Record<string, Element>): Element | undefined =>
-  Object.values(elements).find((element) => element.selected);
+export const getSelectedElement = (
+  elements: Record<string, Element>,
+  hierarchicalData: HierarchicalStructure | null,
+): Element | undefined => {
+  // 階層構造から選択要素を直接取得
+  const selectedElements = getSelectedElementsFromHierarchy(hierarchicalData);
+  return selectedElements[0]; // 最初の選択要素を返す
+};
 
 const getElementsByDepth = (
-  elements: Record<string, Element>,
   depth: number,
   hierarchicalData: HierarchicalStructure | null,
 ): Element[] => {
-  if (!hierarchicalData) return [];
-
-  return Object.values(elements)
-    .filter((e) => getDepthFromHierarchy(hierarchicalData, e.id) === depth)
-    .sort((a, b) => a.y - b.y || a.x - b.x); // Y位置→X位置でソート
+  return getElementsByDepthFromHierarchy(hierarchicalData, depth);
 };
 
 const handleVerticalMove = (
-  elements: Record<string, Element>,
   selected: Element,
   offset: number,
   hierarchicalData: HierarchicalStructure | null,
@@ -37,7 +39,7 @@ const handleVerticalMove = (
 
   // 同じ深さの全要素を取得
   const selectedDepth = getDepthFromHierarchy(hierarchicalData, selected.id);
-  const sameDepthElements = getElementsByDepth(elements, selectedDepth, hierarchicalData);
+  const sameDepthElements = getElementsByDepth(selectedDepth, hierarchicalData);
   const currentIndex = sameDepthElements.findIndex((e) => e.id === selected.id);
 
   // 新しいインデックスを計算
@@ -85,13 +87,13 @@ export const handleArrowNavigation = (
   direction: 'up' | 'down' | 'left' | 'right',
   hierarchicalData: HierarchicalStructure | null,
 ): string | undefined => {
-  const selected = getSelectedElement(elements);
+  const selected = getSelectedElement(elements, hierarchicalData);
   if (!selected || !hierarchicalData) return undefined;
 
   switch (direction) {
     case 'up':
     case 'down':
-      return handleVerticalMove(elements, selected, direction === 'up' ? -1 : 1, hierarchicalData);
+      return handleVerticalMove(selected, direction === 'up' ? -1 : 1, hierarchicalData);
     case 'left': {
       const parentNode = findParentNodeInHierarchy(hierarchicalData, selected.id);
       return parentNode?.data.id ?? selected.id;

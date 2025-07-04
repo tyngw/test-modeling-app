@@ -23,11 +23,12 @@ import { debugLog } from '../utils/debugLogHelpers';
 import { createNewElement } from '../utils/element/elementHelpers';
 import { calculateElementWidth, wrapText } from '../utils/textareaHelpers';
 import { ElementsMap } from '../types/elementTypes';
-import { adjustElementPositions } from '../utils/layoutHelpers';
+import { adjustElementPositionsFromHierarchy } from '../utils/layoutHelpers';
 import {
   getSelectedAndChildren,
   copyToClipboard,
   cutToClipboard,
+  ClipboardData,
 } from '../utils/clipboard/clipboardHelpers';
 import { LayoutMode } from '../types/tabTypes';
 
@@ -39,14 +40,16 @@ import {
 } from '../types/hierarchicalTypes';
 import {
   convertFlatToHierarchical,
-  convertHierarchicalToFlat,
   findElementInHierarchy,
   findNodeInHierarchy,
   getSelectedElementsFromHierarchy,
   getEditingElementsFromHierarchy,
-  getAllElementsFromHierarchy,
+  logElementPositionsFromHierarchy,
   getChildrenFromHierarchy,
   findParentNodeInHierarchy,
+  getElementCountFromHierarchy,
+  updateAllElementsInHierarchy,
+  createElementsMapFromHierarchy,
 } from '../utils/hierarchical/hierarchicalConverter';
 import { updateHierarchyWithElementChanges } from '../utils/hierarchical/hierarchicalMaintainer';
 import {
@@ -245,14 +248,14 @@ const isAddHierarchicalElementsPayload = (
 
 const isPasteClipboardElementsPayload = (
   payload: unknown,
-): payload is { elements: ElementsMap; targetElementId: string } => {
+): payload is { clipboardData: unknown; targetElementId: string } => {
   return (
     typeof payload === 'object' &&
     payload !== null &&
-    'elements' in payload &&
+    'clipboardData' in payload &&
     'targetElementId' in payload &&
     typeof (payload as Record<string, unknown>).targetElementId === 'string' &&
-    typeof (payload as Record<string, unknown>).elements === 'object'
+    typeof (payload as Record<string, unknown>).clipboardData === 'object'
   );
 };
 
@@ -392,11 +395,7 @@ function handleArrowAction(
     }
 
     // 単一選択時の矢印操作
-    const allElements = getAllElementsFromHierarchy(state.hierarchicalData);
-    const elementsMap = allElements.reduce<ElementsMap>((acc, element) => {
-      acc[element.id] = element;
-      return acc;
-    }, {});
+    const elementsMap = createElementsMapFromHierarchy(state.hierarchicalData);
 
     const selectedId = handler(elementsMap, state.hierarchicalData);
     if (!selectedId || !state.hierarchicalData) return state;
@@ -492,35 +491,45 @@ const actionHandlers: Record<string, ActionHandler> = {
       if (editingElements.length > 0) {
         debugLog(`SELECT_ELEMENT: Ending editing for ${editingElements.length} elements`);
 
-        // すべての要素の編集状態を終了
-        const allElements = getAllElementsFromHierarchy(workingState.hierarchicalData);
-        const updatedElementsCache = allElements.reduce<ElementsMap>((acc, element) => {
-          acc[element.id] = { ...element, editing: false };
-          return acc;
-        }, {});
+        // 階層構造内の全要素の編集状態を直接終了
+        if (!workingState.hierarchicalData) {
+          return workingState;
+        }
+
+        const updatedHierarchicalData = updateAllElementsInHierarchy(
+          workingState.hierarchicalData,
+          () => ({ editing: false }),
+        );
+
+        // 位置調整のために一時的にフラット形式に変換（今後リファクタ対象）
+        // const updatedElementsCache = createElementsMapFromHierarchy(updatedHierarchicalData);
 
         // 階層構造を維持したまま位置調整を行う
-        if (workingState.hierarchicalData) {
-          const adjustedElementsCache = adjustElementPositions(
-            updatedElementsCache,
+        if (updatedHierarchicalData) {
+          const adjustedHierarchicalData = adjustElementPositionsFromHierarchy(
+            updatedHierarchicalData,
             () => state.numberOfSections,
             state.layoutMode,
             state.width || 0,
             state.height || 0,
-            workingState.hierarchicalData,
           );
 
-          // 位置調整後の要素データで階層構造を更新（親子関係を維持）
-          const updatedHierarchicalData = updateHierarchyWithElementChanges(
-            workingState.hierarchicalData,
-            adjustedElementsCache,
-          );
+          if (adjustedHierarchicalData) {
+            // 調整後の階層構造から要素マップを再構築
+            const adjustedElementsCache = createElementsMapFromHierarchy(adjustedHierarchicalData);
 
-          if (updatedHierarchicalData) {
-            workingState = {
-              ...workingState,
-              hierarchicalData: updatedHierarchicalData,
-            };
+            // 位置調整後の要素データで階層構造を更新（親子関係を維持）
+            const finalHierarchicalData = updateHierarchyWithElementChanges(
+              updatedHierarchicalData,
+              adjustedElementsCache,
+            );
+
+            if (finalHierarchicalData) {
+              workingState = {
+                ...workingState,
+                hierarchicalData: finalHierarchicalData,
+              };
+            }
           }
         }
       }
@@ -552,15 +561,14 @@ const actionHandlers: Record<string, ActionHandler> = {
           ? findParentNodeInHierarchy(workingState.hierarchicalData, firstSelected.id)
           : null;
         const parentId = parentNode?.data.id || null;
-        const allElements = getAllElementsFromHierarchy(workingState.hierarchicalData);
-        const siblings = allElements
-          .filter((e) => {
-            const eParent = workingState.hierarchicalData
-              ? findParentNodeInHierarchy(workingState.hierarchicalData, e.id)
-              : null;
-            return (eParent?.data.id || null) === parentId;
-          })
-          .sort((a, b) => a.id.localeCompare(b.id)); // IDでソート
+
+        // 兄弟要素を階層構造から直接取得
+        const siblings = parentId
+          ? getChildrenFromHierarchy(workingState.hierarchicalData, parentId)
+          : workingState.hierarchicalData?.root.children?.map((child) => child.data) || [];
+
+        // IDでソート
+        siblings.sort((a, b) => a.id.localeCompare(b.id));
 
         const startIndex = siblings.findIndex((e) => e.id === firstSelected.id);
         const endIndex = siblings.findIndex((e) => e.id === id);
@@ -579,9 +587,10 @@ const actionHandlers: Record<string, ActionHandler> = {
         ? findParentNodeInHierarchy(workingState.hierarchicalData, selectedElement.id)
         : null;
       const parentId = selectedParentNode?.data.id || null;
-      const allElements = getAllElementsFromHierarchy(workingState.hierarchicalData);
+
+      // 有効な選択IDをフィルタ：階層構造から直接検証
       const validSelectedIds = newSelectedIds.filter((id) => {
-        const elem = allElements.find((e) => e.id === id);
+        const elem = findElementInHierarchy(workingState.hierarchicalData, id);
         if (!elem) return false;
         const elemParent = workingState.hierarchicalData
           ? findParentNodeInHierarchy(workingState.hierarchicalData, elem.id)
@@ -757,9 +766,7 @@ const actionHandlers: Record<string, ActionHandler> = {
 
     debugLog(`EDIT_ELEMENT: Result hierarchy updated`, {
       editingElements: result.hierarchicalData
-        ? getAllElementsFromHierarchy(result.hierarchicalData)
-            .filter((e) => e.editing)
-            .map((e) => e.id)
+        ? getEditingElementsFromHierarchy(result.hierarchicalData).map((e) => e.id)
         : [],
     });
 
@@ -769,20 +776,15 @@ const actionHandlers: Record<string, ActionHandler> = {
   END_EDITING: createNoPayloadHandler((state) => {
     if (!state.hierarchicalData) return state;
 
-    // すべての要素の編集状態を終了
-    const allElements = getAllElementsFromHierarchy(state.hierarchicalData);
-
-    // 階層構造を直接更新（位置調整は行わない）
-    let currentHierarchy = state.hierarchicalData;
-    for (const element of allElements) {
-      const updatedElement = { ...element, editing: false };
-      const result = updateElementInHierarchy(currentHierarchy, element.id, updatedElement);
-      currentHierarchy = result.hierarchicalData;
-    }
+    // 階層構造内の全要素の編集状態を一括で終了
+    const updatedHierarchy = updateAllElementsInHierarchy(state.hierarchicalData, (element) => ({
+      ...element,
+      editing: false,
+    }));
 
     return {
       ...state,
-      hierarchicalData: currentHierarchy,
+      hierarchicalData: updatedHierarchy,
     };
   }),
 
@@ -854,31 +856,23 @@ const actionHandlers: Record<string, ActionHandler> = {
 
       const result = updateElementInHierarchy(state.hierarchicalData, id, updatedElement);
 
-      // 位置調整を行う
-      const allElements = getAllElementsFromHierarchy(result.hierarchicalData);
-      const elementsMap = allElements.reduce<ElementsMap>((acc, element) => {
-        acc[element.id] = element;
-        return acc;
-      }, {});
-
-      const adjustedElementsCache = adjustElementPositions(
-        elementsMap,
+      // 位置調整を行う（階層構造ベース）
+      const adjustedHierarchicalData = adjustElementPositionsFromHierarchy(
+        result.hierarchicalData,
         () => state.numberOfSections,
         state.layoutMode,
         state.width || 0,
         state.height || 0,
-        result.hierarchicalData,
       );
 
-      // 階層構造への直接位置更新（フラット変換を避ける）
-      const finalHierarchicalData = updateHierarchyWithElementChanges(
-        result.hierarchicalData,
-        adjustedElementsCache,
-      );
+      if (!adjustedHierarchicalData) {
+        debugLog(`UPDATE_ELEMENT_SIZE: 位置調整に失敗しました`);
+        return createStateFromHierarchicalResult(state, result);
+      }
 
       return {
         ...state,
-        hierarchicalData: finalHierarchicalData,
+        hierarchicalData: adjustedHierarchicalData,
       };
     },
   ),
@@ -908,16 +902,14 @@ const actionHandlers: Record<string, ActionHandler> = {
 
       const text = payload?.text;
 
-      // 階層構造から親要素の既存の子要素を順序通りに取得
-      const allElements = getAllElementsFromHierarchy(state.hierarchicalData);
-      debugLog(`[ADD_ELEMENT] 全要素数:`, allElements.length);
+      // 階層構造から総要素数を直接取得（フラット変換を避ける）
+      const totalElementCount = getElementCountFromHierarchy(state.hierarchicalData);
+      debugLog(`[ADD_ELEMENT] 全要素数:`, totalElementCount);
 
-      const siblings = allElements.filter((el) => {
-        const parentNode = state.hierarchicalData
-          ? findParentNodeInHierarchy(state.hierarchicalData, el.id)
-          : null;
-        return parentNode?.data.id === selectedElement.id && el.visible;
-      });
+      // 階層構造から選択要素の子要素を直接取得
+      const siblings = getChildrenFromHierarchy(state.hierarchicalData, selectedElement.id).filter(
+        (child) => child.visible,
+      );
 
       debugLog(`[ADD_ELEMENT] 選択要素の子要素数:`, siblings.length);
 
@@ -974,17 +966,14 @@ const actionHandlers: Record<string, ActionHandler> = {
       const selectionResult = setSelectionInHierarchy(result.hierarchicalData, [newElement.id]);
       debugLog(`[ADD_ELEMENT] 選択状態更新完了:`, selectionResult);
 
-      // 全要素を取得して位置調整を行う
-      const allElementsForAdjustment = getAllElementsFromHierarchy(
+      // 階層構造から総要素数を直接取得（フラット変換を避ける）
+      const updatedElementCount = getElementCountFromHierarchy(selectionResult.hierarchicalData);
+      debugLog(`[ADD_ELEMENT] 選択状態更新後の全要素数:`, updatedElementCount);
+
+      // 階層構造から直接ElementsMapを作成
+      const elementsForAdjustment = createElementsMapFromHierarchy(
         selectionResult.hierarchicalData,
       );
-      debugLog(`[ADD_ELEMENT] 選択状態更新後の全要素数:`, allElementsForAdjustment.length);
-
-      // フラット形式に変換して位置調整
-      const elementsForAdjustment: { [id: string]: Element } = {};
-      allElementsForAdjustment.forEach((element) => {
-        elementsForAdjustment[element.id] = element;
-      });
 
       // デバッグログ: 選択状態更新後の新要素の座標を確認
       const newElementAfterSelection = elementsForAdjustment[newElement.id];
@@ -996,16 +985,23 @@ const actionHandlers: Record<string, ActionHandler> = {
         debugLog(`[ADD_ELEMENT] エラー: 選択状態更新後に新要素が見つかりません`);
       }
 
-      // 位置調整を行う
+      // 位置調整を行う（階層構造ベース）
       debugLog(`[ADD_ELEMENT] 位置調整開始`);
-      const adjustedElementsCache = adjustElementPositions(
-        elementsForAdjustment,
+      const adjustedHierarchicalData = adjustElementPositionsFromHierarchy(
+        selectionResult.hierarchicalData,
         () => state.numberOfSections,
         state.layoutMode,
         state.width || 0,
         state.height || 0,
-        selectionResult.hierarchicalData,
       );
+
+      if (!adjustedHierarchicalData) {
+        debugLog(`[ADD_ELEMENT] エラー: 位置調整に失敗しました`);
+        return state;
+      }
+
+      // 調整後の階層構造から要素マップを再構築
+      const adjustedElementsCache = createElementsMapFromHierarchy(adjustedHierarchicalData);
 
       // デバッグログ: 位置調整後の新要素の座標を確認
       const newElementAfterAdjustment = adjustedElementsCache[newElement.id];
@@ -1017,29 +1013,21 @@ const actionHandlers: Record<string, ActionHandler> = {
         debugLog(`[ADD_ELEMENT] エラー: 位置調整後に新要素が見つかりません`);
       }
 
-      // デバッグログ: 位置調整後の全要素の座標を確認
+      // デバッグログ: 位置調整後の全要素の座標を確認（階層構造ベース）
       debugLog(`[ADD_ELEMENT] 位置調整後の全要素座標:`);
-      Object.values(adjustedElementsCache).forEach((element) => {
-        debugLog(
-          `  - 要素「${element.texts}」 id=${element.id}: X=${element.x}, Y=${element.y}, selected=${element.selected}`,
-        );
-      });
+      if (adjustedHierarchicalData) {
+        logElementPositionsFromHierarchy(adjustedHierarchicalData, '  ');
+      }
 
       // 階層構造内の要素の位置情報を直接更新（フラット変換を避ける）
       debugLog(`[ADD_ELEMENT] 階層構造内での位置更新開始`);
 
-      // 既存の階層構造を保持しながら要素の位置情報を更新
-      const finalHierarchicalData = updateHierarchyWithElementChanges(
-        selectionResult.hierarchicalData,
-        adjustedElementsCache,
-      );
+      // 階層構造ベースでの位置調整は既に適用済み
+      const finalHierarchicalData = adjustedHierarchicalData;
 
       // デバッグログ: 最終的な階層構造内の要素座標を確認
       debugLog(`[ADD_ELEMENT] 最終的な階層構造内の要素座標:`);
-      const finalElements = getAllElementsFromHierarchy(finalHierarchicalData);
-      finalElements.forEach((element) => {
-        debugLog(`  - 要素「${element.texts}」 id=${element.id}: X=${element.x}, Y=${element.y}`);
-      });
+      logElementPositionsFromHierarchy(finalHierarchicalData, '  ');
 
       debugLog(`[ADD_ELEMENT] 成功: 最終的なhierarchicalData:`, finalHierarchicalData);
 
@@ -1150,31 +1138,26 @@ const actionHandlers: Record<string, ActionHandler> = {
         currentHierarchy = result.hierarchicalData;
       }
 
-      const elementsCache = convertHierarchicalToFlat(currentHierarchy);
-
-      // 位置調整を行い、階層構造を維持
-      const adjustedElementsCache = adjustElementPositions(
-        elementsCache,
+      // 位置調整を行い、階層構造を維持（階層構造ベース）
+      const adjustedHierarchicalData = adjustElementPositionsFromHierarchy(
+        currentHierarchy,
         () => state.numberOfSections,
         state.layoutMode,
         state.width || 0,
         state.height || 0,
-        currentHierarchy,
       );
 
-      // 位置調整後の要素データで階層構造を更新（親子関係を維持）
-      const finalHierarchicalData = updateHierarchyWithElementChanges(
-        currentHierarchy,
-        adjustedElementsCache,
-      );
-      if (!finalHierarchicalData) return state;
+      if (!adjustedHierarchicalData) {
+        debugLog(`[ADD_ELEMENTS_SILENT] 位置調整に失敗しました`);
+        return state;
+      }
 
       // 成功ログ
       debugLog(`[ADD_ELEMENTS_SILENT] ${texts.length}個の要素を追加しました`);
 
       return {
         ...state,
-        hierarchicalData: finalHierarchicalData,
+        hierarchicalData: adjustedHierarchicalData,
       };
     },
   ),
@@ -1238,52 +1221,34 @@ const actionHandlers: Record<string, ActionHandler> = {
     }
 
     // 既存の要素の選択状態を解除し、新しい要素のみを選択状態にする
-    const allElements = getAllElementsFromHierarchy(result.hierarchicalData);
-    const elementsWithUpdatedSelection: { [id: string]: Element } = {};
-    allElements.forEach((element) => {
-      elementsWithUpdatedSelection[element.id] = {
-        ...element,
+    const hierarchyWithUpdatedSelection = updateAllElementsInHierarchy(
+      result.hierarchicalData,
+      (element) => ({
         selected: element.id === newElement.id, // 新しい要素のみを選択状態に
         editing: element.id === newElement.id, // 新しい要素を編集状態に
-      };
-    });
+      }),
+    );
 
-    // デバッグログ: 階層操作後の新要素の座標を確認
-    const newElementAfterHierarchy = elementsWithUpdatedSelection[newElement.id];
-    if (newElementAfterHierarchy) {
-      debugLog(
-        `[ADD_SIBLING_ELEMENT] 階層操作後の新要素: X=${newElementAfterHierarchy.x}, Y=${newElementAfterHierarchy.y}`,
-      );
-    }
-
-    // 位置調整を行い、階層構造を維持
-    const adjustedElementsCache = adjustElementPositions(
-      elementsWithUpdatedSelection,
+    // 位置調整を行い、階層構造を維持（階層構造ベース）
+    const adjustedHierarchicalData = adjustElementPositionsFromHierarchy(
+      hierarchyWithUpdatedSelection,
       () => state.numberOfSections,
       state.layoutMode,
       state.width || 0,
       state.height || 0,
-      result.hierarchicalData,
     );
 
-    // デバッグログ: 位置調整後の新要素の座標を確認
-    const newElementAfterAdjustment = adjustedElementsCache[newElement.id];
-    if (newElementAfterAdjustment) {
-      debugLog(
-        `[ADD_SIBLING_ELEMENT] 位置調整後の新要素: X=${newElementAfterAdjustment.x}, Y=${newElementAfterAdjustment.y}`,
-      );
+    if (!adjustedHierarchicalData) {
+      debugLog(`[ADD_SIBLING_ELEMENT] 位置調整に失敗しました`);
+      return state;
     }
 
-    // 位置調整後の要素データで階層構造を更新（親子関係を維持）
-    const finalHierarchicalData = updateHierarchyWithElementChanges(
-      result.hierarchicalData,
-      adjustedElementsCache,
-    );
-    if (!finalHierarchicalData) return state;
+    // 階層構造から直接ElementsMapを作成
+    const adjustedElementsCache = createElementsMapFromHierarchy(adjustedHierarchicalData);
 
     return {
       ...state,
-      hierarchicalData: finalHierarchicalData,
+      hierarchicalData: adjustedHierarchicalData,
       elementsCache: adjustedElementsCache,
       cacheValid: true,
     };
@@ -1303,15 +1268,13 @@ const actionHandlers: Record<string, ActionHandler> = {
     const firstParentNode = state.hierarchicalData
       ? findParentNodeInHierarchy(state.hierarchicalData, firstElement.id)
       : null;
-    const allElementsForSiblings3 = getAllElementsFromHierarchy(state.hierarchicalData);
-    const siblings = allElementsForSiblings3
-      .filter((e) => {
-        const eParent = state.hierarchicalData
-          ? findParentNodeInHierarchy(state.hierarchicalData, e.id)
-          : null;
-        return (eParent?.data.id || null) === (firstParentNode?.data.id || null) && !e.selected;
-      })
-      .sort((a, b) => a.id.localeCompare(b.id)); // IDでソート
+
+    // 兄弟要素を階層構造から直接取得
+    const siblings = firstParentNode
+      ? getChildrenFromHierarchy(state.hierarchicalData, firstParentNode.data.id)
+          .filter((sibling) => !sibling.selected) // 選択されていない兄弟のみ
+          .sort((a, b) => a.id.localeCompare(b.id)) // IDでソート
+      : [];
 
     // 兄弟要素があればそれを選択、なければ親要素を選択
     const nextSelectedId = siblings[0]?.id || firstParentNode?.data.id;
@@ -1330,28 +1293,26 @@ const actionHandlers: Record<string, ActionHandler> = {
       currentHierarchy = result.hierarchicalData;
     }
 
-    const elementsCache = convertHierarchicalToFlat(currentHierarchy);
-
-    // 位置調整を行い、階層構造を維持
-    const adjustedElementsCache = adjustElementPositions(
-      elementsCache,
+    // 位置調整を行い、階層構造を維持（階層構造ベース）
+    const adjustedHierarchicalData = adjustElementPositionsFromHierarchy(
+      currentHierarchy,
       () => state.numberOfSections,
       state.layoutMode,
       state.width || 0,
       state.height || 0,
-      currentHierarchy,
     );
 
-    // 位置調整後の要素データで階層構造を更新（親子関係を維持）
-    const finalHierarchicalData = updateHierarchyWithElementChanges(
-      currentHierarchy,
-      adjustedElementsCache,
-    );
-    if (!finalHierarchicalData) return state;
+    if (!adjustedHierarchicalData) {
+      debugLog(`DELETE_ELEMENT: 位置調整に失敗しました`);
+      return state;
+    }
+
+    // 階層構造から直接ElementsMapを作成
+    const adjustedElementsCache = createElementsMapFromHierarchy(adjustedHierarchicalData);
 
     return {
       ...state,
-      hierarchicalData: finalHierarchicalData,
+      hierarchicalData: adjustedHierarchicalData,
       elementsCache: adjustedElementsCache,
       cacheValid: true,
     };
@@ -1388,8 +1349,8 @@ const actionHandlers: Record<string, ActionHandler> = {
         root: updateTentativeInNode(state.hierarchicalData.root),
       };
 
-      // 更新された階層構造からキャッシュを再構築
-      const updatedElementsCache = convertHierarchicalToFlat(updatedHierarchicalData);
+      // 階層構造から直接ElementsMapを作成
+      const updatedElementsCache = createElementsMapFromHierarchy(updatedHierarchicalData);
 
       return {
         ...state,
@@ -1444,29 +1405,26 @@ const actionHandlers: Record<string, ActionHandler> = {
         root: updatedRoot,
       };
 
-      // 更新された階層構造からキャッシュを再構築
-      const updatedElementsCache = convertHierarchicalToFlat(updatedHierarchicalData);
-
-      // 位置調整を行い、階層構造を維持
-      const adjustedElementsCache = adjustElementPositions(
-        updatedElementsCache,
+      // 位置調整を行い、階層構造を維持（階層構造ベース）
+      const adjustedHierarchicalData = adjustElementPositionsFromHierarchy(
+        updatedHierarchicalData,
         () => state.numberOfSections,
         state.layoutMode,
         state.width || 0,
         state.height || 0,
-        updatedHierarchicalData,
       );
 
-      // 位置調整後の要素データで階層構造を更新（親子関係を維持）
-      const finalHierarchicalData = updateHierarchyWithElementChanges(
-        updatedHierarchicalData,
-        adjustedElementsCache,
-      );
-      if (!finalHierarchicalData) return state;
+      if (!adjustedHierarchicalData) {
+        debugLog(`CANCEL_TENTATIVE_ELEMENTS: 位置調整に失敗しました`);
+        return state;
+      }
+
+      // 階層構造から直接ElementsMapを作成
+      const adjustedElementsCache = createElementsMapFromHierarchy(adjustedHierarchicalData);
 
       return {
         ...state,
-        hierarchicalData: finalHierarchicalData,
+        hierarchicalData: adjustedHierarchicalData,
         elementsCache: adjustedElementsCache,
         cacheValid: true,
       };
@@ -1542,33 +1500,28 @@ const actionHandlers: Record<string, ActionHandler> = {
         }
       }
 
-      // 位置調整を行う
-      const allElements = getAllElementsFromHierarchy(result.hierarchicalData);
-      const adjustedElementsCache = allElements.reduce<ElementsMap>((acc, element) => {
-        acc[element.id] = element;
-        return acc;
-      }, {});
-
-      const adjustedElements = adjustElementPositions(
-        adjustedElementsCache,
+      // 位置調整を行う（階層構造ベース）
+      const adjustedHierarchicalData = adjustElementPositionsFromHierarchy(
+        result.hierarchicalData,
         () => state.numberOfSections,
         state.layoutMode,
         state.width || 0,
         state.height || 0,
-        result.hierarchicalData,
       );
+
+      if (!adjustedHierarchicalData) {
+        debugLog(`DROP_ELEMENT: 位置調整に失敗しました`);
+        return createStateFromHierarchicalResult(state, result);
+      }
+
+      // 階層構造から直接ElementsMapを作成
+      const adjustedElements = createElementsMapFromHierarchy(adjustedHierarchicalData);
 
       // 位置調整後の要素データで階層構造を更新（親子関係を維持）
-      const finalHierarchicalData = updateHierarchyWithElementChanges(
-        result.hierarchicalData,
-        adjustedElements,
-      );
-      if (!finalHierarchicalData) return state;
-
       return {
         ...state,
-        hierarchicalData: finalHierarchicalData,
-        elementsCache: adjustedElementsCache,
+        hierarchicalData: adjustedHierarchicalData,
+        elementsCache: adjustedElements,
         cacheValid: true,
       };
     },
@@ -1578,40 +1531,28 @@ const actionHandlers: Record<string, ActionHandler> = {
     const selectedElements = getSelectedElementsFromState(state);
     if (selectedElements.length === 0 || !state.hierarchicalData) return state;
 
-    let cutElementsMap: ElementsMap = {};
     let currentHierarchy = state.hierarchicalData;
+    const clipboardDataList: ClipboardData[] = [];
 
     selectedElements.forEach((selectedElement) => {
-      // 選択された要素とその子要素を取得
-      const allElementsForCut = getAllElementsFromHierarchy(state.hierarchicalData);
-      const elementsMapForCut = allElementsForCut.reduce<ElementsMap>((acc, element) => {
-        acc[element.id] = element;
-        return acc;
-      }, {});
-      const elementsToCut = getSelectedAndChildren(
-        elementsMapForCut,
-        state.hierarchicalData,
-        selectedElement,
-      );
+      // 選択された要素とその子要素を階層構造のサブツリーとして取得
+      const clipboardData = getSelectedAndChildren(state.hierarchicalData, selectedElement);
 
-      // 選択状態をリセット
-      Object.keys(elementsToCut).forEach((id) => {
-        if (elementsToCut[id]) {
-          elementsToCut[id] = { ...elementsToCut[id], selected: false };
-        }
-      });
-
-      cutElementsMap = { ...cutElementsMap, ...elementsToCut };
+      if (clipboardData) {
+        clipboardDataList.push({ ...clipboardData, type: 'cut' });
+      }
 
       // 階層構造から削除
       const result = deleteElementFromHierarchy(currentHierarchy, selectedElement.id);
       currentHierarchy = result.hierarchicalData;
     });
 
-    // 非同期でクリップボードに保存（エラーハンドリング付き）
-    cutToClipboard(cutElementsMap, state.hierarchicalData).catch((error) => {
-      console.error('Failed to cut elements to clipboard:', error);
-    });
+    // 最初の要素をクリップボードに保存（複数選択時は最初の要素のみ）
+    if (clipboardDataList.length > 0) {
+      cutToClipboard(clipboardDataList[0]).catch((error) => {
+        console.error('Failed to cut elements to clipboard:', error);
+      });
+    }
 
     return {
       ...state,
@@ -1625,23 +1566,16 @@ const actionHandlers: Record<string, ActionHandler> = {
       return state;
     }
 
-    const allElementsForCopy = getAllElementsFromHierarchy(state.hierarchicalData);
-    const elementsMapForCopy = allElementsForCopy.reduce<ElementsMap>((acc, element) => {
-      acc[element.id] = element;
-      return acc;
-    }, {});
-    const elementsToCopy = getSelectedAndChildren(
-      elementsMapForCopy,
-      state.hierarchicalData,
-      selectedElement,
-    );
+    // 階層構造から直接、選択された要素とその子要素をクリップボードデータとして取得
+    const clipboardData = getSelectedAndChildren(state.hierarchicalData, selectedElement);
 
-    // 非同期でクリップボードに保存（エラーハンドリング付き）
-    copyToClipboard(elementsToCopy, state.hierarchicalData).catch((error) => {
-      console.error('Failed to copy elements to clipboard:', error);
-    });
+    if (clipboardData) {
+      // 非同期でクリップボードに保存（エラーハンドリング付き）
+      copyToClipboard(clipboardData).catch((error) => {
+        console.error('Failed to copy elements to clipboard:', error);
+      });
+    }
 
-    // getSelectedAndChildrenが既に適切なparentId=nullとselected=trueを設定している
     return state;
   }),
 
@@ -1658,33 +1592,27 @@ const actionHandlers: Record<string, ActionHandler> = {
     // 可視性を設定
     const result = setVisibilityInHierarchy(state.hierarchicalData, selectedElement.id, true);
 
-    // 位置調整を行う
-    const allElements = getAllElementsFromHierarchy(result.hierarchicalData);
-    const adjustedElementsCache = allElements.reduce<ElementsMap>((acc, element) => {
-      acc[element.id] = element;
-      return acc;
-    }, {});
-
-    const adjustedElements = adjustElementPositions(
-      adjustedElementsCache,
+    // 位置調整を行う（階層構造ベース）
+    const adjustedHierarchicalData = adjustElementPositionsFromHierarchy(
+      result.hierarchicalData,
       () => state.numberOfSections,
       state.layoutMode,
       state.width || 0,
       state.height || 0,
-      result.hierarchicalData,
     );
 
-    // 位置調整後の要素データで階層構造を更新（親子関係を維持）
-    const finalHierarchicalData = updateHierarchyWithElementChanges(
-      result.hierarchicalData,
-      adjustedElements,
-    );
-    if (!finalHierarchicalData) return state;
+    if (!adjustedHierarchicalData) {
+      debugLog(`EXPAND_ELEMENT: 位置調整に失敗しました`);
+      return createStateFromHierarchicalResult(state, result);
+    }
+
+    // 階層構造から直接ElementsMapを作成
+    const adjustedElements = createElementsMapFromHierarchy(adjustedHierarchicalData);
 
     return {
       ...state,
-      hierarchicalData: finalHierarchicalData,
-      elementsCache: adjustedElementsCache,
+      hierarchicalData: adjustedHierarchicalData,
+      elementsCache: adjustedElements,
       cacheValid: true,
     };
   }),
@@ -1696,33 +1624,27 @@ const actionHandlers: Record<string, ActionHandler> = {
     // 可視性を設定
     const result = setVisibilityInHierarchy(state.hierarchicalData, selectedElement.id, false);
 
-    // 位置調整を行う
-    const allElements = getAllElementsFromHierarchy(result.hierarchicalData);
-    const adjustedElementsCache = allElements.reduce<ElementsMap>((acc, element) => {
-      acc[element.id] = element;
-      return acc;
-    }, {});
-
-    const adjustedElements = adjustElementPositions(
-      adjustedElementsCache,
+    // 位置調整を行う（階層構造ベース）
+    const adjustedHierarchicalData = adjustElementPositionsFromHierarchy(
+      result.hierarchicalData,
       () => state.numberOfSections,
       state.layoutMode,
       state.width || 0,
       state.height || 0,
-      result.hierarchicalData,
     );
 
-    // 位置調整後の要素データで階層構造を更新（親子関係を維持）
-    const finalHierarchicalData = updateHierarchyWithElementChanges(
-      result.hierarchicalData,
-      adjustedElements,
-    );
-    if (!finalHierarchicalData) return state;
+    if (!adjustedHierarchicalData) {
+      debugLog(`COLLAPSE_ELEMENT: 位置調整に失敗しました`);
+      return createStateFromHierarchicalResult(state, result);
+    }
+
+    // 階層構造から直接ElementsMapを作成
+    const adjustedElements = createElementsMapFromHierarchy(adjustedHierarchicalData);
 
     return {
       ...state,
-      hierarchicalData: finalHierarchicalData,
-      elementsCache: adjustedElementsCache,
+      hierarchicalData: adjustedHierarchicalData,
+      elementsCache: adjustedElements,
       cacheValid: true,
     };
   }),
@@ -1814,31 +1736,28 @@ const actionHandlers: Record<string, ActionHandler> = {
         parentStack.push({ element: newElement, level });
       }
 
-      // フラット構造に変換
-      const elementsCache = convertHierarchicalToFlat(currentHierarchy);
-
-      // 位置調整を行い、階層構造を維持
-      const adjustedElementsCache = adjustElementPositions(
-        elementsCache,
+      // 位置調整を行い、階層構造を維持（階層構造ベース）
+      const adjustedHierarchicalData = adjustElementPositionsFromHierarchy(
+        currentHierarchy,
         () => state.numberOfSections,
         state.layoutMode,
         state.width || 0,
         state.height || 0,
-        currentHierarchy,
       );
 
-      // 位置調整後の要素データで階層構造を更新（親子関係を維持）
-      const finalHierarchicalData = updateHierarchyWithElementChanges(
-        currentHierarchy,
-        adjustedElementsCache,
-      );
-      if (!finalHierarchicalData) return state;
+      if (!adjustedHierarchicalData) {
+        debugLog(`ADD_HIERARCHICAL_ELEMENTS: 位置調整に失敗しました`);
+        return state;
+      }
+
+      // 階層構造から直接ElementsMapを作成
+      const adjustedElementsCache = createElementsMapFromHierarchy(adjustedHierarchicalData);
 
       debugLog(`[ADD_HIERARCHICAL_ELEMENTS] ${hierarchicalItems.length}個の階層要素を追加しました`);
 
       return {
         ...state,
-        hierarchicalData: finalHierarchicalData,
+        hierarchicalData: adjustedHierarchicalData,
         elementsCache: adjustedElementsCache,
         cacheValid: true,
       };
@@ -1846,125 +1765,94 @@ const actionHandlers: Record<string, ActionHandler> = {
   ),
 
   PASTE_CLIPBOARD_ELEMENTS: createSafeHandler(isPasteClipboardElementsPayload, (state, payload) => {
-    const { elements: elementsToAdd, targetElementId } = payload;
-    if (!state.hierarchicalData) return state;
+    const { clipboardData, targetElementId } = payload;
+    if (!state.hierarchicalData || !clipboardData) return state;
 
     const selectedElement = findElementInHierarchy(state.hierarchicalData, targetElementId);
     if (!selectedElement) return state;
 
-    let currentHierarchy = state.hierarchicalData;
+    try {
+      // 階層構造のサブツリーを新しいIDで複製
+      const cloneNodeWithNewIds = (sourceNode: HierarchicalNode): HierarchicalNode => {
+        const newId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+        const clonedElement = {
+          ...sourceNode.data,
+          id: newId,
+          selected: false,
+          editing: false,
+          x: selectedElement.x + 20,
+          y: selectedElement.y + 20,
+        };
 
-    // 要素のIDマッピングを作成（古いID -> 新しいID）
-    const idMap = new Map<string, string>();
-    const newElements: ElementsMap = {};
+        return {
+          data: clonedElement,
+          children: sourceNode.children
+            ? sourceNode.children.map((child: HierarchicalNode) => cloneNodeWithNewIds(child))
+            : undefined,
+        };
+      };
 
-    // ルート要素を特定（tempParentIdがnullまたは存在しない要素）
-    const rootElement = Object.values(elementsToAdd).find((el) => {
-      const tempParentId = (el as Element & { tempParentId?: string | null }).tempParentId;
-      return !tempParentId || tempParentId === null;
-    });
-    if (!rootElement) return state;
+      const clonedSubtree = cloneNodeWithNewIds((clipboardData as ClipboardData).subtree);
 
-    // 1. 最初にすべての要素の新しいIDを生成してマッピングを作成
-    Object.values(elementsToAdd).forEach((element, index) => {
-      const newId = (Date.now() + index).toString();
-      idMap.set(element.id, newId);
-    });
+      // 階層構造に追加
+      const result = addElementToHierarchy(
+        state.hierarchicalData,
+        targetElementId,
+        clonedSubtree.data,
+      );
 
-    // 2. 階層構造を維持しながら要素を変換
-    Object.values(elementsToAdd).forEach((element) => {
-      const newId = idMap.get(element.id)!;
-
-      // directionを適切に設定
-      let newDirection = element.direction;
-
-      // ルート要素かどうかをtempParentIdから判断
-      const tempParentId = (element as Element & { tempParentId?: string | null }).tempParentId;
-      const isRootElement = !tempParentId || tempParentId === null;
-
-      if (isRootElement) {
-        // ルート要素の場合
-        if (selectedElement.direction === 'none') {
-          newDirection = element.direction === 'none' ? 'right' : element.direction;
-        } else {
-          newDirection = selectedElement.direction;
-        }
-      } else {
-        // 子要素の場合は元のdirectionを維持
-        newDirection = element.direction;
+      if (!result.hierarchicalData) {
+        return state;
       }
 
-      // tempParentIdを除去してnewElementsに追加
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { tempParentId: _tempParentId, ...cleanElement } = element as Element & {
-        tempParentId?: string | null;
+      let currentHierarchy = result.hierarchicalData;
+
+      // 子要素を再帰的に追加
+      const addSubtreeToHierarchy = (parentId: string, node: HierarchicalNode) => {
+        if (node.children) {
+          node.children.forEach((childNode: HierarchicalNode) => {
+            const childResult = addElementToHierarchy(currentHierarchy, parentId, childNode.data);
+
+            if (childResult.hierarchicalData) {
+              currentHierarchy = childResult.hierarchicalData;
+              addSubtreeToHierarchy(childNode.data.id, childNode);
+            }
+          });
+        }
       };
-      newElements[newId] = {
-        ...cleanElement,
-        id: newId,
-        direction: newDirection,
-        selected: false,
+
+      addSubtreeToHierarchy(clonedSubtree.data.id, clonedSubtree);
+
+      // 貼り付け後に位置を自動調整
+      const adjustedHierarchicalData = adjustElementPositionsFromHierarchy(
+        currentHierarchy,
+        () => state.numberOfSections,
+        state.layoutMode,
+        state.width || 0,
+        state.height || 0,
+      );
+
+      if (!adjustedHierarchicalData) {
+        // 位置調整に失敗した場合は調整前の状態を返す
+        return {
+          ...state,
+          hierarchicalData: currentHierarchy,
+        };
+      }
+
+      // 階層構造から直接ElementsMapを作成
+      const adjustedElementsCache = createElementsMapFromHierarchy(adjustedHierarchicalData);
+
+      return {
+        ...state,
+        hierarchicalData: adjustedHierarchicalData,
+        elementsCache: adjustedElementsCache,
+        cacheValid: true,
       };
-    });
-
-    // 3. 階層構造に追加（ルート要素から開始）
-    const newRootId = idMap.get(rootElement.id)!;
-    const newRootElement = newElements[newRootId];
-
-    const result = addElementToHierarchy(currentHierarchy, selectedElement.id, newRootElement);
-    currentHierarchy = result.hierarchicalData;
-
-    // 4. 子要素を再帰的に追加
-    const addChildrenRecursively = (parentElementId: string, originalParentId: string) => {
-      const childElements = Object.values(elementsToAdd).filter((el) => {
-        // tempParentIdを使って親子関係を確認
-        const tempParentId = (el as Element & { tempParentId?: string | null }).tempParentId;
-        return tempParentId === originalParentId;
-      });
-
-      childElements.forEach((childElement) => {
-        const newChildId = idMap.get(childElement.id)!;
-        const newChildElement = newElements[newChildId];
-
-        const childResult = addElementToHierarchy(
-          currentHierarchy,
-          parentElementId,
-          newChildElement,
-        );
-        currentHierarchy = childResult.hierarchicalData;
-
-        // 孫要素も再帰的に追加
-        addChildrenRecursively(newChildId, childElement.id);
-      });
-    };
-
-    // ルート要素の子要素を再帰的に追加
-    addChildrenRecursively(newRootId, rootElement.id);
-
-    // 位置調整を行い、階層構造を維持
-    const elementsCache = convertHierarchicalToFlat(currentHierarchy);
-    const adjustedElementsCache = adjustElementPositions(
-      elementsCache,
-      () => state.numberOfSections,
-      state.layoutMode,
-      state.width || 0,
-      state.height || 0,
-      currentHierarchy,
-    );
-
-    // 位置調整後の要素データで階層構造を更新（親子関係を維持）
-    const finalHierarchicalData = updateHierarchyWithElementChanges(
-      currentHierarchy,
-      adjustedElementsCache,
-    );
-    if (!finalHierarchicalData) return state;
-
-    return {
-      ...state,
-      hierarchicalData: finalHierarchicalData,
-      elementsCache: adjustedElementsCache,
-      cacheValid: true,
-    };
+    } catch (error) {
+      console.error('PASTE_CLIPBOARD_ELEMENTS: Error occurred:', error);
+      return state;
+    }
   }),
 };
 

@@ -30,6 +30,9 @@ import {
   findParentNodeInHierarchy,
   getChildrenFromHierarchy,
   getDepthFromHierarchy,
+  createElementsMapFromHierarchy,
+  getEditingElementsFromHierarchy,
+  getVisibleElementsFromHierarchy,
   // findNodeInHierarchy, // 未使用のため一時的にコメントアウト
 } from '../../utils/hierarchical/hierarchicalConverter';
 // import { getChildrenInHierarchy } from '../../utils/hierarchical/hierarchicalOperations'; // 未使用のため一時的にコメントアウト
@@ -39,8 +42,6 @@ import {
   getCanvasBackgroundColor,
 } from '../../utils/storage/localStorageHelpers';
 import { calculateDropCoordinates } from '../../utils/dropCoordinateHelpers';
-import { getAllElementsFromHierarchy } from '../../utils/hierarchical/hierarchicalConverter';
-import { ElementsMap } from '../../types/elementTypes';
 
 // デバッグログ機能（開発時のデバッグ用）
 const DEBUG_ENABLED = false; // 本番環境ではfalseに設定
@@ -93,13 +94,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
   const { state, dispatch } = useCanvas();
   // ElementsMapをuseMemoで安定化 - hierarchicalDataが変更された時のみ再計算
   const elementsCache = useMemo(() => {
-    if (!state.hierarchicalData) return {};
-
-    const allElements = getAllElementsFromHierarchy(state.hierarchicalData);
-    return allElements.reduce<ElementsMap>((acc, element) => {
-      acc[element.id] = element;
-      return acc;
-    }, {});
+    return createElementsMapFromHierarchy(state.hierarchicalData);
   }, [state.hierarchicalData]);
   const [connectionPathColor, setConnectionPathColor] = useState(DEFAULT_CONNECTION_PATH_COLOR);
   const [connectionPathStroke, setConnectionPathStroke] = useState(DEFAULT_CONNECTION_PATH_STROKE);
@@ -111,21 +106,18 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
   const [displayArea, setDisplayArea] = useState('0 0 0 0');
 
   const editingNode = useMemo(() => {
-    const editing = Object.values(elementsCache).find(
-      (element): element is CanvasElement => (element as CanvasElement).editing,
-    ) as CanvasElement | undefined;
+    const editingElements = getEditingElementsFromHierarchy(state.hierarchicalData);
+    const editing = editingElements[0] as CanvasElement | undefined;
 
     // デバッグ情報（必要に応じてdebugLogを使用）
     debugLog('[DEBUG] CanvasArea: editingNode search', {
       totalElements: Object.keys(elementsCache).length,
-      editingElements: Object.values(elementsCache)
-        .filter((e) => e.editing)
-        .map((e) => ({ id: e.id, editing: e.editing })),
+      editingElements: editingElements.map((e) => ({ id: e.id, editing: e.editing })),
       editingNode: editing ? editing.id : 'none',
     });
 
     return editing;
-  }, [elementsCache]);
+  }, [state.hierarchicalData, elementsCache]);
 
   const [hover, setHover] = useState<string | null>(null);
   const [showMenuForElement, setShowMenuForElement] = useState<string | null>(null);
@@ -150,7 +142,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
   useResizeEffect({
     setCanvasSize,
     setDisplayArea,
-    elements: elementsCache,
+    hierarchicalData: state.hierarchicalData,
     zoomRatio: state.zoomRatio,
     isClient,
     isDragInProgress, // ドラッグ中のフラグを追加
@@ -159,13 +151,13 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
   // タッチ操作のハンドラーをカスタムフックから取得
   const { isPinching, handleTouchStart, handleTouchMove, handleTouchEnd } = useTouchHandlers({
     handleMouseDown,
-    elements: elementsCache,
+    hierarchicalData: state.hierarchicalData,
   });
 
   // キーボード操作のハンドラーをカスタムフックから取得
   const handleKeyDown = useKeyboardHandler({
     dispatch: dispatch as (action: { type: string; payload?: unknown }) => void,
-    elements: elementsCache,
+    hierarchicalData: state.hierarchicalData,
     addToast,
   });
 
@@ -256,36 +248,35 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     // 子要素を持つ非ルート要素のリスト（始点マーカーボタン用）
     const nonRootElementsWithChildren: CanvasElement[] = [];
 
-    // 要素を可視状態でフィルタリングしつつグループ化
-    Object.values(elementsCache)
-      .filter((element): element is CanvasElement => (element as CanvasElement).visible)
-      .forEach((element) => {
-        const canvasElement = element as CanvasElement;
-        // 階層データから親要素と深度を取得
-        const parentNode = state.hierarchicalData
-          ? findParentNodeInHierarchy(state.hierarchicalData, canvasElement.id)
-          : null;
-        const depth = state.hierarchicalData
-          ? getDepthFromHierarchy(state.hierarchicalData, canvasElement.id)
-          : 1;
+    // 階層構造から可視要素を直接取得してグループ化
+    const visibleElements = getVisibleElementsFromHierarchy(state.hierarchicalData);
+    visibleElements.forEach((element) => {
+      const canvasElement = element as CanvasElement;
+      // 階層データから親要素と深度を取得
+      const parentNode = state.hierarchicalData
+        ? findParentNodeInHierarchy(state.hierarchicalData, canvasElement.id)
+        : null;
+      const depth = state.hierarchicalData
+        ? getDepthFromHierarchy(state.hierarchicalData, canvasElement.id)
+        : 1;
 
-        // グループキーの生成（ルート要素は特別扱い）
-        const groupKey = parentNode ? `${parentNode.data.id}_${depth}` : 'root';
+      // グループキーの生成（ルート要素は特別扱い）
+      const groupKey = parentNode ? `${parentNode.data.id}_${depth}` : 'root';
 
-        // グループが存在しない場合は初期化
-        if (!elementGroups[groupKey]) {
-          elementGroups[groupKey] = [];
-        }
-        elementGroups[groupKey].push(canvasElement);
+      // グループが存在しない場合は初期化
+      if (!elementGroups[groupKey]) {
+        elementGroups[groupKey] = [];
+      }
+      elementGroups[groupKey].push(canvasElement);
 
-        // 子要素を持つ非ルート要素を記録（始点マーカーボタン用）
-        const children = state.hierarchicalData
-          ? getChildrenFromHierarchy(state.hierarchicalData, canvasElement.id)
-          : [];
-        if (parentNode && children.some((child) => child.visible)) {
-          nonRootElementsWithChildren.push(canvasElement);
-        }
-      });
+      // 子要素を持つ非ルート要素を記録（始点マーカーボタン用）
+      const children = state.hierarchicalData
+        ? getChildrenFromHierarchy(state.hierarchicalData, canvasElement.id)
+        : [];
+      if (parentNode && children.some((child) => child.visible)) {
+        nonRootElementsWithChildren.push(canvasElement);
+      }
+    });
 
     // グループごとのレンダリング処理
     return (
@@ -397,13 +388,16 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
 
   // 接続パスとエンドマーカーボタンのレンダリング
   const renderConnectionPaths = () => {
-    return Object.values(elementsCache)
-      .filter((element): element is CanvasElement => {
+    // 階層構造から可視要素を取得し、親を持つ要素のみをフィルタリング
+    const visibleElements = getVisibleElementsFromHierarchy(state.hierarchicalData);
+
+    return visibleElements
+      .filter((element) => {
         const canvasElement = element as CanvasElement;
         const parentNode = state.hierarchicalData
           ? findParentNodeInHierarchy(state.hierarchicalData, canvasElement.id)
           : null;
-        return canvasElement.visible && !!parentNode;
+        return !!parentNode;
       })
       .map((element) => {
         const canvasElement = element as CanvasElement;

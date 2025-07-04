@@ -3,9 +3,9 @@
 
 import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import {
-  getAllElementsFromHierarchy,
   findParentNodeInHierarchy,
   getChildrenFromHierarchy,
+  createElementsMapFromHierarchy,
 } from '../../utils/hierarchical/hierarchicalConverter';
 import { HierarchicalStructure } from '../../types/hierarchicalTypes';
 import { useCanvas } from '../../context/CanvasContext';
@@ -50,10 +50,9 @@ interface IdeaElementProps {
 const renderActionButtons = (
   element: CanvasElement,
   dispatch: React.Dispatch<Action>,
-  elements: CanvasElement[],
   hierarchicalData: HierarchicalStructure | null,
 ) => {
-  const shouldShowButtons = (element: CanvasElement, elements: CanvasElement[]) => {
+  const shouldShowButtons = (element: CanvasElement) => {
     if (!element.tentative) return false;
 
     // 階層データから親要素を取得して同じ親を持つtentative要素をすべて取得
@@ -62,20 +61,21 @@ const renderActionButtons = (
       : null;
     const parentId = parentNode ? parentNode.data.id : null;
 
-    const tentativeSiblings = elements.filter((el) => {
-      const elParentNode = hierarchicalData
-        ? findParentNodeInHierarchy(hierarchicalData, el.id)
-        : null;
-      const elParentId = elParentNode ? elParentNode.data.id : null;
-      return elParentId === parentId && el.tentative;
-    });
+    // 兄弟要素を直接取得してtentativeなもののみフィルタリング
+    const siblings =
+      hierarchicalData && parentId
+        ? getChildrenFromHierarchy(hierarchicalData, parentId)
+        : hierarchicalData && parentId === null && hierarchicalData.root
+          ? [hierarchicalData.root.data]
+          : [];
+    const tentativeSiblings = siblings.filter((el) => el.tentative);
 
     // 自身も含めて最初の要素かどうかをIDで判定（作成順）
     const minId = Math.min(...tentativeSiblings.map((el) => parseInt(el.id)));
     return parseInt(element.id) === minId;
   };
 
-  if (!shouldShowButtons(element, elements)) return null;
+  if (!shouldShowButtons(element)) return null;
   return (
     <g
       transform={`translate(${element.x + element.width * 1.1},${element.y})`}
@@ -236,16 +236,9 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
 
     if (draggingElement.id === element.id) return true;
 
-    // hierarchicalDataから要素を取得してisDescendantを実行
+    // hierarchicalDataから要素マップを取得してisDescendantを実行（階層構造ベース）
     if ('hierarchicalData' in tabState && tabState.hierarchicalData) {
-      const allElements = getAllElementsFromHierarchy(tabState.hierarchicalData);
-      const elementsMap = allElements.reduce(
-        (acc, el) => {
-          acc[el.id] = el;
-          return acc;
-        },
-        {} as Record<string, CanvasElement>,
-      );
+      const elementsMap = createElementsMapFromHierarchy(tabState.hierarchicalData);
       return isDescendant(elementsMap, draggingElement.id, element.id);
     }
 
@@ -325,9 +318,6 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
         {renderActionButtons(
           element,
           dispatch,
-          'hierarchicalData' in tabState && tabState.hierarchicalData
-            ? getAllElementsFromHierarchy(tabState.hierarchicalData)
-            : [],
           'hierarchicalData' in tabState ? tabState.hierarchicalData : null,
         )}
         {hiddenChildren.length > 0 && (

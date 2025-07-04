@@ -2,15 +2,16 @@
 import { renderHook, act } from '@testing-library/react';
 import { useStore } from './textUtils';
 import {
-  getAllElementsFromHierarchy,
   findElementInHierarchy,
+  createElementsMapFromHierarchy,
 } from '../../utils/hierarchical/hierarchicalConverter';
 import { HierarchicalStructure } from '../../types/hierarchicalTypes';
 
 // ヘルパー関数: hierarchicalDataから要素の配列を取得
 const getElementsFromState = (state: { hierarchicalData: HierarchicalStructure | null }) => {
   if (!state.hierarchicalData) return [];
-  return getAllElementsFromHierarchy(state.hierarchicalData);
+  const elementsMap = createElementsMapFromHierarchy(state.hierarchicalData);
+  return Object.values(elementsMap);
 };
 
 // ヘルパー関数: hierarchicalDataから特定の要素を取得

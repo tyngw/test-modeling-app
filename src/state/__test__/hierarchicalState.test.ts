@@ -2,17 +2,11 @@
 import { renderHook, act } from '@testing-library/react';
 import { Element } from '../../types/types';
 import {
-  getAllElementsFromHierarchy,
   getChildrenFromHierarchy,
   findParentNodeInHierarchy,
+  findElementInHierarchy,
 } from '../../utils/hierarchical/hierarchicalConverter';
 import { useStore } from './textUtils';
-import { HierarchicalStructure } from '../../types/hierarchicalTypes';
-
-// テスト用ヘルパー：StateからElement配列を取得
-const getAllElements = (state: { hierarchicalData: HierarchicalStructure | null }): Element[] => {
-  return state.hierarchicalData ? getAllElementsFromHierarchy(state.hierarchicalData) : [];
-};
 
 describe('Hierarchical Data State Management', () => {
   let mockDateNow: jest.SpyInstance;
@@ -124,8 +118,11 @@ describe('Hierarchical Data State Management', () => {
     });
 
     const finalState = result.current.state;
-    const finalElements = getAllElements(finalState);
-    const deletedElementExists = finalElements.some((elm: Element) => elm.id === childElement.id);
+
+    // 階層構造から直接削除された要素が存在しないことを確認
+    const deletedElementExists = finalState.hierarchicalData
+      ? findElementInHierarchy(finalState.hierarchicalData, childElement.id) !== undefined
+      : false;
 
     expect(deletedElementExists).toBe(false);
     if (finalState.hierarchicalData) {
