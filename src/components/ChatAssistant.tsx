@@ -178,17 +178,18 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
       {isVisible && (
         <div
           style={{
+            // 背景色を削除し、透明にする
             position: 'fixed',
             top: 0,
             left: 0,
             width: '100%',
             height: '100%',
-            backgroundColor: 'rgba(0, 0, 0, 0.3)',
             display: 'flex',
             justifyContent: 'flex-end',
             alignItems: 'flex-end',
             zIndex: 9000,
             padding: '20px',
+            // backgroundColor: 'rgba(0, 0, 0, 0.3)', // ← 削除
           }}
           onClick={onToggle}
         >
