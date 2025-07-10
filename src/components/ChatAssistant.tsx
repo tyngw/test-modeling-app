@@ -146,7 +146,7 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
           style={{
             width: '56px',
             height: '56px',
-            backgroundColor: '#9ca3af', // 薄いグレー
+            backgroundColor: '#e5e7eb', // さらに明るいグレー
             border: 'none',
             borderRadius: '50%',
             display: 'flex',
@@ -154,20 +154,20 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
             justifyContent: 'center',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04)', // 影も少し明るく
             outline: 'none',
           }}
           onMouseOver={(e) => {
-            e.currentTarget.style.backgroundColor = '#6b7280'; // 中間グレー
+            e.currentTarget.style.backgroundColor = '#d1d5db'; // 少し暗いグレー
             e.currentTarget.style.transform = 'scale(1.05)';
             e.currentTarget.style.boxShadow =
-              '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)';
+              '0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04)';
           }}
           onMouseOut={(e) => {
-            e.currentTarget.style.backgroundColor = '#9ca3af';
+            e.currentTarget.style.backgroundColor = '#e5e7eb';
             e.currentTarget.style.transform = 'scale(1)';
             e.currentTarget.style.boxShadow =
-              '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)';
+              '0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04)';
           }}
         >
           <ChatIcon size={24} />
@@ -178,7 +178,6 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
       {isVisible && (
         <div
           style={{
-            // 背景色を削除し、透明にする
             position: 'fixed',
             top: 0,
             left: 0,
@@ -195,7 +194,7 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
         >
           <div
             style={{
-              backgroundColor: '#ffffff',
+              background: 'linear-gradient(135deg, #f3f4f6 0%, #e5e7ef 100%)', // 少し暗めのグラデーションに調整
               borderRadius: '16px',
               width: '400px',
               height: '600px',
@@ -206,10 +205,11 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
                 0 4px 6px -2px rgba(0, 0, 0, 0.05),
                 0 0 0 1px rgba(255, 255, 255, 0.1)
               `,
+              border: '2px solid #d1d5db',
               transform: 'translateY(0) scale(1)',
               transition: 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-              marginRight: '20px', // チャットアイコンとの間隔を確保
-              marginBottom: '100px', // チャットアイコンの上に表示
+              marginRight: '20px',
+              marginBottom: '100px',
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -317,9 +317,9 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
                           gap: '4px',
                         }}
                       >
-                        <p>💡 例: 「子要素を追加して」</p>
-                        <p>✏️ 例: 「テキストを変更して」</p>
-                        <p>🎨 例: 「色を青に変更して」</p>
+                        <p>🧩 例: 子要素「hoge」を追加して</p>
+                        <p>✏️ 例: テキストを「タイトル」に変更して</p>
+                        <p>🔀 例: 「hoge」の下に移動して</p>
                       </div>
                     </div>
                   </div>
@@ -374,7 +374,7 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
                 right: 0,
                 padding: '20px 24px',
                 borderTop: '1px solid #e5e7eb',
-                backgroundColor: '#ffffff',
+                background: 'linear-gradient(135deg, #f8fafc 0%, #e5e7eb 100%)', // 入力エリアに薄いグラデーション背景
                 borderRadius: '0 0 16px 16px',
               }}
             >
