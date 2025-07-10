@@ -9,7 +9,6 @@ import SettingsModal from './modal/SettingsModal';
 import UnsaveConfirmModal from './modal/UnsaveConfirmModal';
 import HelpModal from './modal/HelpModal';
 import { CanvasProvider } from '../context/CanvasContext';
-import { useToast } from '../context/ToastContext';
 import { useFileOperations } from '../hooks/useFileOperations';
 import { useAIGeneration } from '../hooks/useAIGeneration';
 import { useTabManagement } from '../hooks/useTabManagement';
@@ -51,8 +50,6 @@ const AppContent: React.FC = () => {
     { isHelpOpen, isSettingsOpen, showCloseConfirm, tabToClose },
     { toggleHelp, toggleSettings, setShowCloseConfirm, setTabToClose },
   ] = useModalState(handleEndEditing);
-
-  const { addToast } = useToast();
 
   // タブ閉じる要求時のハンドラー
   const handleTabCloseRequest = useCallback(
@@ -109,9 +106,7 @@ const AppContent: React.FC = () => {
     toggleHelp,
     isHelpOpen,
     currentTabId,
-    updateTabName,
     toggleSettings,
-    addToast,
     handleAIClick,
     handleLoadElements,
     handleSaveElements,
@@ -120,6 +115,7 @@ const AppContent: React.FC = () => {
     switchTab,
     tabs,
     handleSaveSvg,
+    isLoading,
   ]);
 
   return (

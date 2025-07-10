@@ -9,7 +9,7 @@ import { useToast } from '../context/ToastContext';
 import { ToastMessages } from '../constants/toastMessages';
 import { generateWithGemini } from '../utils/api';
 import { getApiKey, getModelType, getPrompt } from '../utils/storage';
-import { formatElementsForPrompt } from '../utils/element';
+import { formatElementsForPrompt } from '../utils/element/elementHelpers';
 import { createUserPrompt } from '../constants/promptHelpers';
 import { TabState } from '../types/tabTypes';
 import { Action } from '../types/actionTypes';
