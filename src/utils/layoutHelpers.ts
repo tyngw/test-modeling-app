@@ -364,7 +364,6 @@ const layoutNodeFromHierarchy = (
       if (proposedMinY < conflict.maxY + margin && proposedMaxY + margin > conflict.minY) {
         // 衝突が検出された場合、安全な位置に調整
         startY = conflict.maxY + margin;
-        debugLog(`[layoutNodeFromHierarchy] レベル${level}での衝突回避: Y座標を${startY}に調整`);
       }
     }
   }
@@ -380,10 +379,6 @@ const layoutNodeFromHierarchy = (
       level: level,
     });
   }
-
-  debugLog(
-    `[layoutNodeFromHierarchy] 「${element.texts}」 id=${element.id}, level=${level}, y=${element.y}`,
-  );
 
   // 子要素がある場合の処理
   if (node.children && node.children.length > 0) {
@@ -469,11 +464,7 @@ const layoutNodeFromHierarchy = (
         if (sortedChildren.length === 1) {
           // 単一子要素の特殊ケース：親要素と同じY座標に配置
           const singleChild = sortedChildren[0];
-          const parentOldY = element.y;
           element.y = singleChild.y;
-          debugLog(
-            `[layoutNodeFromHierarchy] 単一子要素ケース「${element.texts}」 id=${element.id} - Y座標更新: ${parentOldY} → ${element.y} (子要素と同位置)`,
-          );
         } else {
           // 複数子要素の場合：中央配置
           const firstChild = sortedChildren[0]; // Y座標が最小の要素
@@ -483,10 +474,6 @@ const layoutNodeFromHierarchy = (
           const childrenTopY = firstChild.y;
           const childrenBottomY = lastChild.y + lastChild.height;
           const childrenMidY = (childrenTopY + childrenBottomY) / 2;
-
-          debugLog(
-            `[layoutNodeFromHierarchy] 子要素範囲: ${childrenTopY} - ${childrenBottomY}, 中央Y座標: ${childrenMidY}`,
-          );
 
           const parentOldY = element.y;
           const newParentY = childrenMidY - element.height / 2;
@@ -509,9 +496,6 @@ const layoutNodeFromHierarchy = (
               if (parentMinY < conflict.maxY + margin && parentMaxY + margin > conflict.minY) {
                 // 衝突が検出された場合、下方向にずらす
                 adjustedParentY = conflict.maxY + margin;
-                debugLog(
-                  `[layoutNodeFromHierarchy] 親要素の中央配置時の衝突回避: Y座標を${adjustedParentY}に調整`,
-                );
               }
             }
 
@@ -531,23 +515,12 @@ const layoutNodeFromHierarchy = (
           } else {
             element.y = newParentY;
           }
-
-          debugLog(
-            `[layoutNodeFromHierarchy] 親要素「${element.texts}」 id=${element.id} - Y座標更新: ${parentOldY} → ${element.y}`,
-          );
         }
       }
     }
-
-    debugLog(
-      `[layoutNodeFromHierarchy](子要素あり)「${element.texts}」 id=${element.id}, y=${element.y}, newY=${currentY}`,
-    );
     return { newY: currentY, leftMaxY, rightMaxY };
   } else {
     // 子要素がない場合
-    debugLog(
-      `[layoutNodeFromHierarchy](子要素なし)「${element.texts}」 id=${element.id}, y=${element.y}, newY=${currentY}`,
-    );
     return { newY: currentY, leftMaxY: currentY, rightMaxY: currentY };
   }
 };

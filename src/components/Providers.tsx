@@ -22,14 +22,40 @@ export function Providers({ children }: { children: ReactNode }) {
 
 function ChatAssistantWrapper() {
   const { currentTab, dispatch } = useTabManagement();
+
+  // 最新の状態を取得する関数
+  const getLatestState = React.useCallback(() => {
+    return currentTab;
+  }, [currentTab]);
+
   const { handleChatMessage, isLoading: isChatLoading } = useChatAssistant({
     currentTab,
     dispatch,
+    getLatestState,
   });
   const [isChatVisible, setIsChatVisible] = React.useState(false);
+  const [externalMessage, setExternalMessage] = React.useState<string>('');
 
   const toggleChat = React.useCallback(() => {
     setIsChatVisible((prev) => !prev);
+  }, []);
+
+  const handleExternalMessageProcessed = React.useCallback(() => {
+    setExternalMessage('');
+  }, []);
+
+  // グローバルでAIアシスタントメッセージを受信
+  React.useEffect(() => {
+    const handleAIAssistantMessage = (event: CustomEvent) => {
+      const message = event.detail.message;
+      setIsChatVisible(true); // チャットウィンドウを開く
+      setExternalMessage(message); // メッセージを設定
+    };
+
+    window.addEventListener('aiAssistantMessage', handleAIAssistantMessage as EventListener);
+    return () => {
+      window.removeEventListener('aiAssistantMessage', handleAIAssistantMessage as EventListener);
+    };
   }, []);
 
   return (
@@ -38,6 +64,8 @@ function ChatAssistantWrapper() {
       isLoading={isChatLoading}
       isVisible={isChatVisible}
       onToggle={toggleChat}
+      externalMessage={externalMessage}
+      onExternalMessageProcessed={handleExternalMessageProcessed}
     />
   );
 }

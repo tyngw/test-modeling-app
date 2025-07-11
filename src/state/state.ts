@@ -105,6 +105,7 @@ interface AddElementsSilentPayload {
   targetNodeId?: string; // 追加先の要素IDを階層構造ベースで指定
   targetPosition?: 'before' | 'after' | 'child';
   onError?: (message: string) => void; // エラーハンドリングコールバック
+  onSuccess?: (addedElementIds: string[]) => void; // 成功時のコールバック
 }
 
 type AddHierarchicalElementsPayload = {
@@ -1054,11 +1055,17 @@ const actionHandlers: Record<string, ActionHandler> = {
 
       if (!targetElement || !state.hierarchicalData) {
         // エラーハンドリング: 対象要素が見つからない場合
+        const errorMessage = !state.hierarchicalData
+          ? '階層データが存在しません。'
+          : payload?.targetNodeId
+            ? `指定された要素（ID: ${payload.targetNodeId}）が見つかりません。要素が削除されている可能性があります。`
+            : '選択された要素がありません。要素を選択してから操作を実行してください。';
+
         if (payload?.onError) {
-          payload.onError('AI生成中に対象要素が削除されたため、結果を追加できませんでした。');
+          payload.onError(errorMessage);
         }
         debugLog(
-          `[ADD_ELEMENTS_SILENT] 対象要素が見つかりません: ${payload?.targetNodeId || '選択要素なし'}`,
+          `[ADD_ELEMENTS_SILENT] ${errorMessage} (targetNodeId: ${payload?.targetNodeId || '未指定'})`,
         );
         return state;
       }
@@ -1094,6 +1101,7 @@ const actionHandlers: Record<string, ActionHandler> = {
       }
 
       let currentHierarchy = state.hierarchicalData;
+      const addedElementIds: string[] = []; // 追加された要素のIDを追跡
 
       // 複数の要素を順次追加
       for (let i = 0; i < texts.length; i++) {
@@ -1114,13 +1122,16 @@ const actionHandlers: Record<string, ActionHandler> = {
           .fill(sectionHeight)
           .reduce((sum, h) => sum + h, 0);
 
+        const elementId = (Date.now() + i).toString();
+        addedElementIds.push(elementId); // IDを追跡リストに追加
+
         const newElement: Element = {
           ...createNewElement({
             numSections: state.numberOfSections,
             direction:
               safeTargetElement.direction === 'none' ? 'right' : safeTargetElement.direction, // 親のdirectionを継承
           }),
-          id: (Date.now() + i).toString(),
+          id: elementId,
           x: currentX, // 計算された初期X座標を設定
           y: currentY + i * (totalHeight + OFFSET.Y), // 実際の高さに基づいて配置
           width: elementWidth, // 計算された幅を設定
@@ -1153,7 +1164,14 @@ const actionHandlers: Record<string, ActionHandler> = {
       }
 
       // 成功ログ
-      debugLog(`[ADD_ELEMENTS_SILENT] ${texts.length}個の要素を追加しました`);
+      debugLog(
+        `[ADD_ELEMENTS_SILENT] ${texts.length}個の要素を追加しました (IDs: ${addedElementIds.join(', ')})`,
+      );
+
+      // 成功時のコールバック実行
+      if (payload?.onSuccess) {
+        setTimeout(() => payload.onSuccess!(addedElementIds), 0);
+      }
 
       return {
         ...state,

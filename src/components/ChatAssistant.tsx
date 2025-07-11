@@ -16,6 +16,8 @@ interface ChatAssistantProps {
   isLoading?: boolean;
   isVisible?: boolean;
   onToggle?: () => void;
+  externalMessage?: string; // 外部から送信されるメッセージ
+  onExternalMessageProcessed?: () => void; // 外部メッセージ処理完了コールバック
 }
 
 /**
@@ -27,6 +29,8 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
   isLoading = false,
   isVisible = false,
   onToggle,
+  externalMessage,
+  onExternalMessageProcessed,
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
@@ -71,12 +75,21 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
     }
   }, [isVisible]);
 
-  const handleSendMessage = async () => {
-    if (!inputText.trim() || isLoading) return;
+  // 外部メッセージが送信された時の処理
+  useEffect(() => {
+    if (externalMessage && externalMessage.trim()) {
+      handleSendMessage(externalMessage);
+      onExternalMessageProcessed?.();
+    }
+  }, [externalMessage]);
+
+  const handleSendMessage = async (messageText?: string) => {
+    const textToSend = messageText || inputText.trim();
+    if (!textToSend || isLoading) return;
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
-      text: inputText.trim(),
+      text: textToSend,
       sender: 'user',
       timestamp: new Date(),
     };
@@ -85,19 +98,24 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
     // ユーザー送信内容は重要な操作なので残す
     // console.log('[DEBUG] ChatAssistant - User message:', userMessage.text)
     setMessages((prev) => [...prev, userMessage]);
+
+    // 外部メッセージでない場合のみ入力をクリア
+    if (!messageText) {
+      setInputText('');
+    }
     setInputText('');
 
     try {
       // AI送信開始のみ残す（障害時のトラブルシュート用）
       // console.log('[DEBUG] ChatAssistant - Sending message to AI...')
-      await onSendMessage(userMessage.text);
+      const result = await onSendMessage(userMessage.text);
       // AI操作完了ログは削除
       // console.log('[DEBUG] ChatAssistant - AI operation completed successfully');
 
-      // 成功メッセージを追加
+      // AI操作の結果をチャットウィンドウに表示
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
-        text: '操作を実行しました！',
+        text: result || '操作を実行しました！',
         sender: 'assistant',
         timestamp: new Date(),
       };
@@ -308,7 +326,7 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
                       }}
                     >
                       <p style={{ fontWeight: '500', marginBottom: '8px' }}>
-                        選択した要素に対して操作を指示してください
+                        複数の操作を組み合わせた指示も可能です
                       </p>
                       <div
                         style={{
@@ -319,9 +337,10 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
                           gap: '4px',
                         }}
                       >
-                        <p>🧩 例: 子要素「hoge」を追加して</p>
-                        <p>✏️ 例: テキストを「タイトル」に変更して</p>
-                        <p>🔀 例: 「hoge」の下に移動して</p>
+                        <p>🧩 例: 子要素「概要」「詳細」を追加して</p>
+                        <p>✏️ 例: テキストを「新しいタイトル」に変更して</p>
+                        <p>� 例: ルート要素に「テスト」を追加し、そこに移動して</p>
+                        <p>📝 例: 「概要」要素を選択して内容を「新しい概要」に変更</p>
                       </div>
                     </div>
                   </div>
@@ -343,6 +362,7 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
                             fontSize: '0.875rem',
                             fontWeight: '500',
                             boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+                            whiteSpace: 'pre-wrap', // 改行を保持
                             ...(message.sender === 'user'
                               ? {
                                   background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
@@ -391,7 +411,7 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
                   disabled={isLoading}
                   style={{
                     flex: 1,
-                    padding: '4px 8px', // 余白をさらに減らす
+                    padding: '6px 10px', // 高さに合わせて余白も調整
                     border: '1px solid #e5e7eb',
                     borderRadius: '8px',
                     fontSize: '0.85rem',
@@ -399,9 +419,9 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
                     backgroundColor: '#f9fafb',
                     transition: 'all 0.2s ease',
                     boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-                    minHeight: '28px', // 高さをさらに低く
-                    height: '28px',
-                    lineHeight: '18px',
+                    minHeight: '32px', // 高さを32pxに
+                    height: '32px',
+                    lineHeight: '20px',
                     boxSizing: 'border-box',
                     display: 'block',
                   }}
@@ -417,20 +437,21 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
                   }}
                 />
                 <IconButton
-                  onClick={handleSendMessage}
+                  onClick={() => handleSendMessage()}
                   disabled={!inputText.trim() || isLoading}
                   aria-label="送信"
                   size="small"
                   sx={{
-                    background: isLoading
-                      ? '#9ca3af'
-                      : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                    background:
+                      !inputText.trim() || isLoading
+                        ? 'linear-gradient(135deg, #dbeafe 0%, #93c5fd 100%)' // 非活性時は薄いブルー
+                        : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
                     color: '#fff',
                     borderRadius: '8px',
                     boxShadow: '0 2px 4px 0 rgba(0,0,0,0.1)',
                     opacity: !inputText.trim() || isLoading ? 0.5 : 1,
-                    width: '28px',
-                    height: '28px',
+                    width: '32px', // 正方形
+                    height: '32px', // 正方形
                     transition: 'all 0.2s ease',
                     display: 'flex',
                     alignItems: 'center',
@@ -439,13 +460,22 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
                       background:
                         !isLoading && inputText.trim()
                           ? 'linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)'
-                          : '#9ca3af',
+                          : 'linear-gradient(135deg, #dbeafe 0%, #93c5fd 100%)', // 非活性時のhoverも薄いブルー
                       boxShadow: '0 4px 8px 0 rgba(0,0,0,0.15)',
                     },
                   }}
                 >
                   {isLoading ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    // ローディングアイコンのみ中央表示
+                    <div
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
                       <div
                         style={{
                           width: '14px',
@@ -456,7 +486,6 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
                           animation: 'spin 1s linear infinite',
                         }}
                       />
-                      <span style={{ color: '#fff', fontSize: '0.8rem' }}></span>
                     </div>
                   ) : (
                     <span
@@ -464,10 +493,10 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        padding: '2px',
+                        padding: '2px', // アイコンの余白を2px小さく
                       }}
                     >
-                      <SendIcon style={{ fontSize: 12 }} htmlColor="#fff" />
+                      <SendIcon style={{ fontSize: 14 }} htmlColor="#fff" />
                     </span>
                   )}
                 </IconButton>
