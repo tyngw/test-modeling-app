@@ -11,6 +11,7 @@ export const generateWithGemini = async (
   _modelType: string,
   useOriginalSystemPrompt: boolean = false,
   customSystemPrompt?: string,
+  forceJsonResponse: boolean = false,
 ): Promise<string> => {
   try {
     // プロンプトの長さを制限（トークン制限を回避）
@@ -25,6 +26,17 @@ export const generateWithGemini = async (
       customSystemPrompt ||
       (useOriginalSystemPrompt ? SYSTEM_PROMPT_TEMPLATE : getSystemPromptTemplate());
 
+    // generationConfigの構築
+    const generationConfig: Record<string, unknown> = {
+      temperature: 0.2,
+      topP: 0.8,
+      topK: 40,
+      maxOutputTokens: 2048,
+    };
+    if (forceJsonResponse) {
+      generationConfig.responseMimeType = 'application/json';
+    }
+
     // リクエスト内容を一つの変数にまとめて管理
     const requestPayload = {
       contents: [
@@ -36,12 +48,7 @@ export const generateWithGemini = async (
       systemInstruction: {
         parts: [{ text: systemPrompt }],
       },
-      generationConfig: {
-        temperature: 0.2,
-        topP: 0.8,
-        topK: 40,
-        maxOutputTokens: 2048,
-      },
+      generationConfig,
     };
     console.log('[Geminiリクエスト] 送信内容:', JSON.stringify(requestPayload, null, 2));
     // API送信
