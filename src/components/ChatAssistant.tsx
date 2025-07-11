@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ChatIcon } from './icons/ChatIcon';
+import IconButton from '@mui/material/IconButton';
+import SendIcon from '@mui/icons-material/Send';
 
 interface ChatMessage {
   id: string;
@@ -372,13 +374,13 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
                 bottom: 0,
                 left: 0,
                 right: 0,
-                padding: '20px 24px',
+                padding: '12px 12px', // 余白を減らす
                 borderTop: '1px solid #e5e7eb',
-                background: 'linear-gradient(135deg, #f8fafc 0%, #e5e7eb 100%)', // 入力エリアに薄いグラデーション背景
+                background: 'linear-gradient(135deg, #f8fafc 0%, #e5e7eb 100%)',
                 borderRadius: '0 0 16px 16px',
               }}
             >
-              <div style={{ display: 'flex', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
                 <input
                   ref={inputRef}
                   type="text"
@@ -389,14 +391,19 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
                   disabled={isLoading}
                   style={{
                     flex: 1,
-                    padding: '12px 16px',
+                    padding: '4px 8px', // 余白をさらに減らす
                     border: '1px solid #e5e7eb',
-                    borderRadius: '12px',
-                    fontSize: '0.875rem',
+                    borderRadius: '8px',
+                    fontSize: '0.85rem',
                     outline: 'none',
                     backgroundColor: '#f9fafb',
                     transition: 'all 0.2s ease',
                     boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+                    minHeight: '28px', // 高さをさらに低く
+                    height: '28px',
+                    lineHeight: '18px',
+                    boxSizing: 'border-box',
+                    display: 'block',
                   }}
                   onFocus={(e) => {
                     e.target.style.borderColor = '#3b82f6';
@@ -409,53 +416,61 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
                     e.target.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)';
                   }}
                 />
-                <button
+                <IconButton
                   onClick={handleSendMessage}
                   disabled={!inputText.trim() || isLoading}
-                  style={{
-                    padding: '12px 20px',
+                  aria-label="送信"
+                  size="small"
+                  sx={{
                     background: isLoading
                       ? '#9ca3af'
                       : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                    color: '#ffffff',
-                    borderRadius: '12px',
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
-                    border: 'none',
-                    cursor: isLoading ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.2s ease',
-                    boxShadow: '0 2px 4px 0 rgba(0, 0, 0, 0.1)',
+                    color: '#fff',
+                    borderRadius: '8px',
+                    boxShadow: '0 2px 4px 0 rgba(0,0,0,0.1)',
                     opacity: !inputText.trim() || isLoading ? 0.5 : 1,
-                  }}
-                  onMouseOver={(e) => {
-                    if (!isLoading && inputText.trim()) {
-                      e.currentTarget.style.transform = 'translateY(-1px)';
-                      e.currentTarget.style.boxShadow = '0 4px 8px 0 rgba(0, 0, 0, 0.15)';
-                    }
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 2px 4px 0 rgba(0, 0, 0, 0.1)';
+                    width: '28px',
+                    height: '28px',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    '&:hover': {
+                      background:
+                        !isLoading && inputText.trim()
+                          ? 'linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)'
+                          : '#9ca3af',
+                      boxShadow: '0 4px 8px 0 rgba(0,0,0,0.15)',
+                    },
                   }}
                 >
                   {isLoading ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <div
                         style={{
-                          width: '16px',
-                          height: '16px',
+                          width: '14px',
+                          height: '14px',
                           border: '2px solid #ffffff',
                           borderTop: '2px solid transparent',
                           borderRadius: '50%',
                           animation: 'spin 1s linear infinite',
                         }}
                       />
-                      <span>送信中</span>
+                      <span style={{ color: '#fff', fontSize: '0.8rem' }}></span>
                     </div>
                   ) : (
-                    '送信'
+                    <span
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '2px',
+                      }}
+                    >
+                      <SendIcon style={{ fontSize: 12 }} htmlColor="#fff" />
+                    </span>
                   )}
-                </button>
+                </IconButton>
               </div>
             </div>
           </div>
