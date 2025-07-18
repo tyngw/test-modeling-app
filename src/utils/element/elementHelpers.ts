@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { getMarkerType } from '../storage/localStorageHelpers';
 import { SIZE, NUMBER_OF_SECTIONS } from '../../config/elementSettings';
 import { NewElementOptions, ElementsMap } from '../../types/elementTypes';
-import { HierarchicalStructure } from '../../types/hierarchicalTypes';
+import { HierarchicalStructure, HierarchicalNode } from '../../types/hierarchicalTypes';
 import { getChildrenFromHierarchy as getChildrenFromHierarchyOriginal } from '../hierarchical/hierarchicalConverter';
 
 /**
@@ -93,15 +93,33 @@ export const getChildrenFromHierarchy = (
 /**
  * 要素をプロンプト用のテキスト形式に変換する
  * @param elements 要素マップ
- * @param targetElementId 対象要素のID
+ * @param targetElementId 対象要素のID（省略時は全体構造を返す）
  * @returns プロンプト用のテキスト
  */
 export const formatElementsForPrompt = (
   elements: ElementsMap,
   targetElementId?: string,
 ): string => {
+  // targetElementIdが指定されていない場合は全体構造を返す
+  if (!targetElementId) {
+    const allElements = Object.values(elements);
+    if (allElements.length === 0) {
+      return '要素がありません';
+    }
+
+    // 全要素の構造を文字列化
+    const structureText = allElements
+      .map((element) => {
+        const text = element.texts.filter((t) => t && t.trim()).join(', ');
+        return `ID: ${element.id}, テキスト: "${text}"`;
+      })
+      .join('\n');
+
+    return `全体構造:\n${structureText}`;
+  }
+
   // 選択された要素を基準にした構造テキストを生成
-  const targetElement = targetElementId ? elements[targetElementId] : null;
+  const targetElement = elements[targetElementId];
 
   if (!targetElement) {
     return '要素が見つかりません';
@@ -115,4 +133,39 @@ export const formatElementsForPrompt = (
   }
 
   return `選択された要素: ${elementText}`;
+};
+
+/**
+ * 階層構造を詳細な文字列として表現する（AIが理解しやすい形式）
+ * @param hierarchicalData 階層構造データ
+ * @param elementsMap 要素マップ
+ * @returns 階層構造のテキスト表現
+ */
+export const formatHierarchicalStructureForPrompt = (
+  hierarchicalData: HierarchicalStructure | null,
+): string => {
+  if (!hierarchicalData) {
+    return '階層構造がありません';
+  }
+
+  // 階層構造を再帰的に文字列化
+  const formatNode = (node: HierarchicalNode, depth = 0): string => {
+    const indent = '  '.repeat(depth);
+    const element = node.data;
+
+    const text = element.texts.filter((t) => t && t.trim()).join(', ') || '(テキストなし)';
+    let result = `${indent}- ID: ${element.id} | テキスト: "${text}"`;
+
+    if (node.children && node.children.length > 0) {
+      result +=
+        '\n' +
+        node.children.map((child: HierarchicalNode) => formatNode(child, depth + 1)).join('\n');
+    }
+
+    return result;
+  };
+
+  const structureText = formatNode(hierarchicalData.root);
+
+  return `階層構造:\n${structureText}`;
 };

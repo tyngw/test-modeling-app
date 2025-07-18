@@ -65,6 +65,7 @@ export type AddElementAction =
         texts: string[];
         tentative: boolean;
         onError?: (message: string) => void;
+        onSuccess?: (addedElementIds: string[]) => void;
         hierarchicalData?: Array<{
           text: string;
           level: number;
