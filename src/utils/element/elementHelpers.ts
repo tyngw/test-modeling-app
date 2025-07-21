@@ -6,6 +6,7 @@ import { SIZE, NUMBER_OF_SECTIONS } from '../../config/elementSettings';
 import { NewElementOptions, ElementsMap } from '../../types/elementTypes';
 import { HierarchicalStructure, HierarchicalNode } from '../../types/hierarchicalTypes';
 import { getChildrenFromHierarchy as getChildrenFromHierarchyOriginal } from '../hierarchical/hierarchicalConverter';
+import { PROMPT_LIMITS } from '../../constants/promptLimits';
 
 /**
  * 新しい要素を作成する
@@ -46,6 +47,7 @@ export const createNewElement = ({
 
 /**
  * 要素が他の要素の子孫かどうかを判定する
+ * @deprecated この関数は階層構造への移行により非推奨です。階層構造の関数を使用してください。
  * @param _elements 要素マップ（未使用、後方互換性のため）
  * @param childId 子要素のID
  * @param ancestorId 祖先要素のID
@@ -67,6 +69,7 @@ export const isDescendant = (
 
 /**
  * 指定した要素の子要素を取得する（従来版）
+ * @deprecated この関数は階層構造への移行により非推奨です。代わりに getChildrenFromHierarchy を使用してください。
  * @param _parentId 親要素のID（未使用、後方互換性のため）
  * @param _elements 要素マップ（未使用、後方互換性のため）
  * @returns 子要素の配列
@@ -92,6 +95,7 @@ export const getChildrenFromHierarchy = (
 
 /**
  * 要素をプロンプト用のテキスト形式に変換する
+ * @deprecated このフラット構造ベースの関数は非推奨です。代わりに formatHierarchicalStructureForPrompt を使用してください。
  * @param elements 要素マップ
  * @param targetElementId 対象要素のID（省略時は全体構造を返す）
  * @returns プロンプト用のテキスト
@@ -110,7 +114,7 @@ export const formatElementsForPrompt = (
     // 全要素の構造を文字列化
     const structureText = allElements
       .map((element) => {
-        const text = element.texts.filter((t) => t && t.trim()).join(', ');
+        const text = truncateText(element.texts.filter((t) => t && t.trim()).join(', '));
         return `ID: ${element.id}, テキスト: "${text}"`;
       })
       .join('\n');
@@ -125,8 +129,10 @@ export const formatElementsForPrompt = (
     return '要素が見つかりません';
   }
 
-  // 要素のテキストを結合してプロンプト用の文字列を作成
-  const elementText = targetElement.texts.filter((text) => text && text.trim()).join('\n');
+  // 要素のテキストを結合してプロンプト用の文字列を作成（制限文字数でカット）
+  const elementText = truncateText(
+    targetElement.texts.filter((text) => text && text.trim()).join('\n'),
+  );
 
   if (!elementText) {
     return '選択された要素にテキストがありません';
@@ -153,7 +159,11 @@ export const formatHierarchicalStructureForPrompt = (
     const indent = '  '.repeat(depth);
     const element = node.data;
 
-    const text = element.texts.filter((t) => t && t.trim()).join(', ') || '(テキストなし)';
+    // テキストを結合し、制限文字数でカット（省略記号なし）
+    const text = truncateText(
+      element.texts.filter((t) => t && t.trim()).join(', ') || '(テキストなし)',
+    );
+
     let result = `${indent}- ID: ${element.id} | テキスト: "${text}"`;
 
     if (node.children && node.children.length > 0) {
@@ -168,4 +178,17 @@ export const formatHierarchicalStructureForPrompt = (
   const structureText = formatNode(hierarchicalData.root);
 
   return `階層構造:\n${structureText}`;
+};
+
+/**
+ * プロンプト用のテキストを制限文字数でカットするヘルパー関数
+ * @param text カット対象のテキスト
+ * @param maxLength 最大文字数（デフォルトは要素テキストの制限）
+ * @returns カット後のテキスト
+ */
+export const truncateText = (
+  text: string,
+  maxLength: number = PROMPT_LIMITS.MAX_ELEMENT_TEXT_LENGTH,
+): string => {
+  return text.substring(0, maxLength);
 };

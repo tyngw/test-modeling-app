@@ -10,7 +10,7 @@ import { ToastMessages } from '../constants/toastMessages';
 import { generateWithGemini } from '../utils/api';
 import { getApiKey, getModelType, getPrompt } from '../utils/storage';
 import { getSystemPromptTemplate } from '../utils/storage/localStorageHelpers';
-import { formatElementsForPrompt } from '../utils/element/elementHelpers';
+import { formatHierarchicalStructureForPrompt } from '../utils/element/elementHelpers';
 import { createChatUserPromptOnly, getChatSystemPrompt } from '../config/chatSystemPrompt';
 import { TabState } from '../types/tabTypes';
 import { Element } from '../types/types';
@@ -49,16 +49,10 @@ export function useAIGeneration({ currentTab, dispatch }: UseAIGenerationParams)
           throw new Error('APIキーが設定されていません。設定から登録してください。');
         }
 
-        // 要素マップを作成
-        const elementsMap = currentTab.state.hierarchicalData
-          ? createElementsMapFromHierarchy(currentTab.state.hierarchicalData)
-          : {};
-
-        // 現在の構造をフォーマット
-        const structureText = formatElementsForPrompt(
-          elementsMap,
-          Object.keys(elementsMap)[0] || '',
-        );
+        // 現在の構造をフォーマット（階層構造から直接生成）
+        const structureText = currentTab.state.hierarchicalData
+          ? formatHierarchicalStructureForPrompt(currentTab.state.hierarchicalData)
+          : '階層構造データがありません';
 
         // 統一プロンプト生成関数を利用（システムプロンプト重複を避ける）
         const userPrompt = createChatUserPromptOnly({
@@ -85,7 +79,10 @@ export function useAIGeneration({ currentTab, dispatch }: UseAIGenerationParams)
           throw new Error('AIから有効な結果が得られませんでした。');
         }
 
-        // JSONレスポンスを解析
+        // JSONレスポンスを解析（elementsMapが必要な場合は階層構造から生成）
+        const elementsMap = currentTab.state.hierarchicalData
+          ? createElementsMapFromHierarchy(currentTab.state.hierarchicalData)
+          : {};
         const operationsResult = await executeMultipleOperations(result, elementsMap);
 
         return operationsResult;
@@ -448,10 +445,10 @@ export function useAIGeneration({ currentTab, dispatch }: UseAIGenerationParams)
         return;
       }
 
-      const elementsMap = currentTab.state.hierarchicalData
-        ? createElementsMapFromHierarchy(currentTab.state.hierarchicalData)
-        : {};
-      const structureText = formatElementsForPrompt(elementsMap, targetElementId);
+      // 現在の構造をフォーマット（階層構造から直接生成）
+      const structureText = currentTab.state.hierarchicalData
+        ? formatHierarchicalStructureForPrompt(currentTab.state.hierarchicalData)
+        : '階層構造データがありません';
 
       // システムプロンプトをlocalStorageから取得
       const systemPrompt = getSystemPromptTemplate();

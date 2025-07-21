@@ -3,8 +3,8 @@ import { generateWithGemini } from '../utils/api';
 import { getApiKey, getModelType } from '../utils/storage';
 import { createChatUserPromptOnly, getChatSystemPrompt } from '../config/chatSystemPrompt';
 import {
-  formatElementsForPrompt,
   formatHierarchicalStructureForPrompt,
+  truncateText,
 } from '../utils/element/elementHelpers';
 import {
   getSelectedElementsFromHierarchy,
@@ -105,7 +105,8 @@ export function useChatAssistant({ currentTab, dispatch, getLatestState }: UseCh
         } else {
           selectedElement = selectedElements[0];
         }
-        const selectedElementText = selectedElement?.texts?.[0] || '未選択';
+        // 選択要素のテキストを制限文字数でカット（省略記号なし）
+        const selectedElementText = truncateText(selectedElement?.texts?.[0] || '') || '未選択';
 
         // 現在の構造を取得
         const elementsMap = currentTab.state.hierarchicalData
@@ -115,14 +116,14 @@ export function useChatAssistant({ currentTab, dispatch, getLatestState }: UseCh
         // 現在の全体構造をAIに渡すために、階層構造から詳細な情報を生成
         const fullStructure = currentTab.state.hierarchicalData
           ? formatHierarchicalStructureForPrompt(currentTab.state.hierarchicalData)
-          : formatElementsForPrompt(elementsMap);
+          : '階層構造データがありません'; // 階層構造に統一されているため、この状況は通常発生しない
 
-        // デバッグ用：構造情報をログ出力
+        // デバッグ用：構造情報をログ出力（効率化のため簡素化）
         // eslint-disable-next-line no-console
         console.log('[Chat] 構造情報:', {
           hasHierarchicalData: !!currentTab.state.hierarchicalData,
           elementsMapSize: Object.keys(elementsMap).length,
-          fullStructure,
+          structureLength: fullStructure.length, // 文字数のみ表示
         });
 
         // APIキーを取得
