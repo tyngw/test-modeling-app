@@ -10,8 +10,14 @@ This application allows you to describe test architectures using a notation simi
 
 1. Clone the repository
 2. Run `npm install` to install dependencies
-3. Start the app with `npm start`
+3. Start the development server with `npm run dev`
 4. Open `http://localhost:3000` in your web browser
+
+Alternatively, to run the production build:
+```bash
+npm run build
+npm start
+```
 
 ### Deploying to GitHub Pages
 
@@ -179,7 +185,7 @@ This application can be used not only as a regular web app, but also as a Visual
 
 3. **Use the extension**
    - Open the command palette (`Ctrl/Cmd + Shift + P`)
-   - Run `Test Modeling App: Open Modeling Editor`
+   - Run `Open Test Modeling App`
    - You can create and edit modeling diagrams in the editor
 
 ### Features of the VSCode Extension Version
@@ -201,14 +207,7 @@ This application can be used not only as a regular web app, but also as a Visual
 
 ### Settings
 
-You can configure the following items in VSCode's settings screen (`Ctrl/Cmd + ,`):
-
-- `testModelingApp.theme`: Application theme (light/dark/auto)
-- `testModelingApp.autoSave`: Enable/disable auto-save
-- `testModelingApp.autoSaveInterval`: Auto-save interval (ms)
-- `testModelingApp.defaultFileName`: Default name for new files
-- `testModelingApp.canvasBackgroundColor`: Canvas background color
-- `testModelingApp.elementColor`: Element color
+The VSCode extension currently uses default settings. Configuration options may be added in future versions.
 
 ---
 

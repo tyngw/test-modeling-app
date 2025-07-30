@@ -10,8 +10,14 @@ UMLクラス図に似た記法でテストアーキテクチャを記述でき�
 
 1. リポジトリをクローンします
 2. 依存パッケージをインストールするために `npm install` を実行します
-3. アプリを起動するには `npm start` を実行します
+3. 開発サーバーを起動するには `npm run dev` を実行します
 4. Webブラウザで `http://localhost:3000` にアクセスします
+
+または、本番ビルドを実行する場合：
+```bash
+npm run build
+npm start
+```
 
 ### GitHub Pagesへのデプロイ
 
@@ -179,7 +185,7 @@ Parent Item
 
 3. **拡張機能を使用する**
    - コマンドパレット（`Ctrl/Cmd + Shift + P`）を開く
-   - `Test Modeling App: Open Modeling Editor` を実行
+   - `Open Test Modeling App` を実行
    - エディターでモデリング図を作成・編集できます
 
 ### VSCode拡張版の特長
@@ -201,14 +207,7 @@ Parent Item
 
 ### 設定項目
 
-VSCodeの設定画面（`Ctrl/Cmd + ,`）で以下の項目を設定できます：
-
-- `testModelingApp.theme`: アプリケーションのテーマ（light/dark/auto）
-- `testModelingApp.autoSave`: 自動保存の有効/無効
-- `testModelingApp.autoSaveInterval`: 自動保存の間隔（ミリ秒）
-- `testModelingApp.defaultFileName`: 新しいファイルのデフォルト名
-- `testModelingApp.canvasBackgroundColor`: キャンバスの背景色
-- `testModelingApp.elementColor`: 要素の色
+VSCode拡張は現在デフォルト設定を使用しています。設定オプションは将来のバージョンで追加される予定です。
 
 ---
 
