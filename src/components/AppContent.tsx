@@ -65,7 +65,10 @@ const AppContent: React.FC = () => {
   );
 
   // AI生成機能
-  const { handleAIClick, isLoading } = useAIGeneration({ currentTab, dispatch });
+  const { handleAIClick, isLoading } = useAIGeneration({
+    currentTab,
+    dispatch,
+  });
 
   // ファイル操作関連機能
   const { handleSaveSvg, handleSaveElements, handleLoadElements } = useFileOperations({

@@ -10,6 +10,114 @@ import {
 import { findNodeInHierarchy, findParentNodeInHierarchy } from './hierarchicalConverter';
 
 /**
+ * 階層構造で兄弟要素を追加
+ * @param hierarchical 現在の階層構造
+ * @param siblingId 基準となる兄弟要素のID
+ * @param newElement 新しい要素
+ * @param position 追加位置（'before' | 'after'）
+ * @returns 更新された階層操作結果
+ */
+export function addSiblingToHierarchy(
+  hierarchical: HierarchicalStructure,
+  siblingId: string,
+  newElement: Element,
+  position: 'before' | 'after' = 'after',
+): HierarchicalOperationResult {
+  const clonedHierarchy = JSON.parse(JSON.stringify(hierarchical)) as HierarchicalStructure;
+
+  // 基準要素の親ノードを検索
+  const parentNode = findParentNodeInHierarchy(clonedHierarchy, siblingId);
+
+  if (!parentNode) {
+    const error = `基準要素 ${siblingId} の親ノードが見つかりません`;
+    console.error(`[addSiblingToHierarchy] エラー: ${error}`);
+    throw new Error(error);
+  }
+
+  if (!parentNode.children) {
+    const error = `親ノードに子要素がありません`;
+    console.error(`[addSiblingToHierarchy] エラー: ${error}`);
+    throw new Error(error);
+  }
+
+  // 基準要素のインデックスを検索
+  const siblingIndex = parentNode.children.findIndex((child) => child.data.id === siblingId);
+
+  if (siblingIndex === -1) {
+    const error = `基準要素 ${siblingId} が見つかりません`;
+    console.error(`[addSiblingToHierarchy] エラー: ${error}`);
+    throw new Error(error);
+  }
+
+  // 新しいノードを作成
+  const newNode: HierarchicalNode = {
+    data: newElement,
+  };
+
+  // 指定された位置に挿入
+  const insertIndex = position === 'before' ? siblingIndex : siblingIndex + 1;
+  parentNode.children.splice(insertIndex, 0, newNode);
+
+  return {
+    hierarchicalData: clonedHierarchy,
+  };
+}
+
+/**
+ * 階層構造で複数の兄弟要素を順序通りに追加
+ * @param hierarchical 現在の階層構造
+ * @param siblingId 基準となる兄弟要素のID
+ * @param newElements 新しい要素の配列（順序通り）
+ * @param position 追加位置（'before' | 'after'）
+ * @returns 更新された階層操作結果
+ */
+export function addMultipleSiblingsToHierarchy(
+  hierarchical: HierarchicalStructure,
+  siblingId: string,
+  newElements: Element[],
+  position: 'before' | 'after' = 'after',
+): HierarchicalOperationResult {
+  const clonedHierarchy = JSON.parse(JSON.stringify(hierarchical)) as HierarchicalStructure;
+
+  // 基準要素の親ノードを検索
+  const parentNode = findParentNodeInHierarchy(clonedHierarchy, siblingId);
+
+  if (!parentNode) {
+    const error = `基準要素 ${siblingId} の親ノードが見つかりません`;
+    console.error(`[addMultipleSiblingsToHierarchy] エラー: ${error}`);
+    throw new Error(error);
+  }
+
+  if (!parentNode.children) {
+    const error = `親ノードに子要素がありません`;
+    console.error(`[addMultipleSiblingsToHierarchy] エラー: ${error}`);
+    throw new Error(error);
+  }
+
+  // 基準要素のインデックスを検索
+  const siblingIndex = parentNode.children.findIndex((child) => child.data.id === siblingId);
+
+  if (siblingIndex === -1) {
+    const error = `基準要素 ${siblingId} が見つかりません`;
+    console.error(`[addMultipleSiblingsToHierarchy] エラー: ${error}`);
+    throw new Error(error);
+  }
+
+  // 新しいノードを作成
+  const newNodes: HierarchicalNode[] = newElements.map((element) => ({
+    data: element,
+  }));
+
+  // 指定された位置に一括挿入
+  const insertIndex = position === 'before' ? siblingIndex : siblingIndex + 1;
+  parentNode.children.splice(insertIndex, 0, ...newNodes);
+
+  return {
+    hierarchicalData: clonedHierarchy,
+  };
+}
+
+/**
  * 階層構造で要素を追加
  * @param hierarchical 現在の階層構造
  * @param parentId 親要素のID

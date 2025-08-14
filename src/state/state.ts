@@ -54,6 +54,7 @@ import {
 import { updateHierarchyWithElementChanges } from '../utils/hierarchical/hierarchicalMaintainer';
 import {
   addElementToHierarchy,
+  addMultipleSiblingsToHierarchy,
   deleteElementFromHierarchy,
   moveElementInHierarchy,
   updateElementInHierarchy,
@@ -104,6 +105,15 @@ interface AddElementsSilentPayload {
   tentative?: boolean;
   targetNodeId?: string; // 追加先の要素IDを階層構造ベースで指定
   targetPosition?: 'before' | 'after' | 'child';
+  onError?: (message: string) => void; // エラーハンドリングコールバック
+  onSuccess?: (addedElementIds: string[]) => void; // 成功時のコールバック
+}
+
+interface AddSiblingElementsSilentPayload {
+  texts?: string[];
+  tentative?: boolean;
+  targetNodeId: string; // 兄弟要素として追加する基準要素のID
+  position?: 'before' | 'after'; // 基準要素の前か後か（デフォルト: 'after'）
   onError?: (message: string) => void; // エラーハンドリングコールバック
   onSuccess?: (addedElementIds: string[]) => void; // 成功時のコールバック
 }
@@ -223,6 +233,90 @@ const isAddElementsSilentPayload = (payload: unknown): payload is AddElementsSil
       (!('onError' in payload) ||
         typeof (payload as Record<string, unknown>).onError === 'function'))
   );
+};
+
+const isAddSiblingElementsSilentPayload = (
+  payload: unknown,
+): payload is AddSiblingElementsSilentPayload => {
+  return (
+    typeof payload === 'object' &&
+    payload !== null &&
+    'targetNodeId' in payload &&
+    typeof (payload as Record<string, unknown>).targetNodeId === 'string' &&
+    (!('texts' in payload) || Array.isArray((payload as Record<string, unknown>).texts)) &&
+    (!('tentative' in payload) ||
+      typeof (payload as Record<string, unknown>).tentative === 'boolean') &&
+    (!('position' in payload) ||
+      ['before', 'after'].includes((payload as Record<string, unknown>).position as string)) &&
+    (!('onError' in payload) ||
+      typeof (payload as Record<string, unknown>).onError === 'function') &&
+    (!('onSuccess' in payload) ||
+      typeof (payload as Record<string, unknown>).onSuccess === 'function')
+  );
+};
+
+// 階層構造から親要素を検索するヘルパー関数
+const findParentElementInHierarchy = (
+  hierarchicalData: HierarchicalStructure,
+  childId: string,
+): Element | null => {
+  const parentNode = findParentNodeInHierarchy(hierarchicalData, childId);
+  return parentNode ? parentNode.data : null;
+};
+
+// 共通の要素作成処理
+const createElementsFromTexts = (
+  state: State,
+  texts: string[],
+  tentative: boolean,
+  baseElement: Element,
+  startX: number,
+  startY: number,
+): { elements: Element[]; elementIds: string[] } => {
+  const addedElementIds: string[] = [];
+  const elements: Element[] = [];
+
+  for (let i = 0; i < texts.length; i++) {
+    const textContent = texts[i];
+    const elementWidth = calculateElementWidth([textContent], TEXTAREA_PADDING.HORIZONTAL);
+
+    const lines = wrapText(textContent || '', elementWidth, state.zoomRatio || 1).length;
+    const sectionHeight = Math.max(
+      SIZE.SECTION_HEIGHT * (state.zoomRatio || 1),
+      lines * DEFAULT_FONT_SIZE * LINE_HEIGHT_RATIO +
+        TEXTAREA_PADDING.VERTICAL * (state.zoomRatio || 1),
+    );
+
+    const totalHeight = Array(state.numberOfSections)
+      .fill(sectionHeight)
+      .reduce((sum, h) => sum + h, 0);
+
+    const elementId = (Date.now() + i).toString();
+    addedElementIds.push(elementId);
+
+    const newElement: Element = {
+      ...createNewElement({
+        numSections: state.numberOfSections,
+        direction: baseElement.direction === 'none' ? 'right' : baseElement.direction,
+      }),
+      id: elementId,
+      x: startX,
+      y: startY + i * (totalHeight + OFFSET.Y),
+      width: elementWidth,
+      height: totalHeight,
+      sectionHeights: Array(state.numberOfSections).fill(sectionHeight),
+      texts: Array(state.numberOfSections)
+        .fill('')
+        .map((_, index) => (index === 0 ? texts[i] : '')),
+      tentative,
+      editing: false,
+      selected: false,
+    };
+
+    elements.push(newElement);
+  }
+
+  return { elements, elementIds: addedElementIds };
 };
 
 const isAddHierarchicalElementsPayload = (
@@ -783,6 +877,26 @@ const actionHandlers: Record<string, ActionHandler> = {
       editing: false,
     }));
 
+    // 編集終了後にサジェスト処理を実行
+    // reducer内で直接実行することで確実にトリガーされる
+    setTimeout(() => {
+      if (
+        typeof window !== 'undefined' &&
+        (window as unknown as Record<string, unknown>).__handleEndEditingSuggestion
+      ) {
+        debugLog('[END_EDITING] サジェスト処理を実行します');
+        const suggestionHandler = (window as unknown as Record<string, unknown>)
+          .__handleEndEditingSuggestion as () => Promise<void>;
+        suggestionHandler().catch((error: unknown) => {
+          debugLog(
+            `[END_EDITING] サジェスト処理でエラー: ${error instanceof Error ? error.message : '不明なエラー'}`,
+          );
+        });
+      } else {
+        debugLog('[END_EDITING] サジェスト処理関数が見つかりません');
+      }
+    }, 300); // UIの更新を待つために300ms遅延
+
     return {
       ...state,
       hierarchicalData: updatedHierarchy,
@@ -1171,6 +1285,116 @@ const actionHandlers: Record<string, ActionHandler> = {
       // 成功時のコールバック実行
       if (payload?.onSuccess) {
         setTimeout(() => payload.onSuccess!(addedElementIds), 0);
+      }
+
+      return {
+        ...state,
+        hierarchicalData: adjustedHierarchicalData,
+      };
+    },
+  ),
+
+  ADD_SIBLING_ELEMENTS_SILENT: createSafeHandler(
+    isAddSiblingElementsSilentPayload,
+    (state: State, payload: AddSiblingElementsSilentPayload) => {
+      if (!state.hierarchicalData) {
+        const errorMessage = '階層データが存在しません。';
+        if (payload?.onError) {
+          payload.onError(errorMessage);
+        }
+        debugLog(`[ADD_SIBLING_ELEMENTS_SILENT] ${errorMessage}`);
+        return state;
+      }
+
+      // 基準要素を検索
+      const targetElement = findElementInHierarchy(state.hierarchicalData, payload.targetNodeId);
+      if (!targetElement) {
+        const errorMessage = `指定された要素（ID: ${payload.targetNodeId}）が見つかりません。`;
+        if (payload?.onError) {
+          payload.onError(errorMessage);
+        }
+        debugLog(`[ADD_SIBLING_ELEMENTS_SILENT] ${errorMessage}`);
+        return state;
+      }
+
+      // 基準要素の親要素を検索
+      const parentElement = findParentElementInHierarchy(
+        state.hierarchicalData,
+        payload.targetNodeId,
+      );
+      if (!parentElement) {
+        const errorMessage = `基準要素（ID: ${payload.targetNodeId}）の親要素が見つかりません。`;
+        if (payload?.onError) {
+          payload.onError(errorMessage);
+        }
+        debugLog(`[ADD_SIBLING_ELEMENTS_SILENT] ${errorMessage}`);
+        return state;
+      }
+
+      // Undoスナップショットを保存
+      saveHierarchicalSnapshot(state.hierarchicalData);
+
+      const texts = payload?.texts || [];
+      const tentative = payload?.tentative || false;
+      const position = payload?.position || 'after';
+
+      if (texts.length === 0) {
+        debugLog('[ADD_SIBLING_ELEMENTS_SILENT] 追加するテキストがありません');
+        return state;
+      }
+
+      // 兄弟要素の位置を計算
+      let startX: number;
+      let startY: number;
+
+      if (position === 'after') {
+        // 基準要素の後に追加
+        startX = targetElement.x;
+        startY = targetElement.y + targetElement.height + OFFSET.Y;
+      } else {
+        // 基準要素の前に追加
+        startX = targetElement.x;
+        startY = targetElement.y - OFFSET.Y;
+      }
+
+      // 要素を作成
+      const { elements, elementIds } = createElementsFromTexts(
+        state,
+        texts,
+        tentative,
+        targetElement,
+        startX,
+        startY,
+      );
+
+      // 階層構造に要素を一括追加（順序を保持）
+      const result = addMultipleSiblingsToHierarchy(
+        state.hierarchicalData,
+        payload.targetNodeId,
+        elements,
+        position,
+      );
+      const currentHierarchy = result.hierarchicalData;
+
+      // 位置調整
+      const adjustedHierarchicalData = adjustElementPositionsFromHierarchy(
+        currentHierarchy,
+        () => state.zoomRatio || 1,
+      );
+
+      if (!adjustedHierarchicalData) {
+        debugLog(`[ADD_SIBLING_ELEMENTS_SILENT] 位置調整に失敗しました`);
+        return state;
+      }
+
+      // 成功ログ
+      debugLog(
+        `[ADD_SIBLING_ELEMENTS_SILENT] ${texts.length}個の兄弟要素を追加しました (IDs: ${elementIds.join(', ')})`,
+      );
+
+      // 成功コールバック
+      if (payload?.onSuccess) {
+        payload.onSuccess(elementIds);
       }
 
       return {

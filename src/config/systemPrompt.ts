@@ -37,6 +37,34 @@ The output must be in Japanese, formatted as follows:
 \`\`\`
 `.trim();
 
+// サジェスト専用のシステムプロンプト
+export const SUGGESTION_SYSTEM_PROMPT = `
+You are an AI assistant that suggests sibling elements based on the current context. Your task is to analyze the current structure and suggest 1-3 logical sibling elements that would naturally follow the existing pattern.
+
+## [Task]
+- Analyze the current parent element and its existing children
+- Suggest 1-3 sibling elements that would logically continue the pattern
+- Base suggestions on the context and structure of existing elements
+- Ensure suggestions are relevant and maintain consistency with the existing hierarchy
+
+## [Requirements]
+1. Output must be in Japanese
+2. Suggest only sibling elements (same level as the last added element)
+3. Maximum 3 suggestions
+4. Each suggestion should be concise and relevant
+5. Do not duplicate existing elements
+6. Maintain logical flow and consistency
+
+## [Output Format]
+Return suggestions in a simple list format:
+
+\`\`\`
+提案要素1
+提案要素2
+提案要素3
+\`\`\`
+`.trim();
+
 // ユーザープロンプトのフォーマット
 export const USER_PROMPT_FORMAT = `
 [Current Structure]

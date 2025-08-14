@@ -5,6 +5,108 @@ import { SuggestionResponse } from './schema';
 import { sanitizeApiResponse } from '../security/sanitization';
 import { validateJsonData } from '../security/validation';
 
+// スレッド管理用の型定義
+interface ChatHistory {
+  role: 'user' | 'model';
+  parts: { text: string }[];
+}
+
+// スレッド形式でのGemini API呼び出し
+export const generateWithGeminiThread = async (
+  prompt: string,
+  apiKey: string,
+  _modelType: string,
+  chatHistory: ChatHistory[] = [],
+  customSystemPrompt?: string,
+  forceJsonResponse: boolean = false,
+  truncatePrompt: boolean = true,
+): Promise<{ response: string; updatedHistory: ChatHistory[] }> => {
+  try {
+    const maxPromptLength = 8000;
+    const truncatedPrompt =
+      truncatePrompt && prompt.length > maxPromptLength
+        ? prompt.substring(0, maxPromptLength) + '\n...(省略)'
+        : prompt;
+
+    console.log(
+      `[generateWithGeminiThread] 受信プロンプト長: ${prompt.length}, 切り詰め: ${truncatePrompt}, 最終プロンプト長: ${truncatedPrompt.length}`,
+    );
+    console.log(
+      `[generateWithGeminiThread] 最終プロンプトの先頭100文字: "${truncatedPrompt.substring(0, 100)}..."`,
+    );
+
+    if (truncatePrompt && prompt.length > maxPromptLength) {
+      console.log(
+        `[generateWithGeminiThread] 警告: プロンプトが切り詰められました (${prompt.length} -> ${truncatedPrompt.length})`,
+      );
+    }
+
+    const endpoint = `${getApiEndpoint()}?key=${apiKey}`;
+    const systemPrompt = customSystemPrompt || getSystemPromptTemplate();
+
+    const generationConfig: Record<string, unknown> = {
+      temperature: 0.2,
+      topP: 0.8,
+      topK: 40,
+      maxOutputTokens: 2048,
+    };
+    if (forceJsonResponse) {
+      generationConfig.responseMimeType = 'application/json';
+    }
+
+    // チャット履歴に新しいユーザーメッセージを追加
+    const updatedHistory: ChatHistory[] = [
+      ...chatHistory,
+      {
+        role: 'user',
+        parts: [{ text: truncatedPrompt }],
+      },
+    ];
+
+    const requestPayload = {
+      contents: updatedHistory,
+      systemInstruction: {
+        parts: [{ text: systemPrompt }],
+      },
+      generationConfig,
+    };
+
+    console.log('[Geminiスレッドリクエスト] 送信内容:', JSON.stringify(requestPayload, null, 2));
+
+    const response = await axios.post(endpoint, requestPayload, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const rawTextResponse = response.data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const sanitizedResponse = sanitizeApiResponse(rawTextResponse) as string;
+
+    // レスポンスを履歴に追加
+    const finalHistory: ChatHistory[] = [
+      ...updatedHistory,
+      {
+        role: 'model',
+        parts: [{ text: sanitizedResponse }],
+      },
+    ];
+
+    return {
+      response: sanitizedResponse,
+      updatedHistory: finalHistory,
+    };
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      if (error.response?.status === 400) {
+        throw new Error(
+          `API リクエストエラー: ${error.response?.data?.error?.message || 'リクエストの形式が正しくありません'}`,
+        );
+      }
+    }
+    throw new Error('API呼び出しに失敗しました');
+  }
+};
+
 export const generateWithGemini = async (
   prompt: string,
   apiKey: string,

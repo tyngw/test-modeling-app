@@ -74,6 +74,17 @@ export type AddElementAction =
       };
     }
   | {
+      type: 'ADD_SIBLING_ELEMENTS_SILENT';
+      payload: {
+        targetNodeId: string;
+        position?: 'before' | 'after';
+        texts: string[];
+        tentative: boolean;
+        onError?: (message: string) => void;
+        onSuccess?: (addedElementIds: string[]) => void;
+      };
+    }
+  | {
       type: 'ADD_HIERARCHICAL_ELEMENTS';
       payload: {
         targetNodeId?: string;
