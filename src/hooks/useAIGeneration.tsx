@@ -489,27 +489,39 @@ export function useAIGeneration({ currentTab, dispatch }: UseAIGenerationParams)
 
       // コンテキスト初期化後は簡潔なプロンプトを使用
       const userPrompt = suggestionState.contextInitialized
-        ? `[Current Structure]
+        ? `以下の仕様書に基づいて、選択された要素「${selectedElement.texts?.join(', ') || ''}」の子要素を生成してください。
+
+[Current Structure]
 \`\`\`
 ${structureText}
 \`\`\`
 
-選択された要素の子要素として、論理的に続くであろう要素を生成してください。
-事前に送信した参考情報も考慮して、関連性の高い要素を提案してください。
-各要素は1行ずつ出力してください。`
-        : `[Current Structure]
+**要求事項：**
+1. 事前に送信した仕様書の内容に従って、選択された要素の子要素を生成してください
+2. 仕様書で定義されている機能や項目を階層化する際の、論理的な子要素を生成してください
+3. 仕様書の構造や分類に従って、適切な粒度で要素を提案してください
+4. 各要素は1行ずつ出力してください
+
+提案する要素は、仕様書の内容を反映した具体的で意味のあるものにしてください。`
+        : `以下の仕様書に基づいて、選択された要素「${selectedElement.texts?.join(', ') || ''}」の子要素を生成してください。
+
+[Current Structure]
 \`\`\`
 ${structureText}
 \`\`\`
 
-[Input Information]
+【重要】以下の仕様書に従って階層構造を作成することが目的です：
 \`\`\`
 ${inputText}
 \`\`\`
 
-選択された要素の子要素として、論理的に続くであろう要素を生成してください。
-入力情報も参考にして、関連性の高い要素を提案してください。
-各要素は1行ずつ出力してください。`;
+**要求事項：**
+1. 仕様書の内容に基づいて、選択された要素の子要素を生成してください
+2. 仕様書で定義されている機能や項目を階層化する際の、論理的な子要素を生成してください
+3. 仕様書の構造や分類に従って、適切な粒度で要素を提案してください
+4. 各要素は1行ずつ出力してください
+
+提案する要素は、仕様書の内容を反映した具体的で意味のあるものにしてください。`;
 
       debugLog(`[AI] userPrompt: ${userPrompt.substring(0, 200)}...`);
       debugLog(`[AI] コンテキスト初期化済み: ${suggestionState.contextInitialized}`);
@@ -707,35 +719,62 @@ ${inputText}
           ? formatHierarchicalStructureForPrompt(currentTab.state.hierarchicalData)
           : '階層構造データがありません';
 
+        // 現在選択されている要素の詳細情報を取得
+        const selectedElements = getSelectedElementsFromHierarchy(
+          currentTab.state.hierarchicalData,
+        );
+        const selectedElement = selectedElements[0];
+
         // 親要素とその子要素の情報を抽出
         const parentElement = findElementById(parentElementId);
         const parentInfo = parentElement
           ? `親要素: ${parentElement.texts?.join(', ') || 'テキストなし'}`
           : '親要素情報が見つかりません';
 
-        // 設定画面で設定されたinputTextを取得
+        // 選択された要素の詳細情報
+        const selectedElementInfo = selectedElement
+          ? `現在選択されている要素: ${selectedElement.texts?.join(', ') || 'テキストなし'} (ID: ${selectedElement.id})`
+          : '選択されている要素がありません';
+
+        // 設定画面で設定されたinputTextを取得（仕様書として扱う）
         const inputText = getPrompt();
 
         // 共通のコンテキスト初期化を実行
         await ensureContextInitialized(inputText);
 
-        // サジェスト用のプロンプトを生成（常に簡潔なプロンプトを使用）
-        const suggestionPrompt = `現在の階層構造を分析して、適切な兄弟要素を提案してください。
+        // サジェスト用のプロンプトを生成（選択要素と仕様書に基づく）
+        const suggestionPrompt = `以下の仕様書の情報に基づいて、現在選択されている要素に関連する適切な兄弟要素を提案してください。
 
+【重要】以下の仕様書に従って階層構造を作成することが目的です：
+${
+  suggestionState.contextInitialized
+    ? '（仕様書の詳細は事前に送信済みです。その情報を基に判断してください）'
+    : inputText
+      ? `\n仕様書:\n\`\`\`\n${inputText}\n\`\`\`\n`
+      : ''
+}
+
+${selectedElementInfo}
 ${parentInfo}
 
-[現在の構造]
+[現在の階層構造]
 \`\`\`
 ${structureText}
 \`\`\`
 
-最後に追加された要素の兄弟として、論理的に続くであろう要素を提案してください。
-既存の要素と重複しないよう注意してください。
-${suggestionState.contextInitialized ? '事前に送信した参考情報も考慮して、関連性の高い要素を提案してください。' : inputText ? '以下の参考情報も考慮して、関連性の高い要素を提案してください。' : ''}`;
+**要求事項：**
+1. 仕様書の内容に基づいて、選択された要素「${selectedElement?.texts?.join(', ') || ''}」に関連する兄弟要素を提案してください
+2. 仕様書で定義されている機能や項目を階層化する際の、論理的に並ぶべき要素を生成してください
+3. 既存の要素と重複しないよう注意してください
+4. 仕様書の構造や分類に従って、適切な粒度で要素を提案してください
+
+提案する要素は、仕様書の内容を反映した具体的で意味のあるものにしてください。`;
 
         debugLog(
           `[Suggestion] プロンプト生成完了: コンテキスト初期化済み=${suggestionState.contextInitialized}`,
         );
+        debugLog(`[Suggestion] 選択要素: ${selectedElementInfo}`);
+        debugLog(`[Suggestion] 仕様書長: ${inputText?.length || 0}文字`);
 
         const modelType = getModelType();
 
@@ -1061,21 +1100,21 @@ ${suggestionState.contextInitialized ? '事前に送信した参考情報も考�
           debugLog(`[Context] チャンク ${i + 1} の先頭50文字: "${chunk.substring(0, 50)}..."`);
 
           const contextPrompt = isFirstChunk
-            ? `以下の情報を今後のサジェスト生成の参考情報として記憶してください。${chunks.length > 1 ? `(${i + 1}/${chunks.length}部分)` : ''}
+            ? `以下の仕様書を今後のサジェスト生成の基準として記憶してください。${chunks.length > 1 ? `(${i + 1}/${chunks.length}部分)` : ''}
 
-参考情報:
+【重要】これは仕様書です。この仕様書に基づいて階層構造を作成することが目的です：
 \`\`\`
 ${chunk}
 \`\`\`
 
-${isLastChunk ? 'この情報を基に、今後要素の編集完了時に適切なサジェストを生成してください。' : '続きの情報を次に送信します。'}`
-            : `参考情報の続き(${i + 1}/${chunks.length}部分):
+${isLastChunk ? 'この仕様書を基に、今後要素の編集完了時に仕様に沿った適切なサジェストを生成してください。仕様書で定義されている機能や項目を階層化するための提案をしてください。' : '続きの仕様書を次に送信します。'}`
+            : `仕様書の続き(${i + 1}/${chunks.length}部分):
 
 \`\`\`
 ${chunk}
 \`\`\`
 
-${isLastChunk ? 'これで参考情報の送信は完了です。この情報を基に、今後要素の編集完了時に適切なサジェストを生成してください。' : '続きの情報を次に送信します。'}`;
+${isLastChunk ? 'これで仕様書の送信は完了です。この仕様書を基に、今後要素の編集完了時に仕様に沿った適切なサジェストを生成してください。仕様書で定義されている機能や項目を階層化するための提案をしてください。' : '続きの仕様書を次に送信します。'}`;
 
           debugLog(`[Context] チャンク ${i + 1}/${chunks.length} を送信中`);
           debugLog(
