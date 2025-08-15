@@ -1,30 +1,53 @@
-// src/constants/helpContent.ts
-export const helpContent = `
-<h4>Keyboard shortcuts</h4>
-<p>Tab: Add a child element to the selected element</p>
-<p>Shift + Tab: Add a sibling element to the selected element</p>
-<p>Delete/Backspace: Remove the selected element</p>
-<p>Enter: Edit the selected element</p>
-<p>Esc: Stop editing the selected element</p>
-<p>Tab in editing mode: Move the focus to the next text box</p>
-<p>Ctrl + Z: Undo the last action</p>
-<p>Shift + Ctrl + Z: Redo the last action</p>
-<p>Ctrl + X: Cut the selected element</p>
-<p>Ctrl + C: Copy the selected element</p>
-<p>Ctrl + V: Paste the copied element</p>
-<p>Ctrl + ArrowLeft: Collapse the children of the selected element</p>
-<p>Ctrl + ArrowRight: Expand the children of the selected element</p>
-<p>Arrow keys: Navigate between elements</p>
+/**
+ * Help content data structure
+ * Structured data for safe React component rendering
+ */
 
-<h4>Mouse operations</h4>
-<p>Click: Select an element</p>
-<p>Double click: Edit the selected element</p>
-<p>Clicking outside the element will end the editing mode</p>
-<p>Drag: Move the selected element</p>
+export interface HelpSection {
+  title: string;
+  items: string[];
+}
 
-<h4>Menu operations</h4>
-<p>New: Create a new diagram. Unsaved changes will be discarded.</p>
-<p>Open: Load saved data. The current data will be discarded.</p>
-<p>Save as: Save the diagram data in JSON format</p>
-<p>Export: Export the diagram in SVG format</p>
-`;
+/**
+ * Safe structured help content data
+ * Managed as plain text to prevent HTML injection
+ */
+export const helpSections: HelpSection[] = [
+  {
+    title: 'Keyboard shortcuts',
+    items: [
+      'Tab: Add a child element to the selected element',
+      'Shift + Tab: Add a sibling element to the selected element',
+      'Delete/Backspace: Remove the selected element',
+      'Enter: Edit the selected element',
+      'Esc: Stop editing the selected element',
+      'Tab in editing mode: Move the focus to the next text box',
+      'Ctrl + Z: Undo the last action',
+      'Shift + Ctrl + Z: Redo the last action',
+      'Ctrl + X: Cut the selected element',
+      'Ctrl + C: Copy the selected element',
+      'Ctrl + V: Paste the copied element',
+      'Ctrl + ArrowLeft: Collapse the children of the selected element',
+      'Ctrl + ArrowRight: Expand the children of the selected element',
+      'Arrow keys: Navigate between elements',
+    ],
+  },
+  {
+    title: 'Mouse operations',
+    items: [
+      'Click: Select an element',
+      'Double click: Edit the selected element',
+      'Clicking outside the element will end the editing mode',
+      'Drag: Move the selected element',
+    ],
+  },
+  {
+    title: 'Menu operations',
+    items: [
+      'New: Create a new diagram. Unsaved changes will be discarded.',
+      'Open: Load saved data. The current data will be discarded.',
+      'Save as: Save the diagram data in JSON format',
+      'Export: Export the diagram in SVG format',
+    ],
+  },
+];

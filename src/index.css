@@ -1,15 +1,14 @@
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell',
+    'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
 
 /* src/App.css */
@@ -27,7 +26,7 @@ code {
 /* .rectangle {
   width: 100px;
   height: 100px;
-  border: 1px solid black;
+  border: 1px solid #000000;
   margin: 10px;
   display: flex;
   align-items: center;
@@ -51,7 +50,7 @@ code {
 
 /* ノードが選択されていないときのスタイル */
 /* .element-unselected {
-  stroke: black;
+  stroke: #000000;
 } */
 
 /* .iconbar-button {
