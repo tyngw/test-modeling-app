@@ -21,13 +21,13 @@ const IconButton: React.FC<IconButtonProps> = ({
   disabled = false,
   customContent,
 }) => {
-  return (
-    <Tooltip title={tooltip}>
-      <Button variant="text" className="iconbar-button" onClick={onClick} disabled={disabled}>
-        {customContent || (Icon && <Icon sx={{ color: iconColor }} />)}
-      </Button>
-    </Tooltip>
+  const button = (
+    <Button variant="text" className="iconbar-button" onClick={onClick} disabled={disabled}>
+      {customContent || (Icon && <Icon sx={{ color: iconColor }} />)}
+    </Button>
   );
+
+  return <Tooltip title={tooltip}>{disabled ? <span>{button}</span> : button}</Tooltip>;
 };
 
 export default IconButton;

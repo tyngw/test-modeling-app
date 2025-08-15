@@ -5,6 +5,7 @@ import React from 'react';
 import { ReactNode } from 'react';
 import { TabsProvider } from '../context/TabsContext';
 import { ToastProvider } from '../context/ToastContext';
+import { SuggestionProvider } from '../context/SuggestionContext';
 import ChatAssistant from './ChatAssistant';
 import { useChatAssistant } from '../hooks/useChatAssistant';
 import { useTabManagement } from '../hooks/useTabManagement';
@@ -12,10 +13,12 @@ import { useTabManagement } from '../hooks/useTabManagement';
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <ToastProvider>
-      <TabsProvider>
-        {children}
-        <ChatAssistantWrapper />
-      </TabsProvider>
+      <SuggestionProvider>
+        <TabsProvider>
+          {children}
+          <ChatAssistantWrapper />
+        </TabsProvider>
+      </SuggestionProvider>
     </ToastProvider>
   );
 }

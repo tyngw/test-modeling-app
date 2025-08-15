@@ -9,6 +9,7 @@ import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutl
 import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
 import PlaylistRemoveIcon from '@mui/icons-material/PlaylistRemove';
 import AutoFixOffIcon from '@mui/icons-material/AutoFixOff';
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
 import UnfoldLessIcon from '@mui/icons-material/UnfoldLess';
 import UndoIcon from '@mui/icons-material/Undo';
@@ -22,6 +23,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import { ICONBAR_HEIGHT } from '../../config/elementSettings';
 import { useCanvas } from '../../context/CanvasContext';
 import { useTabs } from '../../context/TabsContext';
+import { useSuggestion } from '../../context/SuggestionContext';
 import { getCurrentTheme } from '../../utils/style/colorHelpers';
 import { getCanvasBackgroundColor } from '../../utils/storage/localStorageHelpers';
 import { useIsMounted } from '../../hooks/UseIsMounted';
@@ -64,6 +66,7 @@ const QuickMenuBar = ({
 }: QuickMenuBarProps) => {
   const { dispatch } = useCanvas();
   const { addTab } = useTabs();
+  const { isSuggestionEnabled, toggleSuggestion } = useSuggestion();
   // VSCode環境では fileInput は使用しない
   const fileInput = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -204,6 +207,12 @@ const QuickMenuBar = ({
                 />
               ) : undefined
             }
+          />
+          <IconButton
+            tooltip={isSuggestionEnabled ? 'サジェスト機能をOFFにする' : 'サジェスト機能をONにする'}
+            onClick={toggleSuggestion}
+            icon={isSuggestionEnabled ? AutoFixHighIcon : AutoFixOffIcon}
+            iconColor={isSuggestionEnabled ? theme.MENU_BAR.ICON_COLOR : '#999'}
           />
           <IconButton
             tooltip={tooltipTexts.EXPAND}
