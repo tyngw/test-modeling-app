@@ -4,6 +4,7 @@ import { SYSTEM_PROMPT_TEMPLATE } from '../../config/systemPrompt';
 import { SuggestionResponse } from './schema';
 import { sanitizeApiResponse } from '../security/sanitization';
 import { validateJsonData } from '../security/validation';
+import { debugLog } from '../debugLogHelpers';
 
 // スレッド管理用の型定義
 interface ChatHistory {
@@ -18,8 +19,8 @@ export const generateWithGeminiThread = async (
   _modelType: string,
   chatHistory: ChatHistory[] = [],
   customSystemPrompt?: string,
-  forceJsonResponse: boolean = false,
-  truncatePrompt: boolean = true,
+  forceJsonResponse = false,
+  truncatePrompt = true,
 ): Promise<{ response: string; updatedHistory: ChatHistory[] }> => {
   try {
     const maxPromptLength = 8000;
@@ -28,15 +29,15 @@ export const generateWithGeminiThread = async (
         ? prompt.substring(0, maxPromptLength) + '\n...(省略)'
         : prompt;
 
-    console.log(
+    debugLog(
       `[generateWithGeminiThread] 受信プロンプト長: ${prompt.length}, 切り詰め: ${truncatePrompt}, 最終プロンプト長: ${truncatedPrompt.length}`,
     );
-    console.log(
+    debugLog(
       `[generateWithGeminiThread] 最終プロンプトの先頭100文字: "${truncatedPrompt.substring(0, 100)}..."`,
     );
 
     if (truncatePrompt && prompt.length > maxPromptLength) {
-      console.log(
+      debugLog(
         `[generateWithGeminiThread] 警告: プロンプトが切り詰められました (${prompt.length} -> ${truncatedPrompt.length})`,
       );
     }
@@ -71,7 +72,9 @@ export const generateWithGeminiThread = async (
       generationConfig,
     };
 
-    console.log('[Geminiスレッドリクエスト] 送信内容:', JSON.stringify(requestPayload, null, 2));
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Geminiスレッドリクエスト] 送信内容:', JSON.stringify(requestPayload, null, 2));
+    }
 
     const response = await axios.post(endpoint, requestPayload, {
       headers: {
@@ -111,9 +114,9 @@ export const generateWithGemini = async (
   prompt: string,
   apiKey: string,
   _modelType: string,
-  useOriginalSystemPrompt: boolean = false,
+  useOriginalSystemPrompt = false,
   customSystemPrompt?: string,
-  forceJsonResponse: boolean = false,
+  forceJsonResponse = false,
 ): Promise<string> => {
   try {
     // プロンプトの長さを制限（トークン制限を回避）
@@ -152,7 +155,9 @@ export const generateWithGemini = async (
       },
       generationConfig,
     };
-    console.log('[Geminiリクエスト] 送信内容:', JSON.stringify(requestPayload, null, 2));
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Geminiリクエスト] 送信内容:', JSON.stringify(requestPayload, null, 2));
+    }
     // API送信
     const response = await axios.post(endpoint, requestPayload, {
       headers: {
