@@ -360,7 +360,7 @@ const layoutNodeFromHierarchy = (
       );
 
       // 左側の子要素をレイアウト
-      let leftCurrentY = currentY;
+      let leftCurrentY = startY; // 親要素と同じY座標から開始
       for (const child of leftChildren) {
         // 左側の子要素：親のX座標 - 子要素の幅 - (親要素の幅 + OFFSET.X)
         child.data.x = element.x - child.data.width - (element.width + OFFSET.X);
@@ -378,7 +378,7 @@ const layoutNodeFromHierarchy = (
       }
 
       // 右側の子要素をレイアウト
-      let rightCurrentY = currentY;
+      let rightCurrentY = startY; // 親要素と同じY座標から開始
       for (const child of rightChildren) {
         // 右側の子要素：親のX座標 + 親要素の幅 + OFFSET.X
         child.data.x = element.x + element.width + OFFSET.X;
@@ -398,23 +398,25 @@ const layoutNodeFromHierarchy = (
       currentY = Math.max(leftMaxY, rightMaxY);
     } else {
       // 通常モードでは縦に配置（兄弟要素間のY座標計算）
+      let childCurrentY = startY; // 親要素と同じY座標から開始
       for (const child of node.children) {
         const result = layoutNodeFromHierarchy(
           child,
-          currentY,
+          childCurrentY,
           level + 1,
           getNumberOfSections,
           layoutMode,
           node, // 親要素の情報を渡す
         );
         // 次の兄弟要素のY座標 = 子要素とその子孫要素の最大Y座標 + OFFSET.Y
-        currentY = result.newY + OFFSET.Y;
+        childCurrentY = result.newY + OFFSET.Y;
         leftMaxY = Math.max(leftMaxY, result.leftMaxY);
         rightMaxY = Math.max(rightMaxY, result.rightMaxY);
       }
+      currentY = Math.max(leftMaxY, rightMaxY);
     }
 
-    // 親要素を子要素群の中央に配置（分析結果に基づく修正）
+    // 親要素を子要素群の中央に配置（修正版）
     if (node.children.length > 0) {
       // 全ての子要素をY座標でソートして、最上位・最下位要素を取得
       const allChildElements = node.children.map((child) => child.data);
@@ -424,30 +426,14 @@ const layoutNodeFromHierarchy = (
 
       if (sortedChildren.length > 0) {
         if (sortedChildren.length === 1) {
-          // 単一子要素の特殊ケース：親要素と同じY座標に配置
-          // ただし、親要素の高さが大きい場合は子要素との重なりを回避
+          // 単一子要素の特殊ケース：親要素と子要素を同じY座標に配置
           const singleChild = sortedChildren[0];
           const parentOldY = element.y;
+          element.y = singleChild.y;
 
-          // 親要素の下端が子要素の範囲と重ならないかチェック
-          const proposedParentY = singleChild.y;
-          const parentBottomY = proposedParentY + element.height;
-          const childBottomY = singleChild.y + singleChild.height;
-
-          if (parentBottomY > childBottomY + OFFSET.Y) {
-            // 親要素が子要素より大きく、重なりが発生する場合
-            // 子要素を親要素の中央に配置するのではなく、親要素を子要素の上に配置
-            element.y = singleChild.y - element.height - OFFSET.Y;
-            debugLog(
-              `[layoutNodeFromHierarchy] 単一子要素（重なり回避）「${element.texts}」 id=${element.id} - Y座標更新: ${parentOldY} → ${element.y}`,
-            );
-          } else {
-            // 通常の単一子要素ケース：親要素と同じY座標に配置
-            element.y = singleChild.y;
-            debugLog(
-              `[layoutNodeFromHierarchy] 単一子要素ケース「${element.texts}」 id=${element.id} - Y座標更新: ${parentOldY} → ${element.y}`,
-            );
-          }
+          debugLog(
+            `[layoutNodeFromHierarchy] 単一子要素ケース「${element.texts}」 id=${element.id} - Y座標更新: ${parentOldY} → ${element.y}`,
+          );
         } else {
           // 複数子要素の場合：中央配置
           const firstChild = sortedChildren[0]; // Y座標が最小の要素
