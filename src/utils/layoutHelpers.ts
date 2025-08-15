@@ -269,9 +269,6 @@ export const adjustElementPositionsFromHierarchy = (
   // 階層構造をディープコピーして更新用に複製
   const updatedHierarchy = JSON.parse(JSON.stringify(hierarchicalData)) as HierarchicalStructure;
 
-  // グローバルな要素位置トラッキング（Y座標の範囲管理）
-  const globalElementRanges: Array<{ minY: number; maxY: number; level: number }> = [];
-
   let currentY = DEFAULT_POSITION.Y;
 
   // マインドマップモードの場合、ルート要素をキャンバス中央に配置
@@ -297,7 +294,6 @@ export const adjustElementPositionsFromHierarchy = (
       getNumberOfSections,
       layoutMode,
       undefined, // ルート要素には親がない
-      globalElementRanges, // globalElementRangesを追加
     );
     currentY = result.newY + OFFSET.Y;
   } else {
@@ -310,7 +306,6 @@ export const adjustElementPositionsFromHierarchy = (
         getNumberOfSections,
         layoutMode,
         undefined, // ルート要素には親がない
-        globalElementRanges, // globalElementRangesを追加
       );
       currentY = result.newY + OFFSET.Y;
     }
@@ -331,7 +326,6 @@ const layoutNodeFromHierarchy = (
   getNumberOfSections: () => number,
   layoutMode: LayoutMode,
   parentNode?: HierarchicalNode, // 親要素の情報を追加
-  globalElementRanges?: Array<{ minY: number; maxY: number; level: number }>, // グローバル要素位置トラッキング
 ): LayoutResult => {
   const element = node.data;
 
@@ -348,37 +342,8 @@ const layoutNodeFromHierarchy = (
     element.x = DEFAULT_POSITION.X + level * (SIZE.WIDTH.MIN + OFFSET.X);
   }
 
-  // グローバル衝突回避チェック
-  if (globalElementRanges && level > 0) {
-    // 同じ階層レベルまたは重複可能性のある範囲をチェック
-    const potentialConflicts = globalElementRanges.filter(
-      (range) => Math.abs(range.level - level) <= 1, // 隣接する階層レベルも考慮
-    );
-
-    for (const conflict of potentialConflicts) {
-      const proposedMinY = startY;
-      const proposedMaxY = startY + element.height;
-
-      // Y座標範囲の重複チェック（マージンを含む）
-      const margin = OFFSET.Y;
-      if (proposedMinY < conflict.maxY + margin && proposedMaxY + margin > conflict.minY) {
-        // 衝突が検出された場合、安全な位置に調整
-        startY = conflict.maxY + margin;
-      }
-    }
-  }
-
   element.y = startY;
   let currentY = startY + element.height;
-
-  // 現在の要素の範囲をグローバルトラッキングに追加
-  if (globalElementRanges) {
-    globalElementRanges.push({
-      minY: element.y,
-      maxY: element.y + element.height,
-      level: level,
-    });
-  }
 
   // 子要素がある場合の処理
   if (node.children && node.children.length > 0) {
@@ -395,7 +360,7 @@ const layoutNodeFromHierarchy = (
       );
 
       // 左側の子要素をレイアウト
-      let leftCurrentY = startY;
+      let leftCurrentY = startY; // 親要素と同じY座標から開始
       for (const child of leftChildren) {
         // 左側の子要素：親のX座標 - 子要素の幅 - (親要素の幅 + OFFSET.X)
         child.data.x = element.x - child.data.width - (element.width + OFFSET.X);
@@ -406,15 +371,14 @@ const layoutNodeFromHierarchy = (
           getNumberOfSections,
           layoutMode,
           node, // 親要素の情報を渡す
-          globalElementRanges, // globalElementRangesを再帰呼び出しに渡す
         );
-        // 次の兄弟要素のY座標 = 現在の要素のY座標 + 要素の高さ + OFFSET.Y
-        leftCurrentY = child.data.y + child.data.height + OFFSET.Y;
+        // 次の兄弟要素のY座標 = 子要素とその子孫要素の最大Y座標 + OFFSET.Y
+        leftCurrentY = result.newY + OFFSET.Y;
         leftMaxY = Math.max(leftMaxY, result.leftMaxY, result.rightMaxY);
       }
 
       // 右側の子要素をレイアウト
-      let rightCurrentY = startY;
+      let rightCurrentY = startY; // 親要素と同じY座標から開始
       for (const child of rightChildren) {
         // 右側の子要素：親のX座標 + 親要素の幅 + OFFSET.X
         child.data.x = element.x + element.width + OFFSET.X;
@@ -425,34 +389,34 @@ const layoutNodeFromHierarchy = (
           getNumberOfSections,
           layoutMode,
           node, // 親要素の情報を渡す
-          globalElementRanges, // globalElementRangesを再帰呼び出しに渡す
         );
-        // 次の兄弟要素のY座標 = 現在の要素のY座標 + 要素の高さ + OFFSET.Y
-        rightCurrentY = child.data.y + child.data.height + OFFSET.Y;
+        // 次の兄弟要素のY座標 = 子要素とその子孫要素の最大Y座標 + OFFSET.Y
+        rightCurrentY = result.newY + OFFSET.Y;
         rightMaxY = Math.max(rightMaxY, result.leftMaxY, result.rightMaxY);
       }
 
       currentY = Math.max(leftMaxY, rightMaxY);
     } else {
       // 通常モードでは縦に配置（兄弟要素間のY座標計算）
+      let childCurrentY = startY; // 親要素と同じY座標から開始
       for (const child of node.children) {
         const result = layoutNodeFromHierarchy(
           child,
-          currentY,
+          childCurrentY,
           level + 1,
           getNumberOfSections,
           layoutMode,
           node, // 親要素の情報を渡す
-          globalElementRanges, // globalElementRangesを再帰呼び出しに渡す
         );
-        // 次の兄弟要素のY座標 = 現在の要素のY座標 + 要素の高さ + OFFSET.Y
-        currentY = child.data.y + child.data.height + OFFSET.Y;
+        // 次の兄弟要素のY座標 = 子要素とその子孫要素の最大Y座標 + OFFSET.Y
+        childCurrentY = result.newY + OFFSET.Y;
         leftMaxY = Math.max(leftMaxY, result.leftMaxY);
         rightMaxY = Math.max(rightMaxY, result.rightMaxY);
       }
+      currentY = Math.max(leftMaxY, rightMaxY);
     }
 
-    // 親要素を子要素群の中央に配置（分析結果に基づく修正）
+    // 親要素を子要素群の中央に配置（修正版）
     if (node.children.length > 0) {
       // 全ての子要素をY座標でソートして、最上位・最下位要素を取得
       const allChildElements = node.children.map((child) => child.data);
@@ -462,9 +426,14 @@ const layoutNodeFromHierarchy = (
 
       if (sortedChildren.length > 0) {
         if (sortedChildren.length === 1) {
-          // 単一子要素の特殊ケース：親要素と同じY座標に配置
+          // 単一子要素の特殊ケース：親要素と子要素を同じY座標に配置
           const singleChild = sortedChildren[0];
+          const parentOldY = element.y;
           element.y = singleChild.y;
+
+          debugLog(
+            `[layoutNodeFromHierarchy] 単一子要素ケース「${element.texts}」 id=${element.id} - Y座標更新: ${parentOldY} → ${element.y}`,
+          );
         } else {
           // 複数子要素の場合：中央配置
           const firstChild = sortedChildren[0]; // Y座標が最小の要素
@@ -477,45 +446,19 @@ const layoutNodeFromHierarchy = (
 
           const parentOldY = element.y;
           const newParentY = childrenMidY - element.height / 2;
+          element.y = newParentY;
 
-          // 親要素の新しい位置での衝突チェック
-          if (globalElementRanges) {
-            let adjustedParentY = newParentY;
-            const parentMinY = adjustedParentY;
-            const parentMaxY = adjustedParentY + element.height;
-
-            // 現在の要素以外との衝突をチェック
-            const conflicts = globalElementRanges.filter(
-              (range) =>
-                range.level === level && // 同じ階層レベルのみチェック
-                !(range.minY === element.y && range.maxY === element.y + element.height), // 自分自身は除外
-            );
-
-            for (const conflict of conflicts) {
-              const margin = OFFSET.Y / 2; // 親要素用のマージンは小さめに
-              if (parentMinY < conflict.maxY + margin && parentMaxY + margin > conflict.minY) {
-                // 衝突が検出された場合、下方向にずらす
-                adjustedParentY = conflict.maxY + margin;
-              }
-            }
-
-            element.y = adjustedParentY;
-
-            // グローバルトラッキングを更新
-            const existingIndex = globalElementRanges.findIndex(
-              (range) => range.minY === parentOldY && range.maxY === parentOldY + element.height,
-            );
-            if (existingIndex !== -1) {
-              globalElementRanges[existingIndex] = {
-                minY: element.y,
-                maxY: element.y + element.height,
-                level: level,
-              };
-            }
-          } else {
-            element.y = newParentY;
-          }
+          debugLog(
+            `[layoutNodeFromHierarchy] 中央配置「${element.texts}」 id=${element.id} - Y座標更新: ${parentOldY} → ${element.y}`,
+          );
         }
+
+        // 親要素の位置変更後、実際の最大Y座標を計算
+        const allElementsMaxY = Math.max(
+          element.y + element.height, // 親要素の下端
+          ...sortedChildren.map((child) => child.y + child.height), // 全子要素の下端
+        );
+        currentY = Math.max(currentY, allElementsMaxY);
       }
     }
     return { newY: currentY, leftMaxY, rightMaxY };
