@@ -89,17 +89,16 @@ const TextDisplayArea = memo<TextDisplayAreaProps>(function TextDisplayArea({
 
       const currentWidth = Math.min(SIZE.WIDTH.MAX, initialWidth);
 
-      const wrappedLines = wrapText(text || '', currentWidth, 1.0); // ズーム比率を1.0に固定
+      const wrappedLines = wrapText(text || '', currentWidth, zoomRatio);
 
-      const baseLineHeight = DEFAULT_FONT_SIZE * LINE_HEIGHT_RATIO;
-      const basePadding = TEXTAREA_PADDING.VERTICAL;
-      const baseMinHeight = SIZE.SECTION_HEIGHT;
-
-      const baseContentHeight = wrappedLines.length * baseLineHeight;
-      const baseTotalHeight = Math.max(baseContentHeight, baseMinHeight) + basePadding;
-
-      // 最終的にズーム比率を適用
-      const totalHeight = baseTotalHeight * zoomRatio;
+      const lineHeightValue = DEFAULT_FONT_SIZE * LINE_HEIGHT_RATIO * zoomRatio;
+      const minHeight = Math.max(
+        SIZE.SECTION_HEIGHT * zoomRatio,
+        (lineHeightValue + TEXTAREA_PADDING.VERTICAL) * zoomRatio,
+      );
+      const contentHeight = wrappedLines.length * lineHeightValue;
+      const totalHeight =
+        Math.max(contentHeight, minHeight) + TEXTAREA_PADDING.VERTICAL * zoomRatio;
 
       const widthChanged = Math.abs(currentWidth - prevDimensions.current.width) > 1;
       const heightChanged = Math.abs(totalHeight - prevDimensions.current.height) > 1;

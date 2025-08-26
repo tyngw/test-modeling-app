@@ -189,10 +189,12 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
     const calculateDimensions = () => {
       const newWidth = calculateElementWidth(element.texts, TEXTAREA_PADDING.HORIZONTAL);
       const sectionHeights = element.texts.map((text) => {
-        const lines = wrapText(text || '', newWidth, 1.0).length; // ズーム比率を1.0に固定
-        const baseHeight =
-          lines * DEFAULT_FONT_SIZE * LINE_HEIGHT_RATIO + TEXTAREA_PADDING.VERTICAL;
-        return Math.max(SIZE.SECTION_HEIGHT, baseHeight); // ズーム比率を除去
+        const lines = wrapText(text || '', newWidth, tabState.zoomRatio).length;
+        return Math.max(
+          SIZE.SECTION_HEIGHT * tabState.zoomRatio,
+          lines * DEFAULT_FONT_SIZE * LINE_HEIGHT_RATIO +
+            TEXTAREA_PADDING.VERTICAL * tabState.zoomRatio,
+        );
       });
       return { newWidth, newHeight: sectionHeights.reduce((sum, h) => sum + h, 0), sectionHeights };
     };
