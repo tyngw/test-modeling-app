@@ -10,6 +10,7 @@ import {
   LINE_HEIGHT_RATIO,
   SIZE,
 } from '../../config/elementSettings';
+import { debugLog } from '../../utils/debugLogHelpers';
 import {
   getFontFamily,
   getElementColor,
@@ -86,7 +87,7 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
 
       // 入力値のセキュリティ検証とサニタイゼーション
       if (!validateTextInput(rawValue)) {
-        console.warn(
+        debugLog(
           '無効なテキスト入力が検出されました。安全でない内容が含まれている可能性があります。',
         );
         return; // 危険な入力は拒否

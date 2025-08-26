@@ -17,6 +17,7 @@ import {
 import { SettingField as SettingFieldType } from '../../types/settings';
 import { sanitizeText } from '../../utils/security/sanitization';
 import { validateSettingValue } from '../../utils/security/validation';
+import { debugLog } from '../../utils/debugLogHelpers';
 
 interface SettingFieldProps {
   field: SettingFieldType;
@@ -50,7 +51,7 @@ export const SettingField: React.FC<SettingFieldProps> = ({
 
     // 設定値の検証
     if (!validateSettingValue(field.key, rawValue)) {
-      console.warn(`設定値が無効です: ${field.key}`);
+      debugLog(`設定値が無効です: ${field.key}`);
       return;
     }
 

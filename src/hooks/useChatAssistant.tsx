@@ -2,6 +2,7 @@ import { useCallback, useState, useRef } from 'react';
 import { generateWithGemini } from '../utils/api';
 import { getApiKey, getModelType } from '../utils/storage';
 import { createChatUserPromptOnly, getChatSystemPrompt } from '../config/chatSystemPrompt';
+import { debugLog } from '../utils/debugLogHelpers';
 import {
   formatHierarchicalStructureForPrompt,
   truncateText,
@@ -61,7 +62,7 @@ export function useChatAssistant({ currentTab, dispatch, getLatestState }: UseCh
     const lastExecution = operationTimestamps.current.get(operationKey);
 
     if (lastExecution && now - lastExecution < threshold) {
-      console.log(
+      debugLog(
         `[${operation}] 重複実行を防止しました (前回実行: ${
           now - lastExecution
         }ms前, key: ${operationKey})`,
@@ -77,7 +78,7 @@ export function useChatAssistant({ currentTab, dispatch, getLatestState }: UseCh
   const markOperationComplete = (operation: string, details?: Record<string, unknown>) => {
     const operationKey = details ? `${operation}_${JSON.stringify(details)}` : operation;
     operationTimestamps.current.delete(operationKey);
-    console.log(`[${operation}] 操作完了、重複防止キーをクリア: ${operationKey}`);
+    debugLog(`[${operation}] 操作完了、重複防止キーをクリア: ${operationKey}`);
   };
 
   const handleChatMessage = useCallback(
@@ -119,8 +120,7 @@ export function useChatAssistant({ currentTab, dispatch, getLatestState }: UseCh
           : '階層構造データがありません'; // 階層構造に統一されているため、この状況は通常発生しない
 
         // デバッグ用：構造情報をログ出力（効率化のため簡素化）
-        // eslint-disable-next-line no-console
-        console.log('[Chat] 構造情報:', {
+        debugLog('[Chat] 構造情報:', {
           hasHierarchicalData: !!currentTab.state.hierarchicalData,
           elementsMapSize: Object.keys(elementsMap).length,
           structureLength: fullStructure.length, // 文字数のみ表示
@@ -141,17 +141,14 @@ export function useChatAssistant({ currentTab, dispatch, getLatestState }: UseCh
 
         const chatSystemPrompt = getChatSystemPrompt();
 
-        // eslint-disable-next-line no-console
-        console.log('[Chat] リクエスト:', {
+        debugLog('[Chat] リクエスト:', {
           selectedElement: selectedElementText,
           instruction: userInput,
         });
 
         // デバッグ用：プロンプト全体をログ出力
-        // eslint-disable-next-line no-console
-        console.log('[Chat] ユーザープロンプト:', chatUserPrompt);
-        // eslint-disable-next-line no-console
-        console.log('[Chat] システムプロンプト:', chatSystemPrompt);
+        debugLog('[Chat] ユーザープロンプト:', chatUserPrompt);
+        debugLog('[Chat] システムプロンプト:', chatSystemPrompt);
 
         // AI に指示を送信（チャット専用のシステムプロンプトを使用）
         const modelType = getModelType();
@@ -172,16 +169,14 @@ export function useChatAssistant({ currentTab, dispatch, getLatestState }: UseCh
             throw new Error('AIからの応答が空でした。プロンプトを確認してください。');
           }
           const cleanedResult = result.replace(/```json\s*|```\s*/g, '').trim();
-          // eslint-disable-next-line no-console
-          console.log('[Chat] クリーンアップ後のレスポンス:', cleanedResult);
+          debugLog('[Chat] クリーンアップ後のレスポンス:', cleanedResult);
 
           // 新しい統一形式のJSONレスポンスを解析
           let operationsData: { operations: Operation[] };
           try {
             operationsData = JSON.parse(cleanedResult);
           } catch (parseError) {
-            // eslint-disable-next-line no-console
-            console.log('[Chat] JSONパースエラー:', {
+            debugLog('[Chat] JSONパースエラー:', {
               error: parseError,
               originalResponse: result,
               cleanedResponse: cleanedResult,
@@ -207,8 +202,7 @@ export function useChatAssistant({ currentTab, dispatch, getLatestState }: UseCh
               await new Promise((resolve) => setTimeout(resolve, 300));
             }
 
-            // eslint-disable-next-line no-console
-            console.log(
+            debugLog(
               `[Chat] 操作 ${i + 1}/${operations.length} 実行中: ${operation.type}, currentSelectedElementId=${currentSelectedElementId}`,
             );
 
@@ -228,8 +222,7 @@ export function useChatAssistant({ currentTab, dispatch, getLatestState }: UseCh
             // SELECT_ELEMENT操作やADD_ELEMENTS(autoSelect)の場合、新しい選択要素IDに更新
             if (result.newSelectedElementId) {
               currentSelectedElementId = result.newSelectedElementId;
-              // eslint-disable-next-line no-console
-              console.log(`[Chat] 選択要素IDを更新: ${currentSelectedElementId}`);
+              debugLog(`[Chat] 選択要素IDを更新: ${currentSelectedElementId}`);
 
               // 選択要素更新後は、より長い待機時間を設ける
               await new Promise((resolve) => setTimeout(resolve, 400));
@@ -241,8 +234,7 @@ export function useChatAssistant({ currentTab, dispatch, getLatestState }: UseCh
             }
           }
 
-          // eslint-disable-next-line no-console
-          console.log('[Chat] 結果:', {
+          debugLog('[Chat] 結果:', {
             operationsCount: operations.length,
             results: results,
           });
@@ -252,8 +244,7 @@ export function useChatAssistant({ currentTab, dispatch, getLatestState }: UseCh
             : `${results.length}個の操作を実行しました:\n${results.map((r, i) => `${i + 1}. ${r}`).join('\n')}`;
         } else if (typeof result === 'object' && result !== null) {
           // object型として処理
-          // eslint-disable-next-line no-console
-          console.log('[Chat] オブジェクトレスポンス:', result);
+          debugLog('[Chat] オブジェクトレスポンス:', result);
           return 'オブジェクトレスポンスを受信しました';
         } else {
           // nullや予期しない型のエラー処理
@@ -261,8 +252,7 @@ export function useChatAssistant({ currentTab, dispatch, getLatestState }: UseCh
         }
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : '不明なエラーが発生しました';
-        // eslint-disable-next-line no-console
-        console.error('[Chat] エラー詳細:', {
+        debugLog('[Chat] エラー詳細:', {
           message: errorMessage,
           error: error,
           selectedElementId: selectedElement?.id,
@@ -354,16 +344,14 @@ async function executeOperation(
         });
       }
 
-      // eslint-disable-next-line no-console
-      console.log(
+      debugLog(
         `[Chat] ADD_ELEMENTS: targetId=${targetId}, selectedElementId=${effectiveSelectedElementId}, operation.targetId=${operation.targetId}`,
       );
 
       // 現在の階層データの状態をログ
       if (currentTab.state.hierarchicalData) {
         const allElements = convertHierarchicalToArray(currentTab.state.hierarchicalData);
-        // eslint-disable-next-line no-console
-        console.log(`[Chat] 現在の要素数: ${allElements.length}`);
+        debugLog(`[Chat] 現在の要素数: ${allElements.length}`);
       }
 
       // 対象要素の存在確認（'current'の場合は既に解決済みのIDをチェック）
@@ -374,8 +362,7 @@ async function executeOperation(
         );
 
         if (!targetElementExists) {
-          // eslint-disable-next-line no-console
-          console.error(
+          debugLog(
             `[Chat] 要素が見つかりません: targetId=${targetId}, hierarchicalData exists=${!!currentTab.state.hierarchicalData}`,
           );
 
@@ -383,8 +370,7 @@ async function executeOperation(
           if (currentTab.state.hierarchicalData) {
             const allElements = convertHierarchicalToArray(currentTab.state.hierarchicalData);
             const allElementIds = allElements.map((el) => el.id);
-            // eslint-disable-next-line no-console
-            console.log(`[Chat] 利用可能な要素ID: ${allElementIds.join(', ')}`);
+            debugLog(`[Chat] 利用可能な要素ID: ${allElementIds.join(', ')}`);
           }
 
           throw new Error(
@@ -403,8 +389,7 @@ async function executeOperation(
             texts: elements,
             tentative: false,
             onSuccess: (addedElementIds: string[]) => {
-              // eslint-disable-next-line no-console
-              console.log(`[Chat] 要素追加成功: ${addedElementIds.join(', ')}`);
+              debugLog(`[Chat] 要素追加成功: ${addedElementIds.join(', ')}`);
 
               // 操作完了をマーク
               if (markOperationComplete) {
@@ -416,8 +401,7 @@ async function executeOperation(
                 const firstElementId = addedElementIds[0];
                 const firstElementText = elements[0];
 
-                // eslint-disable-next-line no-console
-                console.log(
+                debugLog(
                   `[Chat] autoSelect: 「${firstElementText}」(ID: ${firstElementId})を選択します`,
                 );
 
@@ -477,8 +461,7 @@ async function executeOperation(
           };
         } else {
           // より詳細なデバッグ情報を提供
-          // eslint-disable-next-line no-console
-          console.log(`[Chat] SELECT_ELEMENT: 「${targetText}」が見つかりません`);
+          debugLog(`[Chat] SELECT_ELEMENT: 「${targetText}」が見つかりません`);
           return {
             message: `要素「${targetText}」が見つかりませんでした。状態更新を待機してください。`,
           };
@@ -535,8 +518,7 @@ async function executeOperation(
       const resolvedTargetNodeId =
         operation.targetNodeId === 'current' ? effectiveSelectedElementId : operation.targetNodeId;
 
-      // eslint-disable-next-line no-console
-      console.log(
+      debugLog(
         `[Chat] DROP_ELEMENT: operation.targetNodeId=${operation.targetNodeId}, resolvedTargetNodeId=${resolvedTargetNodeId}, selectedElementId=${effectiveSelectedElementId}`,
       );
 
@@ -553,16 +535,14 @@ async function executeOperation(
           );
 
           if (!targetElement) {
-            // eslint-disable-next-line no-console
-            console.error(
+            debugLog(
               `[Chat] DROP_ELEMENT: 新しい親 ${resolvedTargetNodeId} が階層データに見つかりません`,
             );
 
             // 階層データの詳細をログ出力
             const allElements = convertHierarchicalToArray(latestState.state.hierarchicalData);
             const allElementIds = allElements.map((el) => el.id);
-            // eslint-disable-next-line no-console
-            console.log(`[Chat] 利用可能な要素ID: ${allElementIds.join(', ')}`);
+            debugLog(`[Chat] 利用可能な要素ID: ${allElementIds.join(', ')}`);
 
             throw new Error(`新しい親 current が見つかりません。ID: ${resolvedTargetNodeId}`);
           }

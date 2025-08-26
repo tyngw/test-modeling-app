@@ -5,6 +5,7 @@ import { useEffect, useMemo } from 'react';
 import { calculateCanvasSize } from '../utils/layoutUtilities';
 import { HEADER_HEIGHT } from '../config/elementSettings';
 import { HierarchicalStructure } from '../types/hierarchicalTypes';
+import { debugLog } from '../utils/debugLogHelpers';
 
 interface ResizeEffectProps {
   setCanvasSize: React.Dispatch<
@@ -39,7 +40,7 @@ const useResizeEffect = ({
 
     // ドラッグ中はキャンバスサイズの再計算をスキップ
     if (isDragInProgress) {
-      console.log('[useResizeEffect] Skipping canvas resize during drag');
+      debugLog('[useResizeEffect] Skipping canvas resize during drag');
       return;
     }
 

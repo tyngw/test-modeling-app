@@ -20,7 +20,7 @@ const AppContent: React.FC = () => {
   // レンダリングの追跡
   useEffect(() => {
     renderCount.current += 1;
-    // console.log(`[DEBUG] AppContent rendered #${renderCount.current}`);
+    // debugLog(`[DEBUG] AppContent rendered #${renderCount.current}`);
   });
 
   // タブ管理に関する機能

@@ -73,7 +73,7 @@ export const generateWithGeminiThread = async (
     };
 
     if (process.env.NODE_ENV === 'development') {
-      console.log('[Geminiスレッドリクエスト] 送信内容:', JSON.stringify(requestPayload, null, 2));
+      debugLog('[Geminiスレッドリクエスト] 送信内容:', JSON.stringify(requestPayload, null, 2));
     }
 
     const response = await axios.post(endpoint, requestPayload, {
@@ -156,7 +156,7 @@ export const generateWithGemini = async (
       generationConfig,
     };
     if (process.env.NODE_ENV === 'development') {
-      console.log('[Geminiリクエスト] 送信内容:', JSON.stringify(requestPayload, null, 2));
+      debugLog('[Geminiリクエスト] 送信内容:', JSON.stringify(requestPayload, null, 2));
     }
     // API送信
     const response = await axios.post(endpoint, requestPayload, {
@@ -171,7 +171,7 @@ export const generateWithGemini = async (
     // AIレスポンスのセキュリティチェックとサニタイゼーション
     const sanitizedResponse = sanitizeApiResponse(rawTextResponse) as string;
 
-    // // console.log('Sanitized response:', sanitizedResponse);
+    // debugLog('Sanitized response:', sanitizedResponse);
     return sanitizedResponse;
   } catch (error) {
     // // console.error('Gemini API Error:', error);
@@ -204,7 +204,7 @@ export const generateElementSuggestions = async (
   _modelType: string,
 ): Promise<SuggestionResponse> => {
   try {
-    // // console.log('prompt: \n', prompt);
+    // debugLog('prompt: \n', prompt);
     const endpoint = `${getApiEndpoint()}?key=${apiKey}`;
     const systemPrompt = getSystemPromptTemplate();
 
@@ -268,7 +268,7 @@ export const generateElementSuggestions = async (
         jsonResponse = { suggestions: [] };
       }
 
-      // // console.log('JSON Response:', jsonResponse);
+      // debugLog('JSON Response:', jsonResponse);
       return jsonResponse;
     } catch {
       // // console.error('JSON parse error:', parseError);

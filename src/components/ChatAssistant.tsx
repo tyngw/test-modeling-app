@@ -96,7 +96,7 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
 
     // 必要なデバッグログのみ残し、不要なconsole出力を削除
     // ユーザー送信内容は重要な操作なので残す
-    // console.log('[DEBUG] ChatAssistant - User message:', userMessage.text)
+    // debugLog('[DEBUG] ChatAssistant - User message:', userMessage.text)
     setMessages((prev) => [...prev, userMessage]);
 
     // 外部メッセージでない場合のみ入力をクリア
@@ -107,10 +107,10 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
 
     try {
       // AI送信開始のみ残す（障害時のトラブルシュート用）
-      // console.log('[DEBUG] ChatAssistant - Sending message to AI...')
+      // debugLog('[DEBUG] ChatAssistant - Sending message to AI...')
       const result = await onSendMessage(userMessage.text);
       // AI操作完了ログは削除
-      // console.log('[DEBUG] ChatAssistant - AI operation completed successfully');
+      // debugLog('[DEBUG] ChatAssistant - AI operation completed successfully');
 
       // AI操作の結果をチャットウィンドウに表示
       const assistantMessage: ChatMessage = {

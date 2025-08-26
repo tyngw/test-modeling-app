@@ -3,6 +3,7 @@
 import { Element } from '../../types/types';
 import { ElementsMap } from '../../types/elementTypes';
 import { HierarchicalNode, HierarchicalStructure } from '../../types/hierarchicalTypes';
+import { debugLog } from '../debugLogHelpers';
 
 /**
  * 古いElement型（後方互換性のため）
@@ -626,7 +627,7 @@ export function logElementPositionsFromHierarchy(
   function logNodeRecursive(node: HierarchicalNode, depth = 0): void {
     const indent = '  '.repeat(depth);
     // この関数は開発用デバッグ関数なので、ログ出力は維持
-    console.log(
+    debugLog(
       `${prefix}${indent}- 要素「${node.data.texts}」 id=${node.data.id}: X=${node.data.x}, Y=${node.data.y}`,
     );
 

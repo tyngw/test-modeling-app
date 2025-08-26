@@ -20,6 +20,7 @@ import { convertLegacyElement } from '../utils/file/fileHelpers';
 import { getTabsState, setTabsState } from '../utils/storage/localStorageHelpers';
 import { TabState, TabsStorage, TabsContextValue, LayoutMode } from '../types/tabTypes';
 import { convertFlatToHierarchical } from '../utils/hierarchical/hierarchicalConverter';
+import { debugLog } from '../utils/debugLogHelpers';
 
 const TabsContext = createContext<TabsContextValue | undefined>(undefined);
 
@@ -51,16 +52,16 @@ const createInitialTabState = (currentSections?: number): TabState => {
     [newRootId]: legacyRootElement,
   };
 
-  console.log('createInitialTabState - initialElements:', initialElements);
-  console.log('createInitialTabState - legacyRootElement:', legacyRootElement);
+  debugLog('createInitialTabState - initialElements:', initialElements);
+  debugLog('createInitialTabState - legacyRootElement:', legacyRootElement);
 
   const hierarchicalData = convertFlatToHierarchical(initialElements);
 
-  console.log('createInitialTabState - hierarchicalData:', hierarchicalData);
+  debugLog('createInitialTabState - hierarchicalData:', hierarchicalData);
 
   // hierarchicalDataがnullの場合の追加チェック
   if (!hierarchicalData) {
-    console.error('Failed to create hierarchical data for new tab');
+    debugLog('Failed to create hierarchical data for new tab');
     // フォールバック：直接階層構造を作成
     const fallbackHierarchicalData = {
       root: {
@@ -69,10 +70,7 @@ const createInitialTabState = (currentSections?: number): TabState => {
       version: '1.4.43',
     };
 
-    console.log(
-      'createInitialTabState - using fallback hierarchicalData:',
-      fallbackHierarchicalData,
-    );
+    debugLog('createInitialTabState - using fallback hierarchicalData:', fallbackHierarchicalData);
 
     return {
       id: uuidv4(),

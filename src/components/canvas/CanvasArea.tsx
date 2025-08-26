@@ -47,7 +47,7 @@ import { calculateDropCoordinates } from '../../utils/dropCoordinateHelpers';
 const DEBUG_ENABLED = false; // 本番環境ではfalseに設定
 const debugLog = (_message: string, ..._args: unknown[]) => {
   if (DEBUG_ENABLED && process.env.NODE_ENV === 'development') {
-    // console.log(_message, ..._args); // 一時的にコメントアウト
+    // globalDebugLog(_message, ..._args); // 一時的にコメントアウト
   }
 };
 

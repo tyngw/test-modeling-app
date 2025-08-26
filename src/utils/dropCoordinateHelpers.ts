@@ -2,6 +2,7 @@ import { Element as CanvasElement, DropPosition, DirectionType } from '../types/
 import { HierarchicalStructure } from '../types/hierarchicalTypes';
 import { findParentNodeInHierarchy } from './hierarchical/hierarchicalConverter';
 import { OFFSET } from '../config/elementSettings';
+import { debugLog } from './debugLogHelpers';
 
 interface DropCoordinates {
   x: number;
@@ -52,7 +53,7 @@ export const calculateDropCoordinates = ({
       ? findParentNodeInHierarchy(hierarchicalData, currentDropTarget.id) === null
       : false);
 
-  console.log('[calculateDropCoordinates] Input:', {
+  debugLog('[calculateDropCoordinates] Input:', {
     targetId: currentDropTarget.id,
     direction,
     passedDirection,
@@ -87,7 +88,7 @@ export const calculateDropCoordinates = ({
     // dropInsertXが指定されている場合はそれを使用（ルート要素の左右判定に基づく）
     if (dropInsertX !== undefined) {
       x = dropInsertX;
-      console.log('[calculateDropCoordinates] Using dropInsertX:', {
+      debugLog('[calculateDropCoordinates] Using dropInsertX:', {
         dropInsertX,
         finalX: x,
         reason: 'dropInsertX provided',
@@ -95,7 +96,7 @@ export const calculateDropCoordinates = ({
     } else if (direction === 'left' || (isRootInMindmap && childDirection === 'left')) {
       // 左方向の場合
       x = currentDropTarget.x - OFFSET.X - draggingElement.width;
-      console.log('[calculateDropCoordinates] Left direction calculated:', {
+      debugLog('[calculateDropCoordinates] Left direction calculated:', {
         targetX: currentDropTarget.x,
         offset: OFFSET.X,
         draggingWidth: draggingElement.width,
@@ -105,7 +106,7 @@ export const calculateDropCoordinates = ({
     } else {
       // 右方向の場合
       x = currentDropTarget.x + currentDropTarget.width + OFFSET.X;
-      console.log('[calculateDropCoordinates] Right direction calculated:', {
+      debugLog('[calculateDropCoordinates] Right direction calculated:', {
         targetX: currentDropTarget.x,
         targetWidth: currentDropTarget.width,
         offset: OFFSET.X,
@@ -119,7 +120,7 @@ export const calculateDropCoordinates = ({
       ? dropInsertY - draggingElement.height / 2
       : currentDropTarget.y + currentDropTarget.height / 2 - draggingElement.height / 2;
 
-    console.log('[calculateDropCoordinates] Final coordinates:', {
+    debugLog('[calculateDropCoordinates] Final coordinates:', {
       x,
       y,
       dropPosition,

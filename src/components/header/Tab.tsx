@@ -4,6 +4,7 @@ import { TabHeaderProps } from '../../types/tabTypes';
 import { useIsMounted } from '../../hooks/UseIsMounted';
 import { isVSCodeExtension } from '../../utils/environment/environmentDetector';
 import { storageAdapter } from '../../utils/storage/storageAdapter';
+import { debugLog } from '../../utils/debugLogHelpers';
 
 const Tab: React.FC<TabHeaderProps> = React.memo(
   ({ tab, isCurrent, closeTab, switchTab, theme }) => {
@@ -22,7 +23,7 @@ const Tab: React.FC<TabHeaderProps> = React.memo(
               setDisplayName(currentFileName);
             }
           } catch (error) {
-            console.error('ファイル名の取得に失敗しました:', error);
+            debugLog('ファイル名の取得に失敗しました:', error);
           }
         };
 
