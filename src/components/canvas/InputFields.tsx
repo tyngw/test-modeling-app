@@ -72,11 +72,14 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
   const calculateDynamicHeight = useCallback(
     (text: string) => {
       const width = SIZE.WIDTH.MAX;
-      const lines = wrapText(text, width, state.zoomRatio).length;
-      const lineHeight = DEFAULT_FONT_SIZE * LINE_HEIGHT_RATIO * state.zoomRatio;
-      const padding = TEXTAREA_PADDING.VERTICAL * state.zoomRatio;
+      const lines = wrapText(text, width, 1.0).length; // ズーム比率を1.0に固定
+      const baseLineHeight = DEFAULT_FONT_SIZE * LINE_HEIGHT_RATIO;
+      const basePadding = TEXTAREA_PADDING.VERTICAL;
+      const baseHeight = lines * baseLineHeight + basePadding;
 
-      return Math.max(SIZE.SECTION_HEIGHT * state.zoomRatio, lines * lineHeight + padding);
+      // 最小高さとの比較もベース値で行い、最後にズーム比率を適用
+      const finalBaseHeight = Math.max(SIZE.SECTION_HEIGHT, baseHeight);
+      return finalBaseHeight * state.zoomRatio;
     },
     [state.zoomRatio],
   );
