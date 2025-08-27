@@ -39,6 +39,8 @@ import {
   setSelectedStrokeColor,
   getApiKey,
   setApiKey,
+  getIndentSpacesPerLevel,
+  setIndentSpacesPerLevel,
 } from '../../utils/storage/localStorageHelpers';
 import { exportElementSettings, importElementSettings } from '../../utils/settingsExportImport';
 import { useTabs } from '../../context/TabsContext';
@@ -119,6 +121,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       loadedValues['canvasBackgroundColor'] = getCanvasBackgroundColor();
       loadedValues['textColor'] = getTextColor();
       loadedValues['selectedStrokeColor'] = getSelectedStrokeColor();
+      loadedValues['indentSpacesPerLevel'] = getIndentSpacesPerLevel();
 
       setValues(loadedValues);
     } catch {
@@ -184,10 +187,19 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   const handleValueChange = (field: SettingFieldType, value: string) => {
-    setValues((prev) => ({ ...prev, [field.key]: value }));
+    // 数値フィールドの場合は数値として保存
+    let processedValue: string | number = value;
+    if (
+      field.type === 'number' ||
+      (field.type === 'radio' && typeof field.defaultValue === 'number')
+    ) {
+      processedValue = Number(value);
+    }
+
+    setValues((prev) => ({ ...prev, [field.key]: processedValue }));
     setErrors((prev) => ({
       ...prev,
-      [field.key]: !validateField(field, value),
+      [field.key]: !validateField(field, processedValue),
     }));
   };
 
@@ -267,6 +279,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
     const selectedStrokeColor = values['selectedStrokeColor'];
     if (selectedStrokeColor !== undefined) setSelectedStrokeColor(String(selectedStrokeColor));
+
+    const indentSpacesPerLevel = values['indentSpacesPerLevel'];
+    if (indentSpacesPerLevel !== undefined) {
+      const numValue = Number(indentSpacesPerLevel);
+      if (numValue === 2 || numValue === 4) {
+        setIndentSpacesPerLevel(numValue);
+      }
+    }
 
     onClose();
   };

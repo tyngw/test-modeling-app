@@ -370,3 +370,18 @@ export const getTabsState = (): string | null => safeLocalStorage.getItem(TABS_S
 
 export const setTabsState = (value: string): void =>
   safeLocalStorage.setItem(TABS_STORAGE_KEY, value);
+
+// インデント設定関連
+const INDENT_SPACES_KEY = 'indentSpacesPerLevel';
+
+export const getIndentSpacesPerLevel = (): number => {
+  const stored = getSetting(INDENT_SPACES_KEY, '4');
+  const value = parseInt(stored, 10);
+  return value === 2 || value === 4 ? value : 4; // デフォルトは4
+};
+
+export const setIndentSpacesPerLevel = (value: number): void => {
+  if (value === 2 || value === 4) {
+    setSetting(INDENT_SPACES_KEY, value.toString());
+  }
+};
