@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useCanvas } from '../../context/CanvasContext';
-import { wrapText } from '../../utils/textareaHelpers';
+import { calculateTextHeight } from '../../utils/textareaHelpers';
 import { useIsMounted } from '../../hooks/UseIsMounted';
 import {
   DEFAULT_FONT_SIZE,
@@ -71,12 +71,30 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
 
   const calculateDynamicHeight = useCallback(
     (text: string) => {
-      const width = SIZE.WIDTH.MAX;
-      const lines = wrapText(text, width, state.zoomRatio).length;
-      const lineHeight = DEFAULT_FONT_SIZE * LINE_HEIGHT_RATIO * state.zoomRatio;
-      const padding = TEXTAREA_PADDING.VERTICAL * state.zoomRatio;
+      // テキストが空の場合の処理
+      if (!text || text.trim() === '') {
+        return SIZE.SECTION_HEIGHT * state.zoomRatio;
+      }
 
-      return Math.max(SIZE.SECTION_HEIGHT * state.zoomRatio, lines * lineHeight + padding);
+      const width = SIZE.WIDTH.MAX;
+      // DOM要素の実際のコンテンツ幅（パディングを除いた幅）
+      const contentWidth = width - TEXTAREA_PADDING.HORIZONTAL;
+
+      // 一貫性のある高さ計算を使用
+      const contentHeight = calculateTextHeight(
+        text,
+        contentWidth,
+        state.zoomRatio,
+        DEFAULT_FONT_SIZE,
+        LINE_HEIGHT_RATIO,
+      );
+      const padding = TEXTAREA_PADDING.VERTICAL * state.zoomRatio;
+      const calculatedHeight = Math.max(
+        SIZE.SECTION_HEIGHT * state.zoomRatio,
+        contentHeight + padding,
+      );
+
+      return calculatedHeight;
     },
     [state.zoomRatio],
   );
