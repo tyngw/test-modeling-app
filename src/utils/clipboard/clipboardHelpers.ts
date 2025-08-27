@@ -3,6 +3,7 @@ import { Element } from '../../types/types';
 import { ElementsMap } from '../../types/elementTypes';
 import { HierarchicalStructure, HierarchicalNode } from '../../types/hierarchicalTypes';
 import { findNodeInHierarchy } from '../hierarchical/hierarchicalConverter';
+import { getIndentSpacesPerLevel } from '../storage/localStorageHelpers';
 
 // クリップボード用のデータ構造（階層構造ベース）
 export interface ClipboardData {
@@ -350,8 +351,10 @@ export const parseHierarchicalText = (
   level: number;
   originalLine: string;
 }> => {
+  const spacesPerLevel = getIndentSpacesPerLevel();
+
   const result = lines.map((line) => {
-    // タブまたは連続するスペース（4つ）をインデントとして認識
+    // タブまたは連続するスペースをインデントとして認識
     const tabMatch = line.match(/^(\t*)/);
     const spaceMatch = line.match(/^( {0,})/);
 
@@ -359,7 +362,7 @@ export const parseHierarchicalText = (
     if (tabMatch && tabMatch[1]) {
       level = tabMatch[1].length; // タブの数
     } else if (spaceMatch && spaceMatch[1]) {
-      level = Math.floor(spaceMatch[1].length / 4); // 4スペースを1レベルとして計算
+      level = Math.floor(spaceMatch[1].length / spacesPerLevel); // 設定されたスペース数を1レベルとして計算
     }
 
     const text = line.replace(/^[\t ]*/, '').trim(); // インデントを除去

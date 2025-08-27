@@ -8,7 +8,10 @@ import {
 
 const createTextMeasurementContext = (): CanvasRenderingContext2D => {
   const canvas = document.createElement('canvas');
-  const context = canvas.getContext('2d')!;
+  const context = canvas.getContext('2d');
+  if (!context) {
+    throw new Error('Failed to get 2D context from canvas');
+  }
   context.font = `${DEFAULT_FONT_SIZE}px ${DEFAULT_FONT_FAMILY}`;
   return context;
 };
@@ -117,9 +120,9 @@ export const wrapText = (
 export const calculateTextHeight = (
   text: string,
   maxWidth: number,
-  zoomRatio: number = DEFAULT_ZOOM_RATIO,
-  fontSize: number = DEFAULT_FONT_SIZE,
-  lineHeightRatio: number = 1.4,
+  zoomRatio = DEFAULT_ZOOM_RATIO,
+  fontSize = DEFAULT_FONT_SIZE,
+  lineHeightRatio = 1.4,
 ): number => {
   if (!text || text.trim() === '') {
     return fontSize * lineHeightRatio * zoomRatio;

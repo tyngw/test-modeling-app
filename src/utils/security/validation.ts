@@ -214,6 +214,7 @@ export function validateSettingValue(key: string, value: unknown): boolean {
     'connectionPathColor',
     'connectionPathStroke',
     'fontFamily',
+    'indentSpacesPerLevel',
   ];
 
   if (!allowedKeys.includes(key)) {
@@ -286,6 +287,11 @@ export function validateSettingValue(key: string, value: unknown): boolean {
 
     case 'fontFamily':
       return typeof value === 'string' && value.length <= 100;
+
+    case 'indentSpacesPerLevel': {
+      const numValue = typeof value === 'string' ? parseInt(value, 10) : value;
+      return typeof numValue === 'number' && !isNaN(numValue) && (numValue === 2 || numValue === 4);
+    }
 
     default:
       return false;

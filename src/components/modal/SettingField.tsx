@@ -152,7 +152,7 @@ export const SettingField: React.FC<SettingFieldProps> = ({
                 value={option.value}
                 control={
                   <Radio
-                    checked={value === option.value}
+                    checked={String(value) === String(option.value)}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
                   />
                 }
