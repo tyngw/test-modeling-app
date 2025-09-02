@@ -199,4 +199,194 @@ describe('切り取り、コピー、貼り付け操作', () => {
       expect(cutData.rootElement.id).toBe(childElement.id);
     }
   });
+
+  test('複数要素選択時の貼り付けが正しく動作することを確認する', () => {
+    const { result } = renderHook(() => useStore());
+    const { dispatch } = result.current;
+
+    // ルート要素を選択して子要素を追加
+    act(() => {
+      dispatch({ type: 'SELECT_ELEMENT', payload: { id: '1', ctrlKey: false, shiftKey: false } });
+    });
+    act(() => {
+      dispatch({ type: 'ADD_ELEMENT', payload: {} });
+    });
+
+    let state = result.current.state;
+    let childElements = state.hierarchicalData
+      ? getChildrenFromHierarchy(state.hierarchicalData, '1')
+      : [];
+
+    expect(childElements.length).toBe(1);
+    const firstChild = childElements[0] as Element;
+
+    // 2つ目の子要素を追加
+    act(() => {
+      dispatch({ type: 'SELECT_ELEMENT', payload: { id: '1', ctrlKey: false, shiftKey: false } });
+    });
+    act(() => {
+      dispatch({ type: 'ADD_ELEMENT', payload: {} });
+    });
+
+    state = result.current.state;
+    childElements = state.hierarchicalData
+      ? getChildrenFromHierarchy(state.hierarchicalData, '1')
+      : [];
+
+    expect(childElements.length).toBe(2);
+    const secondChild = childElements[1] as Element;
+
+    // 最初の子要素をコピー
+    act(() => {
+      dispatch({
+        type: 'SELECT_ELEMENT',
+        payload: { id: firstChild.id, ctrlKey: false, shiftKey: false },
+      });
+      dispatch({ type: 'COPY_ELEMENT' });
+    });
+
+    // 複数の子要素を選択（Ctrlキーを使用）
+    act(() => {
+      dispatch({
+        type: 'SELECT_ELEMENT',
+        payload: { id: firstChild.id, ctrlKey: false, shiftKey: false },
+      });
+      dispatch({
+        type: 'SELECT_ELEMENT',
+        payload: { id: secondChild.id, ctrlKey: true, shiftKey: false },
+      });
+    });
+
+    // 複数選択状態で貼り付けを実行
+    const copiedData = localStorage.getItem('copiedElements');
+    if (copiedData) {
+      const clipboardData = JSON.parse(copiedData);
+
+      // 各選択要素に対して貼り付けを実行（修正後の動作をシミュレート）
+      act(() => {
+        dispatch({
+          type: 'PASTE_CLIPBOARD_ELEMENTS',
+          payload: {
+            clipboardData: clipboardData,
+            targetElementId: firstChild.id,
+          },
+        });
+      });
+
+      act(() => {
+        dispatch({
+          type: 'PASTE_CLIPBOARD_ELEMENTS',
+          payload: {
+            clipboardData: clipboardData,
+            targetElementId: secondChild.id,
+          },
+        });
+      });
+    }
+
+    // 貼り付け後の状態を確認
+    const finalState = result.current.state;
+    const finalElements = getAllElements(finalState);
+
+    // 元の要素（ルート + 2つの子要素）+ 貼り付けられた要素（2つ）= 5つの要素
+    expect(finalElements.length).toBe(5);
+  });
+
+  test('複数要素を同時にコピーして貼り付けられることを確認する', () => {
+    const { result } = renderHook(() => useStore());
+    const { dispatch } = result.current;
+
+    // ルート要素を選択して子要素を追加
+    act(() => {
+      dispatch({ type: 'SELECT_ELEMENT', payload: { id: '1', ctrlKey: false, shiftKey: false } });
+    });
+    act(() => {
+      dispatch({ type: 'ADD_ELEMENT', payload: {} });
+    });
+
+    let state = result.current.state;
+    let childElements = state.hierarchicalData
+      ? getChildrenFromHierarchy(state.hierarchicalData, '1')
+      : [];
+
+    expect(childElements.length).toBe(1);
+    const firstChild = childElements[0] as Element;
+
+    // 2つ目の子要素を追加
+    act(() => {
+      dispatch({ type: 'SELECT_ELEMENT', payload: { id: '1', ctrlKey: false, shiftKey: false } });
+    });
+    act(() => {
+      dispatch({ type: 'ADD_ELEMENT', payload: {} });
+    });
+
+    state = result.current.state;
+    childElements = state.hierarchicalData
+      ? getChildrenFromHierarchy(state.hierarchicalData, '1')
+      : [];
+
+    expect(childElements.length).toBe(2);
+    const secondChild = childElements[1] as Element;
+
+    // 複数の子要素を選択（Ctrlキーを使用）
+    act(() => {
+      dispatch({
+        type: 'SELECT_ELEMENT',
+        payload: { id: firstChild.id, ctrlKey: false, shiftKey: false },
+      });
+      dispatch({
+        type: 'SELECT_ELEMENT',
+        payload: { id: secondChild.id, ctrlKey: true, shiftKey: false },
+      });
+    });
+
+    // 複数選択状態でコピー
+    act(() => {
+      dispatch({ type: 'COPY_ELEMENT' });
+    });
+
+    // コピー後、localStorage にデータが設定されていることを確認
+    const clipboardData = localStorage.getItem('copiedElements');
+    expect(clipboardData).not.toBeNull();
+    expect(clipboardData).not.toBe('');
+
+    if (clipboardData) {
+      const copiedData = JSON.parse(clipboardData);
+      // 複数要素のコピーの場合、仮想ルートが作成される
+      expect(copiedData).toHaveProperty('type', 'copy');
+      expect(copiedData).toHaveProperty('rootElement');
+      expect(copiedData).toHaveProperty('subtree');
+      expect(copiedData.rootElement.id).toMatch(/^virtual-root-/);
+      expect(copiedData.subtree.children).toHaveLength(2);
+    }
+
+    // ルート要素を選択して貼り付け
+    act(() => {
+      dispatch({ type: 'SELECT_ELEMENT', payload: { id: '1', ctrlKey: false, shiftKey: false } });
+
+      const copiedData = localStorage.getItem('copiedElements');
+      if (copiedData) {
+        dispatch({
+          type: 'PASTE_CLIPBOARD_ELEMENTS',
+          payload: {
+            clipboardData: JSON.parse(copiedData),
+            targetElementId: '1',
+          },
+        });
+      }
+    });
+
+    // 貼り付け後の状態を確認
+    const finalState = result.current.state;
+    const finalElements = getAllElements(finalState);
+
+    // 元の要素（ルート + 2つの子要素）+ 貼り付けられた要素（2つ）= 5つの要素
+    expect(finalElements.length).toBe(5);
+
+    // ルートの子要素が4つになっていることを確認（元の2つ + 貼り付けられた2つ）
+    const finalChildren = finalState.hierarchicalData
+      ? getChildrenFromHierarchy(finalState.hierarchicalData, '1')
+      : [];
+    expect(finalChildren.length).toBe(4);
+  });
 });
