@@ -747,7 +747,11 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
           element={editingNode}
           onEndEditing={() => {
             dispatch({ type: 'END_EDITING' });
-            svgRef.current?.focus();
+            if (svgRef.current) {
+              const { scrollX, scrollY } = window;
+              svgRef.current.focus({ preventScroll: true });
+              window.scrollTo(scrollX, scrollY);
+            }
           }}
         />
       </div>
