@@ -13,58 +13,71 @@
 - **ユーティリティ**: `hierarchicalConverter` や `UseElementDragEffect` などがアプリ特化のロジックと混在し、抽象化が不足。
 
 ## リファクタリングの基本方針
-1. **コアとアダプターの分離**
-   - キャンバスの状態・操作ロジックを「コア」として React 非依存の TypeScript モジュールに集約。
-   - React コンポーネントはコアを利用する薄いアダプターとして実装し、UI や状態バインディングをアプリ側で差し込む。
+1. **ステップ0: 複雑フックの事前分解**
+   - `useElementDragEffect` をはじめとした巨大フックは、コンテキスト依存と UI 副作用の混在が深刻。`state`/`dispatch` ではなく最小限のデータとコールバック (`onDrop`, `onDrag`, `onDragPreviewChange` など) を引数で受け取る純粋ロジックへ段階的に変換する。
+   - 分解後は純粋関数をユニットテストで検証し、React 依存部分を薄いラッパーに閉じ込める。
 
-2. **依存逆転**
-   - ストレージ操作・通知・翻訳など副作用はコールバック/インターフェースとして受け取り、ライブラリ側から直接呼び出さない。
-   - `dispatch` を直接呼ぶのではなく、ライブラリが `onStateChange` や `command` を発行し、アプリがそれを処理する形に。
+2. **コアとアダプターの明確な境界定義**
+   - コア: 階層構造や要素 CRUD、整合性ルール、履歴管理、イベント発行（`onStateChange`）を担当。React 非依存の TypeScript モジュールとして `canvas-core` に配置。
+   - アダプター: React コンポーネント/フック側でコアの状態を購読し、`CanvasView` への描画データ化、レイアウト計算のスケジューリング、UI フィードバック（プレビュー・ハイライト）を担当。状態同期には `useSyncExternalStore` などを検討し、再レンダリングを制御する。
 
-3. **Composable API**
-   - `useCanvas` などカスタムフックは `canvasCore` をラップする薄いフックとし、必要なコールバック・依存を props として受け取る。
-   - UI コンポーネント（メニュー、モーダル、トースト連携など）は呼び出し側に委譲し、ライブラリは最小限の描画 `CanvasView` を提供。
+3. **依存逆転と副作用インターフェース化**
+   - ストレージ、トースト、AI 呼び出しなどの副作用はコアの外側に押し出し、インターフェース越しに注入する。コアは副作用を持たず、コマンド発行に徹する。
+   - 高頻度更新（ドラッグ等）はアダプター側でバッチ処理または `requestAnimationFrame` による間引きを検討する。
 
-4. **型の再設計**
-   - `CanvasElement` をジェネリック化し、アプリ固有のメタデータは拡張型で扱う。
-   - イベント/コマンドの型を明示し、拡張可能な union として定義。
+4. **Composable API と UI 分離**
+   - `useCanvas` などのフックは、コアから提供される store / dispatcher を薄くラップする構成へ移行し、必要な依存は props/オプションとして注入する。
+   - UI コンポーネント（メニュー、モーダル、トースト）は呼び出し側で組み合わせる「シェル」とし、ライブラリは描画と状態操作の API を提供する。
 
-5. **段階的移行**
-   - 既存アプリ内でまず新しい抽象に置き換え、その後ライブラリとして独立リポジトリ化/パッケージ化。
-   - 各ステップでテストと型チェックを整備。
+5. **型レイヤの再設計**
+   - `CanvasElement` から `selected` や `editing` など UI 状態を分離し、`CanvasElement<TMeta>` のようにドメインデータをジェネリクスで拡張できる構造にする。
+   - UI 状態は React 側で保持する `ViewState` 等へ移し、コアは純粋なドメイン情報のみ扱う。イベント/コマンドの union 型も整理して拡張可能にする。
+
+6. **段階的移行と検証**
+   - 既存アプリで新しい抽象を導入→ユニット/統合テストとブラウザ検証で退行を防止→安定後にライブラリとして抽出。
+   - 各ステップで `npm run lint`・`npm run test`・`npm run build` に加え、対象機能の手動検証を計画に組み込む。
 
 ## 具体的ステップ
-### 1. コア状態モデルの抽出
-- `src/state/state.ts` からキャンバス関連の reducer・型を抽出し、`packages/canvas-core` など新ディレクトリに移動。
-- 抽出対象には: Elements の CRUD、階層管理、ズーム・ドラッグ状態など。
-- 抽出後、既存アプリは新コアの API を import して利用するよう変更。
+### 0. 巨大フックの事前リファクタリング
+- `useElementDragEffect`, `UseTouchHandlers`, `UseKeyboardHandler` を調査し、必要データ/副作用を洗い出す。
+- コアロジックと UI 副作用を分離し、純粋関数 + コールバック注入パターンへ書き換え。React 依存部は薄いラッパーに限定。
+- 変更後、フックロジック用のユニットテストを追加して `npm run test` で検証。
 
-### 2. 副作用インターフェース化
-- ストレージアクセス (`localStorageHelpers`) を `CanvasPersistence` インターフェースに定義し、ライブラリ利用者が実装注入する構造に変更。
-- トースト・ログ出力・アナリティクスなども `CanvasEventHandlers` として外部から渡す。
+### 1. 型レイヤの分離と UI 状態の外出し
+- `CanvasElement` から UI 状態 (`selected`, `editing`, `hover` 等) を除去し、`CanvasElement<TMeta>` でドメインデータのみを保持。
+- UI 状態は `ViewState`（React 側の store / context）として別管理し、既存コードを段階的に移行。
+- 型の分離後に `tsc --noEmit` と主要操作の手動確認を実施。
 
-### 3. React アダプターの整理
-- `CanvasArea` を `CanvasView` と `CanvasController` に分割。
-  - `CanvasView`: props として描画用データ（座標、接続情報など）とイベントハンドラーを受け取る純粋 UI。
-  - `CanvasController`: `canvas-core` を利用して状態を更新し、`CanvasView` に渡す。
-- 現在の `CanvasArea` に含まれる UI（メニュー、モーダル等）はアプリ側レイヤに移設し、必要ならライブラリ側で `render prop` や `slots` として受け取れるようにする。
+### 2. コア状態モデルの抽出
+- `src/state/state.ts` から要素 CRUD、階層管理、履歴機能を `packages/canvas-core` に移動。
+- 抽出時にレイアウト計算など UI/副作用的処理をフックできるイベント (`onStateChange`) として切り出す。
+- 既存アプリはコア API 経由で状態更新を行うよう変更し、`npm run lint`・`npm run test`・`npm run build` を成功させる。
 
-### 4. カスタムフックの再設計
-- `useElementDragEffect` などのフックから `CanvasContext` 依存を排除し、必要な状態とコールバックは引数で受け取る純粋フックに修正。
-- ピンチ/タッチ・キーボード操作なども同様に API 化し、コアロジックをテスト可能に分離。
+### 3. レイアウト計算のアダプター化
+- `adjustElementPositionsFromHierarchy` などレイアウト処理を React アダプター層に移し、state 変更後にスケジュールして実行。
+- 高頻度更新時のバッチ処理や `requestAnimationFrame` 最適化を導入。
+- 手動検証として大規模データでドラッグ操作を確認。
 
-### 5. 型・イベントの標準化
-- `src/types/types.ts` を整理し、ライブラリ側は `CanvasElement<TMeta>` のように拡張可能な型を定義。
-- コマンド/イベント (例: `CanvasCommand`, `CanvasEvent`) を列挙し、アプリ側が任意処理をフックできるようにする。
+### 4. 副作用インターフェース化
+- ストレージ・トースト・ロギング・AI 呼び出しを `CanvasPersistence`, `CanvasEventHandlers`, `CanvasExternalServices` といったインターフェースに整理。
+- コアはこれらのインターフェースを引数で受け取る設計とし、モック可能な構造でユニットテストを追加。
 
-### 6. 移行テスト整備
-- 各ステップで `jest` + `react-testing-library` による UI テスト、および `canvas-core` のユニットテストを追加。
-- 主要なドラッグ&ドロップ・接続操作を E2E で検証できるテストを検討。
+### 5. React アダプターと CanvasView の分割
+- `CanvasArea` を `CanvasController`（状態購読・イベント橋渡し）と `CanvasView`（純粋描画）に分割。
+- `useSyncExternalStore` やメモ化を活用して再レンダリングを制御し、Storybook 等で UI を検証。
+- 既存 UI（メニュー/モーダル/トースト）との通信は props/イベント経由に統一。
 
-### 7. パッケージ化 & 公開準備
-- `pnpm workspace` などを利用し `packages/canvas-core` と `packages/canvas-react` を分割。
-- README, API リファレンス、使用例を整備し、`package.json` に `exports` を定義。
-- 最終的に npm への公開、もしくは Git submodule として共有できる状態を目指す。
+### 6. API・イベントの標準化
+- `CanvasCommand`, `CanvasEvent` を整理し、アダプターからコアへの入力・コアからの通知を明確にする。
+- 新 API に合わせてドキュメントと型定義を更新し、`tsc` / `eslint` / `jest` を通す。
+
+### 7. 移行テスト整備
+- `canvas-core` のユニットテスト、React アダプターの統合テスト、主要操作の E2E/手動検証手順を整備。
+- CI で `npm run lint`, `npm run test`, `npm run build`, `npm run build:extension` を通すパイプラインを構築。
+
+### 8. パッケージ化 & 公開準備
+- `packages/canvas-core` / `packages/canvas-react` / `examples/basic-app` を整備し、ワークスペース化。
+- README, API リファレンス、CHANGELOG、バージョニング方針を整備し、`npm run publish:dry-run` で検証。
 
 ## 段階的リリース計画
 1. **内部モノレポ化**: リポジトリ内でパッケージ分割し、現行アプリから新 API に接続して動作確認。
@@ -94,31 +107,36 @@
 1. **ドメインモデルの現状整理**
    - 作業内容: キャンバス要素・階層・操作フローを図解/表に整理し、`docs/canvas-domain-model.md` を作成。
    - 検証: ドキュメントレビュー + 既存の `npm run lint` と `npm run build` が成功すること。
-2. **モノレポ準備とパッケージスケルトン作成**
-   - 作業内容: `package.json` をワークスペース対応に変更し、`packages/canvas-core` と `packages/canvas-react` の空パッケージを追加。
-   - 検証: `npm install` → `npm run build` が成功し、既存アプリが起動可能 (`npm run dev` 簡易確認)。
-3. **キャンバス状態ロジック抽出 (Core 1/3)**
-   - 作業内容: `src/state/state.ts` から要素定義・操作 reducer を `canvas-core` へ移動し、アプリ側は新 API を import。
-   - 検証: `npm run lint`・`npm run test`・`npm run build` を実行。キャンバス主要操作（要素追加/編集）を手動確認。
-4. **階層ユーティリティ抽出 (Core 2/3)**
-   - 作業内容: `hierarchicalConverter`・`hierarchicalOperations` を `canvas-core` に移し、抽象化したデータ構造を採用。
-   - 検証: `npm run test`（新規ユニットテストを含む）と `npm run build`。既存 E2E マニュアル手順で階層編集を確認。
-5. **ドラッグ・タッチ・キーボードロジック抽出 (Core 3/3)**
-   - 作業内容: `useElementDragEffect` 等を副作用レスなユーティリティとして `canvas-core` に再実装し、React フックはラッパー化。
-   - 検証: `npm run test`（新規 drag 操作ユニットテスト）と `npm run build`、ブラウザでドラッグ・キーボード操作を確認。
-6. **副作用インターフェース化**
-   - 作業内容: ストレージ・トースト・ログ呼び出しを `CanvasPersistence`/`CanvasEventHandlers` として抽象化し、アプリ側で実装注入。
-   - 検証: `npm run lint`・`npm run build`。ブラウザでテーマ保存/トースト表示が期待どおりか確認。
-7. **CanvasView / Controller 分割**
-   - 作業内容: `CanvasArea` を UI 表示 (`CanvasView`) と操作制御 (`CanvasController`) に分割し、ライブラリから公開。
-   - 検証: `npm run lint`・`npm run test`（ビューのスナップショットテスト追加）・`npm run build`。UI崩れがないか手動確認。
-8. **型・イベント API 整備**
-   - 作業内容: `CanvasElement<TMeta>` などジェネリック化、`CanvasCommand`/`CanvasEvent` の型定義・ドキュメンテーション追加。
-   - 検証: `npm run lint`・`npm run build` と型テスト (`tsc --project packages/canvas-core/tsconfig.json`)。
-9. **サンプル/PoC アプリ実装**
-   - 作業内容: `examples/basic-app` を作成し、切り出したライブラリのみで最小キャンバスを動作させる。
-   - 検証: `npm run lint`・`npm run build` に加えて `npm run build:examples`（新設）を実行、PoC 上で主要操作を手動確認。
-10. **公開準備とドキュメント整備**
-    - 作業内容: README/API リファレンス、CHANGELOG、バージョニングポリシー策定。npm publish dry-run を実施。
-    - 検証: `npm run lint`・`npm run build`・`npm run test`・`npm run publish:dry-run`（新設スクリプト）。ドキュメントレビュー。
-
+2. **巨大フックの監査と分解計画立案**
+   - 作業内容: `useElementDragEffect` など複雑フックの依存・副作用を棚卸しし、分割後インターフェースを定義。分割スプリント計画を作成。
+   - 検証: レビュー承認 + 影響範囲のテスト観点リスト化。
+3. **巨大フックの段階的リファクタリング（実装）**
+   - 作業内容: 事前設計に沿い純粋ロジック化、React ラッパー化、ユニットテスト追加。
+   - 検証: `npm run test`（新規テスト含む）・`npm run lint`・ブラウザでドラッグ/タッチ/ショートカット確認。
+4. **型レイヤ分離と ViewState 導入**
+   - 作業内容: `CanvasElement` から UI 状態を除外し、`ViewState` で管理する仕組みを実装。
+   - 検証: `tsc --noEmit`, `npm run lint`, 主要操作（選択/編集/フォーカス）の手動確認。
+5. **モノレポ準備とパッケージスケルトン作成**
+   - 作業内容: ワークスペース設定、`packages/canvas-core` & `packages/canvas-react` の雛形、ビルドスクリプト追加。
+   - 検証: `npm install` → `npm run build`・`npm run dev` が成功。
+6. **コア状態モデル抽出とイベント発行導入**
+   - 作業内容: reducer/履歴などを `canvas-core` に移動し、`onStateChange` フックポイントを追加。
+   - 検証: `npm run lint`・`npm run test`・`npm run build`、ブラウザで CRUD/Undo リグレッション確認。
+7. **レイアウト計算のアダプター化とパフォーマンス最適化**
+   - 作業内容: レイアウト更新をアダプター層へ移し、`requestAnimationFrame`/バッチ処理導入。
+   - 検証: `npm run test`（レイアウト単体テスト追加）、`npm run build`、大量ノード操作の手動確認。
+8. **副作用インターフェース化**
+   - 作業内容: `CanvasPersistence`/`CanvasEventHandlers` などを実装し、ストレージ/トーストを注入方式に変更。
+   - 検証: `npm run lint`・`npm run build`、ブラウザで保存・トースト挙動確認。
+9. **CanvasController/CanvasView 分離と状態購読最適化**
+   - 作業内容: `CanvasArea` 分割、`useSyncExternalStore` 導入、UI 差し込みポイント定義。
+   - 検証: `npm run lint`・`npm run test`（スナップショット/レンダリングテスト追加）・`npm run build`、ブラウザで UI 崩れ確認。
+10. **API・イベント定義の標準化**
+    - 作業内容: `CanvasCommand`/`CanvasEvent` 整理、ドキュメント更新、型テスト追加。
+    - 検証: `npm run lint`・`npm run build`・`tsc --project packages/canvas-core/tsconfig.json`。
+11. **サンプル/PoC アプリ実装**
+    - 作業内容: `examples/basic-app` にライブラリ利用例を実装し、利用ガイドを追加。
+    - 検証: `npm run lint`・`npm run build`・`npm run build:examples`、PoC 手動確認。
+12. **公開準備とドキュメント整備**
+    - 作業内容: README/API リファレンス/CHANGELOG/バージョニング策定、`npm publish --dry-run` スクリプト整備。
+    - 検証: `npm run lint`・`npm run build`・`npm run test`・`npm run publish:dry-run`、ドキュメントレビュー。
