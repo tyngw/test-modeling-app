@@ -103,40 +103,39 @@
 4. Spike の結果を踏まえて正式なリファクタリング計画・スケジュールを確定。
 
 
-## タスク分解と検証フロー
-1. **ドメインモデルの現状整理**
-   - 作業内容: キャンバス要素・階層・操作フローを図解/表に整理し、`docs/canvas-domain-model.md` を作成。
-   - 検証: ドキュメントレビュー + 既存の `npm run lint` と `npm run build` が成功すること。
-2. **巨大フックの監査と分解計画立案**
-   - 作業内容: `useElementDragEffect` など複雑フックの依存・副作用を棚卸しし、分割後インターフェースを定義。分割スプリント計画を作成。
-   - 検証: レビュー承認 + 影響範囲のテスト観点リスト化。
-3. **巨大フックの段階的リファクタリング（実装）**
-   - 作業内容: 事前設計に沿い純粋ロジック化、React ラッパー化、ユニットテスト追加。
-   - 検証: `npm run test`（新規テスト含む）・`npm run lint`・ブラウザでドラッグ/タッチ/ショートカット確認。
-4. **型レイヤ分離と ViewState 導入**
-   - 作業内容: `CanvasElement` から UI 状態を除外し、`ViewState` で管理する仕組みを実装。
-   - 検証: `tsc --noEmit`, `npm run lint`, 主要操作（選択/編集/フォーカス）の手動確認。
-5. **モノレポ準備とパッケージスケルトン作成**
-   - 作業内容: ワークスペース設定、`packages/canvas-core` & `packages/canvas-react` の雛形、ビルドスクリプト追加。
-   - 検証: `npm install` → `npm run build`・`npm run dev` が成功。
-6. **コア状態モデル抽出とイベント発行導入**
-   - 作業内容: reducer/履歴などを `canvas-core` に移動し、`onStateChange` フックポイントを追加。
-   - 検証: `npm run lint`・`npm run test`・`npm run build`、ブラウザで CRUD/Undo リグレッション確認。
-7. **レイアウト計算のアダプター化とパフォーマンス最適化**
-   - 作業内容: レイアウト更新をアダプター層へ移し、`requestAnimationFrame`/バッチ処理導入。
-   - 検証: `npm run test`（レイアウト単体テスト追加）、`npm run build`、大量ノード操作の手動確認。
-8. **副作用インターフェース化**
-   - 作業内容: `CanvasPersistence`/`CanvasEventHandlers` などを実装し、ストレージ/トーストを注入方式に変更。
-   - 検証: `npm run lint`・`npm run build`、ブラウザで保存・トースト挙動確認。
-9. **CanvasController/CanvasView 分離と状態購読最適化**
-   - 作業内容: `CanvasArea` 分割、`useSyncExternalStore` 導入、UI 差し込みポイント定義。
-   - 検証: `npm run lint`・`npm run test`（スナップショット/レンダリングテスト追加）・`npm run build`、ブラウザで UI 崩れ確認。
-10. **API・イベント定義の標準化**
-    - 作業内容: `CanvasCommand`/`CanvasEvent` 整理、ドキュメント更新、型テスト追加。
-    - 検証: `npm run lint`・`npm run build`・`tsc --project packages/canvas-core/tsconfig.json`。
-11. **サンプル/PoC アプリ実装**
-    - 作業内容: `examples/basic-app` にライブラリ利用例を実装し、利用ガイドを追加。
-    - 検証: `npm run lint`・`npm run build`・`npm run build:examples`、PoC 手動確認。
-12. **公開準備とドキュメント整備**
-    - 作業内容: README/API リファレンス/CHANGELOG/バージョニング策定、`npm publish --dry-run` スクリプト整備。
-    - 検証: `npm run lint`・`npm run build`・`npm run test`・`npm run publish:dry-run`、ドキュメントレビュー。
+## タスクリスト
+- [ ] **0. ドメインモデルの現状整理**
+  - 作業内容: キャンバス要素・階層・操作フローを図解/表に整理し、`docs/canvas-domain-model.md` を作成。
+  - 検証: ドキュメントレビュー + 既存の `npm run lint` と `npm run build` が成功すること。
+- [ ] **1. 巨大フックの事前リファクタリング**
+  - `useElementDragEffect`, `UseTouchHandlers`, `UseKeyboardHandler` を調査し、必要データ/副作用を洗い出す。
+  - コアロジックと UI 副作用を分離し、純粋関数 + コールバック注入パターンへ書き換え。React 依存部は薄いラッパーに限定。
+  - 変更後、フックロジック用のユニットテストを追加して `npm run test` で検証。
+- [ ] **2. 型レイヤの分離と UI 状態の外出し**
+  - `CanvasElement` から UI 状態 (`selected`, `editing`, `hover` 等) を除去し、`CanvasElement<TMeta>` でドメインデータのみを保持。
+  - UI 状態は `ViewState`（React 側の store / context）として別管理し、既存コードを段階的に移行。
+  - 型の分離後に `tsc --noEmit` と主要操作の手動確認を実施。
+- [ ] **3. コア状態モデルの抽出**
+  - `src/state/state.ts` から要素 CRUD、階層管理、履歴機能を `packages/canvas-core` に移動。
+  - 抽出時にレイアウト計算など UI/副作用的処理をフックできるイベント (`onStateChange`) として切り出す。
+  - 既存アプリはコア API 経由で状態更新を行うよう変更し、`npm run lint`・`npm run test`・`npm run build` を成功させる。
+- [ ] **4. レイアウト計算のアダプター化**
+  - `adjustElementPositionsFromHierarchy` などレイアウト処理を React アダプター層に移し、state 変更後にスケジュールして実行。
+  - 高頻度更新時のバッチ処理や `requestAnimationFrame` 最適化を導入。
+  - 手動検証として大規模データでドラッグ操作を確認。
+- [ ] **5. 副作用インターフェース化**
+  - ストレージ・トースト・ロギング・AI 呼び出しを `CanvasPersistence`, `CanvasEventHandlers`, `CanvasExternalServices` といったインターフェースに整理。
+  - コアはこれらのインターフェースを引数で受け取る設計とし、モック可能な構造でユニットテストを追加。
+- [ ] **6. React アダプターと CanvasView の分割**
+  - `CanvasArea` を `CanvasController`（状態購読・イベント橋渡し）と `CanvasView`（純粋描画）に分割。
+  - `useSyncExternalStore` やメモ化を活用して再レンダリングを制御し、Storybook 等で UI を検証。
+  - 既存 UI（メニュー/モーダル/トースト）との通信は props/イベント経由に統一。
+- [ ] **7. API・イベントの標準化**
+  - `CanvasCommand`, `CanvasEvent` を整理し、アダプターからコアへの入力・コアからの通知を明確にする。
+  - 新 API に合わせてドキュメントと型定義を更新し、`tsc` / `eslint` / `jest` を通す。
+- [ ] **8. 移行テスト整備**
+  - `canvas-core` のユニットテスト、React アダプターの統合テスト、主要操作の E2E/手動検証手順を整備。
+  - CI で `npm run lint`, `npm run test`, `npm run build`, `npm run build:extension` を通すパイプラインを構築。
+- [ ] **9. パッケージ化 & 公開準備**
+  - `packages/canvas-core` / `packages/canvas-react` / `examples/basic-app` を整備し、ワークスペース化。
+  - README, API リファレンス、CHANGELOG、バージョニング方針を整備し、`npm run publish:dry-run` で検証。
