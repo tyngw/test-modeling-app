@@ -52,7 +52,7 @@ export function AppLayout({
   currentTabId,
   currentTab,
   addTab,
-  closeTab,
+  closeTab: _closeTab,
   forceCloseTab,
   switchTab,
   dispatch,
@@ -124,7 +124,6 @@ export function AppLayout({
     tabs,
     currentTabId,
     addTab,
-    closeTab,
     switchTab,
     toggleHelp,
     toggleSettings,
@@ -134,6 +133,8 @@ export function AppLayout({
     handleSaveElements,
     handleLoadElements,
     handleAIClick,
+    forceCloseTab,
+    isAILoading,
   ]);
 
   return <div>{memoizedCanvasProvider}</div>;

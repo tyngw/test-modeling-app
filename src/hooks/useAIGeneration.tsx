@@ -103,6 +103,60 @@ export function useAIGeneration({ currentTab, dispatch }: UseAIGenerationParams)
     [elementOperationService, dispatch, findElementByText],
   );
 
+  // IDで要素を検索する関数
+  const findElementById = useCallback(
+    (elementId: string): Element | null => {
+      if (!currentTab?.state.hierarchicalData) {
+        return null;
+      }
+
+      const elementsMap = createElementsMapFromHierarchy(currentTab.state.hierarchicalData);
+      return elementsMap[elementId] || null;
+    },
+    [currentTab],
+  );
+
+  // サジェストを兄弟要素として追加する関数
+  const addSuggestionsAsSiblings = useCallback(
+    async (selectedElementId: string, suggestions: string[]): Promise<void> => {
+      if (!currentTab?.state.hierarchicalData) {
+        return;
+      }
+
+      debugLog(`[Suggestion] 兄弟要素として追加開始: 選択要素=${selectedElementId}`);
+
+      dispatch({
+        type: 'ADD_SIBLING_ELEMENTS_SILENT',
+        payload: {
+          targetNodeId: selectedElementId,
+          position: 'after',
+          texts: suggestions,
+          tentative: true,
+          onError: (errorMessage: string) => {
+            debugLog(`[Suggestion] 兄弟要素追加エラー: ${errorMessage}`);
+            // フォールバック: 子要素として追加
+            dispatch({
+              type: 'ADD_ELEMENTS_SILENT',
+              payload: {
+                targetNodeId: selectedElementId,
+                targetPosition: 'child',
+                texts: suggestions,
+                tentative: true,
+                onError: (fallbackErrorMessage: string) => {
+                  debugLog(`[Suggestion] フォールバック追加エラー: ${fallbackErrorMessage}`);
+                },
+              },
+            });
+          },
+          onSuccess: (addedElementIds: string[]) => {
+            debugLog(`[Suggestion] 兄弟要素追加成功: ${addedElementIds.join(', ')}`);
+          },
+        },
+      });
+    },
+    [currentTab, dispatch],
+  );
+
   // チャットアシスタント用: 複数操作対応版
   const handleAIClickForChat = useCallback(
     async (message: string): Promise<string> => {
@@ -243,6 +297,82 @@ export function useAIGeneration({ currentTab, dispatch }: UseAIGenerationParams)
     }
   }, [currentTab, dispatch, addToast, isLoading, aiGenerationService]);
 
+  // ヘルパー関数（既存のロジックを保持）
+  const checkElementHasChildren = useCallback(
+    (elementId: string, hierarchicalData: unknown): boolean => {
+      if (!hierarchicalData) return false;
+
+      const searchNode = (nodes: unknown): boolean => {
+        if (!nodes) return false;
+
+        const nodeArray = Array.isArray(nodes)
+          ? nodes
+          : Object.values(nodes as Record<string, unknown>);
+
+        for (const node of nodeArray) {
+          const hierarchicalNode = node as Record<string, unknown>;
+          const element = (hierarchicalNode.data || hierarchicalNode) as Element;
+
+          if (element.id === elementId) {
+            return Boolean(
+              hierarchicalNode.children &&
+                Array.isArray(hierarchicalNode.children) &&
+                (hierarchicalNode.children as unknown[]).length > 0,
+            );
+          }
+
+          if (hierarchicalNode.children && Array.isArray(hierarchicalNode.children)) {
+            const found = searchNode(hierarchicalNode.children);
+            if (found !== false) return found;
+          }
+        }
+
+        return false;
+      };
+
+      return searchNode(hierarchicalData);
+    },
+    [],
+  );
+
+  const findParentElement = useCallback(
+    (elementId: string, _elementsMap: Record<string, Element>): Element | null => {
+      const searchInHierarchy = (nodes: unknown, _parentElement?: Element): Element | null => {
+        if (!nodes) return null;
+
+        const nodeArray = Array.isArray(nodes)
+          ? nodes
+          : Object.values(nodes as Record<string, unknown>);
+
+        for (const node of nodeArray) {
+          const hierarchicalNode = node as Record<string, unknown>;
+          const element = (hierarchicalNode.data || hierarchicalNode) as Element;
+
+          if (hierarchicalNode.children && Array.isArray(hierarchicalNode.children)) {
+            for (const child of hierarchicalNode.children as Record<string, unknown>[]) {
+              const childElement = (child.data || child) as Element;
+              if (childElement.id === elementId) {
+                return element;
+              }
+            }
+
+            const found = searchInHierarchy(hierarchicalNode.children, element);
+            if (found) return found;
+          }
+        }
+
+        return null;
+      };
+
+      if (currentTab?.state.hierarchicalData) {
+        return searchInHierarchy(currentTab.state.hierarchicalData);
+      }
+
+      return null;
+    },
+    [currentTab],
+  );
+
   // 兄弟ノードサジェスト機能
   const handleSiblingNodeSuggestion = useCallback(
     async (parentElementId: string, fromEndEditing = false): Promise<void> => {
@@ -365,7 +495,7 @@ export function useAIGeneration({ currentTab, dispatch }: UseAIGenerationParams)
         }, 500);
       }
     },
-    [currentTab, isLoading, aiGenerationService],
+    [currentTab, isLoading, aiGenerationService, addSuggestionsAsSiblings, findElementById],
   );
 
   // サジェストコンテキストをクリアする関数
@@ -373,60 +503,6 @@ export function useAIGeneration({ currentTab, dispatch }: UseAIGenerationParams)
     aiGenerationService.clearSuggestionContext();
     debugLog('[Suggestion] コンテキストをクリアしました');
   }, [aiGenerationService]);
-
-  // IDで要素を検索する関数
-  const findElementById = useCallback(
-    (elementId: string): Element | null => {
-      if (!currentTab?.state.hierarchicalData) {
-        return null;
-      }
-
-      const elementsMap = createElementsMapFromHierarchy(currentTab.state.hierarchicalData);
-      return elementsMap[elementId] || null;
-    },
-    [currentTab],
-  );
-
-  // サジェストを兄弟要素として追加する関数
-  const addSuggestionsAsSiblings = useCallback(
-    async (selectedElementId: string, suggestions: string[]): Promise<void> => {
-      if (!currentTab?.state.hierarchicalData) {
-        return;
-      }
-
-      debugLog(`[Suggestion] 兄弟要素として追加開始: 選択要素=${selectedElementId}`);
-
-      dispatch({
-        type: 'ADD_SIBLING_ELEMENTS_SILENT',
-        payload: {
-          targetNodeId: selectedElementId,
-          position: 'after',
-          texts: suggestions,
-          tentative: true,
-          onError: (errorMessage: string) => {
-            debugLog(`[Suggestion] 兄弟要素追加エラー: ${errorMessage}`);
-            // フォールバック: 子要素として追加
-            dispatch({
-              type: 'ADD_ELEMENTS_SILENT',
-              payload: {
-                targetNodeId: selectedElementId,
-                targetPosition: 'child',
-                texts: suggestions,
-                tentative: true,
-                onError: (fallbackErrorMessage: string) => {
-                  debugLog(`[Suggestion] フォールバック追加エラー: ${fallbackErrorMessage}`);
-                },
-              },
-            });
-          },
-          onSuccess: (addedElementIds: string[]) => {
-            debugLog(`[Suggestion] 兄弟要素追加成功: ${addedElementIds.join(', ')}`);
-          },
-        },
-      });
-    },
-    [currentTab, dispatch],
-  );
 
   // END_EDITING時にサジェストを実行する関数
   const handleEndEditingSuggestion = useCallback(async (): Promise<void> => {
@@ -484,83 +560,13 @@ export function useAIGeneration({ currentTab, dispatch }: UseAIGenerationParams)
         );
       }
     }, 500);
-  }, [currentTab, handleSiblingNodeSuggestion, isSuggestionEnabled]);
-
-  // ヘルパー関数（既存のロジックを保持）
-  const checkElementHasChildren = useCallback(
-    (elementId: string, hierarchicalData: unknown): boolean => {
-      if (!hierarchicalData) return false;
-
-      const searchNode = (nodes: unknown): boolean => {
-        if (!nodes) return false;
-
-        const nodeArray = Array.isArray(nodes)
-          ? nodes
-          : Object.values(nodes as Record<string, unknown>);
-
-        for (const node of nodeArray) {
-          const hierarchicalNode = node as Record<string, unknown>;
-          const element = (hierarchicalNode.data || hierarchicalNode) as Element;
-
-          if (element.id === elementId) {
-            return Boolean(
-              hierarchicalNode.children &&
-                Array.isArray(hierarchicalNode.children) &&
-                (hierarchicalNode.children as unknown[]).length > 0,
-            );
-          }
-
-          if (hierarchicalNode.children && Array.isArray(hierarchicalNode.children)) {
-            const found = searchNode(hierarchicalNode.children);
-            if (found !== false) return found;
-          }
-        }
-
-        return false;
-      };
-
-      return searchNode(hierarchicalData);
-    },
-    [currentTab],
-  );
-
-  const findParentElement = useCallback(
-    (elementId: string, _elementsMap: Record<string, Element>): Element | null => {
-      const searchInHierarchy = (nodes: unknown, _parentElement?: Element): Element | null => {
-        if (!nodes) return null;
-
-        const nodeArray = Array.isArray(nodes)
-          ? nodes
-          : Object.values(nodes as Record<string, unknown>);
-
-        for (const node of nodeArray) {
-          const hierarchicalNode = node as Record<string, unknown>;
-          const element = (hierarchicalNode.data || hierarchicalNode) as Element;
-
-          if (hierarchicalNode.children && Array.isArray(hierarchicalNode.children)) {
-            for (const child of hierarchicalNode.children as Record<string, unknown>[]) {
-              const childElement = (child.data || child) as Element;
-              if (childElement.id === elementId) {
-                return element;
-              }
-            }
-
-            const found = searchInHierarchy(hierarchicalNode.children, element);
-            if (found) return found;
-          }
-        }
-
-        return null;
-      };
-
-      if (currentTab?.state.hierarchicalData) {
-        return searchInHierarchy(currentTab.state.hierarchicalData);
-      }
-
-      return null;
-    },
-    [currentTab],
-  );
+  }, [
+    currentTab,
+    handleSiblingNodeSuggestion,
+    isSuggestionEnabled,
+    checkElementHasChildren,
+    findParentElement,
+  ]);
 
   // グローバルにサジェスト関数を登録
   useEffect(() => {

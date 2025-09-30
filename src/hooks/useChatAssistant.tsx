@@ -41,6 +41,27 @@ export function useChatAssistant({ currentTab, dispatch, getLatestState }: UseCh
     return new ChatAssistantService(aiRepository, configRepository, chatOperationService);
   }, []);
 
+  // レガシー型からドメイン型への変換ヘルパー
+  const convertToDomainElement = useCallback((element: Element): DomainElement => {
+    return new DomainElement(
+      element.id,
+      element.texts,
+      element.x,
+      element.y,
+      element.width,
+      element.height,
+      element.sectionHeights,
+      element.editing,
+      element.selected,
+      element.visible,
+      element.tentative,
+      element.startMarker,
+      element.endMarker,
+      element.direction,
+      element.tempParentId,
+    );
+  }, []);
+
   // 要素検索のヘルパー関数
   const findElementByText = useCallback(
     async (targetText: string): Promise<DomainElement | null> => {
@@ -80,29 +101,8 @@ export function useChatAssistant({ currentTab, dispatch, getLatestState }: UseCh
 
       return found ? convertToDomainElement(found) : null;
     },
-    [currentTab],
+    [currentTab, convertToDomainElement],
   );
-
-  // レガシー型からドメイン型への変換ヘルパー
-  const convertToDomainElement = useCallback((element: Element): DomainElement => {
-    return new DomainElement(
-      element.id,
-      element.texts,
-      element.x,
-      element.y,
-      element.width,
-      element.height,
-      element.sectionHeights,
-      element.editing,
-      element.selected,
-      element.visible,
-      element.tentative,
-      element.startMarker,
-      element.endMarker,
-      element.direction,
-      element.tempParentId,
-    );
-  }, []);
 
   // 操作実行アダプターの初期化（useMemoで最適化）
   const operationAdapter = useMemo(
