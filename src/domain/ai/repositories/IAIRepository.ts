@@ -41,7 +41,7 @@ export interface IConfigRepository {
   /**
    * APIキーを取得
    */
-  getApiKey(): string | null;
+  getApiKey(): string;
 
   /**
    * モデルタイプを取得
@@ -51,7 +51,7 @@ export interface IConfigRepository {
   /**
    * プロンプトを取得
    */
-  getPrompt(): string | null;
+  getPrompt(): string;
 
   /**
    * システムプロンプトテンプレートを取得

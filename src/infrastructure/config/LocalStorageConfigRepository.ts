@@ -11,7 +11,7 @@ export class LocalStorageConfigRepository implements IConfigRepository {
   /**
    * APIキーを取得
    */
-  getApiKey(): string | null {
+  getApiKey(): string {
     return getApiKey();
   }
 
@@ -25,7 +25,7 @@ export class LocalStorageConfigRepository implements IConfigRepository {
   /**
    * プロンプトを取得
    */
-  getPrompt(): string | null {
+  getPrompt(): string {
     return getPrompt();
   }
 
