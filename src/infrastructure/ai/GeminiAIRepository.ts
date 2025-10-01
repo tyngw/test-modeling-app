@@ -15,7 +15,7 @@ export class GeminiAIRepository implements IAIRepository {
     prompt: string,
     apiKey: string,
     modelType: string,
-    forceJsonResponse: boolean = false,
+    forceJsonResponse = false,
     systemPrompt?: string,
   ): Promise<string> {
     return await generateWithGemini(prompt, apiKey, modelType, forceJsonResponse, systemPrompt);
@@ -30,8 +30,8 @@ export class GeminiAIRepository implements IAIRepository {
     modelType: string,
     chatHistory: ChatHistoryEntry[],
     systemPrompt?: string,
-    forceJsonResponse: boolean = false,
-    truncatePrompt: boolean = true,
+    forceJsonResponse = false,
+    truncatePrompt = true,
   ): Promise<{
     response: string;
     updatedHistory: ChatHistoryEntry[];

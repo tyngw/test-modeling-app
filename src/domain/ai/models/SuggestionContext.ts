@@ -14,12 +14,14 @@ export interface ChatHistoryEntry {
 export class SuggestionContext {
   private _chatHistory: ChatHistoryEntry[] = [];
   private _lastParentElementId: string | null = null;
-  private _isActive: boolean = false;
-  private _isExecuting: boolean = false;
-  private _contextInitialized: boolean = false;
+  private _isActive = false;
+  private _isExecuting = false;
+  private _contextInitialized = false;
   private _lastInputText: string | null = null;
 
-  constructor() {}
+  constructor() {
+    // 初期化処理は不要だが、明示的にコンストラクタを定義
+  }
 
   get chatHistory(): ChatHistoryEntry[] {
     return [...this._chatHistory];
