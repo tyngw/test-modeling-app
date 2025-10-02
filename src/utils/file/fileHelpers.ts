@@ -492,6 +492,32 @@ export const saveSvg = (svgElement: SVGSVGElement, name: string) => {
   URL.revokeObjectURL(svgUrl);
 };
 
+/**
+ * 階層構造を直接保存する関数
+ * @param hierarchicalData 階層構造データ
+ * @param fileName ファイル名
+ */
+export const saveHierarchicalData = (hierarchicalData: HierarchicalStructure, fileName: string) => {
+  // ルート要素からテキストを取得
+  const rootElementText = hierarchicalData.root.data.texts?.[0] || '';
+
+  // ファイル名を決定
+  const name = determineFileName(fileName, rootElementText);
+
+  // 階層構造形式で保存
+  const json = JSON.stringify(hierarchicalData, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+
+  const downloadLink = document.createElement('a');
+  downloadLink.href = url;
+  downloadLink.download = `${name}.json`;
+  document.body.appendChild(downloadLink);
+  downloadLink.click();
+  document.body.removeChild(downloadLink);
+  URL.revokeObjectURL(url);
+};
+
 export const saveElements = (elements: Element[], fileName: string) => {
   // ルート要素からテキストを取得（存在する場合）
   const rootElementText = extractRootElementTextFromElements(elements);
@@ -525,17 +551,7 @@ export const saveElements = (elements: Element[], fileName: string) => {
   }
 
   // 階層構造形式で保存
-  const json = JSON.stringify(hierarchicalData, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-
-  const downloadLink = document.createElement('a');
-  downloadLink.href = url;
-  downloadLink.download = `${name}.json`;
-  document.body.appendChild(downloadLink);
-  downloadLink.click();
-  document.body.removeChild(downloadLink);
-  URL.revokeObjectURL(url);
+  saveHierarchicalData(hierarchicalData, name);
 };
 
 /**
