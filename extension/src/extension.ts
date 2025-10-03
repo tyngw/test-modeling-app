@@ -4,25 +4,45 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 /**
+ * Webviewパネルとエディタの対応関係を管理
+ * markdown-table-editor方式: シンプルな構造
+ */
+interface WebviewEditorPair {
+  panel: vscode.WebviewPanel;
+  document: vscode.TextDocument;
+  isUpdatingFromWebview: boolean; // Webviewからの更新中フラグ
+  lastUpdateTimestamp: number;
+}
+
+/**
  * VSCode拡張機能のメインエントリーポイント
  */
 export function activate(context: vscode.ExtensionContext) {
   console.log('Test Modeling App extension が起動しました');
 
-  // Webviewパネル参照を保持
-  let currentPanel: vscode.WebviewPanel | undefined = undefined;
-  let currentFileName: string | null = null;
+  // アクティブなWebview-エディタペアを管理
+  const activeWebviews = new Map<string, WebviewEditorPair>();
 
-  // コマンドの登録
+  // スタンドアロンモードでWebviewを開くコマンド
   const openModelerCommand = vscode.commands.registerCommand('testModelingApp.openModeler', () => {
-    if (currentPanel) {
-      // 既存のパネルがある場合は前面に表示
-      currentPanel.reveal();
-      return;
-    }
+    createStandaloneWebview();
+  });
 
-    // 新しいWebviewパネルを作成
-    currentPanel = vscode.window.createWebviewPanel(
+  // エディタ連携モードでWebviewを開くコマンド
+  const openInModelingViewCommand = vscode.commands.registerCommand(
+    'testModelingApp.openInModelingView',
+    (uri?: vscode.Uri) => {
+      openFileInModelingView(uri);
+    },
+  );
+
+  context.subscriptions.push(openModelerCommand, openInModelingViewCommand);
+
+  /**
+   * スタンドアロンWebviewを作成（従来の動作）
+   */
+  function createStandaloneWebview() {
+    const panel = vscode.window.createWebviewPanel(
       'testModelingApp',
       'Test Modeling App',
       vscode.ViewColumn.One,
@@ -33,318 +53,350 @@ export function activate(context: vscode.ExtensionContext) {
       },
     );
 
-    // Webviewのコンテンツを設定
-    currentPanel.webview.html = getWebviewContent(currentPanel.webview, context);
+    panel.webview.html = getWebviewContent(panel.webview, context, false);
 
-    // Webviewからのメッセージを処理
-    currentPanel.webview.onDidReceiveMessage(
-      async (message) => {
-        await handleWebviewMessage(message);
-      },
-      undefined,
-      context.subscriptions,
-    );
-
-    // パネルが閉じられたときの処理
-    currentPanel.onDidDispose(() => {
-      currentPanel = undefined;
-      currentFileName = null;
-    });
-  });
-
-  context.subscriptions.push(openModelerCommand);
-
-  /**
-   * Webviewからのメッセージを処理
-   */
-  async function handleWebviewMessage(message: {
-    type: string;
-    data?: unknown;
-    fileName?: string;
-    config?: unknown;
-    message?: string;
-  }): Promise<void> {
-    switch (message.type) {
-      case 'saveFile':
-        await handleSaveFile(message.data, message.fileName);
-        break;
-
-      case 'loadFile':
-        await handleLoadFile(message.fileName);
-        break;
-
-      case 'showError':
-        if (message.message) {
-          vscode.window.showErrorMessage(message.message);
-        }
-        break;
-
-      case 'showInfo':
-        if (message.message) {
-          vscode.window.showInformationMessage(message.message);
-        }
-        break;
-
-      case 'getCurrentFileName':
-        await handleGetCurrentFileName();
-        break;
-
-      default:
-        console.error('未知のメッセージタイプ:', message.type);
-    }
+    // スタンドアロンモードではメッセージ処理は不要（Webview内で完結）
   }
 
   /**
-   * ファイル保存処理
+   * ファイルをTest Modeling Viewで開く
    */
-  async function handleSaveFile(data: unknown, fileName?: string): Promise<void> {
+  async function openFileInModelingView(uri?: vscode.Uri) {
     try {
-      // 型ガード
-      if (!data || typeof data !== 'object' || !('type' in data) || !('content' in data)) {
-        throw new Error('無効なデータ形式です');
+      let targetUri = uri;
+
+      // URIが指定されていない場合は、アクティブエディタから取得
+      if (!targetUri) {
+        const activeEditor = vscode.window.activeTextEditor;
+        if (!activeEditor) {
+          vscode.window.showErrorMessage('開くファイルが見つかりません');
+          return;
+        }
+        targetUri = activeEditor.document.uri;
       }
 
-      const saveData = data as { type: string; content: unknown };
-      let saveFileName = fileName;
-
-      // ファイル保存ダイアログを表示
-      const filters: { [name: string]: string[] } = {};
-      if (saveData.type === 'elements') {
-        filters['JSON Files'] = ['json'];
-      } else if (saveData.type === 'svg') {
-        filters['SVG Files'] = ['svg'];
-      }
-
-      // デフォルトファイル名を生成
-      let defaultFileName = fileName || 'modeling-diagram';
-      if (saveData.type === 'elements' && !defaultFileName.endsWith('.json')) {
-        defaultFileName += '.json';
-      } else if (saveData.type === 'svg' && !defaultFileName.endsWith('.svg')) {
-        defaultFileName += '.svg';
-      }
-
-      // 保存ダイアログを表示
-      const saveUri = await vscode.window.showSaveDialog({
-        filters,
-        defaultUri: vscode.workspace.workspaceFolders?.[0]
-          ? vscode.Uri.joinPath(vscode.workspace.workspaceFolders[0].uri, defaultFileName)
-          : undefined,
-      });
-
-      if (!saveUri) {
-        // キャンセルをWebviewに通知
-        currentPanel?.webview.postMessage({
-          type: 'saveCompleted',
-          success: false,
-          cancelled: true,
-        });
+      // JSONファイルかチェック
+      if (path.extname(targetUri.fsPath) !== '.json') {
+        vscode.window.showErrorMessage('JSONファイルのみサポートされています');
         return;
       }
 
-      saveFileName = path.basename(saveUri.fsPath);
+      const documentKey = targetUri.toString();
 
-      // ファイル内容を準備
-      let content: string;
-      if (saveData.type === 'elements') {
-        // JSON要素データの場合
-        const jsonData = {
-          fileName: saveFileName,
-          elements: saveData.content,
-          version: '0.1.0',
-          createdAt: new Date().toISOString(),
-        };
-        content = JSON.stringify(jsonData, null, 2);
-      } else if (saveData.type === 'svg') {
-        // SVGデータの場合
-        content = saveData.content as string;
-      } else {
-        throw new Error('サポートされていないファイルタイプです');
+      // 既に開いているWebviewがあるかチェック
+      const existingPair = activeWebviews.get(documentKey);
+      if (existingPair) {
+        existingPair.panel.reveal();
+        return;
       }
 
-      // VSCode APIを使ってファイルシステムに保存
-      await vscode.workspace.fs.writeFile(saveUri, Buffer.from(content, 'utf8'));
+      // ドキュメントを開く
+      const document = await vscode.workspace.openTextDocument(targetUri);
 
-      // 要素データの場合は現在のファイル名を更新
-      if (saveData.type === 'elements') {
-        currentFileName = saveFileName;
-
-        // Webviewにファイル名変更を通知
-        currentPanel?.webview.postMessage({
-          type: 'fileNameChanged',
-          fileName: saveFileName,
-        });
+      // ファイル内容を読み込み・検証
+      let fileData;
+      try {
+        fileData = JSON.parse(document.getText());
+      } catch (error) {
+        vscode.window.showErrorMessage(`JSONファイルの解析に失敗しました: ${error}`);
+        return;
       }
 
-      // 保存完了をWebviewに通知
-      currentPanel?.webview.postMessage({
-        type: 'saveCompleted',
-        success: true,
-        fileName: saveFileName,
-      });
+      // Webviewパネルを作成
+      const panel = vscode.window.createWebviewPanel(
+        'testModelingAppEditor',
+        `Test Modeling - ${path.basename(targetUri.fsPath)}`,
+        vscode.ViewColumn.Beside,
+        {
+          enableScripts: true,
+          retainContextWhenHidden: true,
+          localResourceRoots: [vscode.Uri.file(path.join(context.extensionPath, 'webview'))],
+        },
+      );
 
-      vscode.window.showInformationMessage(`ファイルが保存されました: ${saveFileName}`);
-    } catch (error) {
-      console.error('ファイル保存エラー:', error);
+      // ペアを登録
+      const pair: WebviewEditorPair = {
+        panel,
+        document,
+        isUpdatingFromWebview: false,
+        lastUpdateTimestamp: Date.now(),
+      };
+      activeWebviews.set(documentKey, pair);
 
-      // エラーをWebviewに通知
-      currentPanel?.webview.postMessage({
-        type: 'saveCompleted',
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      // Webviewコンテンツを設定（エディタ連携モード）
+      panel.webview.html = getWebviewContent(panel.webview, context, true);
 
-      vscode.window.showErrorMessage(`ファイルの保存に失敗しました: ${error}`);
-    }
-  }
-
-  /**
-   * ファイル読み込み処理
-   */
-  async function handleLoadFile(fileName?: string): Promise<void> {
-    try {
-      let loadUri: vscode.Uri;
-
-      if (fileName) {
-        // ファイル名が指定されている場合
-        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-        if (!workspaceFolder) {
-          throw new Error('ワークスペースフォルダが見つかりません');
-        }
-        loadUri = vscode.Uri.file(path.join(workspaceFolder.uri.fsPath, fileName));
-      } else {
-        // ファイルダイアログで選択
-        const openUris = await vscode.window.showOpenDialog({
-          filters: {
-            'JSON Files': ['json'],
-          },
-          canSelectMany: false,
-          defaultUri: vscode.workspace.workspaceFolders?.[0]?.uri,
-        });
-
-        if (!openUris || openUris.length === 0) {
-          return; // ユーザーがキャンセルした場合
-        }
-
-        loadUri = openUris[0];
-      }
-
-      // ファイルを読み込み
-      const content = await fs.promises.readFile(loadUri.fsPath, 'utf8');
-      const data = JSON.parse(content);
-
-      // ファイル名を更新
-      const loadedFileName = path.basename(loadUri.fsPath);
-      currentFileName = loadedFileName;
-
-      // Webviewにデータを送信（アプリ側の期待する形式に合わせる）
-      currentPanel?.webview.postMessage({
-        type: 'fileLoaded',
+      // 初期データをWebviewに送信
+      panel.webview.postMessage({
+        type: 'initializeWithFile',
         data: {
-          fileName: loadedFileName,
-          content: data.elements || data, // elementsプロパティがあればそれを、なければ全体を送信
+          fileName: path.basename(targetUri.fsPath),
+          content: fileData,
+          isEditorMode: true,
         },
       });
 
-      vscode.window.showInformationMessage(`ファイルが読み込まれました: ${loadedFileName}`);
+      // Webviewからのメッセージを処理
+      panel.webview.onDidReceiveMessage(
+        async (message) => {
+          await handleEditorWebviewMessage(message, pair);
+        },
+        undefined,
+        context.subscriptions,
+      );
+
+      // ドキュメント変更の監視（editor → webview の同期）
+      const fileName = path.basename(targetUri.fsPath); // クロージャ外で取得
+      const changeDocumentSubscription = vscode.workspace.onDidChangeTextDocument((e) => {
+        // このドキュメントの変更かチェック
+        if (e.document.uri.toString() !== documentKey) {
+          return;
+        }
+
+        // Webviewからの更新による変更はスキップ
+        if (pair.isUpdatingFromWebview) {
+          console.log('[Extension] Skipping document change (from webview)');
+          return;
+        }
+
+        // 最近更新されたばかりの場合はスキップ（デバウンス）
+        const timeSinceLastUpdate = Date.now() - pair.lastUpdateTimestamp;
+        if (timeSinceLastUpdate < 100) {
+          console.log('[Extension] Skipping document change (too soon)');
+          return;
+        }
+
+        console.log('[Extension] Document changed, syncing to webview');
+
+        try {
+          // 変更内容をパース
+          const newContent = e.document.getText();
+          const data = JSON.parse(newContent);
+
+          // Webviewに送信
+          panel.webview.postMessage({
+            type: 'documentUpdated',
+            data: {
+              fileName: fileName,
+              content: data,
+              timestamp: Date.now(),
+            },
+          });
+
+          console.log('[Extension] ✅ Document synced to webview');
+        } catch (error) {
+          console.error('[Extension] Failed to sync document to webview:', error);
+        }
+      });
+
+      // パネルが閉じられたときの処理
+      panel.onDidDispose(() => {
+        activeWebviews.delete(documentKey);
+        changeDocumentSubscription.dispose();
+      });
     } catch (error) {
-      console.error('ファイル読み込みエラー:', error);
-      vscode.window.showErrorMessage(`ファイルの読み込みに失敗しました: ${error}`);
+      console.error('ファイルを開く際にエラーが発生しました:', error);
+      vscode.window.showErrorMessage(`ファイルを開けませんでした: ${error}`);
     }
   }
 
   /**
-   * 設定ファイル読み込み処理
+   * エディタ連携Webviewからのメッセージを処理
    */
+  async function handleEditorWebviewMessage(
+    message: { type: string; data?: unknown; timestamp?: number },
+    pair: WebviewEditorPair,
+  ): Promise<void> {
+    console.log('[Extension] ========================================');
+    console.log('[Extension] Message received from webview');
+    console.log('[Extension] Message type:', message?.type);
+    console.log('[Extension] Has data:', !!message?.data);
+    console.log('[Extension] ========================================');
+
+    if (!message || typeof message.type !== 'string') {
+      console.error('[Extension] Invalid message format');
+      return;
+    }
+
+    try {
+      switch (message.type) {
+        case 'updateDocument':
+          console.log('[Extension] Processing updateDocument');
+          await handleUpdateDocument(message.data, pair);
+          break;
+
+        case 'ready':
+          console.log('[Extension] Webview is ready');
+          break;
+
+        default:
+          console.warn('[Extension] Unknown message type:', message.type);
+      }
+    } catch (error) {
+      console.error('[Extension] Error handling message:', error);
+    }
+  }
+
   /**
-   * 現在のファイル名を取得
+   * Webviewからの変更をエディタに反映
+   * markdown-table-editor方式: 更新後に最新データを送り返す
    */
-  async function handleGetCurrentFileName(): Promise<void> {
-    currentPanel?.webview.postMessage({
-      type: 'currentFileName',
-      fileName: currentFileName,
-    });
+  async function handleUpdateDocument(data: unknown, pair: WebviewEditorPair): Promise<void> {
+    console.log('[Extension] ----------------------------------------');
+    console.log('[Extension] handleUpdateDocument START');
+    console.log('[Extension] Has data:', !!data);
+    console.log('[Extension] isUpdatingFromWebview:', pair.isUpdatingFromWebview);
+
+    try {
+      if (!data) {
+        console.error('[Extension] No data provided');
+        return;
+      }
+
+      // 循環更新を防止
+      if (pair.isUpdatingFromWebview) {
+        console.log('[Extension] Already updating, skipping');
+        return;
+      }
+
+      // 現在のドキュメント内容と比較
+      const currentContent = pair.document.getText();
+      const newContent = JSON.stringify(data, null, 2);
+
+      console.log('[Extension] Current content length:', currentContent.length);
+      console.log('[Extension] New content length:', newContent.length);
+
+      // 内容が同じ場合はスキップ
+      if (currentContent === newContent) {
+        console.log('[Extension] Content unchanged, skipping');
+        return;
+      }
+
+      console.log('[Extension] Content differs, proceeding with update');
+
+      // フラグを設定
+      pair.isUpdatingFromWebview = true;
+      pair.lastUpdateTimestamp = Date.now();
+
+      // エディタのテキストを更新
+      const edit = new vscode.WorkspaceEdit();
+      const fullRange = new vscode.Range(
+        pair.document.positionAt(0),
+        pair.document.positionAt(currentContent.length),
+      );
+      edit.replace(pair.document.uri, fullRange, newContent);
+
+      console.log('[Extension] Applying edit...');
+      const success = await vscode.workspace.applyEdit(edit);
+      console.log('[Extension] Apply edit result:', success);
+
+      if (success) {
+        console.log('[Extension] Document updated successfully');
+        await pair.document.save();
+        console.log('[Extension] Document saved');
+
+        // markdown-table-editor方式: 更新後に最新データをWebviewに送り返す
+        const updatedData = JSON.parse(newContent);
+        const responseMessage = {
+          type: 'documentUpdated',
+          data: {
+            fileName: path.basename(pair.document.uri.fsPath),
+            content: updatedData,
+            timestamp: Date.now(),
+          },
+        };
+
+        console.log('[Extension] Sending documentUpdated message to webview');
+        console.log('[Extension] Response message type:', responseMessage.type);
+        pair.panel.webview.postMessage(responseMessage);
+        console.log('[Extension] ✅ Message sent to webview');
+      } else {
+        console.error('[Extension] ❌ Failed to apply edit');
+      }
+    } catch (error) {
+      console.error('[Extension] ❌ Error in handleUpdateDocument:', error);
+      console.error('[Extension] Error stack:', error instanceof Error ? error.stack : 'N/A');
+    } finally {
+      // フラグをリセット
+      pair.isUpdatingFromWebview = false;
+      console.log('[Extension] Flags reset');
+      console.log('[Extension] handleUpdateDocument END');
+      console.log('[Extension] ----------------------------------------');
+    }
   }
 }
 
 /**
  * WebviewのHTMLコンテンツを生成
  */
-function getWebviewContent(webview: vscode.Webview, context: vscode.ExtensionContext): string {
+function getWebviewContent(
+  webview: vscode.Webview,
+  context: vscode.ExtensionContext,
+  isEditorMode: boolean = false,
+): string {
   const webviewPath = path.join(context.extensionPath, 'webview');
-
-  // ビルド済みのindex.htmlを読み込み
   const htmlPath = path.join(webviewPath, 'index.html');
 
   if (!fs.existsSync(htmlPath)) {
     return `<!DOCTYPE html>
 <html>
-<head>
-    <title>Error</title>
-</head>
-<body>
-    <h1>Error: Webview content not found</h1>
-    <p>Path: ${htmlPath}</p>
-</body>
+<head><title>Error</title></head>
+<body><h1>Error: Webview content not found</h1></body>
 </html>`;
   }
 
   let html = fs.readFileSync(htmlPath, 'utf8');
 
-  // Webview URIを生成（extensionディレクトリをベースにする）
-  const extensionPath = path.dirname(webviewPath); // webviewの親ディレクトリ（extension）
+  // HTMLタグにVSCode環境フラグを埋め込む
+  const htmlTagRegex = /<html([^>]*)>/i;
+  html = html.replace(htmlTagRegex, (match, attrs = '') => {
+    let updatedAttrs = attrs;
+
+    if (!/data-vscode-extension=/i.test(updatedAttrs)) {
+      updatedAttrs += ' data-vscode-extension="true"';
+    }
+
+    const editorModeValue = isEditorMode ? 'true' : 'false';
+    if (!/data-vscode-editor-mode=/i.test(updatedAttrs)) {
+      updatedAttrs += ` data-vscode-editor-mode="${editorModeValue}"`;
+    }
+
+    return `<html${updatedAttrs}>`;
+  });
+
+  // Webview URIを生成
+  const extensionPath = path.dirname(webviewPath);
   const webviewBaseUri = webview.asWebviewUri(vscode.Uri.file(extensionPath));
-
-  // デバッグ: 置換前のHTMLの一部を確認
-  console.log('🔍 Original HTML snippet:', html.substring(0, 200));
-  console.log('🔧 Extension path:', extensionPath);
-  console.log('🔧 Webview base URI:', webviewBaseUri.toString());
-
-  // Step 1: プレースホルダーを置換（一度だけ実行するため、既存の置換をチェック）
   const webviewResourceBase = `${webviewBaseUri}/webview`;
-  console.log('🎯 Target replacement URI:', webviewResourceBase);
 
-  // プレースホルダーが存在し、かつまだ置換されていない場合のみ置換
-  if (html.includes('{{WEBVIEW_CSPURI}}') && !html.includes(webviewResourceBase)) {
-    html = html.replace(/{{WEBVIEW_CSPURI}}/g, webviewResourceBase);
-    console.log('✅ Placeholder replacement completed');
-  } else if (html.includes(webviewResourceBase)) {
-    console.log('⚠️ HTML already contains webview URI - skipping replacement');
-  } else {
-    console.log('❌ No placeholder found in HTML');
-  }
+  // プレースホルダーを置換
+  html = html.replace(/{{WEBVIEW_CSPURI}}/g, webviewResourceBase);
 
-  // デバッグ: プレースホルダー置換後
-  console.log('📝 After placeholder replacement:', html.substring(0, 300));
+  // Bootstrap script を追加
+  const environmentScript = `
+    <script>
+      window.isVSCodeExtension = true;
+      window.isVSCodeEditorMode = ${isEditorMode};
+      
+      // VSCode APIを取得してキャッシュ
+      (function() {
+        try {
+          if (typeof acquireVsCodeApi === 'function') {
+            const api = acquireVsCodeApi();
+            window.vscode = api;
+            window.__testModelingAppVscodeApi = api;
+            console.log('[Bootstrap] VSCode API acquired');
+          }
+        } catch (error) {
+          console.error('[Bootstrap] Failed to acquire VSCode API:', error);
+        }
+      })();
+    </script>
+  `;
 
-  // Step 2: 残りの /_next/ パスを処理（念のため、まだ置換されていない場合のみ）
-  if (html.includes('/_next/') && !html.includes(`${webviewResourceBase}/_next/`)) {
-    html = html.replace(/\/_next\//g, `${webviewResourceBase}/_next/`);
-    html = html.replace(/href="\/_next\//g, `href="${webviewResourceBase}/_next/`);
-    html = html.replace(/src="\/_next\//g, `src="${webviewResourceBase}/_next/`);
-    console.log('✅ Additional _next/ paths processed');
-  }
+  html = html.replace('</head>', `${environmentScript}\n</head>`);
 
-  // デバッグ情報をログ出力
-  console.log('🔧 Webview URI:', webviewBaseUri.toString());
-  console.log('📁 Webview path:', webviewPath);
-  console.log('📝 HTML length:', html.length);
-
-  // 静的リソースのサンプルファイルが存在するかチェック
-  const sampleCssPath = path.join(webviewPath, '_next', 'static', 'css', '1c266b06614faa9a.css');
-  console.log('🎨 CSS file exists:', fs.existsSync(sampleCssPath));
-  if (fs.existsSync(sampleCssPath)) {
-    console.log('🎨 CSS file size:', fs.statSync(sampleCssPath).size, 'bytes');
-  }
-
-  // サンプルURIを生成してテスト
-  const sampleUri = webview.asWebviewUri(vscode.Uri.file(sampleCssPath));
-  console.log('🎨 Sample CSS URI:', sampleUri.toString());
-
-  // HTML置換後の最初の数行をデバッグ出力
-  const htmlPreview = html.substring(0, 600);
-  console.log('📄 HTML Preview:', htmlPreview);
-
-  // CSPを修正（Next.jsアプリ用）
+  // CSPを設定
   const cspContent = [
     `default-src 'none'`,
     `img-src ${webview.cspSource} data: blob:`,
@@ -354,7 +406,6 @@ function getWebviewContent(webview: vscode.Webview, context: vscode.ExtensionCon
     `connect-src ${webview.cspSource}`,
   ].join('; ');
 
-  // 既存のCSPがあれば置き換え、なければ追加
   if (html.includes('Content-Security-Policy')) {
     html = html.replace(
       /content="[^"]*"(?=.*Content-Security-Policy)/gi,
@@ -370,9 +421,6 @@ function getWebviewContent(webview: vscode.Webview, context: vscode.ExtensionCon
   return html;
 }
 
-/**
- * 拡張機能の非アクティブ化処理
- */
 export function deactivate() {
   console.log('Test Modeling App extension が非アクティブ化されました');
 }

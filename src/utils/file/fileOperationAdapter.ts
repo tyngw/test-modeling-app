@@ -6,6 +6,7 @@ import { isVSCodeExtension } from '../environment/environmentDetector';
 import {
   saveSvg as webSaveSvg,
   saveElements as webSaveElements,
+  saveHierarchicalData as webSaveHierarchicalData,
   loadElements as webLoadElements,
 } from './fileHelpers';
 import { convertArrayToHierarchical } from '../hierarchical/hierarchicalConverter';
@@ -17,6 +18,10 @@ import { convertArrayToHierarchical } from '../hierarchical/hierarchicalConverte
 export interface FileOperationAdapter {
   saveSvg: (svgElement: SVGSVGElement, fileName: string) => Promise<void>;
   saveElements: (elements: Element[], fileName: string) => Promise<void>;
+  saveHierarchicalData: (
+    hierarchicalData: HierarchicalStructure,
+    fileName: string,
+  ) => Promise<void>;
   loadElements: (fileName?: string) => Promise<{
     hierarchicalData: HierarchicalStructure;
     fileName: string;
@@ -33,6 +38,13 @@ class BrowserFileOperations implements FileOperationAdapter {
 
   async saveElements(elements: Element[], fileName: string): Promise<void> {
     webSaveElements(elements, fileName);
+  }
+
+  async saveHierarchicalData(
+    hierarchicalData: HierarchicalStructure,
+    fileName: string,
+  ): Promise<void> {
+    webSaveHierarchicalData(hierarchicalData, fileName);
   }
 
   async loadElements(): Promise<{
@@ -206,6 +218,67 @@ class VSCodeFileOperations implements FileOperationAdapter {
     });
   }
 
+  async saveHierarchicalData(
+    hierarchicalData: HierarchicalStructure,
+    fileName: string,
+  ): Promise<void> {
+    return new Promise((resolve, reject) => {
+      try {
+        const vscodeAPI = this.getVSCodeAPI();
+
+        // メッセージハンドラーを一時的に設定
+        const messageHandler = (event: MessageEvent) => {
+          if (event.data.type === 'saveCompleted') {
+            // イベントリスナーを削除
+            window.removeEventListener('message', messageHandler);
+
+            if (event.data.success) {
+              resolve();
+            } else if (event.data.cancelled) {
+              reject(new Error('ファイル保存がキャンセルされました'));
+            } else {
+              reject(new Error(event.data.error || 'ファイルの保存に失敗しました'));
+            }
+          }
+        };
+
+        // メッセージリスナーを追加
+        window.addEventListener('message', messageHandler);
+
+        // タイムアウトを設定（30秒）
+        const timeoutId = setTimeout(() => {
+          window.removeEventListener('message', messageHandler);
+          reject(new Error('ファイル保存がタイムアウトしました'));
+        }, 30000);
+
+        // 成功時にタイムアウトをクリア
+        const originalResolve = resolve;
+        resolve = () => {
+          clearTimeout(timeoutId);
+          originalResolve();
+        };
+
+        const originalReject = reject;
+        reject = (reason) => {
+          clearTimeout(timeoutId);
+          originalReject(reason);
+        };
+
+        // 階層構造データをJSONとして保存
+        vscodeAPI.saveFile(
+          {
+            type: 'hierarchical',
+            content: hierarchicalData,
+          },
+          fileName,
+        );
+      } catch (error) {
+        console.error('階層構造保存エラー:', error);
+        reject(error);
+      }
+    });
+  }
+
   async loadElements(fileName?: string): Promise<{
     hierarchicalData: HierarchicalStructure;
     fileName: string;
@@ -336,6 +409,10 @@ export const fileOperationAdapter = {
   get saveElements() {
     const adapter = createFileOperationAdapter();
     return adapter.saveElements.bind(adapter);
+  },
+  get saveHierarchicalData() {
+    const adapter = createFileOperationAdapter();
+    return adapter.saveHierarchicalData.bind(adapter);
   },
   get saveSvg() {
     const adapter = createFileOperationAdapter();
