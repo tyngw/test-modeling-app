@@ -23,48 +23,57 @@ function prepareWebviewHTML() {
   // VSCode拡張用のスクリプトを追加
   const vscodeScript = `
     <script>
-      // VSCode API の初期化
-      const vscode = acquireVsCodeApi();
-      
       // VSCode拡張環境であることを示すフラグ
+      // 注意: VSCode APIの取得はextension.tsのBootstrapスクリプトで行います
       window.isVSCodeExtension = true;
       
       // VSCode拡張向けのファイル操作API
+      // 注意: vscodeオブジェクトはextension.tsのBootstrapスクリプトで設定されます
       window.vscodeFileAPI = {
         saveFile: (data, fileName) => {
-          vscode.postMessage({
-            type: 'saveFile',
-            data: data,
-            fileName: fileName
-          });
+          if (window.vscode) {
+            window.vscode.postMessage({
+              type: 'saveFile',
+              data: data,
+              fileName: fileName
+            });
+          }
         },
         
         loadFile: (fileName) => {
-          vscode.postMessage({
-            type: 'loadFile',
-            fileName: fileName
-          });
+          if (window.vscode) {
+            window.vscode.postMessage({
+              type: 'loadFile',
+              fileName: fileName
+            });
+          }
         },
         
         showError: (message) => {
-          vscode.postMessage({
-            type: 'showError',
-            message: message
-          });
+          if (window.vscode) {
+            window.vscode.postMessage({
+              type: 'showError',
+              message: message
+            });
+          }
         },
         
         showInfo: (message) => {
-          vscode.postMessage({
-            type: 'showInfo',
-            message: message
-          });
+          if (window.vscode) {
+            window.vscode.postMessage({
+              type: 'showInfo',
+              message: message
+            });
+          }
         },
 
         getCurrentFileName: () => {
           return new Promise((resolve) => {
-            vscode.postMessage({
-              type: 'getCurrentFileName'
-            });
+            if (window.vscode) {
+              window.vscode.postMessage({
+                type: 'getCurrentFileName'
+              });
+            }
             // レスポンス待ちの処理は省略（現在のファイル名取得用）
             resolve(null);
           });

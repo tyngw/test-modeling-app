@@ -1,7 +1,7 @@
 // src/AppContent.tsx
 'use client';
 
-import React, { useCallback, useMemo, useEffect, useRef } from 'react';
+import React, { useCallback, useMemo, useEffect, useRef, useState } from 'react';
 import { CanvasArea } from './canvas';
 import QuickMenuBar from './header/QuickMenuBar';
 import TabHeaders from './header/TabHeaders';
@@ -13,6 +13,9 @@ import { useFileOperations } from '../hooks/useFileOperations';
 import { useAIGeneration } from '../hooks/useAIGeneration';
 import { useTabManagement } from '../hooks/useTabManagement';
 import { useModalState } from '../hooks/useModalState';
+import { setupVSCodeMessageListener, notifyDocumentUpdate } from '../utils/vscode/vscodeMessaging';
+import { isVSCodeEditorMode, isVSCodeExtension } from '../utils/environment/environmentDetector';
+import { HierarchicalStructure } from '../types/hierarchicalTypes';
 
 const AppContent: React.FC = () => {
   const renderCount = useRef(0);
@@ -80,18 +83,113 @@ const AppContent: React.FC = () => {
     updateTabSaveStatus,
   });
 
+  // 環境情報の状態管理
+  const [environmentInfo, setEnvironmentInfo] = useState(() => ({
+    isExtension: isVSCodeExtension(),
+    isEditorMode: isVSCodeEditorMode(),
+  }));
+
+  // 最新のcurrentTabを追跡
+  const currentTabRef = useRef(currentTab);
+  useEffect(() => {
+    currentTabRef.current = currentTab;
+  }, [currentTab]);
+
+  // VSCodeメッセージリスナーの設定
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return undefined;
+    }
+
+    const cleanup = setupVSCodeMessageListener(
+      // ファイル初期化
+      (data) => {
+        console.log('[AppContent] Initializing with file:', data.fileName);
+        setEnvironmentInfo({ isExtension: true, isEditorMode: Boolean(data.isEditorMode) });
+
+        // 新しいタブを作成してファイルデータを読み込み
+        const newTabId = addTab();
+        if (data.content) {
+          updateTabState(newTabId, (prevState) => ({
+            ...prevState,
+            hierarchicalData: data.content as HierarchicalStructure,
+          }));
+          updateTabName(newTabId, data.fileName);
+          updateTabSaveStatus(newTabId, true);
+        }
+      },
+      // ドキュメント更新（更新後の最新データ）
+      (data) => {
+        console.log('[AppContent] Document updated:', data.fileName);
+
+        if (currentTabRef.current && data.content) {
+          // extensionからの更新であることを記録
+          isUpdatingFromExtensionRef.current = true;
+
+          updateTabState(currentTabId, (prevState) => ({
+            ...prevState,
+            hierarchicalData: data.content as HierarchicalStructure,
+          }));
+          updateTabName(currentTabId, data.fileName);
+
+          // lastNotifiedStateRefも更新して、次回の比較をスキップ
+          lastNotifiedStateRef.current = JSON.stringify(data.content);
+        }
+      },
+    );
+
+    return cleanup;
+  }, [addTab, updateTabState, updateTabName, updateTabSaveStatus, currentTabId]);
+
+  // エディタモードでの状態変更をVSCodeに通知
+  const lastNotifiedStateRef = useRef<string>('');
+  const isUpdatingFromExtensionRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    if (!environmentInfo.isEditorMode || !currentTab) {
+      return;
+    }
+
+    // extensionからの更新中はスキップ
+    if (isUpdatingFromExtensionRef.current) {
+      console.log('[AppContent] Skipping notification (updating from extension)');
+      isUpdatingFromExtensionRef.current = false;
+      return;
+    }
+
+    // 状態が変更されたかチェック
+    const currentStateStr = JSON.stringify(currentTab.state.hierarchicalData);
+    if (currentStateStr === lastNotifiedStateRef.current) {
+      return;
+    }
+
+    console.log('[AppContent] State changed, notifying VSCode');
+    lastNotifiedStateRef.current = currentStateStr;
+
+    if (currentTab.state.hierarchicalData) {
+      notifyDocumentUpdate(currentTab.state.hierarchicalData);
+    }
+  }, [currentTab?.state.hierarchicalData, currentTab, environmentInfo.isEditorMode]);
+
   const memoizedCanvasProvider = useMemo(() => {
     if (!currentTab) return null;
+
+    const editorMode = environmentInfo.isEditorMode;
+    const extensionMode = environmentInfo.isExtension;
+
     return (
       <CanvasProvider state={currentTab.state} dispatch={dispatch}>
         <CanvasArea isHelpOpen={isHelpOpen} toggleHelp={toggleHelp} />
-        <TabHeaders
-          tabs={tabs}
-          currentTabId={currentTabId}
-          addTab={addTab}
-          closeTab={handleTabCloseRequest}
-          switchTab={switchTab}
-        />
+        {/* エディタモードではタブバーを非表示 */}
+        {!editorMode && (
+          <TabHeaders
+            tabs={tabs}
+            currentTabId={currentTabId}
+            addTab={addTab}
+            closeTab={handleTabCloseRequest}
+            switchTab={switchTab}
+          />
+        )}
         <QuickMenuBar
           saveSvg={handleSaveSvg}
           loadElements={handleLoadElements}
@@ -100,6 +198,8 @@ const AppContent: React.FC = () => {
           toggleSettings={toggleSettings}
           onAIClick={handleAIClick}
           isAILoading={isLoading}
+          isEditorMode={editorMode}
+          isVSCodeExtension={extensionMode}
         />
       </CanvasProvider>
     );
@@ -119,6 +219,7 @@ const AppContent: React.FC = () => {
     tabs,
     handleSaveSvg,
     isLoading,
+    environmentInfo,
   ]);
 
   return (

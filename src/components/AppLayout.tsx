@@ -99,6 +99,8 @@ export function AppLayout({
           toggleSettings={toggleSettings}
           onAIClick={handleAIClick}
           isAILoading={isAILoading}
+          isEditorMode={false}
+          isVSCodeExtension={false}
         />
 
         <UnsaveConfirmModal
