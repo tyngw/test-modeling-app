@@ -104,24 +104,27 @@ const AppContent: React.FC = () => {
     const cleanup = setupVSCodeMessageListener(
       // ファイル初期化
       (data) => {
-        console.log('[AppContent] Initializing with file:', data.fileName);
         setEnvironmentInfo({ isExtension: true, isEditorMode: Boolean(data.isEditorMode) });
 
-        // 新しいタブを作成してファイルデータを読み込み
-        const newTabId = addTab();
+        // VSCode拡張機能では既存のタブを使用、ブラウザでは新しいタブを作成
+        let targetTabId = currentTabId;
+        if (!currentTabId) {
+          targetTabId = addTab();
+        }
+
+        // ファイル名を常に設定
+        updateTabName(targetTabId, data.fileName);
+
         if (data.content) {
-          updateTabState(newTabId, (prevState) => ({
+          updateTabState(targetTabId, (prevState) => ({
             ...prevState,
             hierarchicalData: data.content as HierarchicalStructure,
           }));
-          updateTabName(newTabId, data.fileName);
-          updateTabSaveStatus(newTabId, true);
+          updateTabSaveStatus(targetTabId, true);
         }
       },
       // ドキュメント更新（更新後の最新データ）
       (data) => {
-        console.log('[AppContent] Document updated:', data.fileName);
-
         if (currentTabRef.current && data.content) {
           // extensionからの更新であることを記録
           isUpdatingFromExtensionRef.current = true;
@@ -130,6 +133,8 @@ const AppContent: React.FC = () => {
             ...prevState,
             hierarchicalData: data.content as HierarchicalStructure,
           }));
+
+          // ファイル名も更新（initializeWithFileが呼ばれない場合の対策）
           updateTabName(currentTabId, data.fileName);
 
           // lastNotifiedStateRefも更新して、次回の比較をスキップ
@@ -152,7 +157,6 @@ const AppContent: React.FC = () => {
 
     // extensionからの更新中はスキップ
     if (isUpdatingFromExtensionRef.current) {
-      console.log('[AppContent] Skipping notification (updating from extension)');
       isUpdatingFromExtensionRef.current = false;
       return;
     }
@@ -163,7 +167,6 @@ const AppContent: React.FC = () => {
       return;
     }
 
-    console.log('[AppContent] State changed, notifying VSCode');
     lastNotifiedStateRef.current = currentStateStr;
 
     if (currentTab.state.hierarchicalData) {
@@ -180,16 +183,13 @@ const AppContent: React.FC = () => {
     return (
       <CanvasProvider state={currentTab.state} dispatch={dispatch}>
         <CanvasArea isHelpOpen={isHelpOpen} toggleHelp={toggleHelp} />
-        {/* エディタモードではタブバーを非表示 */}
-        {!editorMode && (
-          <TabHeaders
-            tabs={tabs}
-            currentTabId={currentTabId}
-            addTab={addTab}
-            closeTab={handleTabCloseRequest}
-            switchTab={switchTab}
-          />
-        )}
+        <TabHeaders
+          tabs={tabs}
+          currentTabId={currentTabId}
+          addTab={addTab}
+          closeTab={handleTabCloseRequest}
+          switchTab={switchTab}
+        />
         <QuickMenuBar
           saveSvg={handleSaveSvg}
           loadElements={handleLoadElements}

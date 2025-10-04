@@ -142,7 +142,7 @@ const QuickMenuBar = ({
             alignItems: 'center',
             height: '100%',
             backgroundColor: theme.MENU_BAR.BACKGROUND,
-            padding: '0 20px',
+            padding: isExtension ? '0' : '0 20px', // VSCode拡張機能ではpaddingなし
             margin: 0,
             minWidth: 'max-content', // コンテンツ幅を維持
           }}
