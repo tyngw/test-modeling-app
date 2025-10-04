@@ -124,6 +124,9 @@ const QuickMenuBar = ({
         style={{
           position: 'fixed',
           width: '100%',
+          left: 0,
+          margin: 0,
+          padding: 0,
           height: ICONBAR_HEIGHT,
           overflowX: 'auto',
           WebkitOverflowScrolling: 'touch',
@@ -140,6 +143,7 @@ const QuickMenuBar = ({
             height: '100%',
             backgroundColor: theme.MENU_BAR.BACKGROUND,
             padding: '0 20px',
+            margin: 0,
             minWidth: 'max-content', // コンテンツ幅を維持
           }}
         >
