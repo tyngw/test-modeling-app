@@ -55,7 +55,7 @@ The app is available at [https://tyngw.github.io/test-modeling-app/](https://tyn
 
 - `New`: Create a new diagram (unsaved changes will be discarded)
 - `Open`: Load saved data (current data will be discarded)
-- `Save As`: Save diagram data as JSON or Markdown (when used as VSCode extension)
+- `Save As`: Save diagram data as JSON
 - `Export`: Export the diagram as SVG
 
 ---
