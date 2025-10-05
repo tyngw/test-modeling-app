@@ -55,7 +55,7 @@ The app is available at [https://tyngw.github.io/test-modeling-app/](https://tyn
 
 - `New`: Create a new diagram (unsaved changes will be discarded)
 - `Open`: Load saved data (current data will be discarded)
-- `Save As`: Save diagram data as JSON
+- `Save As`: Save diagram data as JSON or Markdown (when used as VSCode extension)
 - `Export`: Export the diagram as SVG
 
 ---
@@ -192,8 +192,9 @@ This application can be used not only as a regular web app, but also as a Visual
 
 #### Integrated File Operations
 - **Save within workspace**: Diagram data is saved as files in your workspace
-- **Real-time saving**: Edits are automatically saved as JSON files
+- **Real-time saving**: Edits are automatically saved as JSON or Markdown files
 - **File history**: Leverage VSCode's file history features
+- **Multiple formats**: Supports both JSON (full data model) and Markdown (hierarchical text format)
 
 #### Integrated Settings
 - **Integration with VSCode settings**: App settings are managed via VSCode's settings system
