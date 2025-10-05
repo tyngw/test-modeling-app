@@ -22,7 +22,10 @@ import {
 } from '../utils/vscode/vscodeMessaging';
 import { isVSCodeEditorMode, isVSCodeExtension } from '../utils/environment/environmentDetector';
 import { HierarchicalStructure } from '../types/hierarchicalTypes';
-import { loadYamlAsHierarchical, convertHierarchicalToYaml } from '../utils/file/yamlHelpers';
+import {
+  loadMarkdownAsHierarchical,
+  convertHierarchicalToMarkdown,
+} from '../utils/file/markdownHelpers';
 
 const AppContent: React.FC = () => {
   const renderCount = useRef(0);
@@ -94,7 +97,7 @@ const AppContent: React.FC = () => {
   type EnvironmentInfo = {
     isExtension: boolean;
     isEditorMode: boolean;
-    fileType: 'json' | 'yaml';
+    fileType: 'json' | 'markdown';
   };
 
   // 環境情報の状態管理
@@ -104,7 +107,7 @@ const AppContent: React.FC = () => {
     fileType: 'json',
   }));
 
-  const currentFileTypeRef = useRef<'json' | 'yaml'>(environmentInfo.fileType);
+  const currentFileTypeRef = useRef<'json' | 'markdown'>(environmentInfo.fileType);
 
   const { updateCurrentTabNumberOfSections, getCurrentTabNumberOfSections } = useTabs();
 
@@ -125,7 +128,7 @@ const AppContent: React.FC = () => {
       (data) => {
         hasInitializedFromExtensionRef.current = false;
 
-        const fileType = data.fileType === 'yaml' ? 'yaml' : 'json';
+        const fileType = data.fileType === 'markdown' ? 'markdown' : 'json';
         currentFileTypeRef.current = fileType;
         setEnvironmentInfo({
           isExtension: true,
@@ -139,8 +142,8 @@ const AppContent: React.FC = () => {
         // ファイル名を常に設定
         updateTabName(ensuredTabId, data.fileName);
 
-        if (fileType === 'yaml') {
-          const converted = loadYamlAsHierarchical((data.content as string) || '');
+        if (fileType === 'markdown') {
+          const converted = loadMarkdownAsHierarchical((data.content as string) || '');
 
           if (getCurrentTabNumberOfSections() !== 1) {
             updateCurrentTabNumberOfSections(1);
@@ -187,7 +190,7 @@ const AppContent: React.FC = () => {
           isUpdatingFromExtensionRef.current = true;
           hasInitializedFromExtensionRef.current = true;
 
-          const fileType = data.fileType === 'yaml' ? 'yaml' : 'json';
+          const fileType = data.fileType === 'markdown' ? 'markdown' : 'json';
           if (data.skipStateUpdate) {
             isUpdatingFromExtensionRef.current = false;
             return;
@@ -198,8 +201,8 @@ const AppContent: React.FC = () => {
             fileType,
           }));
 
-          if (fileType === 'yaml') {
-            const converted = loadYamlAsHierarchical((data.content as string) || '');
+          if (fileType === 'markdown') {
+            const converted = loadMarkdownAsHierarchical((data.content as string) || '');
 
             if (getCurrentTabNumberOfSections() !== 1) {
               updateCurrentTabNumberOfSections(1);
@@ -281,8 +284,10 @@ const AppContent: React.FC = () => {
         fileName: currentTab.name,
       };
 
-      if (fileType === 'yaml') {
-        payload.serializedContent = convertHierarchicalToYaml(currentTab.state.hierarchicalData);
+      if (fileType === 'markdown') {
+        payload.serializedContent = convertHierarchicalToMarkdown(
+          currentTab.state.hierarchicalData,
+        );
         payload.hierarchicalData = currentTab.state.hierarchicalData;
       }
 

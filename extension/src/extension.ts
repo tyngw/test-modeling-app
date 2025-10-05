@@ -9,7 +9,7 @@ import { DocumentSyncHandler } from './documentSyncHandler';
  * ファイル保存データの形式
  */
 interface SaveFileData {
-  type: 'svg' | 'elements' | 'hierarchical' | 'yaml';
+  type: 'svg' | 'elements' | 'hierarchical' | 'markdown';
   content: unknown;
 }
 
@@ -19,7 +19,7 @@ interface SaveFileData {
 interface LoadFileResult {
   fileName: string;
   content: unknown;
-  fileType?: 'json' | 'yaml';
+  fileType?: 'json' | 'markdown';
 }
 
 /**
@@ -100,8 +100,8 @@ export function activate(context: vscode.ExtensionContext) {
 
       // サポートされているファイル形式かチェック
       const fileExtension = path.extname(targetUri.fsPath).toLowerCase();
-      if (!['.json', '.yaml', '.yml'].includes(fileExtension)) {
-        vscode.window.showErrorMessage('JSON、YAMLファイルのみサポートされています');
+      if (!['.json', '.md', '.markdown'].includes(fileExtension)) {
+        vscode.window.showErrorMessage('JSON、Markdownファイルのみサポートされています');
         return;
       }
 
@@ -119,12 +119,12 @@ export function activate(context: vscode.ExtensionContext) {
 
       // ファイル内容を読み込み・検証
       let fileData: unknown;
-      let fileType: 'json' | 'yaml';
+      let fileType: 'json' | 'markdown';
       const initialDocumentContent = document.getText();
       try {
-        if (fileExtension === '.yaml' || fileExtension === '.yml') {
+        if (fileExtension === '.md' || fileExtension === '.markdown') {
           fileData = initialDocumentContent;
-          fileType = 'yaml';
+          fileType = 'markdown';
         } else {
           fileData = JSON.parse(initialDocumentContent);
           fileType = 'json';
@@ -238,11 +238,11 @@ export function activate(context: vscode.ExtensionContext) {
           defaultExtension = '.svg';
           filters = { 'SVG Files': ['svg'] };
           break;
-        case 'yaml':
+        case 'markdown':
           content =
             typeof data.content === 'string' ? data.content : JSON.stringify(data.content, null, 2);
-          defaultExtension = '.yaml';
-          filters = { 'YAML Files': ['yaml', 'yml'] };
+          defaultExtension = '.md';
+          filters = { 'Markdown Files': ['md', 'markdown'] };
           break;
         case 'hierarchical':
         case 'elements':
@@ -302,9 +302,9 @@ export function activate(context: vscode.ExtensionContext) {
       const openUri = await vscode.window.showOpenDialog({
         canSelectMany: false,
         filters: {
-          'Supported Files': ['json', 'yaml', 'yml'],
+          'Supported Files': ['json', 'md', 'markdown'],
           'JSON Files': ['json'],
-          'YAML Files': ['yaml', 'yml'],
+          'Markdown Files': ['md', 'markdown'],
         },
       });
 
@@ -318,11 +318,11 @@ export function activate(context: vscode.ExtensionContext) {
       const contentString = Buffer.from(fileContent).toString('utf8');
 
       let parsedContent: unknown;
-      let fileType: 'json' | 'yaml';
+      let fileType: 'json' | 'markdown';
 
-      if (fileExtension === '.yaml' || fileExtension === '.yml') {
+      if (fileExtension === '.md' || fileExtension === '.markdown') {
         parsedContent = contentString;
-        fileType = 'yaml';
+        fileType = 'markdown';
       } else {
         parsedContent = JSON.parse(contentString);
         fileType = 'json';

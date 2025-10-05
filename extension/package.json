@@ -14,8 +14,7 @@
     "onCommand:testModelingApp.openModeler",
     "onCommand:testModelingApp.openInModelingView",
     "onLanguage:json",
-    "onLanguage:yaml",
-    "onLanguage:yml"
+    "onLanguage:markdown"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -40,12 +39,12 @@
         },
         {
           "command": "testModelingApp.openInModelingView",
-          "when": "resourceExtname == .yaml",
+          "when": "resourceExtname == .md",
           "group": "navigation"
         },
         {
           "command": "testModelingApp.openInModelingView",
-          "when": "resourceExtname == .yml",
+          "when": "resourceExtname == .markdown",
           "group": "navigation"
         }
       ],
@@ -57,12 +56,12 @@
         },
         {
           "command": "testModelingApp.openInModelingView",
-          "when": "resourceExtname == .yaml",
+          "when": "resourceExtname == .md",
           "group": "navigation"
         },
         {
           "command": "testModelingApp.openInModelingView",
-          "when": "resourceExtname == .yml",
+          "when": "resourceExtname == .markdown",
           "group": "navigation"
         }
       ]

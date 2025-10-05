@@ -5,7 +5,7 @@ import { isVSCodeEditorMode } from '../environment/environmentDetector';
 
 export interface DocumentUpdatePayload {
   hierarchicalData?: unknown;
-  fileType?: 'json' | 'yaml';
+  fileType?: 'json' | 'markdown';
   serializedContent?: string;
   fileName?: string;
   content?: unknown;
@@ -126,7 +126,7 @@ export function setupVSCodeMessageListener(
   onInitializeWithFile: (data: {
     fileName: string;
     content: unknown;
-    fileType?: 'json' | 'yaml';
+    fileType?: 'json' | 'markdown';
     isEditorMode: boolean;
   }) => void,
   onDocumentUpdated: (data: DocumentUpdatedMessagePayload) => void,

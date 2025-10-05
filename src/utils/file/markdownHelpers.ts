@@ -1,19 +1,19 @@
-// src/utils/file/yamlHelpers.ts
+// src/utils/file/markdownHelpers.ts
 import { Element, MarkerType } from '../../types/types';
 import { HierarchicalNode, HierarchicalStructure } from '../../types/hierarchicalTypes';
 
 import { createNewElement } from '../element/elementHelpers';
 import { convertArrayToHierarchical } from '../hierarchical/hierarchicalConverter';
 
-type YamlMarkerProperties = Partial<{
+type MarkdownMarkerProperties = Partial<{
   startMarker: MarkerType;
   endMarker: MarkerType;
 }>;
 
-interface ParsedYamlLine {
+interface ParsedMarkdownLine {
   level: number;
   text: string;
-  properties: YamlMarkerProperties;
+  properties: MarkdownMarkerProperties;
 }
 
 const INDENT_SIZE = 2;
@@ -39,7 +39,7 @@ const markerFromString = (value: string): MarkerType | null => {
     : null;
 };
 
-const parseYamlLine = (rawLine: string): ParsedYamlLine | null => {
+const parseMarkdownLine = (rawLine: string): ParsedMarkdownLine | null => {
   if (!rawLine.trim() || rawLine.trim().startsWith('#')) {
     return null;
   }
@@ -59,7 +59,7 @@ const parseYamlLine = (rawLine: string): ParsedYamlLine | null => {
 
   const metadataMatch = content.match(/^(.*?)\s*\[(.+)]\s*$/);
   let text = content;
-  const properties: YamlMarkerProperties = {};
+  const properties: MarkdownMarkerProperties = {};
 
   if (metadataMatch) {
     text = metadataMatch[1].trim();
@@ -104,7 +104,7 @@ const parseYamlLine = (rawLine: string): ParsedYamlLine | null => {
   };
 };
 
-const buildElementsFromParsedLines = (lines: ParsedYamlLine[]): Element[] => {
+const buildElementsFromParsedLines = (lines: ParsedMarkdownLine[]): Element[] => {
   const elements: Element[] = [];
   const stack: Array<{ level: number; element: Element }> = [];
 
@@ -133,15 +133,15 @@ const buildElementsFromParsedLines = (lines: ParsedYamlLine[]): Element[] => {
   return elements;
 };
 
-export const loadYamlAsHierarchical = (yamlText: string): HierarchicalStructure | null => {
-  if (!yamlText || !yamlText.trim()) {
+export const loadMarkdownAsHierarchical = (markdownText: string): HierarchicalStructure | null => {
+  if (!markdownText || !markdownText.trim()) {
     return null;
   }
 
-  const parsedLines: ParsedYamlLine[] = [];
+  const parsedLines: ParsedMarkdownLine[] = [];
 
-  yamlText.split('\n').forEach((line) => {
-    const parsed = parseYamlLine(line);
+  markdownText.split('\n').forEach((line) => {
+    const parsed = parseMarkdownLine(line);
     if (parsed) {
       parsedLines.push(parsed);
     }
@@ -157,7 +157,7 @@ export const loadYamlAsHierarchical = (yamlText: string): HierarchicalStructure 
   return hierarchical;
 };
 
-const serializeNodeToYaml = (node: HierarchicalNode, depth = 0): string => {
+const serializeNodeToMarkdown = (node: HierarchicalNode, depth = 0): string => {
   const indent = '  '.repeat(depth);
   const label = node.data?.texts?.[0] ?? '';
   const markers: string[] = [];
@@ -173,20 +173,22 @@ const serializeNodeToYaml = (node: HierarchicalNode, depth = 0): string => {
   const metadata = markers.length > 0 ? ` [${markers.join(', ')}]` : '';
   const currentLine = `${indent}- ${label}${metadata}`;
 
-  const childLines = node.children?.map((child) => serializeNodeToYaml(child, depth + 1)) ?? [];
+  const childLines = node.children?.map((child) => serializeNodeToMarkdown(child, depth + 1)) ?? [];
 
   return [currentLine, ...childLines].join('\n');
 };
 
-export const convertHierarchicalToYaml = (hierarchical: HierarchicalStructure | null): string => {
+export const convertHierarchicalToMarkdown = (
+  hierarchical: HierarchicalStructure | null,
+): string => {
   if (!hierarchical?.root) {
     return '';
   }
 
-  return serializeNodeToYaml(hierarchical.root);
+  return serializeNodeToMarkdown(hierarchical.root);
 };
 
-export const createYamlSnapshotFromElements = (elements: Element[]): string => {
+export const createMarkdownSnapshotFromElements = (elements: Element[]): string => {
   const hierarchical = convertArrayToHierarchical(elements);
-  return convertHierarchicalToYaml(hierarchical);
+  return convertHierarchicalToMarkdown(hierarchical);
 };

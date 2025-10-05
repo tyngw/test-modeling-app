@@ -10,7 +10,7 @@ export interface DocumentUpdatePayload {
   fileName?: string;
   hierarchicalData?: unknown;
   serializedContent?: string;
-  fileType?: 'json' | 'yaml';
+  fileType?: 'json' | 'markdown';
   content?: unknown;
   skipStateUpdate?: boolean;
 }
@@ -18,10 +18,10 @@ export interface DocumentUpdatePayload {
 /**
  * ファイル形式を検出
  */
-export function detectFileTypeFromUri(uri: vscode.Uri): 'json' | 'yaml' {
+export function detectFileTypeFromUri(uri: vscode.Uri): 'json' | 'markdown' {
   const extension = path.extname(uri.fsPath).toLowerCase();
-  const YAML_EXTENSIONS = new Set(['.yaml', '.yml']);
-  return YAML_EXTENSIONS.has(extension) ? 'yaml' : 'json';
+  const MARKDOWN_EXTENSIONS = new Set(['.md', '.markdown']);
+  return MARKDOWN_EXTENSIONS.has(extension) ? 'markdown' : 'json';
 }
 
 /**
@@ -90,12 +90,12 @@ export class DocumentSyncHandler {
 
       let updatePayload: DocumentUpdatePayload;
 
-      if (fileType === 'yaml') {
+      if (fileType === 'markdown') {
         updatePayload = {
           fileName,
           content: newContent,
           serializedContent: newContent,
-          fileType: 'yaml',
+          fileType: 'markdown',
         };
       } else {
         const data = JSON.parse(newContent);
@@ -127,19 +127,19 @@ export class DocumentSyncHandler {
 
     let contentToWrite = '';
 
-    if (fileType === 'yaml') {
-      const yamlSource =
+    if (fileType === 'markdown') {
+      const markdownSource =
         typeof payload.serializedContent === 'string'
           ? payload.serializedContent
           : typeof payload.content === 'string'
             ? payload.content
             : undefined;
 
-      if (typeof yamlSource !== 'string') {
-        throw new Error('YAML payload missing serialized content');
+      if (typeof markdownSource !== 'string') {
+        throw new Error('Markdown payload missing serialized content');
       }
 
-      contentToWrite = yamlSource;
+      contentToWrite = markdownSource;
     } else {
       if (typeof payload.serializedContent === 'string') {
         contentToWrite = payload.serializedContent;
@@ -165,7 +165,7 @@ export class DocumentSyncHandler {
    */
   private sendUpdateAcknowledgment(
     originalPayload: DocumentUpdatePayload,
-    fileType: 'json' | 'yaml',
+    fileType: 'json' | 'markdown',
     contentText: string,
   ): void {
     const responsePayload: DocumentUpdatePayload = {
@@ -174,7 +174,7 @@ export class DocumentSyncHandler {
       skipStateUpdate: true, // 状態更新をスキップ（確認応答のため）
     };
 
-    if (fileType === 'yaml') {
+    if (fileType === 'markdown') {
       responsePayload.content = contentText;
       responsePayload.serializedContent = contentText;
     } else {
