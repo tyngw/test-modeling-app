@@ -10,6 +10,7 @@ import {
   loadElements as webLoadElements,
 } from './fileHelpers';
 import { convertArrayToHierarchical } from '../hierarchical/hierarchicalConverter';
+import { loadYamlAsHierarchical } from './yamlHelpers';
 
 /**
  * ファイル操作の抽象化インターフェース
@@ -297,8 +298,22 @@ class VSCodeFileOperations implements FileOperationAdapter {
               // データの形式を確認・変換
               const content = event.data.data.content;
               const fileName = event.data.data.fileName;
+              const fileType = event.data.data.fileType as 'json' | 'yaml' | undefined;
 
               // 階層構造ファイルかどうかをチェック
+              if (fileType === 'yaml' && typeof content === 'string') {
+                const hierarchicalData = loadYamlAsHierarchical(content);
+                if (!hierarchicalData) {
+                  throw new Error('YAMLファイルの解析に失敗しました');
+                }
+
+                resolve({
+                  hierarchicalData,
+                  fileName: fileName,
+                });
+                return;
+              }
+
               if (content && typeof content === 'object' && content.root && content.version) {
                 // 階層構造の場合はそのまま返す
                 resolve({

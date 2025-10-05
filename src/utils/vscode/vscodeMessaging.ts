@@ -3,6 +3,13 @@
 
 import { isVSCodeEditorMode } from '../environment/environmentDetector';
 
+export interface DocumentUpdatePayload {
+  hierarchicalData: unknown;
+  fileType?: 'json' | 'yaml';
+  serializedContent?: string;
+  fileName?: string;
+}
+
 /**
  * VSCode APIの型定義
  */
@@ -54,7 +61,7 @@ let isUpdating = false;
  * ドキュメントの更新をVSCodeに通知
  * markdown-table-editor方式: 状態変更を即座に送信
  */
-export function notifyDocumentUpdate(hierarchicalData: unknown): void {
+export function notifyDocumentUpdate(payload: DocumentUpdatePayload): void {
   console.log('[vscodeMessaging] notifyDocumentUpdate called');
   console.log('[vscodeMessaging] isVSCodeEditorMode:', isVSCodeEditorMode());
 
@@ -85,7 +92,7 @@ export function notifyDocumentUpdate(hierarchicalData: unknown): void {
 
   const message = {
     type: 'updateDocument',
-    data: hierarchicalData,
+    data: payload,
     timestamp: Date.now(),
   };
 
@@ -109,9 +116,14 @@ export function setupVSCodeMessageListener(
   onInitializeWithFile: (data: {
     fileName: string;
     content: unknown;
+    fileType?: 'json' | 'yaml';
     isEditorMode: boolean;
   }) => void,
-  onDocumentUpdated: (data: { fileName: string; content: unknown }) => void,
+  onDocumentUpdated: (data: {
+    fileName: string;
+    content: unknown;
+    fileType?: 'json' | 'yaml';
+  }) => void,
 ): () => void {
   const vscode = getVSCodeAPI();
 

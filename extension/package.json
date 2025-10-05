@@ -12,7 +12,10 @@
   ],
   "activationEvents": [
     "onCommand:testModelingApp.openModeler",
-    "onCommand:testModelingApp.openInModelingView"
+    "onCommand:testModelingApp.openInModelingView",
+    "onLanguage:json",
+    "onLanguage:yaml",
+    "onLanguage:yml"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -34,12 +37,32 @@
           "command": "testModelingApp.openInModelingView",
           "when": "resourceExtname == .json",
           "group": "navigation"
+        },
+        {
+          "command": "testModelingApp.openInModelingView",
+          "when": "resourceExtname == .yaml",
+          "group": "navigation"
+        },
+        {
+          "command": "testModelingApp.openInModelingView",
+          "when": "resourceExtname == .yml",
+          "group": "navigation"
         }
       ],
       "editor/context": [
         {
           "command": "testModelingApp.openInModelingView",
           "when": "resourceExtname == .json",
+          "group": "navigation"
+        },
+        {
+          "command": "testModelingApp.openInModelingView",
+          "when": "resourceExtname == .yaml",
+          "group": "navigation"
+        },
+        {
+          "command": "testModelingApp.openInModelingView",
+          "when": "resourceExtname == .yml",
           "group": "navigation"
         }
       ]

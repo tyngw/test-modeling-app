@@ -7,11 +7,31 @@ import * as fs from 'fs';
  * Webviewパネルとエディタの対応関係を管理
  * markdown-table-editor方式: シンプルな構造
  */
+interface DocumentUpdatePayload {
+  fileName?: string;
+  hierarchicalData?: unknown;
+  serializedContent?: string;
+  fileType?: 'json' | 'yaml';
+  content?: unknown;
+}
+
+interface SaveFileData {
+  type: 'svg' | 'elements' | 'hierarchical' | 'yaml';
+  content: unknown;
+}
+
+interface LoadFileResult {
+  fileName: string;
+  content: unknown;
+  fileType?: 'json' | 'yaml';
+}
+
 interface WebviewEditorPair {
   panel: vscode.WebviewPanel;
   document: vscode.TextDocument;
   isUpdatingFromWebview: boolean; // Webviewからの更新中フラグ
   lastUpdateTimestamp: number;
+  pendingDocumentUpdate: DocumentUpdatePayload | null;
 }
 
 /**
@@ -55,7 +75,13 @@ export function activate(context: vscode.ExtensionContext) {
 
     panel.webview.html = getWebviewContent(panel.webview, context, false);
 
-    // スタンドアロンモードではメッセージ処理は不要（Webview内で完結）
+    panel.webview.onDidReceiveMessage(
+      async (message) => {
+        await handleStandaloneWebviewMessage(message, panel);
+      },
+      undefined,
+      context.subscriptions,
+    );
   }
 
   /**
@@ -75,9 +101,10 @@ export function activate(context: vscode.ExtensionContext) {
         targetUri = activeEditor.document.uri;
       }
 
-      // JSONファイルかチェック
-      if (path.extname(targetUri.fsPath) !== '.json') {
-        vscode.window.showErrorMessage('JSONファイルのみサポートされています');
+      // サポートされているファイル形式かチェック
+      const fileExtension = path.extname(targetUri.fsPath).toLowerCase();
+      if (!['.json', '.yaml', '.yml'].includes(fileExtension)) {
+        vscode.window.showErrorMessage('JSON、YAMLファイルのみサポートされています');
         return;
       }
 
@@ -94,11 +121,19 @@ export function activate(context: vscode.ExtensionContext) {
       const document = await vscode.workspace.openTextDocument(targetUri);
 
       // ファイル内容を読み込み・検証
-      let fileData;
+      let fileData: unknown;
+      let fileType: 'json' | 'yaml';
       try {
-        fileData = JSON.parse(document.getText());
+        const rawContent = document.getText();
+        if (fileExtension === '.yaml' || fileExtension === '.yml') {
+          fileData = rawContent;
+          fileType = 'yaml';
+        } else {
+          fileData = JSON.parse(rawContent);
+          fileType = 'json';
+        }
       } catch (error) {
-        vscode.window.showErrorMessage(`JSONファイルの解析に失敗しました: ${error}`);
+        vscode.window.showErrorMessage(`ファイルの解析に失敗しました: ${error}`);
         return;
       }
 
@@ -120,6 +155,7 @@ export function activate(context: vscode.ExtensionContext) {
         document,
         isUpdatingFromWebview: false,
         lastUpdateTimestamp: Date.now(),
+        pendingDocumentUpdate: null,
       };
       activeWebviews.set(documentKey, pair);
 
@@ -132,6 +168,7 @@ export function activate(context: vscode.ExtensionContext) {
         data: {
           fileName: path.basename(targetUri.fsPath),
           content: fileData,
+          fileType,
           isEditorMode: true,
         },
       });
@@ -144,6 +181,37 @@ export function activate(context: vscode.ExtensionContext) {
         undefined,
         context.subscriptions,
       );
+
+      const flushPendingDocumentUpdate = () => {
+        if (!pair.pendingDocumentUpdate) {
+          return;
+        }
+
+        if (!pair.panel.active) {
+          return;
+        }
+
+        pair.panel.webview.postMessage({
+          type: 'documentUpdated',
+          data: pair.pendingDocumentUpdate,
+        });
+
+        pair.pendingDocumentUpdate = null;
+        pair.lastUpdateTimestamp = Date.now();
+      };
+
+      const queueDocumentUpdate = (payload: DocumentUpdatePayload) => {
+        pair.pendingDocumentUpdate = payload;
+        if (pair.panel.active) {
+          flushPendingDocumentUpdate();
+        }
+      };
+
+      const viewStateSubscription = panel.onDidChangeViewState((event) => {
+        if (event.webviewPanel.active) {
+          flushPendingDocumentUpdate();
+        }
+      });
 
       // ドキュメント変更の監視（editor → webview の同期）
       const fileName = path.basename(targetUri.fsPath); // クロージャ外で取得
@@ -171,19 +239,26 @@ export function activate(context: vscode.ExtensionContext) {
         try {
           // 変更内容をパース
           const newContent = e.document.getText();
-          const data = JSON.parse(newContent);
+          const extension = path.extname(e.document.uri.fsPath).toLowerCase();
 
-          // Webviewに送信
-          panel.webview.postMessage({
-            type: 'documentUpdated',
-            data: {
-              fileName: fileName,
+          if (extension === '.yaml' || extension === '.yml') {
+            queueDocumentUpdate({
+              fileName,
+              content: newContent,
+              fileType: 'yaml',
+            });
+          } else {
+            const data = JSON.parse(newContent);
+            queueDocumentUpdate({
+              fileName,
               content: data,
-              timestamp: Date.now(),
-            },
-          });
+              fileType: 'json',
+            });
+          }
 
-          console.log('[Extension] ✅ Document synced to webview');
+          if (!pair.pendingDocumentUpdate) {
+            console.log('[Extension] ✅ Document synced to webview');
+          }
         } catch (error) {
           console.error('[Extension] Failed to sync document to webview:', error);
         }
@@ -193,10 +268,166 @@ export function activate(context: vscode.ExtensionContext) {
       panel.onDidDispose(() => {
         activeWebviews.delete(documentKey);
         changeDocumentSubscription.dispose();
+        viewStateSubscription.dispose();
       });
     } catch (error) {
       console.error('ファイルを開く際にエラーが発生しました:', error);
       vscode.window.showErrorMessage(`ファイルを開けませんでした: ${error}`);
+    }
+  }
+
+  /**
+   * スタンドアロンWebviewからのメッセージを処理
+   */
+  async function handleStandaloneWebviewMessage(
+    message: { type: string; data?: unknown; fileName?: string },
+    panel: vscode.WebviewPanel,
+  ): Promise<void> {
+    if (!message || typeof message.type !== 'string') {
+      console.error('[Extension] Invalid message format');
+      return;
+    }
+
+    try {
+      switch (message.type) {
+        case 'saveFile':
+          await handleSaveFile(message.data as SaveFileData, message.fileName || 'untitled', panel);
+          break;
+        case 'loadFile':
+          await handleLoadFile(message.fileName, panel);
+          break;
+        default:
+          console.warn('[Extension] Unknown standalone message type:', message.type);
+      }
+    } catch (error) {
+      console.error('[Extension] Error handling standalone message:', error);
+    }
+  }
+
+  /**
+   * ファイル保存処理
+   */
+  async function handleSaveFile(
+    data: SaveFileData,
+    fileName: string,
+    panel: vscode.WebviewPanel,
+  ): Promise<void> {
+    try {
+      let content: string;
+      let defaultExtension: string;
+      let filters: Record<string, string[]>;
+
+      switch (data.type) {
+        case 'svg':
+          content = String(data.content ?? '');
+          defaultExtension = '.svg';
+          filters = { 'SVG Files': ['svg'] };
+          break;
+        case 'yaml':
+          content =
+            typeof data.content === 'string' ? data.content : JSON.stringify(data.content, null, 2);
+          defaultExtension = '.yaml';
+          filters = { 'YAML Files': ['yaml', 'yml'] };
+          break;
+        case 'hierarchical':
+        case 'elements':
+        default:
+          content = JSON.stringify(data.content, null, 2);
+          defaultExtension = '.json';
+          filters = { 'JSON Files': ['json'] };
+          break;
+      }
+
+      let finalFileName = fileName;
+      if (!path.extname(finalFileName)) {
+        finalFileName += defaultExtension;
+      }
+
+      const saveUri = await vscode.window.showSaveDialog({
+        defaultUri: vscode.Uri.file(finalFileName),
+        filters,
+      });
+
+      if (!saveUri) {
+        panel.webview.postMessage({
+          type: 'saveCompleted',
+          success: false,
+          cancelled: true,
+        });
+        return;
+      }
+
+      await vscode.workspace.fs.writeFile(saveUri, Buffer.from(content, 'utf8'));
+      panel.webview.postMessage({
+        type: 'saveCompleted',
+        success: true,
+      });
+
+      vscode.window.showInformationMessage(
+        `ファイルを保存しました: ${path.basename(saveUri.fsPath)}`,
+      );
+    } catch (error) {
+      console.error('[Extension] Save file error:', error);
+      panel.webview.postMessage({
+        type: 'saveCompleted',
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  /**
+   * ファイル読み込み処理
+   */
+  async function handleLoadFile(
+    fileName: string | undefined,
+    panel: vscode.WebviewPanel,
+  ): Promise<void> {
+    try {
+      const openUri = await vscode.window.showOpenDialog({
+        canSelectMany: false,
+        filters: {
+          'Supported Files': ['json', 'yaml', 'yml'],
+          'JSON Files': ['json'],
+          'YAML Files': ['yaml', 'yml'],
+        },
+      });
+
+      if (!openUri || !openUri[0]) {
+        return;
+      }
+
+      const fileUri = openUri[0];
+      const fileExtension = path.extname(fileUri.fsPath).toLowerCase();
+      const fileContent = await vscode.workspace.fs.readFile(fileUri);
+      const contentString = Buffer.from(fileContent).toString('utf8');
+
+      let parsedContent: unknown;
+      let fileType: 'json' | 'yaml';
+
+      if (fileExtension === '.yaml' || fileExtension === '.yml') {
+        parsedContent = contentString;
+        fileType = 'yaml';
+      } else {
+        parsedContent = JSON.parse(contentString);
+        fileType = 'json';
+      }
+
+      const result: LoadFileResult = {
+        fileName: path.basename(fileUri.fsPath),
+        content: parsedContent,
+        fileType,
+      };
+
+      panel.webview.postMessage({
+        type: 'fileLoaded',
+        data: result,
+      });
+    } catch (error) {
+      console.error('[Extension] Load file error:', error);
+      vscode.window.showErrorMessage(
+        `ファイルの読み込みに失敗しました: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
     }
   }
 
@@ -248,10 +479,13 @@ export function activate(context: vscode.ExtensionContext) {
     console.log('[Extension] isUpdatingFromWebview:', pair.isUpdatingFromWebview);
 
     try {
-      if (!data) {
-        console.error('[Extension] No data provided');
+      if (!data || typeof data !== 'object') {
+        console.error('[Extension] Invalid update payload');
         return;
       }
+
+      const payload = data as DocumentUpdatePayload;
+      const fileType: 'json' | 'yaml' = payload.fileType === 'yaml' ? 'yaml' : 'json';
 
       // 循環更新を防止
       if (pair.isUpdatingFromWebview) {
@@ -259,14 +493,26 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      // 現在のドキュメント内容と比較
       const currentContent = pair.document.getText();
-      const newContent = JSON.stringify(data, null, 2);
+      let newContent = '';
+
+      if (fileType === 'yaml') {
+        if (typeof payload.serializedContent === 'string') {
+          newContent = payload.serializedContent;
+        } else if (typeof payload.content === 'string') {
+          newContent = payload.content;
+        } else {
+          console.error('[Extension] YAML payload missing serialized content');
+          return;
+        }
+      } else {
+        const source = payload.hierarchicalData ?? payload.content;
+        newContent = JSON.stringify(source, null, 2);
+      }
 
       console.log('[Extension] Current content length:', currentContent.length);
       console.log('[Extension] New content length:', newContent.length);
 
-      // 内容が同じ場合はスキップ
       if (currentContent === newContent) {
         console.log('[Extension] Content unchanged, skipping');
         return;
@@ -274,11 +520,9 @@ export function activate(context: vscode.ExtensionContext) {
 
       console.log('[Extension] Content differs, proceeding with update');
 
-      // フラグを設定
       pair.isUpdatingFromWebview = true;
       pair.lastUpdateTimestamp = Date.now();
 
-      // エディタのテキストを更新
       const edit = new vscode.WorkspaceEdit();
       const fullRange = new vscode.Range(
         pair.document.positionAt(0),
@@ -295,20 +539,18 @@ export function activate(context: vscode.ExtensionContext) {
         await pair.document.save();
         console.log('[Extension] Document saved');
 
-        // markdown-table-editor方式: 更新後に最新データをWebviewに送り返す
-        const updatedData = JSON.parse(newContent);
-        const responseMessage = {
-          type: 'documentUpdated',
-          data: {
-            fileName: path.basename(pair.document.uri.fsPath),
-            content: updatedData,
-            timestamp: Date.now(),
-          },
+        const responsePayload: DocumentUpdatePayload = {
+          fileName: path.basename(pair.document.uri.fsPath),
+          fileType,
+          content: fileType === 'yaml' ? newContent : JSON.parse(newContent),
         };
 
-        console.log('[Extension] Sending documentUpdated message to webview');
-        console.log('[Extension] Response message type:', responseMessage.type);
-        pair.panel.webview.postMessage(responseMessage);
+        pair.panel.webview.postMessage({
+          type: 'documentUpdated',
+          data: responsePayload,
+        });
+
+        pair.pendingDocumentUpdate = null;
         console.log('[Extension] ✅ Message sent to webview');
       } else {
         console.error('[Extension] ❌ Failed to apply edit');
@@ -317,7 +559,6 @@ export function activate(context: vscode.ExtensionContext) {
       console.error('[Extension] ❌ Error in handleUpdateDocument:', error);
       console.error('[Extension] Error stack:', error instanceof Error ? error.stack : 'N/A');
     } finally {
-      // フラグをリセット
       pair.isUpdatingFromWebview = false;
       console.log('[Extension] Flags reset');
       console.log('[Extension] handleUpdateDocument END');
