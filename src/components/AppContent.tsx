@@ -13,12 +13,23 @@ import { useFileOperations } from '../hooks/useFileOperations';
 import { useAIGeneration } from '../hooks/useAIGeneration';
 import { useTabManagement } from '../hooks/useTabManagement';
 import { useModalState } from '../hooks/useModalState';
-import { setupVSCodeMessageListener, notifyDocumentUpdate } from '../utils/vscode/vscodeMessaging';
+import { useTabs } from '../context/TabsContext';
+import {
+  setupVSCodeMessageListener,
+  notifyDocumentUpdate,
+  DocumentUpdatePayload,
+  DocumentUpdatedMessagePayload,
+} from '../utils/vscode/vscodeMessaging';
 import { isVSCodeEditorMode, isVSCodeExtension } from '../utils/environment/environmentDetector';
 import { HierarchicalStructure } from '../types/hierarchicalTypes';
+import {
+  loadMarkdownAsHierarchical,
+  convertHierarchicalToMarkdown,
+} from '../utils/file/markdownHelpers';
 
 const AppContent: React.FC = () => {
   const renderCount = useRef(0);
+  const hasInitializedFromExtensionRef = useRef(false);
 
   // レンダリングの追跡
   useEffect(() => {
@@ -83,11 +94,22 @@ const AppContent: React.FC = () => {
     updateTabSaveStatus,
   });
 
+  type EnvironmentInfo = {
+    isExtension: boolean;
+    isEditorMode: boolean;
+    fileType: 'json' | 'markdown';
+  };
+
   // 環境情報の状態管理
-  const [environmentInfo, setEnvironmentInfo] = useState(() => ({
+  const [environmentInfo, setEnvironmentInfo] = useState<EnvironmentInfo>(() => ({
     isExtension: isVSCodeExtension(),
     isEditorMode: isVSCodeEditorMode(),
+    fileType: 'json',
   }));
+
+  const currentFileTypeRef = useRef<'json' | 'markdown'>(environmentInfo.fileType);
+
+  const { updateCurrentTabNumberOfSections, getCurrentTabNumberOfSections } = useTabs();
 
   // 最新のcurrentTabを追跡
   const currentTabRef = useRef(currentTab);
@@ -104,47 +126,128 @@ const AppContent: React.FC = () => {
     const cleanup = setupVSCodeMessageListener(
       // ファイル初期化
       (data) => {
-        setEnvironmentInfo({ isExtension: true, isEditorMode: Boolean(data.isEditorMode) });
+        hasInitializedFromExtensionRef.current = false;
+
+        const fileType = data.fileType === 'markdown' ? 'markdown' : 'json';
+        currentFileTypeRef.current = fileType;
+        setEnvironmentInfo({
+          isExtension: true,
+          isEditorMode: Boolean(data.isEditorMode),
+          fileType,
+        });
 
         // VSCode拡張機能では既存のタブを使用、ブラウザでは新しいタブを作成
-        let targetTabId = currentTabId;
-        if (!currentTabId) {
-          targetTabId = addTab();
-        }
+        const ensuredTabId = currentTabId ?? addTab();
 
         // ファイル名を常に設定
-        updateTabName(targetTabId, data.fileName);
+        updateTabName(ensuredTabId, data.fileName);
 
-        if (data.content) {
-          updateTabState(targetTabId, (prevState) => ({
+        if (fileType === 'markdown') {
+          const converted = loadMarkdownAsHierarchical((data.content as string) || '');
+
+          if (getCurrentTabNumberOfSections() !== 1) {
+            updateCurrentTabNumberOfSections(1);
+          }
+
+          updateTabState(ensuredTabId, (prevState) => ({
+            ...prevState,
+            numberOfSections: 1,
+            ...(converted
+              ? {
+                  hierarchicalData: converted,
+                }
+              : {}),
+          }));
+
+          if (converted) {
+            updateTabSaveStatus(ensuredTabId, true);
+          }
+
+          const serializedForComparison = converted
+            ? JSON.stringify(converted)
+            : JSON.stringify(data.content);
+          lastNotifiedStateRef.current = serializedForComparison;
+        } else if (data.content) {
+          updateTabState(ensuredTabId, (prevState) => ({
             ...prevState,
             hierarchicalData: data.content as HierarchicalStructure,
           }));
-          updateTabSaveStatus(targetTabId, true);
+          updateTabSaveStatus(ensuredTabId, true);
+          lastNotifiedStateRef.current = JSON.stringify(data.content);
         }
+
+        hasInitializedFromExtensionRef.current = true;
       },
       // ドキュメント更新（更新後の最新データ）
-      (data) => {
+      (data: DocumentUpdatedMessagePayload) => {
         if (currentTabRef.current && data.content) {
+          const activeTabId = currentTabId;
+          if (!activeTabId) {
+            return;
+          }
+
           // extensionからの更新であることを記録
           isUpdatingFromExtensionRef.current = true;
+          hasInitializedFromExtensionRef.current = true;
 
-          updateTabState(currentTabId, (prevState) => ({
-            ...prevState,
-            hierarchicalData: data.content as HierarchicalStructure,
+          const fileType = data.fileType === 'markdown' ? 'markdown' : 'json';
+          if (data.skipStateUpdate) {
+            isUpdatingFromExtensionRef.current = false;
+            return;
+          }
+          currentFileTypeRef.current = fileType;
+          setEnvironmentInfo((prev) => ({
+            ...prev,
+            fileType,
           }));
 
-          // ファイル名も更新（initializeWithFileが呼ばれない場合の対策）
-          updateTabName(currentTabId, data.fileName);
+          if (fileType === 'markdown') {
+            const converted = loadMarkdownAsHierarchical((data.content as string) || '');
 
-          // lastNotifiedStateRefも更新して、次回の比較をスキップ
-          lastNotifiedStateRef.current = JSON.stringify(data.content);
+            if (getCurrentTabNumberOfSections() !== 1) {
+              updateCurrentTabNumberOfSections(1);
+            }
+
+            updateTabState(activeTabId, (prevState) => ({
+              ...prevState,
+              numberOfSections: 1,
+              ...(converted
+                ? {
+                    hierarchicalData: converted,
+                  }
+                : {}),
+            }));
+
+            const serializedForComparison = converted
+              ? JSON.stringify(converted)
+              : JSON.stringify(data.content);
+            lastNotifiedStateRef.current = serializedForComparison;
+          } else {
+            updateTabState(activeTabId, (prevState) => ({
+              ...prevState,
+              hierarchicalData: data.content as HierarchicalStructure,
+            }));
+            lastNotifiedStateRef.current = JSON.stringify(data.content);
+          }
+
+          // ファイル名も更新（initializeWithFileが呼ばれない場合の対策）
+          updateTabName(activeTabId, data.fileName);
+
+          // lastNotifiedStateRefは上記で更新済み
         }
       },
     );
 
     return cleanup;
-  }, [addTab, updateTabState, updateTabName, updateTabSaveStatus, currentTabId]);
+  }, [
+    addTab,
+    updateTabState,
+    updateTabName,
+    updateTabSaveStatus,
+    currentTabId,
+    getCurrentTabNumberOfSections,
+    updateCurrentTabNumberOfSections,
+  ]);
 
   // エディタモードでの状態変更をVSCodeに通知
   const lastNotifiedStateRef = useRef<string>('');
@@ -152,6 +255,10 @@ const AppContent: React.FC = () => {
 
   useEffect(() => {
     if (!environmentInfo.isEditorMode || !currentTab) {
+      return;
+    }
+
+    if (!hasInitializedFromExtensionRef.current) {
       return;
     }
 
@@ -170,7 +277,21 @@ const AppContent: React.FC = () => {
     lastNotifiedStateRef.current = currentStateStr;
 
     if (currentTab.state.hierarchicalData) {
-      notifyDocumentUpdate(currentTab.state.hierarchicalData);
+      const fileType = currentFileTypeRef.current;
+      const payload: DocumentUpdatePayload = {
+        hierarchicalData: currentTab.state.hierarchicalData,
+        fileType,
+        fileName: currentTab.name,
+      };
+
+      if (fileType === 'markdown') {
+        payload.serializedContent = convertHierarchicalToMarkdown(
+          currentTab.state.hierarchicalData,
+        );
+        payload.hierarchicalData = currentTab.state.hierarchicalData;
+      }
+
+      notifyDocumentUpdate(payload);
     }
   }, [currentTab?.state.hierarchicalData, currentTab, environmentInfo.isEditorMode]);
 

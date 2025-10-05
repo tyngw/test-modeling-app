@@ -12,7 +12,9 @@
   ],
   "activationEvents": [
     "onCommand:testModelingApp.openModeler",
-    "onCommand:testModelingApp.openInModelingView"
+    "onCommand:testModelingApp.openInModelingView",
+    "onLanguage:json",
+    "onLanguage:markdown"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -34,12 +36,32 @@
           "command": "testModelingApp.openInModelingView",
           "when": "resourceExtname == .json",
           "group": "navigation"
+        },
+        {
+          "command": "testModelingApp.openInModelingView",
+          "when": "resourceExtname == .md",
+          "group": "navigation"
+        },
+        {
+          "command": "testModelingApp.openInModelingView",
+          "when": "resourceExtname == .markdown",
+          "group": "navigation"
         }
       ],
       "editor/context": [
         {
           "command": "testModelingApp.openInModelingView",
           "when": "resourceExtname == .json",
+          "group": "navigation"
+        },
+        {
+          "command": "testModelingApp.openInModelingView",
+          "when": "resourceExtname == .md",
+          "group": "navigation"
+        },
+        {
+          "command": "testModelingApp.openInModelingView",
+          "when": "resourceExtname == .markdown",
           "group": "navigation"
         }
       ]

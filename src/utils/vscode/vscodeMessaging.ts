@@ -3,6 +3,19 @@
 
 import { isVSCodeEditorMode } from '../environment/environmentDetector';
 
+export interface DocumentUpdatePayload {
+  hierarchicalData?: unknown;
+  fileType?: 'json' | 'markdown';
+  serializedContent?: string;
+  fileName?: string;
+  content?: unknown;
+  skipStateUpdate?: boolean;
+}
+
+export interface DocumentUpdatedMessagePayload extends DocumentUpdatePayload {
+  fileName: string;
+}
+
 /**
  * VSCode APIの型定義
  */
@@ -49,22 +62,18 @@ function getVSCodeAPI(): VSCodeAPI | null {
 
 // 更新中フラグ（送信中の重複防止）
 let isUpdating = false;
+let pendingUpdatePayload: DocumentUpdatePayload | null = null;
 
 /**
  * ドキュメントの更新をVSCodeに通知
  * markdown-table-editor方式: 状態変更を即座に送信
  */
-export function notifyDocumentUpdate(hierarchicalData: unknown): void {
+export function notifyDocumentUpdate(payload: DocumentUpdatePayload): void {
   console.log('[vscodeMessaging] notifyDocumentUpdate called');
   console.log('[vscodeMessaging] isVSCodeEditorMode:', isVSCodeEditorMode());
 
   if (!isVSCodeEditorMode()) {
     console.log('[vscodeMessaging] Not in editor mode, skipping');
-    return;
-  }
-
-  if (isUpdating) {
-    console.log('[vscodeMessaging] Update in progress, skipping');
     return;
   }
 
@@ -81,11 +90,18 @@ export function notifyDocumentUpdate(hierarchicalData: unknown): void {
     return;
   }
 
+  if (isUpdating) {
+    console.log('[vscodeMessaging] Update in progress, queueing latest payload');
+    pendingUpdatePayload = { ...payload };
+    return;
+  }
+
+  pendingUpdatePayload = null;
   isUpdating = true;
 
   const message = {
     type: 'updateDocument',
-    data: hierarchicalData,
+    data: payload,
     timestamp: Date.now(),
   };
 
@@ -99,6 +115,7 @@ export function notifyDocumentUpdate(hierarchicalData: unknown): void {
   } catch (error) {
     console.error('[vscodeMessaging] ❌ Error sending message:', error);
     isUpdating = false;
+    pendingUpdatePayload = null;
   }
 }
 
@@ -109,9 +126,10 @@ export function setupVSCodeMessageListener(
   onInitializeWithFile: (data: {
     fileName: string;
     content: unknown;
+    fileType?: 'json' | 'markdown';
     isEditorMode: boolean;
   }) => void,
-  onDocumentUpdated: (data: { fileName: string; content: unknown }) => void,
+  onDocumentUpdated: (data: DocumentUpdatedMessagePayload) => void,
 ): () => void {
   const vscode = getVSCodeAPI();
 
@@ -147,11 +165,23 @@ export function setupVSCodeMessageListener(
       case 'documentUpdated':
         // markdown-table-editor方式: 更新後の最新データを受信
         console.log('[vscodeMessaging] Document updated from extension');
+        isUpdating = false; // 更新完了
         if (message.data) {
-          isUpdating = false; // 更新完了
           console.log('[vscodeMessaging] Calling onDocumentUpdated');
-          onDocumentUpdated(message.data);
+          onDocumentUpdated(message.data as DocumentUpdatedMessagePayload);
         }
+
+        if (pendingUpdatePayload) {
+          const nextPayload = pendingUpdatePayload;
+          pendingUpdatePayload = null;
+          notifyDocumentUpdate(nextPayload);
+        }
+        break;
+
+      case 'updateError':
+        console.error('[vscodeMessaging] Update error from extension:', message.message);
+        isUpdating = false;
+        pendingUpdatePayload = null;
         break;
 
       default:

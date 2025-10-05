@@ -3,15 +3,32 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 
+import { DocumentSyncHandler } from './documentSyncHandler';
+
 /**
- * Webviewパネルとエディタの対応関係を管理
- * markdown-table-editor方式: シンプルな構造
+ * ファイル保存データの形式
+ */
+interface SaveFileData {
+  type: 'svg' | 'elements' | 'hierarchical' | 'markdown';
+  content: unknown;
+}
+
+/**
+ * ファイル読み込み結果の形式
+ */
+interface LoadFileResult {
+  fileName: string;
+  content: unknown;
+  fileType?: 'json' | 'markdown';
+}
+
+/**
+ * Webviewとエディタのペア管理
  */
 interface WebviewEditorPair {
   panel: vscode.WebviewPanel;
   document: vscode.TextDocument;
-  isUpdatingFromWebview: boolean; // Webviewからの更新中フラグ
-  lastUpdateTimestamp: number;
+  syncHandler: DocumentSyncHandler;
 }
 
 /**
@@ -55,7 +72,13 @@ export function activate(context: vscode.ExtensionContext) {
 
     panel.webview.html = getWebviewContent(panel.webview, context, false);
 
-    // スタンドアロンモードではメッセージ処理は不要（Webview内で完結）
+    panel.webview.onDidReceiveMessage(
+      async (message) => {
+        await handleStandaloneWebviewMessage(message, panel);
+      },
+      undefined,
+      context.subscriptions,
+    );
   }
 
   /**
@@ -75,9 +98,10 @@ export function activate(context: vscode.ExtensionContext) {
         targetUri = activeEditor.document.uri;
       }
 
-      // JSONファイルかチェック
-      if (path.extname(targetUri.fsPath) !== '.json') {
-        vscode.window.showErrorMessage('JSONファイルのみサポートされています');
+      // サポートされているファイル形式かチェック
+      const fileExtension = path.extname(targetUri.fsPath).toLowerCase();
+      if (!['.json', '.md', '.markdown'].includes(fileExtension)) {
+        vscode.window.showErrorMessage('JSON、Markdownファイルのみサポートされています');
         return;
       }
 
@@ -94,11 +118,19 @@ export function activate(context: vscode.ExtensionContext) {
       const document = await vscode.workspace.openTextDocument(targetUri);
 
       // ファイル内容を読み込み・検証
-      let fileData;
+      let fileData: unknown;
+      let fileType: 'json' | 'markdown';
+      const initialDocumentContent = document.getText();
       try {
-        fileData = JSON.parse(document.getText());
+        if (fileExtension === '.md' || fileExtension === '.markdown') {
+          fileData = initialDocumentContent;
+          fileType = 'markdown';
+        } else {
+          fileData = JSON.parse(initialDocumentContent);
+          fileType = 'json';
+        }
       } catch (error) {
-        vscode.window.showErrorMessage(`JSONファイルの解析に失敗しました: ${error}`);
+        vscode.window.showErrorMessage(`ファイルの解析に失敗しました: ${error}`);
         return;
       }
 
@@ -114,12 +146,14 @@ export function activate(context: vscode.ExtensionContext) {
         },
       );
 
+      // 同期ハンドラーを作成
+      const syncHandler = new DocumentSyncHandler(panel, document);
+
       // ペアを登録
       const pair: WebviewEditorPair = {
         panel,
         document,
-        isUpdatingFromWebview: false,
-        lastUpdateTimestamp: Date.now(),
+        syncHandler,
       };
       activeWebviews.set(documentKey, pair);
 
@@ -132,6 +166,7 @@ export function activate(context: vscode.ExtensionContext) {
         data: {
           fileName: path.basename(targetUri.fsPath),
           content: fileData,
+          fileType,
           isEditorMode: true,
         },
       });
@@ -145,58 +180,169 @@ export function activate(context: vscode.ExtensionContext) {
         context.subscriptions,
       );
 
-      // ドキュメント変更の監視（editor → webview の同期）
-      const fileName = path.basename(targetUri.fsPath); // クロージャ外で取得
-      const changeDocumentSubscription = vscode.workspace.onDidChangeTextDocument((e) => {
-        // このドキュメントの変更かチェック
-        if (e.document.uri.toString() !== documentKey) {
-          return;
-        }
-
-        // Webviewからの更新による変更はスキップ
-        if (pair.isUpdatingFromWebview) {
-          console.log('[Extension] Skipping document change (from webview)');
-          return;
-        }
-
-        // 最近更新されたばかりの場合はスキップ（デバウンス）
-        const timeSinceLastUpdate = Date.now() - pair.lastUpdateTimestamp;
-        if (timeSinceLastUpdate < 100) {
-          console.log('[Extension] Skipping document change (too soon)');
-          return;
-        }
-
-        console.log('[Extension] Document changed, syncing to webview');
-
-        try {
-          // 変更内容をパース
-          const newContent = e.document.getText();
-          const data = JSON.parse(newContent);
-
-          // Webviewに送信
-          panel.webview.postMessage({
-            type: 'documentUpdated',
-            data: {
-              fileName: fileName,
-              content: data,
-              timestamp: Date.now(),
-            },
-          });
-
-          console.log('[Extension] ✅ Document synced to webview');
-        } catch (error) {
-          console.error('[Extension] Failed to sync document to webview:', error);
-        }
-      });
-
       // パネルが閉じられたときの処理
       panel.onDidDispose(() => {
         activeWebviews.delete(documentKey);
-        changeDocumentSubscription.dispose();
+        pair.syncHandler.dispose();
       });
     } catch (error) {
       console.error('ファイルを開く際にエラーが発生しました:', error);
       vscode.window.showErrorMessage(`ファイルを開けませんでした: ${error}`);
+    }
+  }
+
+  /**
+   * スタンドアロンWebviewからのメッセージを処理
+   */
+  async function handleStandaloneWebviewMessage(
+    message: { type: string; data?: unknown; fileName?: string },
+    panel: vscode.WebviewPanel,
+  ): Promise<void> {
+    if (!message || typeof message.type !== 'string') {
+      console.error('[Extension] Invalid message format');
+      return;
+    }
+
+    try {
+      switch (message.type) {
+        case 'saveFile':
+          await handleSaveFile(message.data as SaveFileData, message.fileName || 'untitled', panel);
+          break;
+        case 'loadFile':
+          await handleLoadFile(message.fileName, panel);
+          break;
+        default:
+          console.warn('[Extension] Unknown standalone message type:', message.type);
+      }
+    } catch (error) {
+      console.error('[Extension] Error handling standalone message:', error);
+    }
+  }
+
+  /**
+   * ファイル保存処理
+   */
+  async function handleSaveFile(
+    data: SaveFileData,
+    fileName: string,
+    panel: vscode.WebviewPanel,
+  ): Promise<void> {
+    try {
+      let content: string;
+      let defaultExtension: string;
+      let filters: Record<string, string[]>;
+
+      switch (data.type) {
+        case 'svg':
+          content = String(data.content ?? '');
+          defaultExtension = '.svg';
+          filters = { 'SVG Files': ['svg'] };
+          break;
+        case 'markdown':
+          content =
+            typeof data.content === 'string' ? data.content : JSON.stringify(data.content, null, 2);
+          defaultExtension = '.md';
+          filters = { 'Markdown Files': ['md', 'markdown'] };
+          break;
+        case 'hierarchical':
+        case 'elements':
+        default:
+          content = JSON.stringify(data.content, null, 2);
+          defaultExtension = '.json';
+          filters = { 'JSON Files': ['json'] };
+          break;
+      }
+
+      let finalFileName = fileName;
+      if (!path.extname(finalFileName)) {
+        finalFileName += defaultExtension;
+      }
+
+      const saveUri = await vscode.window.showSaveDialog({
+        defaultUri: vscode.Uri.file(finalFileName),
+        filters,
+      });
+
+      if (!saveUri) {
+        panel.webview.postMessage({
+          type: 'saveCompleted',
+          success: false,
+          cancelled: true,
+        });
+        return;
+      }
+
+      await vscode.workspace.fs.writeFile(saveUri, Buffer.from(content, 'utf8'));
+      panel.webview.postMessage({
+        type: 'saveCompleted',
+        success: true,
+      });
+
+      vscode.window.showInformationMessage(
+        `ファイルを保存しました: ${path.basename(saveUri.fsPath)}`,
+      );
+    } catch (error) {
+      console.error('[Extension] Save file error:', error);
+      panel.webview.postMessage({
+        type: 'saveCompleted',
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  /**
+   * ファイル読み込み処理
+   */
+  async function handleLoadFile(
+    fileName: string | undefined,
+    panel: vscode.WebviewPanel,
+  ): Promise<void> {
+    try {
+      const openUri = await vscode.window.showOpenDialog({
+        canSelectMany: false,
+        filters: {
+          'Supported Files': ['json', 'md', 'markdown'],
+          'JSON Files': ['json'],
+          'Markdown Files': ['md', 'markdown'],
+        },
+      });
+
+      if (!openUri || !openUri[0]) {
+        return;
+      }
+
+      const fileUri = openUri[0];
+      const fileExtension = path.extname(fileUri.fsPath).toLowerCase();
+      const fileContent = await vscode.workspace.fs.readFile(fileUri);
+      const contentString = Buffer.from(fileContent).toString('utf8');
+
+      let parsedContent: unknown;
+      let fileType: 'json' | 'markdown';
+
+      if (fileExtension === '.md' || fileExtension === '.markdown') {
+        parsedContent = contentString;
+        fileType = 'markdown';
+      } else {
+        parsedContent = JSON.parse(contentString);
+        fileType = 'json';
+      }
+
+      const result: LoadFileResult = {
+        fileName: path.basename(fileUri.fsPath),
+        content: parsedContent,
+        fileType,
+      };
+
+      panel.webview.postMessage({
+        type: 'fileLoaded',
+        data: result,
+      });
+    } catch (error) {
+      console.error('[Extension] Load file error:', error);
+      vscode.window.showErrorMessage(
+        `ファイルの読み込みに失敗しました: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
     }
   }
 
@@ -207,12 +353,6 @@ export function activate(context: vscode.ExtensionContext) {
     message: { type: string; data?: unknown; timestamp?: number },
     pair: WebviewEditorPair,
   ): Promise<void> {
-    console.log('[Extension] ========================================');
-    console.log('[Extension] Message received from webview');
-    console.log('[Extension] Message type:', message?.type);
-    console.log('[Extension] Has data:', !!message?.data);
-    console.log('[Extension] ========================================');
-
     if (!message || typeof message.type !== 'string') {
       console.error('[Extension] Invalid message format');
       return;
@@ -221,8 +361,7 @@ export function activate(context: vscode.ExtensionContext) {
     try {
       switch (message.type) {
         case 'updateDocument':
-          console.log('[Extension] Processing updateDocument');
-          await handleUpdateDocument(message.data, pair);
+          await pair.syncHandler.handleWebviewUpdate(message.data);
           break;
 
         case 'ready':
@@ -234,94 +373,12 @@ export function activate(context: vscode.ExtensionContext) {
       }
     } catch (error) {
       console.error('[Extension] Error handling message:', error);
-    }
-  }
 
-  /**
-   * Webviewからの変更をエディタに反映
-   * markdown-table-editor方式: 更新後に最新データを送り返す
-   */
-  async function handleUpdateDocument(data: unknown, pair: WebviewEditorPair): Promise<void> {
-    console.log('[Extension] ----------------------------------------');
-    console.log('[Extension] handleUpdateDocument START');
-    console.log('[Extension] Has data:', !!data);
-    console.log('[Extension] isUpdatingFromWebview:', pair.isUpdatingFromWebview);
-
-    try {
-      if (!data) {
-        console.error('[Extension] No data provided');
-        return;
-      }
-
-      // 循環更新を防止
-      if (pair.isUpdatingFromWebview) {
-        console.log('[Extension] Already updating, skipping');
-        return;
-      }
-
-      // 現在のドキュメント内容と比較
-      const currentContent = pair.document.getText();
-      const newContent = JSON.stringify(data, null, 2);
-
-      console.log('[Extension] Current content length:', currentContent.length);
-      console.log('[Extension] New content length:', newContent.length);
-
-      // 内容が同じ場合はスキップ
-      if (currentContent === newContent) {
-        console.log('[Extension] Content unchanged, skipping');
-        return;
-      }
-
-      console.log('[Extension] Content differs, proceeding with update');
-
-      // フラグを設定
-      pair.isUpdatingFromWebview = true;
-      pair.lastUpdateTimestamp = Date.now();
-
-      // エディタのテキストを更新
-      const edit = new vscode.WorkspaceEdit();
-      const fullRange = new vscode.Range(
-        pair.document.positionAt(0),
-        pair.document.positionAt(currentContent.length),
-      );
-      edit.replace(pair.document.uri, fullRange, newContent);
-
-      console.log('[Extension] Applying edit...');
-      const success = await vscode.workspace.applyEdit(edit);
-      console.log('[Extension] Apply edit result:', success);
-
-      if (success) {
-        console.log('[Extension] Document updated successfully');
-        await pair.document.save();
-        console.log('[Extension] Document saved');
-
-        // markdown-table-editor方式: 更新後に最新データをWebviewに送り返す
-        const updatedData = JSON.parse(newContent);
-        const responseMessage = {
-          type: 'documentUpdated',
-          data: {
-            fileName: path.basename(pair.document.uri.fsPath),
-            content: updatedData,
-            timestamp: Date.now(),
-          },
-        };
-
-        console.log('[Extension] Sending documentUpdated message to webview');
-        console.log('[Extension] Response message type:', responseMessage.type);
-        pair.panel.webview.postMessage(responseMessage);
-        console.log('[Extension] ✅ Message sent to webview');
-      } else {
-        console.error('[Extension] ❌ Failed to apply edit');
-      }
-    } catch (error) {
-      console.error('[Extension] ❌ Error in handleUpdateDocument:', error);
-      console.error('[Extension] Error stack:', error instanceof Error ? error.stack : 'N/A');
-    } finally {
-      // フラグをリセット
-      pair.isUpdatingFromWebview = false;
-      console.log('[Extension] Flags reset');
-      console.log('[Extension] handleUpdateDocument END');
-      console.log('[Extension] ----------------------------------------');
+      // エラーをWebviewに通知
+      pair.panel.webview.postMessage({
+        type: 'updateError',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
     }
   }
 }
