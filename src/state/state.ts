@@ -54,6 +54,7 @@ import {
 import { updateHierarchyWithElementChanges } from '../utils/hierarchical/hierarchicalMaintainer';
 import {
   addElementToHierarchy,
+  addSiblingToHierarchy,
   addMultipleSiblingsToHierarchy,
   deleteElementFromHierarchy,
   moveElementInHierarchy,
@@ -1411,30 +1412,9 @@ const actionHandlers: Record<string, ActionHandler> = {
     // Undoスナップショットを保存
     saveHierarchicalSnapshot(state.hierarchicalData);
 
-    // 同じ階層の兄弟要素を取得
-    // 選択された要素の親を取得
-    const parentNode = findParentNodeInHierarchy(state.hierarchicalData, selectedElement.id);
-    const parent = parentNode ? parentNode.data : null;
-
-    // 親の子要素（選択された要素の兄弟要素）を取得
-    const siblings = parent
-      ? getChildrenFromHierarchy(state.hierarchicalData, parent.id).filter((el) => el.visible)
-      : [];
-
-    // 新しい要素の初期座標を計算
-    let initialX: number;
-    let initialY: number;
-
-    if (siblings.length > 0) {
-      // 同じ階層の最後の要素の下に配置
-      const lastSibling = siblings[siblings.length - 1];
-      initialX = lastSibling.x; // 最後の兄弟要素のX座標と同じ
-      initialY = lastSibling.y + lastSibling.height + OFFSET.Y; // 最後の兄弟要素の下端+OFFSETに配置
-    } else {
-      // 兄弟要素がない場合：選択された要素と同じ位置に配置
-      initialX = selectedElement.x;
-      initialY = selectedElement.y + selectedElement.height + OFFSET.Y;
-    }
+    // 新しい要素の初期座標を計算（選択された要素の直下に配置）
+    const initialX = selectedElement.x;
+    const initialY = selectedElement.y + selectedElement.height + OFFSET.Y;
 
     // 兄弟要素を作成
     const newElement: Element = {
@@ -1443,8 +1423,8 @@ const actionHandlers: Record<string, ActionHandler> = {
         direction: selectedElement.direction, // 選択された要素のdirectionを継承
       }),
       id: Date.now().toString(),
-      x: initialX, // 計算された初期X座標を設定
-      y: initialY, // 計算された初期Y座標を設定
+      x: initialX,
+      y: initialY,
       texts: Array(state.numberOfSections).fill(''),
       selected: true,
     };
@@ -1454,10 +1434,15 @@ const actionHandlers: Record<string, ActionHandler> = {
       `[ADD_SIBLING_ELEMENT] 新要素作成: ID=${newElement.id}, X=${newElement.x}, Y=${newElement.y}`,
     );
 
-    // 階層構造に要素を追加
+    // 階層構造に要素を追加（選択された要素の直後に挿入）
     let result: HierarchicalOperationResult;
     try {
-      result = addElementToHierarchy(state.hierarchicalData, parent?.id || null, newElement);
+      result = addSiblingToHierarchy(
+        state.hierarchicalData,
+        selectedElement.id,
+        newElement,
+        'after',
+      );
     } catch {
       return state; // エラー時は元の状態を返す
     }
