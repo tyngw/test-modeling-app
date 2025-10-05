@@ -4,6 +4,7 @@ import { HierarchicalNode, HierarchicalStructure } from '../../types/hierarchica
 
 import { createNewElement } from '../element/elementHelpers';
 import { convertArrayToHierarchical } from '../hierarchical/hierarchicalConverter';
+import { getIndentSpacesPerLevel, setIndentSpacesPerLevel } from '../storage/localStorageHelpers';
 
 type MarkdownMarkerProperties = Partial<{
   startMarker: MarkerType;
@@ -16,30 +17,65 @@ interface ParsedMarkdownLine {
   properties: MarkdownMarkerProperties;
 }
 
-const INDENT_SIZE = 2;
-
-const VALID_MARKERS: readonly MarkerType[] = [
-  'arrow',
-  'filled_arrow',
-  'circle',
-  'filled_circle',
-  'square',
-  'filled_square',
-  'diamond',
-  'filled_diamond',
-  'none',
-];
-
 const DEFAULT_MARKER: MarkerType = 'none';
 
-const markerFromString = (value: string): MarkerType | null => {
-  const normalized = value.trim();
-  return (VALID_MARKERS as readonly string[]).includes(normalized)
-    ? (normalized as MarkerType)
-    : null;
+/**
+ * Markdownテキストからインデントパターンを検出し、設定に反映する
+ * @param markdownText 解析対象のMarkdownテキスト
+ * @returns 検出されたインデント数（2または4、検出できない場合は現在の設定値）
+ */
+const detectAndApplyIndentPattern = (markdownText: string): number => {
+  const lines = markdownText.split('\n');
+  const indentCounts: number[] = [];
+
+  // インデントされた行を検出
+  for (const line of lines) {
+    if (!line.trim() || line.trim().startsWith('#')) {
+      continue;
+    }
+
+    const dashIndex = line.indexOf('-');
+    if (dashIndex === -1) {
+      continue;
+    }
+
+    const indent = line.slice(0, dashIndex);
+    const spaceCount = indent.replace(/\t/g, '  ').length;
+
+    // インデントがある行のみ記録
+    if (spaceCount > 0) {
+      indentCounts.push(spaceCount);
+    }
+  }
+
+  if (indentCounts.length === 0) {
+    return getIndentSpacesPerLevel(); // インデントが検出されない場合は現在の設定を維持
+  }
+
+  // 最小のインデント数を基準とする（通常は最初のレベルのインデント）
+  const minIndent = Math.min(...indentCounts);
+
+  // 2または4に正規化
+  let detectedIndent: number;
+  if (minIndent <= 2) {
+    detectedIndent = 2;
+  } else {
+    detectedIndent = 4;
+  }
+
+  // 現在の設定と異なる場合のみ更新
+  const currentSetting = getIndentSpacesPerLevel();
+  if (detectedIndent !== currentSetting) {
+    setIndentSpacesPerLevel(detectedIndent);
+    console.log(
+      `Markdownファイルのインデントパターンを検出し、設定を${detectedIndent}スペースに更新しました`,
+    );
+  }
+
+  return detectedIndent;
 };
 
-const parseMarkdownLine = (rawLine: string): ParsedMarkdownLine | null => {
+const parseMarkdownLine = (rawLine: string, spacesPerLevel: number): ParsedMarkdownLine | null => {
   if (!rawLine.trim() || rawLine.trim().startsWith('#')) {
     return null;
   }
@@ -50,7 +86,7 @@ const parseMarkdownLine = (rawLine: string): ParsedMarkdownLine | null => {
   }
 
   const indent = rawLine.slice(0, dashIndex);
-  const level = Math.floor(indent.replace(/\t/g, '  ').length / INDENT_SIZE);
+  const level = Math.floor(indent.replace(/\t/g, '  ').length / spacesPerLevel);
 
   const content = rawLine.slice(dashIndex + 1).trim();
   if (!content) {
@@ -78,17 +114,13 @@ const parseMarkdownLine = (rawLine: string): ParsedMarkdownLine | null => {
       const value = pair.slice(separatorIndex + 1).trim();
 
       if (key === 'startMarker') {
-        const marker = markerFromString(value);
-        if (marker) {
-          properties.startMarker = marker;
-        }
+        // TypeScriptの型システムに依存し、無効な値は無視される
+        properties.startMarker = value as MarkerType;
       }
 
       if (key === 'endMarker') {
-        const marker = markerFromString(value);
-        if (marker) {
-          properties.endMarker = marker;
-        }
+        // TypeScriptの型システムに依存し、無効な値は無視される
+        properties.endMarker = value as MarkerType;
       }
     });
   }
@@ -138,10 +170,13 @@ export const loadMarkdownAsHierarchical = (markdownText: string): HierarchicalSt
     return null;
   }
 
+  // インデントパターンを検出し、設定に反映
+  const spacesPerLevel = detectAndApplyIndentPattern(markdownText);
+
   const parsedLines: ParsedMarkdownLine[] = [];
 
   markdownText.split('\n').forEach((line) => {
-    const parsed = parseMarkdownLine(line);
+    const parsed = parseMarkdownLine(line, spacesPerLevel);
     if (parsed) {
       parsedLines.push(parsed);
     }
@@ -158,7 +193,8 @@ export const loadMarkdownAsHierarchical = (markdownText: string): HierarchicalSt
 };
 
 const serializeNodeToMarkdown = (node: HierarchicalNode, depth = 0): string => {
-  const indent = '  '.repeat(depth);
+  const spacesPerLevel = getIndentSpacesPerLevel();
+  const indent = ' '.repeat(depth * spacesPerLevel);
   const label = node.data?.texts?.[0] ?? '';
   const markers: string[] = [];
 
