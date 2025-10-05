@@ -1121,7 +1121,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
         elementOriginalPositions.current.set(element.id, { x: element.x, y: element.y });
       });
     },
-    [convertToZoomCoordinates, dispatch],
+    [convertToZoomCoordinates],
   );
 
   const resetElementsPosition = useCallback(() => {
@@ -1141,7 +1141,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
     // 状態をリセット
     setDraggingElement(null);
     elementOriginalPositions.current.clear();
-  }, [dispatch]);
+  }, []);
 
   // 要素をドロップする際の親変更を検証する関数
   const validateParentChange = useCallback(
@@ -1354,34 +1354,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
 
       dispatch({ type: 'SNAPSHOT' });
 
-      // ドラッグ中の要素が移動元と移動先で同じparentIdを持つ場合の処理
-      const isMovingWithinSameParent = selectedElements.some((el) => {
-        const parentNode = state.hierarchicalData
-          ? findParentNodeInHierarchy(state.hierarchicalData, el.id)
-          : null;
-        return parentNode?.data.id === newParentId;
-      });
-
-      // 移動対象の要素の現在のorder値を取得
-      const draggedElements = selectedElements.filter((el) => {
-        const parentNode = state.hierarchicalData
-          ? findParentNodeInHierarchy(state.hierarchicalData, el.id)
-          : null;
-        return parentNode?.data.id === newParentId;
-      });
-      const targetOrderValues = calculateTargetOrderValues(currentDropTarget, draggedElements);
-
-      if (isMovingWithinSameParent) {
-        // 同じ親内での移動の場合、要素の順序を正しく更新
-        moveElementsWithinSameParent(draggedElements, targetOrderValues.baseOrder, newParentId);
-      } else {
-        // 異なる親への移動、または同じ親でも後続要素のorderを調整
-        adjustOrdersForNewElements(
-          targetOrderValues.baseOrder,
-          selectedElements.length,
-          newParentId,
-        );
-      }
+      // 階層構造では配列の順序で管理されるため、orderベースのロジックは不要
 
       // 全要素に対して移動処理
       // 複数要素をドロップする場合、挿入による配列変化を考慮して逆順で処理
@@ -1444,10 +1417,8 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
           }
         }
 
-        // 逆順処理における各要素の挿入位置を計算
-        // 最初の要素（逆順処理では最後に選択された要素）は baseOrder の位置に挿入
-        // 後続の要素は baseOrder の位置に挿入（逆順なので同じ位置に連続挿入される）
-        const finalOrder = targetOrderValues.baseOrder;
+        // 階層構造では配列の順序で管理されるため、orderは使用しない
+        const finalOrder = 0;
 
         debugLog(
           `[processBetweenDrop] Dispatching DROP_ELEMENT for: ${element.id}, newOrder: ${finalOrder}, newParentId: ${newParentId}`,
@@ -1473,101 +1444,6 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
       dispatch,
       state.hierarchicalData,
     ],
-  );
-
-  // ドロップ先のorder値を計算する関数
-  const calculateTargetOrderValues = useCallback(
-    (dropTarget: DropTargetInfo, draggedElements: Element[]) => {
-      let baseOrder = 0;
-
-      debugLog(`[calculateTargetOrderValues] DropTarget: ${dropTarget?.element?.id}`);
-      debugLog(
-        `[calculateTargetOrderValues] DraggedElements: ${draggedElements.map((el) => el.id).join(', ')}`,
-      );
-
-      if (dropTarget?.siblingInfo) {
-        const { prevElement, nextElement } = dropTarget.siblingInfo;
-
-        // between ドロップの場合、兄弟要素の親を取得
-        let targetParentId: string | null = null;
-        if (prevElement) {
-          const prevParent = state.hierarchicalData
-            ? findParentNodeInHierarchy(state.hierarchicalData, prevElement.id)
-            : null;
-          targetParentId = prevParent?.data.id || null;
-        } else if (nextElement) {
-          const nextParent = state.hierarchicalData
-            ? findParentNodeInHierarchy(state.hierarchicalData, nextElement.id)
-            : null;
-          targetParentId = nextParent?.data.id || null;
-        } else {
-          // 兄弟要素がない場合は、ドロップターゲットを親とする
-          targetParentId = dropTarget.element.id;
-        }
-
-        // ドラッグ中の要素のIDリストを作成
-        const draggedElementIds = draggedElements.map((el) => el.id);
-
-        // 同じ親を持つ兄弟要素を取得（ドラッグ中の要素を除外、階層構造ベース）
-        const siblings =
-          state.hierarchicalData && targetParentId
-            ? getChildrenFromHierarchy(state.hierarchicalData, targetParentId)
-                .filter((el) => el.visible && !draggedElementIds.includes(el.id))
-                .sort((a, b) => a.y - b.y) // Y座標で並び替え
-            : [];
-
-        if (prevElement && nextElement) {
-          // 2つの要素の間にドロップする場合
-          const nextIndex = siblings.findIndex((el) => el.id === nextElement.id);
-          baseOrder = Math.max(0, nextIndex); // nextElementの位置に挿入
-        } else if (prevElement) {
-          // 最後の要素の後にドロップする場合
-          const prevIndex = siblings.findIndex((el) => el.id === prevElement.id);
-          baseOrder = prevIndex >= 0 ? prevIndex + 1 : siblings.length; // prevElementの次の位置に挿入
-        } else if (nextElement) {
-          // 最初の要素の前にドロップする場合
-          baseOrder = 0; // 配列の最初に挿入
-        } else {
-          // 兄弟要素がない場合（最初の子要素として追加）
-          baseOrder = 0;
-          debugLog(`[calculateTargetOrderValues] No siblings - baseOrder: ${baseOrder}`);
-        }
-      } else if (dropTarget) {
-        // child ドロップの場合
-        const targetParentId = dropTarget.element.id;
-        const siblings = state.hierarchicalData
-          ? getChildrenFromHierarchy(state.hierarchicalData, targetParentId).filter(
-              (el) => el.visible,
-            )
-          : [];
-        baseOrder = siblings.length; // 末尾に追加
-        debugLog(
-          `[calculateTargetOrderValues] Child drop - siblings length: ${siblings.length}, baseOrder: ${baseOrder}`,
-        );
-      }
-
-      debugLog(`[calculateTargetOrderValues] Final baseOrder: ${baseOrder}`);
-      return { baseOrder };
-    },
-    [state.hierarchicalData],
-  );
-
-  // 階層構造での要素移動時の配列順序調整関数（現在は階層操作で自動処理されるため削除予定）
-  const moveElementsWithinSameParent = useCallback(
-    (_draggedElements: Element[], _targetIndex: number, _elementParentId: string | null) => {
-      // 階層構造では配列の順序で管理されるため、orderベースのロジックを階層操作に置き換える
-      // この実装は階層構造の操作で自動的に処理されるため、ここでは何もしない
-    },
-    [],
-  );
-
-  // 新しい要素追加時の配列順序調整関数（現在は階層操作で自動処理されるため削除予定）
-  const adjustOrdersForNewElements = useCallback(
-    (_baseIndex: number, _count: number, _elementParentId: string | null) => {
-      // 階層構造では配列の順序で管理されるため、orderベースのロジックを階層操作に置き換える
-      // この実装は階層構造の操作で自動的に処理されるため、ここでは何もしない
-    },
-    [],
   );
 
   const handleMouseUp = useCallback(async () => {
@@ -1683,6 +1559,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
       convertToZoomCoordinates,
       dragStartOffset,
       dispatch,
+      state.hierarchicalData,
     ],
   );
 

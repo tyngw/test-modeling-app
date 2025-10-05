@@ -18,6 +18,7 @@ import {
   setupVSCodeMessageListener,
   notifyDocumentUpdate,
   DocumentUpdatePayload,
+  DocumentUpdatedMessagePayload,
 } from '../utils/vscode/vscodeMessaging';
 import { isVSCodeEditorMode, isVSCodeExtension } from '../utils/environment/environmentDetector';
 import { HierarchicalStructure } from '../types/hierarchicalTypes';
@@ -175,7 +176,7 @@ const AppContent: React.FC = () => {
         hasInitializedFromExtensionRef.current = true;
       },
       // ドキュメント更新（更新後の最新データ）
-      (data) => {
+      (data: DocumentUpdatedMessagePayload) => {
         if (currentTabRef.current && data.content) {
           const activeTabId = currentTabId;
           if (!activeTabId) {
@@ -187,6 +188,10 @@ const AppContent: React.FC = () => {
           hasInitializedFromExtensionRef.current = true;
 
           const fileType = data.fileType === 'yaml' ? 'yaml' : 'json';
+          if (data.skipStateUpdate) {
+            isUpdatingFromExtensionRef.current = false;
+            return;
+          }
           currentFileTypeRef.current = fileType;
           setEnvironmentInfo((prev) => ({
             ...prev,

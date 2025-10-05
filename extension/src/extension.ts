@@ -13,6 +13,7 @@ interface DocumentUpdatePayload {
   serializedContent?: string;
   fileType?: 'json' | 'yaml';
   content?: unknown;
+  skipStateUpdate?: boolean;
 }
 
 interface SaveFileData {
@@ -32,7 +33,25 @@ interface WebviewEditorPair {
   isUpdatingFromWebview: boolean; // Webviewからの更新中フラグ
   lastUpdateTimestamp: number;
   pendingDocumentUpdate: DocumentUpdatePayload | null;
+  lastSyncedContent: string;
 }
+
+const YAML_EXTENSIONS = new Set(['.yaml', '.yml']);
+
+const normalizeLineEndings = (text: string): string => text.replace(/\r\n|\r|\n/g, '\n');
+
+const detectFileTypeFromUri = (uri: vscode.Uri): 'json' | 'yaml' => {
+  const extension = path.extname(uri.fsPath).toLowerCase();
+  return YAML_EXTENSIONS.has(extension) ? 'yaml' : 'json';
+};
+
+const normalizeContentForDocument = (content: string, document: vscode.TextDocument): string => {
+  const normalized = normalizeLineEndings(content);
+  if (document.eol === vscode.EndOfLine.LF) {
+    return normalized;
+  }
+  return normalized.replace(/\n/g, '\r\n');
+};
 
 /**
  * VSCode拡張機能のメインエントリーポイント
@@ -123,13 +142,13 @@ export function activate(context: vscode.ExtensionContext) {
       // ファイル内容を読み込み・検証
       let fileData: unknown;
       let fileType: 'json' | 'yaml';
+      const initialDocumentContent = document.getText();
       try {
-        const rawContent = document.getText();
         if (fileExtension === '.yaml' || fileExtension === '.yml') {
-          fileData = rawContent;
+          fileData = initialDocumentContent;
           fileType = 'yaml';
         } else {
-          fileData = JSON.parse(rawContent);
+          fileData = JSON.parse(initialDocumentContent);
           fileType = 'json';
         }
       } catch (error) {
@@ -156,6 +175,7 @@ export function activate(context: vscode.ExtensionContext) {
         isUpdatingFromWebview: false,
         lastUpdateTimestamp: Date.now(),
         pendingDocumentUpdate: null,
+        lastSyncedContent: normalizeLineEndings(initialDocumentContent),
       };
       activeWebviews.set(documentKey, pair);
 
@@ -239,14 +259,22 @@ export function activate(context: vscode.ExtensionContext) {
         try {
           // 変更内容をパース
           const newContent = e.document.getText();
-          const extension = path.extname(e.document.uri.fsPath).toLowerCase();
+          const documentFileType = detectFileTypeFromUri(e.document.uri);
+          const normalizedNewContent = normalizeLineEndings(newContent);
 
-          if (extension === '.yaml' || extension === '.yml') {
+          if (normalizedNewContent === pair.lastSyncedContent) {
+            console.log('[Extension] Skipping document change (no diff from last synced)');
+            return;
+          }
+
+          if (documentFileType === 'yaml') {
             queueDocumentUpdate({
               fileName,
               content: newContent,
+              serializedContent: newContent,
               fileType: 'yaml',
             });
+            pair.lastSyncedContent = normalizedNewContent;
           } else {
             const data = JSON.parse(newContent);
             queueDocumentUpdate({
@@ -254,6 +282,7 @@ export function activate(context: vscode.ExtensionContext) {
               content: data,
               fileType: 'json',
             });
+            pair.lastSyncedContent = normalizedNewContent;
           }
 
           if (!pair.pendingDocumentUpdate) {
@@ -478,6 +507,14 @@ export function activate(context: vscode.ExtensionContext) {
     console.log('[Extension] Has data:', !!data);
     console.log('[Extension] isUpdatingFromWebview:', pair.isUpdatingFromWebview);
 
+    const notifyUpdateError = (message: string) => {
+      console.error('[Extension] ❌', message);
+      void pair.panel.webview.postMessage({
+        type: 'updateError',
+        message,
+      });
+    };
+
     try {
       if (!data || typeof data !== 'object') {
         console.error('[Extension] Invalid update payload');
@@ -485,7 +522,47 @@ export function activate(context: vscode.ExtensionContext) {
       }
 
       const payload = data as DocumentUpdatePayload;
-      const fileType: 'json' | 'yaml' = payload.fileType === 'yaml' ? 'yaml' : 'json';
+      const fileType = detectFileTypeFromUri(pair.document.uri);
+
+      const sendAcknowledgeToWebview = (options: {
+        contentText?: string;
+        jsonData?: unknown;
+        logMessage?: string;
+        skipStateUpdate?: boolean;
+      }) => {
+        const responsePayload: DocumentUpdatePayload = {
+          fileName: path.basename(pair.document.uri.fsPath),
+          fileType,
+          skipStateUpdate: Boolean(options.skipStateUpdate),
+        };
+
+        if (!responsePayload.skipStateUpdate) {
+          if (fileType === 'yaml') {
+            responsePayload.content = options.contentText;
+            responsePayload.serializedContent = options.contentText;
+          } else {
+            const jsonPayload =
+              typeof options.jsonData !== 'undefined'
+                ? options.jsonData
+                : (payload.hierarchicalData ?? payload.content);
+
+            responsePayload.hierarchicalData = jsonPayload;
+            responsePayload.content = jsonPayload;
+            responsePayload.serializedContent = options.contentText;
+          }
+        }
+
+        pair.pendingDocumentUpdate = null;
+        pair.lastUpdateTimestamp = Date.now();
+        if (typeof options.contentText === 'string') {
+          pair.lastSyncedContent = options.contentText;
+        }
+        console.log(options.logMessage ?? '[Extension] ✅ Message sent to webview');
+        void pair.panel.webview.postMessage({
+          type: 'documentUpdated',
+          data: responsePayload,
+        });
+      };
 
       // 循環更新を防止
       if (pair.isUpdatingFromWebview) {
@@ -493,28 +570,72 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      const currentContent = pair.document.getText();
-      let newContent = '';
+      const currentContentRaw = pair.document.getText();
+      const currentContentNormalized = normalizeLineEndings(currentContentRaw);
+
+      let incomingContentNormalized = '';
+      let jsonContentForResponse: unknown = payload.hierarchicalData ?? payload.content;
 
       if (fileType === 'yaml') {
-        if (typeof payload.serializedContent === 'string') {
-          newContent = payload.serializedContent;
-        } else if (typeof payload.content === 'string') {
-          newContent = payload.content;
-        } else {
-          console.error('[Extension] YAML payload missing serialized content');
+        const yamlSource =
+          typeof payload.serializedContent === 'string'
+            ? payload.serializedContent
+            : typeof payload.content === 'string'
+              ? payload.content
+              : undefined;
+
+        if (typeof yamlSource !== 'string') {
+          notifyUpdateError('YAML payload missing serialized content');
           return;
         }
+
+        incomingContentNormalized = normalizeLineEndings(yamlSource);
       } else {
-        const source = payload.hierarchicalData ?? payload.content;
-        newContent = JSON.stringify(source, null, 2);
+        if (typeof payload.serializedContent === 'string') {
+          incomingContentNormalized = normalizeLineEndings(payload.serializedContent);
+
+          if (typeof jsonContentForResponse === 'undefined') {
+            try {
+              jsonContentForResponse = JSON.parse(incomingContentNormalized);
+            } catch (error) {
+              notifyUpdateError(`Failed to parse JSON payload: ${error}`);
+              return;
+            }
+          }
+        } else if (typeof jsonContentForResponse !== 'undefined') {
+          try {
+            incomingContentNormalized = normalizeLineEndings(
+              JSON.stringify(jsonContentForResponse, null, 2),
+            );
+          } catch (error) {
+            notifyUpdateError(`Failed to serialize JSON payload: ${error}`);
+            return;
+          }
+        } else {
+          notifyUpdateError('JSON payload is empty');
+          return;
+        }
       }
 
-      console.log('[Extension] Current content length:', currentContent.length);
-      console.log('[Extension] New content length:', newContent.length);
+      if (fileType === 'json' && typeof jsonContentForResponse === 'undefined') {
+        try {
+          jsonContentForResponse = JSON.parse(incomingContentNormalized);
+        } catch (error) {
+          notifyUpdateError(`Failed to parse JSON payload: ${error}`);
+          return;
+        }
+      }
 
-      if (currentContent === newContent) {
-        console.log('[Extension] Content unchanged, skipping');
+      console.log('[Extension] Current content length:', currentContentNormalized.length);
+      console.log('[Extension] New content length:', incomingContentNormalized.length);
+
+      if (currentContentNormalized === incomingContentNormalized) {
+        sendAcknowledgeToWebview({
+          contentText: incomingContentNormalized,
+          jsonData: jsonContentForResponse,
+          logMessage: '[Extension] Content unchanged, acknowledged webview update',
+          skipStateUpdate: true,
+        });
         return;
       }
 
@@ -523,12 +644,14 @@ export function activate(context: vscode.ExtensionContext) {
       pair.isUpdatingFromWebview = true;
       pair.lastUpdateTimestamp = Date.now();
 
+      const editContent = normalizeContentForDocument(incomingContentNormalized, pair.document);
+
       const edit = new vscode.WorkspaceEdit();
       const fullRange = new vscode.Range(
         pair.document.positionAt(0),
-        pair.document.positionAt(currentContent.length),
+        pair.document.positionAt(currentContentRaw.length),
       );
-      edit.replace(pair.document.uri, fullRange, newContent);
+      edit.replace(pair.document.uri, fullRange, editContent);
 
       console.log('[Extension] Applying edit...');
       const success = await vscode.workspace.applyEdit(edit);
@@ -539,25 +662,18 @@ export function activate(context: vscode.ExtensionContext) {
         await pair.document.save();
         console.log('[Extension] Document saved');
 
-        const responsePayload: DocumentUpdatePayload = {
-          fileName: path.basename(pair.document.uri.fsPath),
-          fileType,
-          content: fileType === 'yaml' ? newContent : JSON.parse(newContent),
-        };
-
-        pair.panel.webview.postMessage({
-          type: 'documentUpdated',
-          data: responsePayload,
+        sendAcknowledgeToWebview({
+          contentText: normalizeLineEndings(editContent),
+          jsonData: jsonContentForResponse,
+          skipStateUpdate: true,
         });
-
-        pair.pendingDocumentUpdate = null;
-        console.log('[Extension] ✅ Message sent to webview');
       } else {
-        console.error('[Extension] ❌ Failed to apply edit');
+        notifyUpdateError('Failed to apply workspace edit');
       }
     } catch (error) {
       console.error('[Extension] ❌ Error in handleUpdateDocument:', error);
       console.error('[Extension] Error stack:', error instanceof Error ? error.stack : 'N/A');
+      notifyUpdateError(error instanceof Error ? error.message : 'Unknown error');
     } finally {
       pair.isUpdatingFromWebview = false;
       console.log('[Extension] Flags reset');
