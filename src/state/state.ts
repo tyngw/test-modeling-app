@@ -191,8 +191,9 @@ const isDropElementPayload = (payload: unknown): payload is DropElementPayload =
     // targetIndex は省略可能
     (('targetIndex' in payload && typeof p.targetIndex === 'number') ||
       !('targetIndex' in payload)) &&
-    // direction は省略可能なので存在チェックのみ
-    (('direction' in payload && typeof p.direction === 'string') || !('direction' in payload))
+    // direction は省略可能（string, undefined, または存在しない場合を許可）
+    (('direction' in payload && (typeof p.direction === 'string' || p.direction === undefined)) ||
+      !('direction' in payload))
   );
 };
 

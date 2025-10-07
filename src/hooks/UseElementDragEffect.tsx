@@ -410,121 +410,133 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
 
         // 同一親を持つ兄弟要素を取得（階層構造ベース）
         const parentId = elementParentNode?.data.id || null;
-        const siblings =
-          state.hierarchicalData && parentId
-            ? getChildrenFromHierarchy(state.hierarchicalData, parentId)
-                .filter((el) => el.visible && el.id !== draggingElementId)
-                .sort((a, b) => a.y - b.y)
-            : [];
 
-        debugLog(
-          `[calculatePositionAndDistance] Found ${siblings.length} siblings (excluding dragging element) for element ${element.id}`,
-        );
+        // parentIdがnullの場合（ルート要素の兄弟）は、betweenモードを使用しない
+        if (!parentId) {
+          debugLog(
+            `[Sibling of root element ${element.id}] Skipping between mode for root siblings`,
+          );
+          result = {
+            position: 'child',
+            insertY: element.y + element.height / 2,
+            insertX: element.x + element.width + OFFSET.X,
+            siblingInfo: {},
+            direction: element.direction || 'right',
+          };
+        } else {
+          const siblings = getChildrenFromHierarchy(state.hierarchicalData, parentId)
+            .filter((el) => el.visible && el.id !== draggingElementId)
+            .sort((a, b) => a.y - b.y);
 
-        // 兄弟要素間の位置を計算
-        let prevElement: Element | null = null;
-        let nextElement: Element | null = null;
+          debugLog(
+            `[calculatePositionAndDistance] Found ${siblings.length} siblings (excluding dragging element) for element ${element.id}`,
+          );
 
-        for (let i = 0; i < siblings.length; i++) {
-          const current = siblings[i];
-          if (current.id === draggingElement?.id) continue; // ドラッグ中の要素自身は無視
+          // 兄弟要素間の位置を計算
+          let prevElement: Element | null = null;
+          let nextElement: Element | null = null;
 
-          const currentBottom = current.y + current.height;
+          for (let i = 0; i < siblings.length; i++) {
+            const current = siblings[i];
+            if (current.id === draggingElement?.id) continue; // ドラッグ中の要素自身は無視
 
-          if (mouseY < current.y) {
-            nextElement = current;
-            if (i > 0) prevElement = siblings[i - 1];
-            break;
-          } else if (mouseY < currentBottom) {
-            const midpoint = current.y + current.height / 2;
-            if (mouseY < midpoint) {
+            const currentBottom = current.y + current.height;
+
+            if (mouseY < current.y) {
               nextElement = current;
               if (i > 0) prevElement = siblings[i - 1];
+              break;
+            } else if (mouseY < currentBottom) {
+              const midpoint = current.y + current.height / 2;
+              if (mouseY < midpoint) {
+                nextElement = current;
+                if (i > 0) prevElement = siblings[i - 1];
+              } else {
+                prevElement = current;
+                if (i < siblings.length - 1) nextElement = siblings[i + 1];
+              }
+              break;
             } else {
               prevElement = current;
               if (i < siblings.length - 1) nextElement = siblings[i + 1];
             }
-            break;
-          } else {
-            prevElement = current;
-            if (i < siblings.length - 1) nextElement = siblings[i + 1];
           }
+
+          // between位置の計算 - 兄弟要素のdirectionを考慮してX座標を設定
+          let insertX: number;
+          let siblingDirection: DirectionType = 'right'; // デフォルト値
+
+          // 兄弟要素のdirectionを取得（prevElementまたはnextElementから）
+          if (prevElement && prevElement.direction) {
+            siblingDirection = prevElement.direction;
+          } else if (nextElement && nextElement.direction) {
+            siblingDirection = nextElement.direction;
+          } else if (element.direction && element.direction !== 'none') {
+            siblingDirection = element.direction;
+          }
+
+          // directionに基づいてX座標を計算
+          const parentNodeForInsert = state.hierarchicalData
+            ? findParentNodeInHierarchy(state.hierarchicalData, element.id)
+            : null;
+          const parentElement = parentNodeForInsert ? parentNodeForInsert.data : null;
+
+          // 親要素が存在する場合のみX座標を計算（ルート要素の兄弟の場合は親がないのでここには来ない）
+          if (parentElement) {
+            insertX =
+              siblingDirection === 'left'
+                ? parentElement.x - OFFSET.X - (draggingElement?.width ?? 0)
+                : parentElement.x + parentElement.width + OFFSET.X;
+          } else {
+            // このケースは上記のparentIdチェックで既に除外されているはず
+            debugLog(`[Warning] Unexpected case: sibling element without parent`);
+            insertX = element.x + element.width + OFFSET.X;
+          }
+
+          if (prevElement && nextElement) {
+            // 2つの要素の間
+            const gap = nextElement.y - (prevElement.y + prevElement.height);
+            result = {
+              position: 'between',
+              insertY: prevElement.y + prevElement.height + gap / 2,
+              insertX,
+              siblingInfo: { prevElement, nextElement },
+              direction: siblingDirection,
+            };
+          } else if (prevElement) {
+            // 最後の要素の後
+            result = {
+              position: 'between',
+              insertY: prevElement.y + prevElement.height + OFFSET.Y,
+              insertX,
+              siblingInfo: { prevElement },
+              direction: siblingDirection,
+            };
+          } else if (nextElement) {
+            // 最初の要素の前
+            result = {
+              position: 'between',
+              insertY: nextElement.y - OFFSET.Y,
+              insertX,
+              siblingInfo: { nextElement },
+              direction: siblingDirection,
+            };
+          } else {
+            // 要素が1つしかない場合や、ドラッグ中の要素のみの場合
+            result = {
+              position: 'between',
+              insertY: element.y + element.height + OFFSET.Y,
+              insertX,
+              siblingInfo: {},
+              direction: siblingDirection,
+            };
+          }
+
+          debugLog(
+            `Drop position mode (between siblings) - direction: ${siblingDirection}, insertX: ${insertX}`,
+            'between',
+          );
         }
-
-        // between位置の計算 - 兄弟要素のdirectionを考慮してX座標を設定
-        let insertX: number;
-        let siblingDirection: DirectionType = 'right'; // デフォルト値
-
-        // 兄弟要素のdirectionを取得（prevElementまたはnextElementから）
-        if (prevElement && prevElement.direction) {
-          siblingDirection = prevElement.direction;
-        } else if (nextElement && nextElement.direction) {
-          siblingDirection = nextElement.direction;
-        } else if (element.direction && element.direction !== 'none') {
-          siblingDirection = element.direction;
-        }
-
-        // directionに基づいてX座標を計算
-        const parentNodeForInsert = state.hierarchicalData
-          ? findParentNodeInHierarchy(state.hierarchicalData, element.id)
-          : null;
-        const parentElement = parentNodeForInsert ? parentNodeForInsert.data : null;
-        if (parentElement) {
-          insertX =
-            siblingDirection === 'left'
-              ? parentElement.x - OFFSET.X - (draggingElement?.width ?? 0)
-              : parentElement.x + parentElement.width + OFFSET.X;
-        } else {
-          // 親がない場合（ルート要素の兄弟）
-          insertX =
-            siblingDirection === 'left'
-              ? element.x - OFFSET.X - (draggingElement?.width ?? 0)
-              : element.x + element.width + OFFSET.X;
-        }
-
-        if (prevElement && nextElement) {
-          // 2つの要素の間
-          const gap = nextElement.y - (prevElement.y + prevElement.height);
-          result = {
-            position: 'between',
-            insertY: prevElement.y + prevElement.height + gap / 2,
-            insertX,
-            siblingInfo: { prevElement, nextElement },
-            direction: siblingDirection,
-          };
-        } else if (prevElement) {
-          // 最後の要素の後
-          result = {
-            position: 'between',
-            insertY: prevElement.y + prevElement.height + OFFSET.Y,
-            insertX,
-            siblingInfo: { prevElement },
-            direction: siblingDirection,
-          };
-        } else if (nextElement) {
-          // 最初の要素の前
-          result = {
-            position: 'between',
-            insertY: nextElement.y - OFFSET.Y,
-            insertX,
-            siblingInfo: { nextElement },
-            direction: siblingDirection,
-          };
-        } else {
-          // 要素が1つしかない場合や、ドラッグ中の要素のみの場合
-          result = {
-            position: 'between',
-            insertY: element.y + element.height + OFFSET.Y,
-            insertX,
-            siblingInfo: {},
-            direction: siblingDirection,
-          };
-        }
-
-        debugLog(
-          `Drop position mode (between siblings) - direction: ${siblingDirection}, insertX: ${insertX}`,
-          'between',
-        );
       }
 
       // 要素中心からの距離を計算
@@ -808,8 +820,9 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
               }
             }
           }
-        } else {
+        } else if (parentElement) {
           // ルート以外の親の場合は従来の処理
+          // parentElementがnullの場合（ルート要素の兄弟）は処理をスキップ
           groupElements.sort((a, b) => a.y - b.y);
 
           for (let i = 0; i < groupElements.length - 1; i++) {
@@ -924,25 +937,17 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
               siblingInfo: { prevElement: lastElement },
             };
           }
-        } else {
+        } else if (parentElement) {
           // ルート以外の親の場合は従来の処理
+          // parentElementがnullの場合（ルート要素の兄弟）は処理をスキップ
           // グループ内で最も下にある要素を探す
           const lastElement = groupElements.reduce((last, current) => {
             return current.y + current.height > last.y + last.height ? current : last;
           }, groupElements[0]);
 
-          // マウスがこのグループの水平範囲内で、最後の要素よりも下にあるかチェック
-          let groupLeft, groupRight;
-
-          if (parentElement) {
-            // 親要素がある場合は親の右側から検出範囲を計算
-            groupLeft = parentElement.x + parentElement.width;
-            groupRight = groupLeft + OFFSET.X * 2 + lastElement.width;
-          } else {
-            // ルート要素の場合
-            groupLeft = lastElement.x - OFFSET.X;
-            groupRight = lastElement.x + lastElement.width + OFFSET.X;
-          }
+          // 親要素がある場合は親の右側から検出範囲を計算
+          const groupLeft = parentElement.x + parentElement.width;
+          const groupRight = groupLeft + OFFSET.X * 2 + lastElement.width;
 
           const bottomThreshold = lastElement.y + lastElement.height + OFFSET.Y * 2;
 
@@ -977,8 +982,23 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
           element.direction === 'none' &&
           state.hierarchicalData &&
           findParentNodeInHierarchy(state.hierarchicalData, element.id) === null;
-        const isValidRootSideDrop =
-          isRootElement && (position === 'child' || position === 'between');
+
+        // ルート要素の場合、betweenはルート要素の子要素間のみ許可
+        // siblingInfoにprevElementまたはnextElementがあり、その親がルート要素でない場合は除外
+        let isValidRootSideDrop = false;
+        if (isRootElement) {
+          if (position === 'child') {
+            isValidRootSideDrop = true;
+          } else if (position === 'between' && siblingInfo) {
+            // betweenの場合、兄弟要素がルート要素の子要素であることを確認
+            const sibling = siblingInfo.prevElement || siblingInfo.nextElement;
+            if (sibling && state.hierarchicalData) {
+              const siblingParent = findParentNodeInHierarchy(state.hierarchicalData, sibling.id);
+              // 兄弟要素の親がルート要素（element）である場合のみ許可
+              isValidRootSideDrop = siblingParent?.data.id === element.id;
+            }
+          }
+        }
 
         debugLog(
           `[findDropTarget] Checking element ${element.id}, isRoot: ${isRootElement}, position: ${position}, distance: ${distanceSq}`,
@@ -1254,14 +1274,26 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
           ? getChildrenCountFromHierarchy(state.hierarchicalData, target.id)
           : 0;
 
+        // directionがundefinedの場合はペイロードから除外
+        const payload: {
+          id: string;
+          targetNodeId: string;
+          targetIndex: number;
+          direction?: DirectionType;
+        } = {
+          id: element.id,
+          targetNodeId: target.id,
+          targetIndex: childrenCount + index,
+        };
+
+        // directionが定義されている場合のみペイロードに含める
+        if (newDirection !== undefined) {
+          payload.direction = newDirection;
+        }
+
         dispatch({
           type: 'DROP_ELEMENT',
-          payload: {
-            id: element.id,
-            targetNodeId: target.id,
-            targetIndex: childrenCount + index,
-            direction: newDirection,
-          },
+          payload,
         });
       });
       return true;
@@ -1442,6 +1474,25 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
             // 新しい親がルート要素以外の場合、親の方向を継承
             newDirection = newParent?.direction || 'right';
           }
+        } else {
+          // newParentIdがnullの場合（ルート要素レベルへの移動）
+          // 兄弟要素のdirectionを継承、または既存のdirectionを保持
+          if (currentDropTarget?.direction) {
+            newDirection = currentDropTarget.direction;
+          } else if (currentDropTarget?.siblingInfo) {
+            const { prevElement, nextElement } = currentDropTarget.siblingInfo;
+            if (prevElement && prevElement.direction && prevElement.direction !== 'none') {
+              newDirection = prevElement.direction;
+            } else if (nextElement && nextElement.direction && nextElement.direction !== 'none') {
+              newDirection = nextElement.direction;
+            } else {
+              // デフォルトは要素の既存のdirectionを保持、なければ'right'
+              newDirection = element.direction !== 'none' ? element.direction : 'right';
+            }
+          } else {
+            // デフォルトは要素の既存のdirectionを保持、なければ'right'
+            newDirection = element.direction !== 'none' ? element.direction : 'right';
+          }
         }
 
         // 逆順処理における各要素の挿入位置を計算
@@ -1450,17 +1501,29 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
         const finalOrder = targetOrderValues.baseOrder;
 
         debugLog(
-          `[processBetweenDrop] Dispatching DROP_ELEMENT for: ${element.id}, newOrder: ${finalOrder}, newParentId: ${newParentId}`,
+          `[processBetweenDrop] Dispatching DROP_ELEMENT for: ${element.id}, newOrder: ${finalOrder}, newParentId: ${newParentId}, direction: ${newDirection}`,
         );
+
+        // directionがundefinedの場合はペイロードから除外
+        const payload: {
+          id: string;
+          targetNodeId: string | null;
+          targetIndex: number;
+          direction?: DirectionType;
+        } = {
+          id: element.id,
+          targetNodeId: newParentId,
+          targetIndex: finalOrder,
+        };
+
+        // directionが定義されている場合のみペイロードに含める
+        if (newDirection !== undefined) {
+          payload.direction = newDirection;
+        }
 
         dispatch({
           type: 'DROP_ELEMENT',
-          payload: {
-            id: element.id,
-            targetNodeId: newParentId,
-            targetIndex: finalOrder,
-            direction: newDirection,
-          },
+          payload,
         });
       });
       return true;
