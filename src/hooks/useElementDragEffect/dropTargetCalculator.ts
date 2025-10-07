@@ -37,7 +37,7 @@ export const calculateChildPosition = (
   element: Element,
   mouseY: number,
   hierarchicalData: HierarchicalStructure | null,
-  draggingElementWidth: number = 0,
+  draggingElementWidth = 0,
 ): { position: 'child'; insertY: number; insertX?: number } => {
   const elemTop = element.y;
   const children = getChildren(element, hierarchicalData);
