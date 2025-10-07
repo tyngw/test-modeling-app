@@ -604,6 +604,15 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     if (!newParent) return null;
 
     // ドロップ座標を計算（ユーティリティ関数を使用）
+    const resolvedDropInsertX =
+      dropInsertX !== undefined
+        ? dropInsertX
+        : currentDropTarget &&
+            typeof currentDropTarget === 'object' &&
+            'insertX' in currentDropTarget
+          ? (currentDropTarget as { insertX: number }).insertX
+          : undefined;
+
     const coordinates = calculateDropCoordinates({
       elements: elementsCache,
       hierarchicalData: state.hierarchicalData,
@@ -611,17 +620,16 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
       draggingElement,
       dropPosition,
       dropInsertY,
-      dropInsertX:
-        currentDropTarget && typeof currentDropTarget === 'object' && 'insertX' in currentDropTarget
-          ? (currentDropTarget as { insertX: number }).insertX
-          : undefined,
+      dropInsertX: resolvedDropInsertX,
+      dropTargetDirection,
+      direction: dropTargetDirection,
       siblingInfo,
     });
 
     if (!coordinates) return null;
 
     // betweenモードの場合、正しいdirectionを計算
-    let previewDirection = draggingElement.direction;
+    let previewDirection = dropTargetDirection ?? draggingElement.direction;
 
     if (dropPosition === 'between') {
       // betweenモードでは兄弟要素のdirectionを継承
