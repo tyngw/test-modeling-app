@@ -95,7 +95,7 @@ export const calculateDropCoordinates = ({
       });
     } else if (direction === 'left' || (isRootInMindmap && childDirection === 'left')) {
       // 左方向の場合
-      x = currentDropTarget.x - OFFSET.X - draggingElement.width;
+      x = currentDropTarget.x - currentDropTarget.width - OFFSET.X - draggingElement.width;
       debugLog('[calculateDropCoordinates] Left direction calculated:', {
         targetX: currentDropTarget.x,
         offset: OFFSET.X,
@@ -146,7 +146,7 @@ export const calculateDropCoordinates = ({
 
       if (childDirection === 'left') {
         // 左方向の場合
-        x = parentElement.x - OFFSET.X - draggingElement.width;
+        x = parentElement.x - parentElement.width - OFFSET.X - draggingElement.width;
       } else {
         // 右方向の場合
         x = parentElement.x + parentElement.width + OFFSET.X;

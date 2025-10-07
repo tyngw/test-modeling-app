@@ -125,6 +125,35 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
 
   useClickOutside(svgRef, !!editingNode);
 
+  const viewBoxOffsets = useMemo(() => {
+    const parts = displayArea.split(' ').map(Number);
+    if (parts.length === 4 && parts.every((value) => !Number.isNaN(value))) {
+      return { minX: parts[0], minY: parts[1] };
+    }
+    return { minX: 0, minY: 0 };
+  }, [displayArea]);
+
+  const resolveEventCoordinates = useCallback((event: MouseEvent | TouchEvent) => {
+    if (!svgRef.current) return null;
+    const svg = svgRef.current;
+    const point = svg.createSVGPoint();
+
+    if ('touches' in event && event.touches.length > 0) {
+      point.x = event.touches[0].clientX;
+      point.y = event.touches[0].clientY;
+    } else {
+      const mouseEvent = event as MouseEvent;
+      point.x = mouseEvent.clientX;
+      point.y = mouseEvent.clientY;
+    }
+
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return null;
+    const inverted = ctm.inverse();
+    const svgPoint = point.matrixTransform(inverted);
+    return { x: svgPoint.x, y: svgPoint.y };
+  }, []);
+
   const {
     handleMouseDown,
     handleMouseUp,
@@ -136,7 +165,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     dropTargetDirection,
     siblingInfo,
     isDragInProgress,
-  } = useElementDragEffect();
+  } = useElementDragEffect({ viewBoxOffsets, resolveEventCoordinates });
 
   // カスタムフックの使用
   useResizeEffect({
@@ -745,6 +774,8 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
         )}
         <InputFields
           element={editingNode}
+          viewBoxMinX={viewBoxOffsets.minX}
+          viewBoxMinY={viewBoxOffsets.minY}
           onEndEditing={() => {
             dispatch({ type: 'END_EDITING' });
             if (svgRef.current) {

@@ -44,19 +44,27 @@ const useResizeEffect = ({
       return;
     }
 
-    const newCanvasSize = calculateCanvasSize(hierarchicalData);
+    const canvasBounds = calculateCanvasSize(hierarchicalData);
     const maxHeight = window.innerHeight - HEADER_HEIGHT;
-    newCanvasSize.width = Math.max(newCanvasSize.width, window.innerWidth);
-    newCanvasSize.height = Math.max(newCanvasSize.height, maxHeight);
-    const newViewSize = {
-      width: newCanvasSize.width,
-      height: newCanvasSize.height,
-    };
-    newCanvasSize.width *= zoomRatio;
-    newCanvasSize.height *= zoomRatio;
 
-    setCanvasSize(newCanvasSize);
-    setDisplayArea(`0 0 ${newViewSize.width} ${newViewSize.height}`);
+    // viewBoxの開始位置と全体サイズを計算
+    const viewBoxMinX = canvasBounds.minX;
+    const viewBoxMinY = canvasBounds.minY;
+    const viewBoxWidth = Math.max(canvasBounds.width, window.innerWidth);
+    const viewBoxHeight = Math.max(canvasBounds.height, maxHeight);
+
+    // ズーム調整後のキャンバスサイズを設定
+    const zoomedCanvasSize = {
+      width: viewBoxWidth * zoomRatio,
+      height: viewBoxHeight * zoomRatio,
+    };
+
+    setCanvasSize(zoomedCanvasSize);
+    setDisplayArea(`${viewBoxMinX} ${viewBoxMinY} ${viewBoxWidth} ${viewBoxHeight}`);
+
+    debugLog(
+      `[useResizeEffect] ViewBox updated: ${viewBoxMinX} ${viewBoxMinY} ${viewBoxWidth} ${viewBoxHeight}`,
+    );
   }, [
     hierarchySignature,
     zoomRatio,

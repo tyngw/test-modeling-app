@@ -249,8 +249,8 @@ export const adjustElementPositionsFromHierarchy = (
   hierarchicalData: HierarchicalStructure | null,
   getNumberOfSections: () => number,
   layoutMode: LayoutMode = 'default',
-  canvasWidth = 0,
-  canvasHeight = 0,
+  _canvasWidth = 0,
+  _canvasHeight = 0,
 ): HierarchicalStructure | null => {
   // 呼び出し元を特定するためのスタックトレース
   const stack = new Error().stack;
@@ -271,19 +271,22 @@ export const adjustElementPositionsFromHierarchy = (
 
   let currentY = DEFAULT_POSITION.Y;
 
-  // マインドマップモードの場合、ルート要素をキャンバス中央に配置
+  // マインドマップモードの場合、ルート要素をビューポート中央に配置
   if (layoutMode === 'mindmap' && updatedHierarchy.root) {
     const rootElement = updatedHierarchy.root.data;
     // ルート要素の方向をnoneに設定
     rootElement.direction = 'none';
 
-    // キャンバス中央に配置（デフォルト値を使用する場合も考慮）
-    const centerX = canvasWidth > 0 ? canvasWidth / 2 - rootElement.width / 2 : DEFAULT_POSITION.X;
-    const centerY =
-      canvasHeight > 0 ? canvasHeight / 2 - rootElement.height / 2 : DEFAULT_POSITION.Y;
+    // ビューポート中央に配置（キャンバスサイズではなくビューポートサイズを使用）
+    // これにより、左側に要素を追加してもルート要素の位置が変わらない
+    const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1000;
+    const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 800;
 
-    // マインドマップモードでは、ルート要素を右にオフセット
-    rootElement.x = centerX + OFFSET.X;
+    const centerX = viewportWidth / 2 - rootElement.width / 2;
+    const centerY = viewportHeight / 2 - rootElement.height / 2;
+
+    // マインドマップモードでは、ルート要素をビューポート中央に配置
+    rootElement.x = centerX;
     rootElement.y = centerY;
 
     // 子要素をレイアウト（階層構造ベース）
@@ -334,9 +337,13 @@ const layoutNodeFromHierarchy = (
     // ルート要素は固定位置
     element.x = DEFAULT_POSITION.X;
   } else if (parentNode) {
-    // 親要素がある場合：親のX座標 + 親の幅 + OFFSET.X
+    // 親要素がある場合：方向に応じて左右どちらかへ配置
     const parent = parentNode.data;
-    element.x = parent.x + parent.width + OFFSET.X;
+    if (element.direction === 'left') {
+      element.x = parent.x - element.width - (parent.width + OFFSET.X);
+    } else {
+      element.x = parent.x + parent.width + OFFSET.X;
+    }
   } else {
     // フォールバック：階層レベルに応じた基本配置
     element.x = DEFAULT_POSITION.X + level * (SIZE.WIDTH.MIN + OFFSET.X);

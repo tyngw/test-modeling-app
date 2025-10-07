@@ -129,6 +129,18 @@ describe('coordinateUtils', () => {
       expect(result.y).toBe(300 - HEADER_HEIGHT); // 200 + 100 - HEADER_HEIGHT
     });
 
+    it('viewBoxオフセットを考慮して変換する', () => {
+      const mouseEvent = {
+        clientX: 120,
+        clientY: 220,
+      } as MouseEvent;
+
+      const result = convertToZoomCoordinates(mouseEvent, 1, { minX: -150, minY: 50 });
+
+      expect(result.x).toBe(-30); // 120 + (-150)
+      expect(result.y).toBe(220 - HEADER_HEIGHT + 50);
+    });
+
     it('ズーム比率とスクロールを両方考慮して変換する', () => {
       Object.defineProperty(window, 'scrollX', { writable: true, value: 100 });
       Object.defineProperty(window, 'scrollY', { writable: true, value: 200 });

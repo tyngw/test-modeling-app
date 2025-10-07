@@ -26,6 +26,7 @@ export interface GapDetectionParams {
   draggingElement: Element;
   hierarchicalData: HierarchicalStructure | null;
   elementsByParent: { [parentId: string]: Element[] };
+  targetDirection: 'left' | 'right';
 }
 
 /**
@@ -38,7 +39,8 @@ export interface GapDetectionParams {
  * @returns ドロップターゲット情報（見つからない場合はnull）
  */
 export const detectGapBetweenElements = (params: GapDetectionParams): DropTargetInfo => {
-  const { mouseX, mouseY, draggingElement, hierarchicalData, elementsByParent } = params;
+  const { mouseX, mouseY, draggingElement, hierarchicalData, elementsByParent, targetDirection } =
+    params;
 
   for (const [parentKey, groupElements] of Object.entries(elementsByParent)) {
     if (groupElements.length < 2) continue;
@@ -53,7 +55,6 @@ export const detectGapBetweenElements = (params: GapDetectionParams): DropTarget
 
     if (isParentRoot) {
       // ルート要素の子の場合、directionでグループ分け
-      const draggingDirection = draggingElement?.direction || 'right';
       const leftChildren = groupElements
         .filter((el) => el.direction === 'left')
         .sort((a, b) => a.y - b.y);
@@ -61,8 +62,7 @@ export const detectGapBetweenElements = (params: GapDetectionParams): DropTarget
         .filter((el) => el.direction === 'right')
         .sort((a, b) => a.y - b.y);
 
-      // 左側のギャップチェック
-      if (draggingDirection === 'left') {
+      if (targetDirection === 'left') {
         const leftGap = checkDirectionGap(
           leftChildren,
           mouseX,
@@ -73,7 +73,6 @@ export const detectGapBetweenElements = (params: GapDetectionParams): DropTarget
         );
         if (leftGap) return leftGap;
       } else {
-        // 右側のギャップチェック
         const rightGap = checkDirectionGap(
           rightChildren,
           mouseX,
@@ -149,8 +148,9 @@ const checkDirectionGap = (
 
     let gapAreaLeft: number, gapAreaRight: number;
     if (direction === 'left') {
-      gapAreaLeft = parentElement.x - OFFSET.X * 2 - (draggingElement?.width ?? 0);
-      gapAreaRight = parentElement.x;
+      gapAreaLeft =
+        parentElement.x - parentElement.width - OFFSET.X * 2 - (draggingElement?.width ?? 0);
+      gapAreaRight = parentElement.x - parentElement.width;
     } else {
       gapAreaLeft = parentElement.x + parentElement.width;
       gapAreaRight = gapAreaLeft + OFFSET.X * 2 + (draggingElement?.width ?? 0);
@@ -172,7 +172,7 @@ const checkDirectionGap = (
 
       const insertX =
         direction === 'left'
-          ? parentElement.x - OFFSET.X - (draggingElement?.width ?? 0)
+          ? parentElement.x - parentElement.width - OFFSET.X - (draggingElement?.width ?? 0)
           : parentElement.x + parentElement.width + OFFSET.X;
 
       return {
@@ -200,7 +200,8 @@ const checkDirectionGap = (
  * @returns ドロップターゲット情報（見つからない場合はnull）
  */
 export const detectBottomGap = (params: GapDetectionParams): DropTargetInfo => {
-  const { mouseX, mouseY, draggingElement, hierarchicalData, elementsByParent } = params;
+  const { mouseX, mouseY, draggingElement, hierarchicalData, elementsByParent, targetDirection } =
+    params;
 
   for (const [parentKey, groupElements] of Object.entries(elementsByParent)) {
     if (groupElements.length === 0) continue;
@@ -214,9 +215,8 @@ export const detectBottomGap = (params: GapDetectionParams): DropTargetInfo => {
       findParentNodeInHierarchy(hierarchicalData, parentElement.id) === null;
 
     if (isParentRoot) {
-      const draggingDirection = draggingElement?.direction || 'right';
       const filteredElements = groupElements.filter((el) =>
-        draggingDirection === 'left' ? el.direction === 'left' : el.direction === 'right',
+        targetDirection === 'left' ? el.direction === 'left' : el.direction === 'right',
       );
 
       if (filteredElements.length === 0) continue;
@@ -226,9 +226,10 @@ export const detectBottomGap = (params: GapDetectionParams): DropTargetInfo => {
       }, filteredElements[0]);
 
       let groupLeft: number, groupRight: number;
-      if (draggingDirection === 'left') {
-        groupLeft = parentElement.x - OFFSET.X * 2 - (draggingElement?.width ?? 0);
-        groupRight = parentElement.x;
+      if (targetDirection === 'left') {
+        groupLeft =
+          parentElement.x - parentElement.width - OFFSET.X * 2 - (draggingElement?.width ?? 0);
+        groupRight = parentElement.x - parentElement.width;
       } else {
         groupLeft = parentElement.x + parentElement.width;
         groupRight = groupLeft + OFFSET.X * 2 + (draggingElement?.width ?? 0);
@@ -237,7 +238,7 @@ export const detectBottomGap = (params: GapDetectionParams): DropTargetInfo => {
       const bottomThreshold = lastElement.y + lastElement.height + OFFSET.Y * 2;
 
       debugLog(
-        `[Bottom area check] dragging:${draggingDirection}, mouse(${mouseX},${mouseY}), bottomArea(${groupLeft},${lastElement.y + lastElement.height},${groupRight},${bottomThreshold})`,
+        `[Bottom area check] direction:${targetDirection}, mouse(${mouseX},${mouseY}), bottomArea(${groupLeft},${lastElement.y + lastElement.height},${groupRight},${bottomThreshold})`,
       );
 
       if (
@@ -247,11 +248,11 @@ export const detectBottomGap = (params: GapDetectionParams): DropTargetInfo => {
         mouseY <= bottomThreshold
       ) {
         const insertX =
-          draggingDirection === 'left'
-            ? parentElement.x - OFFSET.X - (draggingElement?.width ?? 0)
+          targetDirection === 'left'
+            ? parentElement.x - parentElement.width - OFFSET.X - (draggingElement?.width ?? 0)
             : parentElement.x + parentElement.width + OFFSET.X;
 
-        debugLog(`[Bottom area found] Below ${lastElement.id}, direction: ${draggingDirection}`);
+        debugLog(`[Bottom area found] Below ${lastElement.id}, direction: ${targetDirection}`);
         return {
           element: lastElement,
           position: 'between',

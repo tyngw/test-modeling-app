@@ -35,7 +35,15 @@ import {
 // 型を再エクスポート（後方互換性のため）
 export type { DropTargetInfo, ElementDragEffectResult };
 
-export const useElementDragEffect = (): ElementDragEffectResult => {
+interface DragEffectOptions {
+  viewBoxOffsets?: { minX: number; minY: number };
+  resolveEventCoordinates?: (event: MouseEvent | TouchEvent) => { x: number; y: number } | null;
+}
+
+export const useElementDragEffect = ({
+  viewBoxOffsets = { minX: 0, minY: 0 },
+  resolveEventCoordinates,
+}: DragEffectOptions = {}): ElementDragEffectResult => {
   const { state, dispatch } = useCanvas();
   const { addToast } = useToast();
 
@@ -44,6 +52,19 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
   const [currentDropTarget, setCurrentDropTarget] = useState<DropTargetInfo>(null);
   // 元の位置を各要素ごとに記録するためのMap
   const elementOriginalPositions = useRef<Map<string, Position>>(new Map());
+
+  const resolveCoordinates = useCallback(
+    (event: MouseEvent | TouchEvent) => {
+      if (resolveEventCoordinates) {
+        const customPoint = resolveEventCoordinates(event);
+        if (customPoint) {
+          return customPoint;
+        }
+      }
+      return convertToZoomCoordinates(event, state.zoomRatio, viewBoxOffsets);
+    },
+    [resolveEventCoordinates, state.zoomRatio, viewBoxOffsets],
+  );
 
   const handleMouseDown = useCallback(
     (
@@ -80,7 +101,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
         nativeEvent = e.nativeEvent;
       }
 
-      const zoomAdjustedPos = convertToZoomCoordinates(nativeEvent, state.zoomRatio);
+      const zoomAdjustedPos = resolveCoordinates(nativeEvent);
 
       setDraggingElement(element);
       setDragStartOffset({
@@ -103,7 +124,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
         elementOriginalPositions.current.set(element.id, { x: element.x, y: element.y });
       });
     },
-    [state.hierarchicalData, state.zoomRatio, dispatch],
+    [state.hierarchicalData, state.zoomRatio, dispatch, resolveCoordinates],
   );
 
   const resetElementsPosition = useCallback(() => {
@@ -213,7 +234,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
         draggingElement,
         hierarchicalData: state.hierarchicalData,
         zoomRatio: state.zoomRatio,
-        convertToZoomCoordinates,
+        convertToZoomCoordinates: (event, _ratio) => resolveCoordinates(event),
       });
 
       // 新しいドロップターゲットと現在のドロップターゲットを比較し、
@@ -228,7 +249,9 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
             // betweenモードの場合は、子要素の間に挿入するため、挿入位置の変更を許可する
             currentDropTarget.position !== dropTarget.position ||
             (dropTarget.position === 'between' &&
-              currentDropTarget.insertY !== dropTarget.insertY)));
+              currentDropTarget.insertY !== dropTarget.insertY) ||
+            currentDropTarget.direction !== dropTarget.direction ||
+            currentDropTarget.insertX !== dropTarget.insertX));
 
       if (isTargetChanged) {
         debugLog(`[setCurrentDropTarget] Setting drop target:`, dropTarget);
@@ -240,7 +263,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
         setCurrentDropTarget(dropTarget);
       }
 
-      const zoomAdjustedPos = convertToZoomCoordinates(e, state.zoomRatio);
+      const zoomAdjustedPos = resolveCoordinates(e);
       const newPosition = {
         x: zoomAdjustedPos.x - dragStartOffset.x,
         y: zoomAdjustedPos.y - dragStartOffset.y,
@@ -258,6 +281,7 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
       dispatch,
       state.zoomRatio,
       state.hierarchicalData,
+      resolveCoordinates,
     ],
   );
 

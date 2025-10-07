@@ -56,14 +56,15 @@ export const isInDropArea = (params: DropAreaCheckParams): boolean => {
     findParentNodeInHierarchy(hierarchicalData, element.id) === null;
 
   if (isRootElement) {
-    // ルート要素の場合は拡張されたドロップ範囲を使用
+    // ルート要素の場合は左右の半分ごとにドロップエリアを分割し、狙っている方向と一致する場合のみ許可
     const leftPadding = OFFSET.X * 2 + (draggingElement?.width ?? 0);
     const rightPadding = OFFSET.X * 2 + (draggingElement?.width ?? 0);
+    const rootCenterX = elemLeft + element.width / 2;
 
     const dropAreaTop = elemTop - OFFSET.Y;
     const dropAreaBottom = elemBottom + OFFSET.Y;
-    const dropAreaLeft = elemLeft - leftPadding;
-    const dropAreaRight = elemRight + rightPadding;
+    const dropAreaLeft = targetDirection === 'left' ? elemLeft - leftPadding : rootCenterX;
+    const dropAreaRight = targetDirection === 'left' ? rootCenterX : elemRight + rightPadding;
 
     const inArea =
       mouseX >= dropAreaLeft &&
@@ -72,7 +73,7 @@ export const isInDropArea = (params: DropAreaCheckParams): boolean => {
       mouseY <= dropAreaBottom;
 
     debugLog(
-      `[Root drop area] mouse(${mouseX},${mouseY}), area(${dropAreaLeft},${dropAreaTop},${dropAreaRight},${dropAreaBottom}), inArea: ${inArea}`,
+      `[Root drop area] direction:${targetDirection}, mouse(${mouseX},${mouseY}), area(${dropAreaLeft},${dropAreaTop},${dropAreaRight},${dropAreaBottom}), inArea: ${inArea}`,
     );
 
     return inArea;
@@ -145,6 +146,14 @@ export const filterDropCandidates = (
 ): Element[] => {
   const candidates = allElements.filter((element: Element) => {
     if (!element.visible || selectedElementIds.includes(element.id)) {
+      return false;
+    }
+
+    if (
+      element.direction &&
+      element.direction !== 'none' &&
+      element.direction !== targetDirection
+    ) {
       return false;
     }
 
