@@ -252,8 +252,15 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
       // これを最優先で処理して、要素上のドラッグは常にchildモードになるようにする
       if (isInsideElement) {
         result = calculateChildPosition(element, mouseY);
-        // 要素の方向を設定（ルート要素の場合は右方向をデフォルトとする）
-        result.direction = element.direction || 'right';
+        // 要素の方向を設定（ルート要素の場合は、マウス位置で左右を判定）
+        if (isRootInMindmap) {
+          // ルート要素の場合、マウスのX座標で左右を判定
+          const rootCenterX = element.x + element.width / 2;
+          result.direction = mouseX < rootCenterX ? 'left' : 'right';
+        } else {
+          // 通常の要素の場合は親の方向を継承（'none'でない場合）
+          result.direction = element.direction !== 'none' ? element.direction : 'right';
+        }
         debugLog(`Drop position mode (inside element ${element.id}):`, 'child');
         debugLog(
           `[Inside element] Element ${element.id} - direction: ${result.direction}, insertX: ${result.insertX}`,
@@ -394,12 +401,23 @@ export const useElementDragEffect = (): ElementDragEffectResult => {
       ) {
         // ルート要素の場合は兄弟判定をスキップし、デフォルトのchild位置を返す
         debugLog(`[Root element ${element.id}] Not on valid side, using default child position`);
+
+        // ルート要素の場合、マウス位置で左右を判定
+        let childDirection: DirectionType = 'right';
+        if (isRootInMindmap) {
+          const rootCenterX = element.x + element.width / 2;
+          childDirection = mouseX < rootCenterX ? 'left' : 'right';
+        } else {
+          // 通常の要素の場合は親の方向を継承（'none'でない場合）
+          childDirection = element.direction !== 'none' ? element.direction : 'right';
+        }
+
         result = {
           position: 'child',
           insertY: element.y + element.height / 2,
           insertX: element.x + element.width + OFFSET.X,
           siblingInfo: {},
-          direction: element.direction || 'right', // 要素の方向を保持
+          direction: childDirection,
         };
       } else {
         // 同じ親を持つ要素（兄弟要素）を取得
