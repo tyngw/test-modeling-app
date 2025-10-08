@@ -20,6 +20,7 @@ import { convertLegacyElement } from '../utils/file/fileHelpers';
 import { getTabsState, setTabsState } from '../utils/storage/localStorageHelpers';
 import { TabState, TabsStorage, TabsContextValue, LayoutMode } from '../types/tabTypes';
 import { convertFlatToHierarchical } from '../utils/hierarchical/hierarchicalConverter';
+import { debugLog } from '../utils/debugLogHelpers';
 
 const TabsContext = createContext<TabsContextValue | undefined>(undefined);
 
@@ -51,16 +52,16 @@ const createInitialTabState = (currentSections?: number): TabState => {
     [newRootId]: legacyRootElement,
   };
 
-  console.log('createInitialTabState - initialElements:', initialElements);
-  console.log('createInitialTabState - legacyRootElement:', legacyRootElement);
+  debugLog('createInitialTabState - initialElements:', initialElements);
+  debugLog('createInitialTabState - legacyRootElement:', legacyRootElement);
 
   const hierarchicalData = convertFlatToHierarchical(initialElements);
 
-  console.log('createInitialTabState - hierarchicalData:', hierarchicalData);
+  debugLog('createInitialTabState - hierarchicalData:', hierarchicalData);
 
   // hierarchicalDataがnullの場合の追加チェック
   if (!hierarchicalData) {
-    console.error('Failed to create hierarchical data for new tab');
+    debugLog('Failed to create hierarchical data for new tab');
     // フォールバック：直接階層構造を作成
     const fallbackHierarchicalData = {
       root: {
@@ -69,10 +70,7 @@ const createInitialTabState = (currentSections?: number): TabState => {
       version: '1.4.43',
     };
 
-    console.log(
-      'createInitialTabState - using fallback hierarchicalData:',
-      fallbackHierarchicalData,
-    );
+    debugLog('createInitialTabState - using fallback hierarchicalData:', fallbackHierarchicalData);
 
     return {
       id: uuidv4(),
@@ -110,6 +108,15 @@ const createInitialTabState = (currentSections?: number): TabState => {
 
 // ローカルストレージから状態を読み込む
 const loadTabsState = (): TabsStorage => {
+  // VSCode拡張機能の場合は常に新しいタブを作成（過去の状態を保持しない）
+  if (typeof window !== 'undefined' && window.acquireVsCodeApi) {
+    const initialTab = createInitialTabState();
+    return {
+      tabs: [initialTab],
+      currentTabId: initialTab.id,
+    };
+  }
+
   try {
     const saved = getTabsState();
     if (saved) {
@@ -168,10 +175,19 @@ export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const { tabs, currentTabId } = tabsState;
 
   useEffect(() => {
+    // VSCode拡張機能ではローカルストレージに保存しない
+    if (typeof window !== 'undefined' && window.acquireVsCodeApi) {
+      return;
+    }
     saveTabsToLocalStorage(tabs, currentTabId);
   }, [tabs, currentTabId]);
 
   const addTab = useCallback(() => {
+    // VSCode拡張機能では新しいタブを作成せず、現在のタブIDを返す
+    if (typeof window !== 'undefined' && window.acquireVsCodeApi) {
+      return currentTabId;
+    }
+
     // 現在のタブのセクション数を取得して新しいタブに適用
     const currentTab = tabs.find((tab) => tab.id === currentTabId);
     const currentSections = currentTab?.state.numberOfSections ?? NUMBER_OF_SECTIONS;

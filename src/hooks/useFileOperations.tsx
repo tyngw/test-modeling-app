@@ -3,7 +3,7 @@
 import React, { useCallback } from 'react';
 import { createElementsMapFromHierarchy } from '../utils/hierarchical/hierarchicalConverter';
 import { useToast } from '../context/ToastContext';
-import { saveSvg, saveElements, loadElements } from '../utils/file';
+import { saveSvg, loadElements, saveHierarchicalData } from '../utils/file';
 import { fileOperationAdapter } from '../utils/file/fileOperationAdapter';
 import { TabState } from '../types/tabTypes';
 import { State } from '../state/state';
@@ -58,11 +58,13 @@ export function useFileOperations({
     if (!currentTab) return;
 
     try {
-      // hierarchicalDataから要素を取得
-      const elementsMap = currentTab.state.hierarchicalData
-        ? createElementsMapFromHierarchy(currentTab.state.hierarchicalData)
-        : {};
-      const allElements = Object.values(elementsMap);
+      // hierarchicalDataを直接保存
+      const hierarchicalData = currentTab.state.hierarchicalData;
+
+      if (!hierarchicalData) {
+        addToast('保存するデータがありません');
+        return;
+      }
 
       // VSCode拡張機能の場合は、現在のファイル名を使用
       let fileName = currentTab.name;
@@ -74,10 +76,10 @@ export function useFileOperations({
           }
         }
         // VSCode拡張機能環境ではfileOperationAdapterを使用
-        await fileOperationAdapter.saveElements(allElements, fileName);
+        await fileOperationAdapter.saveHierarchicalData(hierarchicalData, fileName);
       } else {
-        // ブラウザ環境では従来の関数を使用
-        saveElements(allElements, fileName);
+        // ブラウザ環境では階層構造を直接保存
+        saveHierarchicalData(hierarchicalData, fileName);
       }
 
       // JSON保存後にタブを保存済みとしてマーク

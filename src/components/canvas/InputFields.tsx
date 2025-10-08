@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useCanvas } from '../../context/CanvasContext';
-import { wrapText } from '../../utils/textareaHelpers';
+import { calculateTextHeight } from '../../utils/textareaHelpers';
 import { useIsMounted } from '../../hooks/UseIsMounted';
 import {
   DEFAULT_FONT_SIZE,
@@ -10,6 +10,7 @@ import {
   LINE_HEIGHT_RATIO,
   SIZE,
 } from '../../config/elementSettings';
+import { debugLog } from '../../utils/debugLogHelpers';
 import {
   getFontFamily,
   getElementColor,
@@ -22,9 +23,16 @@ import { validateTextInput } from '../../utils/security/validation';
 interface InputFieldsProps {
   element?: Element;
   onEndEditing?: () => void;
+  viewBoxMinX: number;
+  viewBoxMinY: number;
 }
 
-const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
+const InputFields: React.FC<InputFieldsProps> = ({
+  element,
+  onEndEditing,
+  viewBoxMinX,
+  viewBoxMinY,
+}) => {
   const { dispatch, state } = useCanvas();
   const isMounted = useIsMounted();
   const fieldRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
@@ -70,12 +78,30 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
 
   const calculateDynamicHeight = useCallback(
     (text: string) => {
-      const width = SIZE.WIDTH.MAX;
-      const lines = wrapText(text, width, state.zoomRatio).length;
-      const lineHeight = DEFAULT_FONT_SIZE * LINE_HEIGHT_RATIO * state.zoomRatio;
-      const padding = TEXTAREA_PADDING.VERTICAL * state.zoomRatio;
+      // テキストが空の場合の処理
+      if (!text || text.trim() === '') {
+        return SIZE.SECTION_HEIGHT * state.zoomRatio;
+      }
 
-      return Math.max(SIZE.SECTION_HEIGHT * state.zoomRatio, lines * lineHeight + padding);
+      const width = SIZE.WIDTH.MAX;
+      // DOM要素の実際のコンテンツ幅（パディングを除いた幅）
+      const contentWidth = width - TEXTAREA_PADDING.HORIZONTAL;
+
+      // 一貫性のある高さ計算を使用
+      const contentHeight = calculateTextHeight(
+        text,
+        contentWidth,
+        state.zoomRatio,
+        DEFAULT_FONT_SIZE,
+        LINE_HEIGHT_RATIO,
+      );
+      const padding = TEXTAREA_PADDING.VERTICAL * state.zoomRatio;
+      const calculatedHeight = Math.max(
+        SIZE.SECTION_HEIGHT * state.zoomRatio,
+        contentHeight + padding,
+      );
+
+      return calculatedHeight;
     },
     [state.zoomRatio],
   );
@@ -86,7 +112,7 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
 
       // 入力値のセキュリティ検証とサニタイゼーション
       if (!validateTextInput(rawValue)) {
-        console.warn(
+        debugLog(
           '無効なテキスト入力が検出されました。安全でない内容が含まれている可能性があります。',
         );
         return; // 危険な入力は拒否
@@ -190,8 +216,8 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
             onClick={(e) => e.stopPropagation()}
             style={{
               position: 'absolute',
-              left: `${element.x * state.zoomRatio}px`,
-              top: `${element.y * state.zoomRatio + yPosition}px`,
+              left: `${(element.x - viewBoxMinX) * state.zoomRatio}px`,
+              top: `${(element.y - viewBoxMinY) * state.zoomRatio + yPosition}px`,
               width: `${width}px`,
               height: `${height}px`,
               minWidth: `${SIZE.WIDTH.MAX * state.zoomRatio}px`,

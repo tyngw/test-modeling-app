@@ -35,8 +35,8 @@ export const useKeyboardHandler = ({
         const selectedElements = hierarchicalData
           ? getSelectedElementsFromHierarchy(hierarchicalData)
           : [];
-        const selectedElement = selectedElements[0]; // 最初の選択要素を使用
-        if (!selectedElement) {
+
+        if (selectedElements.length === 0) {
           addToast(ToastMessages.noSelect);
           return;
         }
@@ -49,32 +49,40 @@ export const useKeyboardHandler = ({
             originalLine: string;
           }>;
 
-          // 新しい階層構造専用アクションを使用
-          dispatch({
-            type: 'ADD_HIERARCHICAL_ELEMENTS',
-            payload: {
-              targetNodeId: selectedElement.id,
-              targetPosition: 'child',
-              hierarchicalItems: hierarchicalData,
-              onError: (message: string) => {
-                addToast(`エラー: ${message}`);
+          // 複数選択要素がある場合は、それぞれに対して貼り付けを実行
+          for (const selectedElement of selectedElements) {
+            dispatch({
+              type: 'ADD_HIERARCHICAL_ELEMENTS',
+              payload: {
+                targetNodeId: selectedElement.id,
+                targetPosition: 'child',
+                hierarchicalItems: hierarchicalData,
+                onError: (message: string) => {
+                  addToast(`エラー: ${message}`);
+                },
               },
-            },
-          });
+            });
+          }
 
-          addToast(`${hierarchicalData.length}個の要素を階層構造で貼り付けました`);
+          addToast(
+            `${hierarchicalData.length}個の要素を${selectedElements.length}個の選択要素に階層構造で貼り付けました`,
+          );
         } else if (pasteData.type === 'elements') {
           // クリップボードからの要素貼り付け（階層構造ベース）
           const clipboardData = pasteData.data as unknown;
-          dispatch({
-            type: 'PASTE_CLIPBOARD_ELEMENTS',
-            payload: {
-              clipboardData: clipboardData,
-              targetElementId: selectedElement.id,
-            },
-          });
 
-          addToast(`要素を貼り付けました`);
+          // 複数選択要素がある場合は、それぞれに対して貼り付けを実行
+          for (const selectedElement of selectedElements) {
+            dispatch({
+              type: 'PASTE_CLIPBOARD_ELEMENTS',
+              payload: {
+                clipboardData: clipboardData,
+                targetElementId: selectedElement.id,
+              },
+            });
+          }
+
+          addToast(`要素を${selectedElements.length}個の選択要素に貼り付けました`);
         }
       } else if (actionType) {
         if (actionType === 'ADD_ELEMENT') {

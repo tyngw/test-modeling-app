@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { TabHeaderProps } from '../../types/tabTypes';
 import { useIsMounted } from '../../hooks/UseIsMounted';
 import { isVSCodeExtension } from '../../utils/environment/environmentDetector';
-import { storageAdapter } from '../../utils/storage/storageAdapter';
 
 const Tab: React.FC<TabHeaderProps> = React.memo(
   ({ tab, isCurrent, closeTab, switchTab, theme }) => {
@@ -11,36 +10,10 @@ const Tab: React.FC<TabHeaderProps> = React.memo(
     const [isHovered, setIsHovered] = useState(false);
     const [displayName, setDisplayName] = useState(tab.name);
 
-    // VSCode拡張機能でファイル名が変更された場合の処理
+    // タブ名の表示名を設定
     useEffect(() => {
-      if (isVSCodeExtension() && isCurrent && storageAdapter.getCurrentFileName) {
-        // ファイル名変更のリスナーを設定
-        const handleFileNameChange = async () => {
-          try {
-            const currentFileName = await storageAdapter.getCurrentFileName!();
-            if (currentFileName && currentFileName !== tab.name) {
-              setDisplayName(currentFileName);
-            }
-          } catch (error) {
-            console.error('ファイル名の取得に失敗しました:', error);
-          }
-        };
-
-        // VSCode拡張機能のファイル名変更イベントを監視
-        if (typeof window !== 'undefined') {
-          const win = window as unknown as { handleFileNameChanged?: (fileName: string) => void };
-          if (win.handleFileNameChanged) {
-            win.handleFileNameChanged = (fileName: string) => {
-              setDisplayName(fileName);
-            };
-          }
-        }
-
-        handleFileNameChange();
-      } else {
-        setDisplayName(tab.name);
-      }
-    }, [tab.name, isCurrent]);
+      setDisplayName(tab.name);
+    }, [tab.name]);
 
     if (!isMounted) return null;
 
@@ -99,31 +72,34 @@ const Tab: React.FC<TabHeaderProps> = React.memo(
             </span>
           )}
         </div>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            closeTab(tab.id);
-          }}
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
-          style={{
-            flex: '0 0 auto',
-            padding: '0px',
-            marginLeft: '0px',
-            marginRight: '2px',
-            border: '0',
-            backgroundColor: 'transparent',
-            fontSize: '16px',
-            color: isHovered
-              ? theme.TAB_BAR.CLOSE_BUTTON_HOVER_COLOR || '#9999ff'
-              : theme.TAB_BAR.CLOSE_BUTTON_COLOR,
-            fontWeight: 'bold',
-            cursor: 'pointer',
-            transition: 'color 0.2s ease',
-          }}
-        >
-          ×
-        </button>
+        {/* VSCode拡張機能では閉じるボタンを非表示 */}
+        {!isVSCodeExtension() && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              closeTab(tab.id);
+            }}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            style={{
+              flex: '0 0 auto',
+              padding: '0px',
+              marginLeft: '0px',
+              marginRight: '2px',
+              border: '0',
+              backgroundColor: 'transparent',
+              fontSize: '16px',
+              color: isHovered
+                ? theme.TAB_BAR.CLOSE_BUTTON_HOVER_COLOR || '#9999ff'
+                : theme.TAB_BAR.CLOSE_BUTTON_COLOR,
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              transition: 'color 0.2s ease',
+            }}
+          >
+            ×
+          </button>
+        )}
       </div>
     );
   },

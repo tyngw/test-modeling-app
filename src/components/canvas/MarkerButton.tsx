@@ -24,6 +24,7 @@ export const MarkerButton: React.FC<MarkerButtonProps> = ({
   _isInGroup = false,
 }) => {
   const { state } = useCanvas();
+  const isMindmapMode = state.layoutMode === 'mindmap';
 
   // ボタン表示条件のチェック
   if (isEndMarker) {
@@ -41,10 +42,28 @@ export const MarkerButton: React.FC<MarkerButtonProps> = ({
   const totalHeight = element.height;
   const buttonId = isEndMarker ? `end-${element.id}` : element.id;
 
-  // ボタン位置の計算（終点マーカーは左側、始点マーカーは右側）
-  const buttonX = isEndMarker
-    ? absolutePosition.x - MARKER.WIDTH / 2
-    : absolutePosition.x + element.width + MARKER.WIDTH / 2;
+  // direction:leftの場合、マーカーの位置が逆になる
+  // - startMarker: 要素の左側（direction:leftの場合）または右側（通常）
+  // - endMarker: 要素の右側（direction:leftの場合）または左側（通常）
+  const isLeftDirection = element.direction === 'left';
+
+  let buttonX: number;
+  if (isEndMarker) {
+    // 終点マーカーの場合
+    buttonX = isLeftDirection
+      ? absolutePosition.x + element.width + MARKER.WIDTH / 2 // direction:leftでは右側
+      : absolutePosition.x - MARKER.WIDTH / 2; // 通常は左側
+  } else {
+    // 始点マーカーの場合
+    buttonX = isLeftDirection
+      ? absolutePosition.x - MARKER.WIDTH / 2 // direction:leftでは左側
+      : absolutePosition.x + element.width + MARKER.WIDTH / 2; // 通常は右側
+  }
+
+  // マインドマップモードでは接続線が下端に来るため、ボタンも下端に配置
+  const buttonY = isMindmapMode
+    ? absolutePosition.y + totalHeight // 下端
+    : absolutePosition.y + totalHeight / 2; // 中央
 
   return (
     <g
@@ -56,7 +75,7 @@ export const MarkerButton: React.FC<MarkerButtonProps> = ({
       {hoverId === buttonId && (
         <circle
           cx={buttonX}
-          cy={absolutePosition.y + totalHeight / 2}
+          cy={buttonY}
           r={MARKER.WIDTH / 2}
           fill="#bfbfbf"
           opacity={0.5}
@@ -65,7 +84,7 @@ export const MarkerButton: React.FC<MarkerButtonProps> = ({
       )}
       <circle
         cx={buttonX}
-        cy={absolutePosition.y + totalHeight / 2}
+        cy={buttonY}
         r={MARKER.WIDTH / 2}
         fill="transparent"
         stroke="transparent"

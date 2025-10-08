@@ -11,7 +11,10 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:testModelingApp.openModeler"
+    "onCommand:testModelingApp.openModeler",
+    "onCommand:testModelingApp.openInModelingView",
+    "onLanguage:json",
+    "onLanguage:markdown"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -20,8 +23,49 @@
         "command": "testModelingApp.openModeler",
         "title": "Open Test Modeling App",
         "category": "Test Modeling"
+      },
+      {
+        "command": "testModelingApp.openInModelingView",
+        "title": "Open in Test Modeling View",
+        "category": "Test Modeling"
       }
-    ]
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "testModelingApp.openInModelingView",
+          "when": "resourceExtname == .json",
+          "group": "navigation"
+        },
+        {
+          "command": "testModelingApp.openInModelingView",
+          "when": "resourceExtname == .md",
+          "group": "navigation"
+        },
+        {
+          "command": "testModelingApp.openInModelingView",
+          "when": "resourceExtname == .markdown",
+          "group": "navigation"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "testModelingApp.openInModelingView",
+          "when": "resourceExtname == .json",
+          "group": "navigation"
+        },
+        {
+          "command": "testModelingApp.openInModelingView",
+          "when": "resourceExtname == .md",
+          "group": "navigation"
+        },
+        {
+          "command": "testModelingApp.openInModelingView",
+          "when": "resourceExtname == .markdown",
+          "group": "navigation"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

@@ -34,6 +34,7 @@ import { Element as CanvasElement, DropPosition } from '../../types/types';
 import { isDescendant } from '../../utils/element/elementHelpers';
 import { useTabs } from '../../context/TabsContext';
 import { useIsMounted } from '../../hooks/UseIsMounted';
+import { debugLog } from '../../utils/debugLogHelpers';
 
 interface IdeaElementProps {
   element: CanvasElement;
@@ -270,7 +271,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
 
   const handleSelect = (e: React.MouseEvent) => {
     e.stopPropagation();
-    console.log(`[DEBUG] Element ${element.id} clicked - current selected: ${element.selected}`);
+    debugLog(`[DEBUG] Element ${element.id} clicked - current selected: ${element.selected}`);
     dispatch({
       type: 'SELECT_ELEMENT',
       payload: {
@@ -401,7 +402,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
           strokeDasharray={element.tentative ? '4 2' : 'none'}
           onClick={handleSelect}
           onDoubleClick={(e) => {
-            console.log(`[DEBUG] onDoubleClick triggered for element ${element.id}`, {
+            debugLog(`[DEBUG] onDoubleClick triggered for element ${element.id}`, {
               editing: element.editing,
               selected: element.selected,
             });
@@ -409,14 +410,14 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
             dispatch({ type: 'EDIT_ELEMENT' });
           }}
           onMouseDown={(e) => {
-            console.log(`[DEBUG] onMouseDown triggered for element ${element.id}`, {
+            debugLog(`[DEBUG] onMouseDown triggered for element ${element.id}`, {
               button: e.button,
               selected: element.selected,
             });
             handleMouseDown(e, element);
           }}
           onTouchStart={(e) => {
-            console.log(`[DEBUG] onTouchStart triggered for element ${element.id}`, {
+            debugLog(`[DEBUG] onTouchStart triggered for element ${element.id}`, {
               selected: element.selected,
             });
             // TouchEventをMouseEventに変換
@@ -507,12 +508,12 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
                 onUrlClick={undefined}
                 onElementClick={handleSelect}
                 onDoubleClick={(e) => {
-                  console.log(`[DEBUG] TextDisplayArea onDoubleClick for element ${element.id}`);
+                  debugLog(`[DEBUG] TextDisplayArea onDoubleClick for element ${element.id}`);
                   e.stopPropagation();
                   dispatch({ type: 'EDIT_ELEMENT' });
                 }}
                 onMouseDown={(e) => {
-                  console.log(`[DEBUG] TextDisplayArea onMouseDown for element ${element.id}`);
+                  debugLog(`[DEBUG] TextDisplayArea onMouseDown for element ${element.id}`);
                   // MouseEvent<Element>をMouseEvent<SVGElement>に適切にキャスト
                   const syntheticEvent = {
                     ...e,
@@ -523,7 +524,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
                   handleMouseDown(syntheticEvent, element);
                 }}
                 onTouchStart={(e) => {
-                  console.log(`[DEBUG] TextDisplayArea onTouchStart for element ${element.id}`);
+                  debugLog(`[DEBUG] TextDisplayArea onTouchStart for element ${element.id}`);
                   // TouchEventをMouseEventに変換
                   const touch = e.touches[0];
                   const syntheticMouseEvent = {

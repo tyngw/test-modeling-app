@@ -29,7 +29,6 @@ import { getCanvasBackgroundColor } from '../../utils/storage/localStorageHelper
 import { useIsMounted } from '../../hooks/UseIsMounted';
 import LoadingIndicator from '../LoadingIndicator';
 import { tooltipTexts } from '../../constants/tooltipTexts';
-import { isVSCodeExtension } from '../../utils/environment/environmentDetector';
 
 // 基本コンポーネントのインポート
 import IconButton from './menubar/IconButton';
@@ -43,6 +42,8 @@ interface QuickMenuBarProps {
   toggleSettings: () => void;
   onAIClick: () => void;
   isAILoading?: boolean;
+  isEditorMode: boolean;
+  isVSCodeExtension: boolean;
 }
 
 type CanvasActionType =
@@ -63,6 +64,8 @@ const QuickMenuBar = ({
   toggleSettings,
   onAIClick,
   isAILoading,
+  isEditorMode,
+  isVSCodeExtension: isExtension,
 }: QuickMenuBarProps) => {
   const { dispatch } = useCanvas();
   const { addTab } = useTabs();
@@ -106,7 +109,7 @@ const QuickMenuBar = ({
   const theme = getCurrentTheme(backgroundColor);
 
   const handleFileOpen = () => {
-    if (isVSCodeExtension()) {
+    if (isExtension) {
       // VSCode環境では直接loadElementsを呼び出す
       loadElements();
     } else {
@@ -121,6 +124,9 @@ const QuickMenuBar = ({
         style={{
           position: 'fixed',
           width: '100%',
+          left: 0,
+          margin: 0,
+          padding: 0,
           height: ICONBAR_HEIGHT,
           overflowX: 'auto',
           WebkitOverflowScrolling: 'touch',
@@ -136,12 +142,13 @@ const QuickMenuBar = ({
             alignItems: 'center',
             height: '100%',
             backgroundColor: theme.MENU_BAR.BACKGROUND,
-            padding: '0 20px',
+            padding: isExtension ? '0' : '0 20px', // VSCode拡張機能ではpaddingなし
+            margin: 0,
             minWidth: 'max-content', // コンテンツ幅を維持
           }}
         >
           {/* VSCode環境では隠しinputは完全に除外 */}
-          {!isVSCodeExtension() && (
+          {!isExtension && (
             <input
               type="file"
               ref={fileInput}
@@ -151,25 +158,29 @@ const QuickMenuBar = ({
             />
           )}
 
-          {/* ファイル操作グループ */}
-          <IconButton
-            tooltip={tooltipTexts.NEW}
-            onClick={addTab}
-            icon={InsertDriveFileOutlinedIcon}
-            iconColor={theme.MENU_BAR.ICON_COLOR}
-          />
-          <IconButton
-            tooltip={tooltipTexts.OPEN}
-            onClick={handleFileOpen}
-            icon={FolderOpenOutlinedIcon}
-            iconColor={theme.MENU_BAR.ICON_COLOR}
-          />
-          <IconButton
-            tooltip={tooltipTexts.SAVE}
-            onClick={saveElements}
-            icon={SaveAsOutlinedIcon}
-            iconColor={theme.MENU_BAR.ICON_COLOR}
-          />
+          {/* ファイル操作グループ - エディタモードでは新規・開く・保存を非表示 */}
+          {!isEditorMode && (
+            <>
+              <IconButton
+                tooltip={tooltipTexts.NEW}
+                onClick={addTab}
+                icon={InsertDriveFileOutlinedIcon}
+                iconColor={theme.MENU_BAR.ICON_COLOR}
+              />
+              <IconButton
+                tooltip={tooltipTexts.OPEN}
+                onClick={handleFileOpen}
+                icon={FolderOpenOutlinedIcon}
+                iconColor={theme.MENU_BAR.ICON_COLOR}
+              />
+              <IconButton
+                tooltip={tooltipTexts.SAVE}
+                onClick={saveElements}
+                icon={SaveAsOutlinedIcon}
+                iconColor={theme.MENU_BAR.ICON_COLOR}
+              />
+            </>
+          )}
           <IconButton
             tooltip={tooltipTexts.SAVE_SVG}
             onClick={saveSvg}

@@ -50,10 +50,12 @@ import {
   getElementCountFromHierarchy,
   updateAllElementsInHierarchy,
   createElementsMapFromHierarchy,
+  updateDescendantDirections,
 } from '../utils/hierarchical/hierarchicalConverter';
 import { updateHierarchyWithElementChanges } from '../utils/hierarchical/hierarchicalMaintainer';
 import {
   addElementToHierarchy,
+  addSiblingToHierarchy,
   addMultipleSiblingsToHierarchy,
   deleteElementFromHierarchy,
   moveElementInHierarchy,
@@ -190,8 +192,9 @@ const isDropElementPayload = (payload: unknown): payload is DropElementPayload =
     // targetIndex は省略可能
     (('targetIndex' in payload && typeof p.targetIndex === 'number') ||
       !('targetIndex' in payload)) &&
-    // direction は省略可能なので存在チェックのみ
-    (('direction' in payload && typeof p.direction === 'string') || !('direction' in payload))
+    // direction は省略可能（string, undefined, または存在しない場合を許可）
+    (('direction' in payload && (typeof p.direction === 'string' || p.direction === undefined)) ||
+      !('direction' in payload))
   );
 };
 
@@ -1411,30 +1414,9 @@ const actionHandlers: Record<string, ActionHandler> = {
     // Undoスナップショットを保存
     saveHierarchicalSnapshot(state.hierarchicalData);
 
-    // 同じ階層の兄弟要素を取得
-    // 選択された要素の親を取得
-    const parentNode = findParentNodeInHierarchy(state.hierarchicalData, selectedElement.id);
-    const parent = parentNode ? parentNode.data : null;
-
-    // 親の子要素（選択された要素の兄弟要素）を取得
-    const siblings = parent
-      ? getChildrenFromHierarchy(state.hierarchicalData, parent.id).filter((el) => el.visible)
-      : [];
-
-    // 新しい要素の初期座標を計算
-    let initialX: number;
-    let initialY: number;
-
-    if (siblings.length > 0) {
-      // 同じ階層の最後の要素の下に配置
-      const lastSibling = siblings[siblings.length - 1];
-      initialX = lastSibling.x; // 最後の兄弟要素のX座標と同じ
-      initialY = lastSibling.y + lastSibling.height + OFFSET.Y; // 最後の兄弟要素の下端+OFFSETに配置
-    } else {
-      // 兄弟要素がない場合：選択された要素と同じ位置に配置
-      initialX = selectedElement.x;
-      initialY = selectedElement.y + selectedElement.height + OFFSET.Y;
-    }
+    // 新しい要素の初期座標を計算（選択された要素の直下に配置）
+    const initialX = selectedElement.x;
+    const initialY = selectedElement.y + selectedElement.height + OFFSET.Y;
 
     // 兄弟要素を作成
     const newElement: Element = {
@@ -1443,8 +1425,8 @@ const actionHandlers: Record<string, ActionHandler> = {
         direction: selectedElement.direction, // 選択された要素のdirectionを継承
       }),
       id: Date.now().toString(),
-      x: initialX, // 計算された初期X座標を設定
-      y: initialY, // 計算された初期Y座標を設定
+      x: initialX,
+      y: initialY,
       texts: Array(state.numberOfSections).fill(''),
       selected: true,
     };
@@ -1454,10 +1436,15 @@ const actionHandlers: Record<string, ActionHandler> = {
       `[ADD_SIBLING_ELEMENT] 新要素作成: ID=${newElement.id}, X=${newElement.x}, Y=${newElement.y}`,
     );
 
-    // 階層構造に要素を追加
+    // 階層構造に要素を追加（選択された要素の直後に挿入）
     let result: HierarchicalOperationResult;
     try {
-      result = addElementToHierarchy(state.hierarchicalData, parent?.id || null, newElement);
+      result = addSiblingToHierarchy(
+        state.hierarchicalData,
+        selectedElement.id,
+        newElement,
+        'after',
+      );
     } catch {
       return state; // エラー時は元の状態を返す
     }
@@ -1739,6 +1726,15 @@ const actionHandlers: Record<string, ActionHandler> = {
             direction,
           };
           debugLog(`Element ${id} direction updated to: ${direction}`);
+
+          // マインドマップモードの場合、子孫要素のdirectionも更新
+          // 背景：親要素が右側から左側に移動した場合、子要素も左側に配置される必要がある
+          // レイアウト計算では子要素のdirection値に基づいて配置が決まるため、
+          // 親のdirection変更時に子要素のdirectionを更新しないと表示が崩れる
+          if (state.layoutMode === 'mindmap') {
+            updateDescendantDirections(targetNode, direction);
+            debugLog(`Element ${id} descendants direction updated to: ${direction}`);
+          }
         }
       }
 
@@ -1803,19 +1799,65 @@ const actionHandlers: Record<string, ActionHandler> = {
   }),
 
   COPY_ELEMENT: createNoPayloadHandler((state) => {
-    const selectedElement = getSelectedElementFromState(state);
-    if (!selectedElement) {
+    const selectedElements = getSelectedElementsFromState(state);
+    if (selectedElements.length === 0) {
       return state;
     }
 
-    // 階層構造から直接、選択された要素とその子要素をクリップボードデータとして取得
-    const clipboardData = getSelectedAndChildren(state.hierarchicalData, selectedElement);
+    if (selectedElements.length === 1) {
+      // 単一選択時は従来の処理
+      const clipboardData = getSelectedAndChildren(state.hierarchicalData, selectedElements[0]);
+      if (clipboardData) {
+        copyToClipboard(clipboardData).catch((error) => {
+          console.error('Failed to copy elements to clipboard:', error);
+        });
+      }
+    } else {
+      // 複数選択時：CUT_ELEMENTと同様のパターンで各要素を個別に処理
+      const clipboardDataList: ClipboardData[] = [];
 
-    if (clipboardData) {
-      // 非同期でクリップボードに保存（エラーハンドリング付き）
-      copyToClipboard(clipboardData).catch((error) => {
-        console.error('Failed to copy elements to clipboard:', error);
+      selectedElements.forEach((selectedElement) => {
+        const clipboardData = getSelectedAndChildren(state.hierarchicalData, selectedElement);
+        if (clipboardData) {
+          clipboardDataList.push(clipboardData);
+        }
       });
+
+      // 複数要素を統合した仮想ルートを作成
+      if (clipboardDataList.length > 0) {
+        const virtualRootElement: Element = {
+          id: 'virtual-root-' + Date.now(),
+          texts: ['複数要素のコピー'],
+          x: 0,
+          y: 0,
+          width: 200,
+          height: 30,
+          sectionHeights: [30],
+          selected: true,
+          editing: false,
+          visible: true,
+          tentative: false,
+          startMarker: 'none',
+          endMarker: 'none',
+          direction: 'none',
+          tempParentId: null,
+        };
+
+        const virtualSubtree: HierarchicalNode = {
+          data: virtualRootElement,
+          children: clipboardDataList.map((data) => data.subtree),
+        };
+
+        const combinedClipboardData: ClipboardData = {
+          type: 'copy',
+          rootElement: virtualRootElement,
+          subtree: virtualSubtree,
+        };
+
+        copyToClipboard(combinedClipboardData).catch((error) => {
+          console.error('Failed to copy multiple elements to clipboard:', error);
+        });
+      }
     }
 
     return state;
@@ -2014,16 +2056,21 @@ const actionHandlers: Record<string, ActionHandler> = {
     if (!selectedElement) return state;
 
     try {
+      const clipboardDataTyped = clipboardData as ClipboardData;
+
       // 階層構造のサブツリーを新しいIDで複製
-      const cloneNodeWithNewIds = (sourceNode: HierarchicalNode): HierarchicalNode => {
+      const cloneNodeWithNewIds = (
+        sourceNode: HierarchicalNode,
+        offsetIndex = 0,
+      ): HierarchicalNode => {
         const newId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
         const clonedElement = {
           ...sourceNode.data,
           id: newId,
           selected: false,
           editing: false,
-          x: selectedElement.x + 20,
-          y: selectedElement.y + 20,
+          x: selectedElement.x + 20 + offsetIndex * 10,
+          y: selectedElement.y + 20 + offsetIndex * 10,
         };
 
         return {
@@ -2034,36 +2081,66 @@ const actionHandlers: Record<string, ActionHandler> = {
         };
       };
 
-      const clonedSubtree = cloneNodeWithNewIds((clipboardData as ClipboardData).subtree);
+      let currentHierarchy = state.hierarchicalData;
 
-      // 階層構造に追加
-      const result = addElementToHierarchy(
-        state.hierarchicalData,
-        targetElementId,
-        clonedSubtree.data,
-      );
+      // 複数要素のコピー（仮想ルート）かどうかを判定
+      const isMultipleElementsCopy = clipboardDataTyped.rootElement.id.startsWith('virtual-root-');
 
-      if (!result.hierarchicalData) {
-        return state;
-      }
+      if (isMultipleElementsCopy && clipboardDataTyped.subtree.children) {
+        // 複数要素の場合：仮想ルートの子要素を直接貼り付け
+        clipboardDataTyped.subtree.children.forEach((childNode, index) => {
+          const clonedChild = cloneNodeWithNewIds(childNode, index);
 
-      let currentHierarchy = result.hierarchicalData;
+          const result = addElementToHierarchy(currentHierarchy, targetElementId, clonedChild.data);
+          if (result.hierarchicalData) {
+            currentHierarchy = result.hierarchicalData;
 
-      // 子要素を再帰的に追加
-      const addSubtreeToHierarchy = (parentId: string, node: HierarchicalNode) => {
-        if (node.children) {
-          node.children.forEach((childNode: HierarchicalNode) => {
-            const childResult = addElementToHierarchy(currentHierarchy, parentId, childNode.data);
+            // 子要素を再帰的に追加
+            const addSubtreeToHierarchy = (parentId: string, node: HierarchicalNode) => {
+              if (node.children) {
+                node.children.forEach((childNode: HierarchicalNode) => {
+                  const childResult = addElementToHierarchy(
+                    currentHierarchy,
+                    parentId,
+                    childNode.data,
+                  );
+                  if (childResult.hierarchicalData) {
+                    currentHierarchy = childResult.hierarchicalData;
+                    addSubtreeToHierarchy(childNode.data.id, childNode);
+                  }
+                });
+              }
+            };
 
-            if (childResult.hierarchicalData) {
-              currentHierarchy = childResult.hierarchicalData;
-              addSubtreeToHierarchy(childNode.data.id, childNode);
-            }
-          });
+            addSubtreeToHierarchy(clonedChild.data.id, clonedChild);
+          }
+        });
+      } else {
+        // 単一要素の場合：従来の処理
+        const clonedSubtree = cloneNodeWithNewIds(clipboardDataTyped.subtree);
+
+        const result = addElementToHierarchy(currentHierarchy, targetElementId, clonedSubtree.data);
+        if (!result.hierarchicalData) {
+          return state;
         }
-      };
 
-      addSubtreeToHierarchy(clonedSubtree.data.id, clonedSubtree);
+        currentHierarchy = result.hierarchicalData;
+
+        // 子要素を再帰的に追加
+        const addSubtreeToHierarchy = (parentId: string, node: HierarchicalNode) => {
+          if (node.children) {
+            node.children.forEach((childNode: HierarchicalNode) => {
+              const childResult = addElementToHierarchy(currentHierarchy, parentId, childNode.data);
+              if (childResult.hierarchicalData) {
+                currentHierarchy = childResult.hierarchicalData;
+                addSubtreeToHierarchy(childNode.data.id, childNode);
+              }
+            });
+          }
+        };
+
+        addSubtreeToHierarchy(clonedSubtree.data.id, clonedSubtree);
+      }
 
       // 貼り付け後に位置を自動調整
       const adjustedHierarchicalData = adjustElementPositionsFromHierarchy(

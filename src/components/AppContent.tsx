@@ -1,7 +1,7 @@
 // src/AppContent.tsx
 'use client';
 
-import React, { useCallback, useMemo, useEffect, useRef } from 'react';
+import React, { useCallback, useMemo, useEffect, useRef, useState } from 'react';
 import { CanvasArea } from './canvas';
 import QuickMenuBar from './header/QuickMenuBar';
 import TabHeaders from './header/TabHeaders';
@@ -13,14 +13,28 @@ import { useFileOperations } from '../hooks/useFileOperations';
 import { useAIGeneration } from '../hooks/useAIGeneration';
 import { useTabManagement } from '../hooks/useTabManagement';
 import { useModalState } from '../hooks/useModalState';
+import { useTabs } from '../context/TabsContext';
+import {
+  setupVSCodeMessageListener,
+  notifyDocumentUpdate,
+  DocumentUpdatePayload,
+  DocumentUpdatedMessagePayload,
+} from '../utils/vscode/vscodeMessaging';
+import { isVSCodeEditorMode, isVSCodeExtension } from '../utils/environment/environmentDetector';
+import { HierarchicalStructure } from '../types/hierarchicalTypes';
+import {
+  loadMarkdownAsHierarchical,
+  convertHierarchicalToMarkdown,
+} from '../utils/file/markdownHelpers';
 
 const AppContent: React.FC = () => {
   const renderCount = useRef(0);
+  const hasInitializedFromExtensionRef = useRef(false);
 
   // レンダリングの追跡
   useEffect(() => {
     renderCount.current += 1;
-    // console.log(`[DEBUG] AppContent rendered #${renderCount.current}`);
+    // debugLog(`[DEBUG] AppContent rendered #${renderCount.current}`);
   });
 
   // タブ管理に関する機能
@@ -80,8 +94,213 @@ const AppContent: React.FC = () => {
     updateTabSaveStatus,
   });
 
+  type EnvironmentInfo = {
+    isExtension: boolean;
+    isEditorMode: boolean;
+    fileType: 'json' | 'markdown';
+  };
+
+  // 環境情報の状態管理
+  const [environmentInfo, setEnvironmentInfo] = useState<EnvironmentInfo>(() => ({
+    isExtension: isVSCodeExtension(),
+    isEditorMode: isVSCodeEditorMode(),
+    fileType: 'json',
+  }));
+
+  const currentFileTypeRef = useRef<'json' | 'markdown'>(environmentInfo.fileType);
+
+  const { updateCurrentTabNumberOfSections, getCurrentTabNumberOfSections } = useTabs();
+
+  // 最新のcurrentTabを追跡
+  const currentTabRef = useRef(currentTab);
+  useEffect(() => {
+    currentTabRef.current = currentTab;
+  }, [currentTab]);
+
+  // VSCodeメッセージリスナーの設定
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return undefined;
+    }
+
+    const cleanup = setupVSCodeMessageListener(
+      // ファイル初期化
+      (data) => {
+        hasInitializedFromExtensionRef.current = false;
+
+        const fileType = data.fileType === 'markdown' ? 'markdown' : 'json';
+        currentFileTypeRef.current = fileType;
+        setEnvironmentInfo({
+          isExtension: true,
+          isEditorMode: Boolean(data.isEditorMode),
+          fileType,
+        });
+
+        // VSCode拡張機能では既存のタブを使用、ブラウザでは新しいタブを作成
+        const ensuredTabId = currentTabId ?? addTab();
+
+        // ファイル名を常に設定
+        updateTabName(ensuredTabId, data.fileName);
+
+        if (fileType === 'markdown') {
+          const converted = loadMarkdownAsHierarchical((data.content as string) || '');
+
+          if (getCurrentTabNumberOfSections() !== 1) {
+            updateCurrentTabNumberOfSections(1);
+          }
+
+          updateTabState(ensuredTabId, (prevState) => ({
+            ...prevState,
+            numberOfSections: 1,
+            ...(converted
+              ? {
+                  hierarchicalData: converted,
+                }
+              : {}),
+          }));
+
+          if (converted) {
+            updateTabSaveStatus(ensuredTabId, true);
+          }
+
+          const serializedForComparison = converted
+            ? JSON.stringify(converted)
+            : JSON.stringify(data.content);
+          lastNotifiedStateRef.current = serializedForComparison;
+        } else if (data.content) {
+          updateTabState(ensuredTabId, (prevState) => ({
+            ...prevState,
+            hierarchicalData: data.content as HierarchicalStructure,
+          }));
+          updateTabSaveStatus(ensuredTabId, true);
+          lastNotifiedStateRef.current = JSON.stringify(data.content);
+        }
+
+        hasInitializedFromExtensionRef.current = true;
+      },
+      // ドキュメント更新（更新後の最新データ）
+      (data: DocumentUpdatedMessagePayload) => {
+        if (currentTabRef.current && data.content) {
+          const activeTabId = currentTabId;
+          if (!activeTabId) {
+            return;
+          }
+
+          // extensionからの更新であることを記録
+          isUpdatingFromExtensionRef.current = true;
+          hasInitializedFromExtensionRef.current = true;
+
+          const fileType = data.fileType === 'markdown' ? 'markdown' : 'json';
+          if (data.skipStateUpdate) {
+            isUpdatingFromExtensionRef.current = false;
+            return;
+          }
+          currentFileTypeRef.current = fileType;
+          setEnvironmentInfo((prev) => ({
+            ...prev,
+            fileType,
+          }));
+
+          if (fileType === 'markdown') {
+            const converted = loadMarkdownAsHierarchical((data.content as string) || '');
+
+            if (getCurrentTabNumberOfSections() !== 1) {
+              updateCurrentTabNumberOfSections(1);
+            }
+
+            updateTabState(activeTabId, (prevState) => ({
+              ...prevState,
+              numberOfSections: 1,
+              ...(converted
+                ? {
+                    hierarchicalData: converted,
+                  }
+                : {}),
+            }));
+
+            const serializedForComparison = converted
+              ? JSON.stringify(converted)
+              : JSON.stringify(data.content);
+            lastNotifiedStateRef.current = serializedForComparison;
+          } else {
+            updateTabState(activeTabId, (prevState) => ({
+              ...prevState,
+              hierarchicalData: data.content as HierarchicalStructure,
+            }));
+            lastNotifiedStateRef.current = JSON.stringify(data.content);
+          }
+
+          // ファイル名も更新（initializeWithFileが呼ばれない場合の対策）
+          updateTabName(activeTabId, data.fileName);
+
+          // lastNotifiedStateRefは上記で更新済み
+        }
+      },
+    );
+
+    return cleanup;
+  }, [
+    addTab,
+    updateTabState,
+    updateTabName,
+    updateTabSaveStatus,
+    currentTabId,
+    getCurrentTabNumberOfSections,
+    updateCurrentTabNumberOfSections,
+  ]);
+
+  // エディタモードでの状態変更をVSCodeに通知
+  const lastNotifiedStateRef = useRef<string>('');
+  const isUpdatingFromExtensionRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    if (!environmentInfo.isEditorMode || !currentTab) {
+      return;
+    }
+
+    if (!hasInitializedFromExtensionRef.current) {
+      return;
+    }
+
+    // extensionからの更新中はスキップ
+    if (isUpdatingFromExtensionRef.current) {
+      isUpdatingFromExtensionRef.current = false;
+      return;
+    }
+
+    // 状態が変更されたかチェック
+    const currentStateStr = JSON.stringify(currentTab.state.hierarchicalData);
+    if (currentStateStr === lastNotifiedStateRef.current) {
+      return;
+    }
+
+    lastNotifiedStateRef.current = currentStateStr;
+
+    if (currentTab.state.hierarchicalData) {
+      const fileType = currentFileTypeRef.current;
+      const payload: DocumentUpdatePayload = {
+        hierarchicalData: currentTab.state.hierarchicalData,
+        fileType,
+        fileName: currentTab.name,
+      };
+
+      if (fileType === 'markdown') {
+        payload.serializedContent = convertHierarchicalToMarkdown(
+          currentTab.state.hierarchicalData,
+        );
+        payload.hierarchicalData = currentTab.state.hierarchicalData;
+      }
+
+      notifyDocumentUpdate(payload);
+    }
+  }, [currentTab?.state.hierarchicalData, currentTab, environmentInfo.isEditorMode]);
+
   const memoizedCanvasProvider = useMemo(() => {
     if (!currentTab) return null;
+
+    const editorMode = environmentInfo.isEditorMode;
+    const extensionMode = environmentInfo.isExtension;
+
     return (
       <CanvasProvider state={currentTab.state} dispatch={dispatch}>
         <CanvasArea isHelpOpen={isHelpOpen} toggleHelp={toggleHelp} />
@@ -100,6 +319,8 @@ const AppContent: React.FC = () => {
           toggleSettings={toggleSettings}
           onAIClick={handleAIClick}
           isAILoading={isLoading}
+          isEditorMode={editorMode}
+          isVSCodeExtension={extensionMode}
         />
       </CanvasProvider>
     );
@@ -119,6 +340,7 @@ const AppContent: React.FC = () => {
     tabs,
     handleSaveSvg,
     isLoading,
+    environmentInfo,
   ]);
 
   return (

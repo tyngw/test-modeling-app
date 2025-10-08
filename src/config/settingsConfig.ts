@@ -175,4 +175,22 @@ export const SETTINGS_TABS: SettingTab[] = [
       },
     ],
   },
+  {
+    id: 3,
+    label: 'Paste Settings',
+    fields: [
+      {
+        key: 'indentSpacesPerLevel',
+        label: 'インデント判定基準',
+        type: 'radio',
+        helperText:
+          'クリップボードからテキストを貼り付ける際のインデント判定基準を設定します。タブ文字は常に1つで1レベルとして認識されます。',
+        defaultValue: 4,
+        options: [
+          { value: 2, label: '半角スペース2つで1レベル' },
+          { value: 4, label: '半角スペース4つで1レベル' },
+        ],
+      },
+    ],
+  },
 ];

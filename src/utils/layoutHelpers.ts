@@ -249,8 +249,8 @@ export const adjustElementPositionsFromHierarchy = (
   hierarchicalData: HierarchicalStructure | null,
   getNumberOfSections: () => number,
   layoutMode: LayoutMode = 'default',
-  canvasWidth = 0,
-  canvasHeight = 0,
+  _canvasWidth = 0,
+  _canvasHeight = 0,
 ): HierarchicalStructure | null => {
   // 呼び出し元を特定するためのスタックトレース
   const stack = new Error().stack;
@@ -271,19 +271,22 @@ export const adjustElementPositionsFromHierarchy = (
 
   let currentY = DEFAULT_POSITION.Y;
 
-  // マインドマップモードの場合、ルート要素をキャンバス中央に配置
+  // マインドマップモードの場合、ルート要素をビューポート中央に配置
   if (layoutMode === 'mindmap' && updatedHierarchy.root) {
     const rootElement = updatedHierarchy.root.data;
     // ルート要素の方向をnoneに設定
     rootElement.direction = 'none';
 
-    // キャンバス中央に配置（デフォルト値を使用する場合も考慮）
-    const centerX = canvasWidth > 0 ? canvasWidth / 2 - rootElement.width / 2 : DEFAULT_POSITION.X;
-    const centerY =
-      canvasHeight > 0 ? canvasHeight / 2 - rootElement.height / 2 : DEFAULT_POSITION.Y;
+    // ビューポート中央に配置（キャンバスサイズではなくビューポートサイズを使用）
+    // これにより、左側に要素を追加してもルート要素の位置が変わらない
+    const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1000;
+    const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 800;
 
-    // マインドマップモードでは、ルート要素を右にオフセット
-    rootElement.x = centerX + OFFSET.X;
+    const centerX = viewportWidth / 2 - rootElement.width / 2;
+    const centerY = viewportHeight / 2 - rootElement.height / 2;
+
+    // マインドマップモードでは、ルート要素をビューポート中央に配置
+    rootElement.x = centerX;
     rootElement.y = centerY;
 
     // 子要素をレイアウト（階層構造ベース）
@@ -334,9 +337,13 @@ const layoutNodeFromHierarchy = (
     // ルート要素は固定位置
     element.x = DEFAULT_POSITION.X;
   } else if (parentNode) {
-    // 親要素がある場合：親のX座標 + 親の幅 + OFFSET.X
+    // 親要素がある場合：方向に応じて左右どちらかへ配置
     const parent = parentNode.data;
-    element.x = parent.x + parent.width + OFFSET.X;
+    if (element.direction === 'left') {
+      element.x = parent.x - element.width - (parent.width + OFFSET.X);
+    } else {
+      element.x = parent.x + parent.width + OFFSET.X;
+    }
   } else {
     // フォールバック：階層レベルに応じた基本配置
     element.x = DEFAULT_POSITION.X + level * (SIZE.WIDTH.MIN + OFFSET.X);
@@ -416,7 +423,7 @@ const layoutNodeFromHierarchy = (
       currentY = Math.max(leftMaxY, rightMaxY);
     }
 
-    // 親要素を子要素群の中央に配置（修正版）
+    // 親要素と子要素群の中央配置（最も高い要素を基準にする）
     if (node.children.length > 0) {
       // 全ての子要素をY座標でソートして、最上位・最下位要素を取得
       const allChildElements = node.children.map((child) => child.data);
@@ -425,35 +432,51 @@ const layoutNodeFromHierarchy = (
         .sort((a, b) => a.y - b.y);
 
       if (sortedChildren.length > 0) {
-        if (sortedChildren.length === 1) {
-          // 単一子要素の特殊ケース：親要素と子要素を同じY座標に配置
-          const singleChild = sortedChildren[0];
-          const parentOldY = element.y;
-          element.y = singleChild.y;
+        // 子要素群の範囲を計算
+        const firstChild = sortedChildren[0]; // Y座標が最小の要素
+        const lastChild = sortedChildren[sortedChildren.length - 1]; // Y座標が最大の要素
+        const childrenTopY = firstChild.y;
+        const childrenBottomY = lastChild.y + lastChild.height;
+        const childrenTotalHeight = childrenBottomY - childrenTopY;
+
+        // 親要素と子要素群のどちらが高いかを判定
+        const parentHeight = element.height;
+
+        const parentOldY = element.y;
+
+        if (parentHeight > childrenTotalHeight) {
+          // 親要素の方が高い場合：子要素群を親要素の中央に配置
+          const parentMidY = element.y + element.height / 2;
+          const childrenMidY = (childrenTopY + childrenBottomY) / 2;
+          const offsetY = parentMidY - childrenMidY;
+
+          // 子要素群を移動（再帰的に子孫要素も移動）
+          const adjustChildrenPositions = (childNode: HierarchicalNode, offset: number) => {
+            childNode.data.y += offset;
+            if (childNode.children) {
+              childNode.children.forEach((grandChild) =>
+                adjustChildrenPositions(grandChild, offset),
+              );
+            }
+          };
+
+          node.children.forEach((child) => adjustChildrenPositions(child, offsetY));
 
           debugLog(
-            `[layoutNodeFromHierarchy] 単一子要素ケース「${element.texts}」 id=${element.id} - Y座標更新: ${parentOldY} → ${element.y}`,
+            `[layoutNodeFromHierarchy] 親要素基準「${element.texts}」 id=${element.id} - 子要素群を移動（オフセット: ${offsetY}）`,
           );
         } else {
-          // 複数子要素の場合：中央配置
-          const firstChild = sortedChildren[0]; // Y座標が最小の要素
-          const lastChild = sortedChildren[sortedChildren.length - 1]; // Y座標が最大の要素
-
-          // 分析結果に基づく正しい中央配置計算
-          const childrenTopY = firstChild.y;
-          const childrenBottomY = lastChild.y + lastChild.height;
+          // 子要素群の方が高い場合：親要素を子要素群の中央に配置
           const childrenMidY = (childrenTopY + childrenBottomY) / 2;
-
-          const parentOldY = element.y;
           const newParentY = childrenMidY - element.height / 2;
           element.y = newParentY;
 
           debugLog(
-            `[layoutNodeFromHierarchy] 中央配置「${element.texts}」 id=${element.id} - Y座標更新: ${parentOldY} → ${element.y}`,
+            `[layoutNodeFromHierarchy] 子要素群基準「${element.texts}」 id=${element.id} - Y座標更新: ${parentOldY} → ${element.y}`,
           );
         }
 
-        // 親要素の位置変更後、実際の最大Y座標を計算
+        // 最終的な最大Y座標を計算
         const allElementsMaxY = Math.max(
           element.y + element.height, // 親要素の下端
           ...sortedChildren.map((child) => child.y + child.height), // 全子要素の下端

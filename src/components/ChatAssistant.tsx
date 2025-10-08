@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { ChatIcon } from './icons/ChatIcon';
 import IconButton from '@mui/material/IconButton';
@@ -76,70 +76,73 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
   }, [isVisible]);
 
   // 外部メッセージが送信された時の処理
+  const handleSendMessage = useCallback(
+    async (messageText?: string) => {
+      const textToSend = messageText || inputText.trim();
+      if (!textToSend || isLoading) return;
+
+      const userMessage: ChatMessage = {
+        id: Date.now().toString(),
+        text: textToSend,
+        sender: 'user',
+        timestamp: new Date(),
+      };
+
+      // 必要なデバッグログのみ残し、不要なconsole出力を削除
+      // ユーザー送信内容は重要な操作なので残す
+      // debugLog('[DEBUG] ChatAssistant - User message:', userMessage.text)
+      setMessages((prev) => [...prev, userMessage]);
+
+      // 外部メッセージでない場合のみ入力をクリア
+      if (!messageText) {
+        setInputText('');
+      }
+      setInputText('');
+
+      try {
+        // AI送信開始のみ残す（障害時のトラブルシュート用）
+        // debugLog('[DEBUG] ChatAssistant - Sending message to AI...')
+        const result = await onSendMessage(userMessage.text);
+        // AI操作完了ログは削除
+        // debugLog('[DEBUG] ChatAssistant - AI operation completed successfully');
+
+        // AI操作の結果をチャットウィンドウに表示
+        const assistantMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          text: result || '操作を実行しました！',
+          sender: 'assistant',
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
+      } catch (error) {
+        // エラー時の詳細は残す（障害解析用）
+        // console.error('[DEBUG] ChatAssistant - AI operation failed:', error)
+        // console.error('[DEBUG] ChatAssistant - Error details:', {
+        //   message: error instanceof Error ? error.message : '不明なエラー',
+        //   stack: error instanceof Error ? error.stack : undefined,
+        //   userInput: userMessage.text,
+        //   timestamp: new Date().toISOString(),
+        // })
+
+        // エラーメッセージを追加
+        const errorMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          text: `エラーが発生しました: ${error instanceof Error ? error.message : '不明なエラー'}`,
+          sender: 'assistant',
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, errorMessage]);
+      }
+    },
+    [inputText, isLoading, onSendMessage],
+  );
+
   useEffect(() => {
     if (externalMessage && externalMessage.trim()) {
       handleSendMessage(externalMessage);
       onExternalMessageProcessed?.();
     }
-  }, [externalMessage]);
-
-  const handleSendMessage = async (messageText?: string) => {
-    const textToSend = messageText || inputText.trim();
-    if (!textToSend || isLoading) return;
-
-    const userMessage: ChatMessage = {
-      id: Date.now().toString(),
-      text: textToSend,
-      sender: 'user',
-      timestamp: new Date(),
-    };
-
-    // 必要なデバッグログのみ残し、不要なconsole出力を削除
-    // ユーザー送信内容は重要な操作なので残す
-    // console.log('[DEBUG] ChatAssistant - User message:', userMessage.text)
-    setMessages((prev) => [...prev, userMessage]);
-
-    // 外部メッセージでない場合のみ入力をクリア
-    if (!messageText) {
-      setInputText('');
-    }
-    setInputText('');
-
-    try {
-      // AI送信開始のみ残す（障害時のトラブルシュート用）
-      // console.log('[DEBUG] ChatAssistant - Sending message to AI...')
-      const result = await onSendMessage(userMessage.text);
-      // AI操作完了ログは削除
-      // console.log('[DEBUG] ChatAssistant - AI operation completed successfully');
-
-      // AI操作の結果をチャットウィンドウに表示
-      const assistantMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        text: result || '操作を実行しました！',
-        sender: 'assistant',
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
-    } catch (error) {
-      // エラー時の詳細は残す（障害解析用）
-      // console.error('[DEBUG] ChatAssistant - AI operation failed:', error)
-      // console.error('[DEBUG] ChatAssistant - Error details:', {
-      //   message: error instanceof Error ? error.message : '不明なエラー',
-      //   stack: error instanceof Error ? error.stack : undefined,
-      //   userInput: userMessage.text,
-      //   timestamp: new Date().toISOString(),
-      // })
-
-      // エラーメッセージを追加
-      const errorMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        text: `エラーが発生しました: ${error instanceof Error ? error.message : '不明なエラー'}`,
-        sender: 'assistant',
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
-    }
-  };
+  }, [externalMessage, handleSendMessage, onExternalMessageProcessed]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {

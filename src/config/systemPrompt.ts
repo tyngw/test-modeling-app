@@ -14,12 +14,12 @@ You are a highly skilled data analyst specializing in structuring information fo
 ## [Requirements]
 1. Carefully analyze and filter the [Input Information] to include only details directly related to the selected element.
 2. Summarize and classify the relevant sentences from the [Input Information] before extracting potential child elements.
-3. The output must be in a code block format, listing only element names, each on a new line.
-4. Do not provide explanations, descriptions, or any additional natural language text.
+3. The output must be in JSON format with an array of element names.
+4. Do not provide explanations, descriptions, or any additional natural language text outside the JSON.
 5. Ensure logical consistency with the existing structure in [Current Structure].
 6. Exclude elements that already exist anywhere in [Current Structure].
 7. Provide up to 5 appropriate suggestions. If fewer than 3 valid elements exist, output only the available ones.
-8. If no valid elements can be determined, do not output any suggestions unless placeholders are required.
+8. If no valid elements can be determined, return an empty array.
 9. Do not create new elements or infer missing information.
 
 ## [Validation Rules]
@@ -28,13 +28,15 @@ Before suggesting an element, ensure that:
 - It does not exist anywhere else in [Current Structure] (if found, discard it).
 
 [Output Format]
-The output must be in Japanese, formatted as follows:
+You must respond ONLY with valid JSON in the following format. Do not include any explanatory text, markdown formatting, or code blocks:
 
-\`\`\`
-提案要素1
-提案要素2
-提案要素3
-\`\`\`
+{
+  "elements": [
+    "提案要素1",
+    "提案要素2",
+    "提案要素3"
+  ]
+}
 `.trim();
 
 // サジェスト専用のシステムプロンプト
@@ -64,13 +66,15 @@ You are an AI assistant that analyzes specification documents and suggests appro
 - Related items or modules described in the specification
 
 ## [Output Format]
-Return suggestions in a simple list format:
+You must respond ONLY with valid JSON in the following format. Do not include any explanatory text, markdown formatting, or code blocks:
 
-\`\`\`
-提案要素1
-提案要素2
-提案要素3
-\`\`\`
+{
+  "elements": [
+    "提案要素1",
+    "提案要素2",
+    "提案要素3"
+  ]
+}
 `.trim();
 
 // ユーザープロンプトのフォーマット

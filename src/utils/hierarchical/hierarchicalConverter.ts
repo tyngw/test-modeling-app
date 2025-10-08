@@ -3,6 +3,7 @@
 import { Element } from '../../types/types';
 import { ElementsMap } from '../../types/elementTypes';
 import { HierarchicalNode, HierarchicalStructure } from '../../types/hierarchicalTypes';
+import { debugLog } from '../debugLogHelpers';
 
 /**
  * 古いElement型（後方互換性のため）
@@ -626,7 +627,7 @@ export function logElementPositionsFromHierarchy(
   function logNodeRecursive(node: HierarchicalNode, depth = 0): void {
     const indent = '  '.repeat(depth);
     // この関数は開発用デバッグ関数なので、ログ出力は維持
-    console.log(
+    debugLog(
       `${prefix}${indent}- 要素「${node.data.texts}」 id=${node.data.id}: X=${node.data.x}, Y=${node.data.y}`,
     );
 
@@ -827,4 +828,48 @@ export function findElementByIdInHierarchy(
 
   const node = findNodeInHierarchy(hierarchical, elementId);
   return node ? node.data : null;
+}
+
+/**
+ * 指定ノードの子孫要素のdirectionを再帰的に更新
+ *
+ * マインドマップモードで親要素のdirectionが変更された際、
+ * その子孫要素のdirectionも適切に更新する必要があります。
+ *
+ * 背景：
+ * - 親要素が右側から左側に移動した場合、子要素も左側に配置されるべき
+ * - レイアウト計算では子要素のdirection値に基づいて配置が決まる
+ * - 親のdirection変更時に子要素のdirectionを更新しないと、表示が崩れる
+ *
+ * トレードオフ：
+ * - この実装では、子孫要素全てが親と同じdirectionを持つことになる
+ * - 将来的に子要素が親に対して相対的なdirectionを持てるようにする場合は、
+ *   この関数を拡張する必要がある
+ *
+ * @param node 更新対象のノード
+ * @param newDirection 新しいdirection値
+ */
+export function updateDescendantDirections(
+  node: HierarchicalNode,
+  newDirection: Element['direction'],
+): void {
+  if (!node.children || node.children.length === 0) {
+    return;
+  }
+
+  // 子要素のdirectionを再帰的に更新
+  node.children.forEach((child) => {
+    // 子要素のdirectionを親のdirectionと同じに設定
+    child.data = {
+      ...child.data,
+      direction: newDirection,
+    };
+
+    debugLog(
+      `[updateDescendantDirections] 子要素「${child.data.texts}」(id=${child.data.id})のdirectionを${newDirection}に更新`,
+    );
+
+    // 孫要素以降も再帰的に更新
+    updateDescendantDirections(child, newDirection);
+  });
 }

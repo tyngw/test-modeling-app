@@ -15,6 +15,7 @@ import { getTextColor } from '../../utils/storage/localStorageHelpers';
 import { sanitizeText } from '../../utils/security/sanitization';
 import { detectUrls, openUrlInNewTab, isMobileDevice } from '../../utils/url/urlHelpers';
 import UrlPopup from '../UrlPopup';
+import { debugLog } from '../../utils/debugLogHelpers';
 
 interface TextDisplayAreaProps {
   x: number;
@@ -259,14 +260,14 @@ const TextDisplayArea = memo<TextDisplayAreaProps>(function TextDisplayArea({
 
     if (!touch) return;
 
-    console.log(`[DEBUG] URL touched on mobile. isSelected: ${isSelected}, url: ${url}`);
+    debugLog(`[DEBUG] URL touched on mobile. isSelected: ${isSelected}, url: ${url}`);
 
     // モバイル端末で要素が既に選択状態の場合はURL処理
     if (isMobile && isSelected) {
       event.preventDefault();
       event.stopPropagation();
 
-      console.log(`[DEBUG] Opening URL on mobile: ${url}`);
+      debugLog(`[DEBUG] Opening URL on mobile: ${url}`);
 
       // 直接URLを開く（モバイルでは新しいタブで開く）
       openUrlInNewTab(url);

@@ -6,15 +6,16 @@ import {
   DEFAULT_FONT_FAMILY,
 } from '../config/elementSettings';
 
-// 文字幅計算用キャンバスを生成する関数
 const createTextMeasurementContext = (): CanvasRenderingContext2D => {
   const canvas = document.createElement('canvas');
-  const context = canvas.getContext('2d')!;
+  const context = canvas.getContext('2d');
+  if (!context) {
+    throw new Error('Failed to get 2D context from canvas');
+  }
   context.font = `${DEFAULT_FONT_SIZE}px ${DEFAULT_FONT_FAMILY}`;
   return context;
 };
 
-// テキストの幅を正確に計算する関数
 export const calculateTextWidth = (text: string, padding = 0): number => {
   const context = createTextMeasurementContext();
   return Math.ceil(
@@ -25,7 +26,6 @@ export const calculateTextWidth = (text: string, padding = 0): number => {
   );
 };
 
-// 要素の幅を計算する関数
 export const calculateElementWidth = (texts: string[], padding = 0): number => {
   const maxTextWidth = texts.reduce((max: number, text: string) => {
     return Math.max(max, calculateTextWidth(text || '', padding));
@@ -34,12 +34,15 @@ export const calculateElementWidth = (texts: string[], padding = 0): number => {
   return Math.min(SIZE.WIDTH.MAX, Math.max(SIZE.WIDTH.MIN, maxTextWidth));
 };
 
-// テキストを指定された幅に折り返す関数
 export const wrapText = (
   text: string,
   maxWidth: number,
   _zoomRatio: number = DEFAULT_ZOOM_RATIO,
 ): string[] => {
+  if (!text || maxWidth <= 0) {
+    return text ? [text] : [''];
+  }
+
   const context = createTextMeasurementContext();
   const paragraphs = text.split('\n');
   const wrappedLines: string[] = [];
@@ -53,52 +56,79 @@ export const wrapText = (
     let currentLine = '';
     let currentWidth = 0;
 
-    // 単語単位分割（英語対応）
-    const words = paragraph.split(/(\s+)/).filter((w) => w !== '');
+    const hasJapanese = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(paragraph);
 
-    for (const word of words) {
-      const wordWidth = context.measureText(word).width;
+    if (hasJapanese) {
+      for (let i = 0; i < paragraph.length; i++) {
+        const char = paragraph[i];
+        const charWidth = context.measureText(char).width;
 
-      // 単語が行に収まるかチェック
-      if (currentWidth + wordWidth > maxWidth) {
-        if (currentLine !== '') {
+        if (currentWidth + charWidth > maxWidth && currentLine.length > 0) {
           wrappedLines.push(currentLine);
-          currentLine = '';
-          currentWidth = 0;
+          currentLine = char;
+          currentWidth = charWidth;
+        } else {
+          currentLine += char;
+          currentWidth += charWidth;
         }
+      }
+    } else {
+      const words = paragraph.split(/(\s+)/).filter((w) => w !== '');
 
-        // 単語が行幅を超える場合、文字単位で分割
-        if (wordWidth > maxWidth) {
-          for (const char of word) {
-            const charWidth = context.measureText(char).width;
+      for (const word of words) {
+        const wordWidth = context.measureText(word).width;
 
-            // 現在の行に文字を追加できるかチェック
-            if (currentWidth + charWidth > maxWidth) {
-              wrappedLines.push(currentLine);
-              currentLine = '';
-              currentWidth = 0;
+        if (currentWidth + wordWidth > maxWidth) {
+          if (currentLine !== '') {
+            wrappedLines.push(currentLine);
+            currentLine = '';
+            currentWidth = 0;
+          }
+
+          if (wordWidth > maxWidth) {
+            for (const char of word) {
+              const charWidth = context.measureText(char).width;
+
+              if (currentWidth + charWidth > maxWidth && currentLine.length > 0) {
+                wrappedLines.push(currentLine);
+                currentLine = '';
+                currentWidth = 0;
+              }
+
+              currentLine += char;
+              currentWidth += charWidth;
             }
-
-            currentLine += char;
-            currentWidth += charWidth;
+          } else {
+            currentLine = word;
+            currentWidth = wordWidth;
           }
         } else {
-          // 単語が行幅を超えるが、文字単位では収まる場合
-          currentLine = word;
-          currentWidth = wordWidth;
+          currentLine += word;
+          currentWidth += wordWidth;
         }
-      } else {
-        // 単語が現在の行に収まる場合
-        currentLine += word;
-        currentWidth += wordWidth;
       }
     }
 
-    // 最後の行を追加
     if (currentLine !== '') {
       wrappedLines.push(currentLine);
     }
   });
 
   return wrappedLines;
+};
+
+export const calculateTextHeight = (
+  text: string,
+  maxWidth: number,
+  zoomRatio = DEFAULT_ZOOM_RATIO,
+  fontSize = DEFAULT_FONT_SIZE,
+  lineHeightRatio = 1.4,
+): number => {
+  if (!text || text.trim() === '') {
+    return fontSize * lineHeightRatio * zoomRatio;
+  }
+
+  const wrappedLines = wrapText(text, maxWidth, zoomRatio);
+  const lineHeight = fontSize * lineHeightRatio * zoomRatio;
+  return wrappedLines.length * lineHeight;
 };
