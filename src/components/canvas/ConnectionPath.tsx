@@ -95,8 +95,10 @@ export const ConnectionPath: React.FC<ConnectionPathProps> = ({
     }
   } else if (direction === 'left') {
     // 左方向の場合
+    // direction:leftの場合、親要素のstartMarkerは左端に配置されるため、
+    // startOffsetを引く（右向きマーカーなので）
     pathCommands = [
-      `M ${parentPos.x},${parentPos.y + parentElement.height / 2}`,
+      `M ${parentPos.x - startOffset},${parentPos.y + parentElement.height / 2}`,
       `C ${parentPos.x - CURVE_CONTROL_OFFSET},${parentPos.y + parentElement.height / 2}`,
       `${elementPos.x + element.width + CURVE_CONTROL_OFFSET},${elementPos.y + totalHeight / 2}`,
       `${elementPos.x + element.width + endOffset},${elementPos.y + totalHeight / 2}`,
@@ -111,6 +113,9 @@ export const ConnectionPath: React.FC<ConnectionPathProps> = ({
     ].join(' ');
   }
 
+  // SVGマーカーのorient="auto"により、パスの方向に応じて自動的に回転する
+  // startMarkerは常に親要素から出ていく方向（-end付き不要）
+  // endMarkerは常に子要素に入っていく方向（-end付き使用）
   const markerStart = getMarkerUrlByType(parentElement.startMarker);
   const markerEnd = getMarkerUrlByType(element.endMarker, true);
 

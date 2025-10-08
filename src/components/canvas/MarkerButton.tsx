@@ -41,10 +41,23 @@ export const MarkerButton: React.FC<MarkerButtonProps> = ({
   const totalHeight = element.height;
   const buttonId = isEndMarker ? `end-${element.id}` : element.id;
 
-  // ボタン位置の計算（終点マーカーは左側、始点マーカーは右側）
-  const buttonX = isEndMarker
-    ? absolutePosition.x - MARKER.WIDTH / 2
-    : absolutePosition.x + element.width + MARKER.WIDTH / 2;
+  // direction:leftの場合、マーカーの位置が逆になる
+  // - startMarker: 要素の左側（direction:leftの場合）または右側（通常）
+  // - endMarker: 要素の右側（direction:leftの場合）または左側（通常）
+  const isLeftDirection = element.direction === 'left';
+
+  let buttonX: number;
+  if (isEndMarker) {
+    // 終点マーカーの場合
+    buttonX = isLeftDirection
+      ? absolutePosition.x + element.width + MARKER.WIDTH / 2 // direction:leftでは右側
+      : absolutePosition.x - MARKER.WIDTH / 2; // 通常は左側
+  } else {
+    // 始点マーカーの場合
+    buttonX = isLeftDirection
+      ? absolutePosition.x - MARKER.WIDTH / 2 // direction:leftでは左側
+      : absolutePosition.x + element.width + MARKER.WIDTH / 2; // 通常は右側
+  }
 
   return (
     <g

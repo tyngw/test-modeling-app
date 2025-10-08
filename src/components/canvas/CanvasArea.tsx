@@ -703,17 +703,31 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     if (!element) return null;
 
     const totalHeight = element.height;
+    const isLeftDirection = element.direction === 'left';
 
     // ポップアップメニューの表示位置を計算
+    // direction:leftの場合、マーカーの位置が逆になるため、メニューの位置も逆にする
     let popupX, popupY;
 
     if (isEndMarkerMenu) {
-      // 終点マーカーの場合は要素の左側に表示
-      popupX = element.x - 170; // メニューの幅(150px) + マージン(20px)
+      // 終点マーカーの場合
+      if (isLeftDirection) {
+        // direction:leftでは右側に表示
+        popupX = element.x + element.width + 20; // 要素の右端 + マージン
+      } else {
+        // 通常は左側に表示
+        popupX = element.x - 170; // メニューの幅(150px) + マージン(20px)
+      }
       popupY = element.y + totalHeight / 2 - 135; // 中央に表示
     } else {
-      // 始点マーカーの場合は要素の右側に表示
-      popupX = element.x + element.width + 20; // 要素の右端 + マージン
+      // 始点マーカーの場合
+      if (isLeftDirection) {
+        // direction:leftでは左側に表示
+        popupX = element.x - 170; // メニューの幅(150px) + マージン(20px)
+      } else {
+        // 通常は右側に表示
+        popupX = element.x + element.width + 20; // 要素の右端 + マージン
+      }
       popupY = element.y + totalHeight / 2 - 135; // 中央に表示
     }
 
