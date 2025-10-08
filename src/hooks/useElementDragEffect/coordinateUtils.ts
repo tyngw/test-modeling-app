@@ -35,19 +35,23 @@ export const isTouchEvent = (event: MouseEvent | TouchEvent): event is TouchEven
 export const convertToZoomCoordinates = (
   e: MouseEvent | TouchEvent,
   zoomRatio: number,
+  offsets: { minX: number; minY: number } = { minX: 0, minY: 0 },
 ): Position => {
   let clientX: number, clientY: number;
 
   if (isTouchEvent(e)) {
-    clientX = e.touches[0].clientX + window.scrollX;
-    clientY = e.touches[0].clientY + window.scrollY;
+    clientX = e.touches[0].clientX;
+    clientY = e.touches[0].clientY;
   } else {
-    clientX = e.clientX + window.scrollX;
-    clientY = e.clientY + window.scrollY;
+    clientX = e.clientX;
+    clientY = e.clientY;
   }
 
+  const scrollX = window.scrollX ?? 0;
+  const scrollY = window.scrollY ?? 0;
+
   return {
-    x: clientX / zoomRatio,
-    y: (clientY - HEADER_HEIGHT) / zoomRatio,
+    x: (clientX + scrollX) / zoomRatio + offsets.minX,
+    y: (clientY + scrollY - HEADER_HEIGHT) / zoomRatio + offsets.minY,
   };
 };

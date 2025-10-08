@@ -37,6 +37,7 @@ export const calculateChildPosition = (
   element: Element,
   mouseY: number,
   hierarchicalData: HierarchicalStructure | null,
+  draggingElementWidth = 0,
 ): { position: 'child'; insertY: number; insertX?: number } => {
   const elemTop = element.y;
   const children = getChildren(element, hierarchicalData);
@@ -48,8 +49,8 @@ export const calculateChildPosition = (
   // 方向に応じてX座標を計算
   let insertX;
   if (direction === 'left') {
-    // 左方向の場合
-    insertX = element.x - OFFSET.X;
+    // 左方向の場合は親幅と要素幅を考慮して左側のスペースを確保
+    insertX = element.x - element.width - OFFSET.X - draggingElementWidth;
   } else if (direction === 'right' || isRootInMindmap) {
     // 右方向の場合、またはルート要素の場合（デフォルトで右方向）
     insertX = element.x + element.width + OFFSET.X;
@@ -159,15 +160,24 @@ export const calculatePositionAndDistance = (
   // 要素の上にある場合は子要素として追加 (child mode)
   // これを最優先で処理して、要素上のドラッグは常にchildモードになるようにする
   if (isInsideElement) {
-    result = calculateChildPosition(element, mouseY, hierarchicalData);
+    result = calculateChildPosition(element, mouseY, hierarchicalData, draggingElement?.width ?? 0);
     // 要素の方向を設定（ルート要素の場合は、マウス位置で左右を判定）
     if (isRootInMindmap) {
-      // ルート要素の場合、マウスのX座標で左右を判定
+      // ルート要素の場合、マウスのX座標で左右を判定し、挿入位置も更新
       const rootCenterX = element.x + element.width / 2;
-      result.direction = mouseX < rootCenterX ? 'left' : 'right';
+      const resolvedDirection = mouseX < rootCenterX ? 'left' : 'right';
+      result.direction = resolvedDirection;
+      result.insertX =
+        resolvedDirection === 'left'
+          ? element.x - element.width - OFFSET.X - (draggingElement?.width ?? 0)
+          : element.x + element.width + OFFSET.X;
     } else {
-      // 通常の要素の場合は親の方向を継承（'none'でない場合）
-      result.direction = element.direction !== 'none' ? element.direction : 'right';
+      // 通常の要素の場合は親の方向を継承（'none'でない場合）し、左方向時はX座標を調整
+      const resolvedDirection = element.direction !== 'none' ? element.direction : 'right';
+      result.direction = resolvedDirection;
+      if (resolvedDirection === 'left') {
+        result.insertX = element.x - element.width - OFFSET.X - (draggingElement?.width ?? 0);
+      }
     }
     debugLog(`Drop position mode (inside element ${element.id}):`, 'child');
     debugLog(
@@ -191,7 +201,7 @@ export const calculatePositionAndDistance = (
       // 位置は子要素モードと同じく、要素の側に表示
       const insertX =
         childDirection === 'left'
-          ? element.x - OFFSET.X - (draggingElement?.width ?? 0)
+          ? element.x - element.width - OFFSET.X - (draggingElement?.width ?? 0)
           : element.x + element.width + OFFSET.X;
 
       // ルート要素で子要素なしの場合の位置計算完了
@@ -208,7 +218,7 @@ export const calculatePositionAndDistance = (
       // 子要素がある場合は、子要素の間に挿入
       const insertX =
         childDirection === 'left'
-          ? element.x - OFFSET.X - (draggingElement?.width ?? 0)
+          ? element.x - element.width - OFFSET.X - (draggingElement?.width ?? 0)
           : element.x + element.width + OFFSET.X;
 
       // ルート要素の場合は、betweenモードではなくchildモードを使用
@@ -320,10 +330,15 @@ export const calculatePositionAndDistance = (
       childDirection = element.direction !== 'none' ? element.direction : 'right';
     }
 
+    const fallbackInsertX =
+      childDirection === 'left'
+        ? element.x - element.width - OFFSET.X - (draggingElement?.width ?? 0)
+        : element.x + element.width + OFFSET.X;
+
     result = {
       position: 'child',
       insertY: element.y + element.height / 2,
-      insertX: element.x + element.width + OFFSET.X,
+      insertX: fallbackInsertX,
       siblingInfo: {},
       direction: childDirection,
     };
@@ -409,7 +424,7 @@ export const calculatePositionAndDistance = (
       if (parentElement) {
         insertX =
           siblingDirection === 'left'
-            ? parentElement.x - OFFSET.X - (draggingElement?.width ?? 0)
+            ? parentElement.x - parentElement.width - OFFSET.X - (draggingElement?.width ?? 0)
             : parentElement.x + parentElement.width + OFFSET.X;
       } else {
         // このケースは上記のparentIdチェックで既に除外されているはず
@@ -567,6 +582,7 @@ export const findDropTarget = (params: FindDropTargetParams): DropTargetInfo => 
     draggingElement,
     hierarchicalData,
     elementsByParent,
+    targetDirection,
   };
 
   // 要素間のギャップを検出（最優先）
@@ -660,7 +676,7 @@ export const findDropTarget = (params: FindDropTargetParams): DropTargetInfo => 
             element: rootElement,
             position: 'child',
             insertY: rootElement.y + rootElement.height / 2,
-            insertX: rootElement.x - OFFSET.X,
+            insertX: rootElement.x - rootElement.width - OFFSET.X - (draggingElement?.width ?? 0),
             direction: 'left',
           };
         } else if (mouseX >= rightAreaLeft && mouseX <= rightAreaRight) {

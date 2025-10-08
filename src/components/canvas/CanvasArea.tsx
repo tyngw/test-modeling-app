@@ -125,6 +125,35 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
 
   useClickOutside(svgRef, !!editingNode);
 
+  const viewBoxOffsets = useMemo(() => {
+    const parts = displayArea.split(' ').map(Number);
+    if (parts.length === 4 && parts.every((value) => !Number.isNaN(value))) {
+      return { minX: parts[0], minY: parts[1] };
+    }
+    return { minX: 0, minY: 0 };
+  }, [displayArea]);
+
+  const resolveEventCoordinates = useCallback((event: MouseEvent | TouchEvent) => {
+    if (!svgRef.current) return null;
+    const svg = svgRef.current;
+    const point = svg.createSVGPoint();
+
+    if ('touches' in event && event.touches.length > 0) {
+      point.x = event.touches[0].clientX;
+      point.y = event.touches[0].clientY;
+    } else {
+      const mouseEvent = event as MouseEvent;
+      point.x = mouseEvent.clientX;
+      point.y = mouseEvent.clientY;
+    }
+
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return null;
+    const inverted = ctm.inverse();
+    const svgPoint = point.matrixTransform(inverted);
+    return { x: svgPoint.x, y: svgPoint.y };
+  }, []);
+
   const {
     handleMouseDown,
     handleMouseUp,
@@ -136,7 +165,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     dropTargetDirection,
     siblingInfo,
     isDragInProgress,
-  } = useElementDragEffect();
+  } = useElementDragEffect({ viewBoxOffsets, resolveEventCoordinates });
 
   // カスタムフックの使用
   useResizeEffect({
@@ -575,6 +604,15 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     if (!newParent) return null;
 
     // ドロップ座標を計算（ユーティリティ関数を使用）
+    const resolvedDropInsertX =
+      dropInsertX !== undefined
+        ? dropInsertX
+        : currentDropTarget &&
+            typeof currentDropTarget === 'object' &&
+            'insertX' in currentDropTarget
+          ? (currentDropTarget as { insertX: number }).insertX
+          : undefined;
+
     const coordinates = calculateDropCoordinates({
       elements: elementsCache,
       hierarchicalData: state.hierarchicalData,
@@ -582,17 +620,16 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
       draggingElement,
       dropPosition,
       dropInsertY,
-      dropInsertX:
-        currentDropTarget && typeof currentDropTarget === 'object' && 'insertX' in currentDropTarget
-          ? (currentDropTarget as { insertX: number }).insertX
-          : undefined,
+      dropInsertX: resolvedDropInsertX,
+      dropTargetDirection,
+      direction: dropTargetDirection,
       siblingInfo,
     });
 
     if (!coordinates) return null;
 
     // betweenモードの場合、正しいdirectionを計算
-    let previewDirection = draggingElement.direction;
+    let previewDirection = dropTargetDirection ?? draggingElement.direction;
 
     if (dropPosition === 'between') {
       // betweenモードでは兄弟要素のdirectionを継承
@@ -666,18 +703,36 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     if (!element) return null;
 
     const totalHeight = element.height;
+    const isLeftDirection = element.direction === 'left';
+    const isMindmapMode = state.layoutMode === 'mindmap';
 
     // ポップアップメニューの表示位置を計算
+    // direction:leftの場合、マーカーの位置が逆になるため、メニューの位置も逆にする
     let popupX, popupY;
 
+    // マインドマップモードでは接続線が下端に来るため、メニューも下端に配置
+    const menuOffsetY = isMindmapMode ? totalHeight : totalHeight / 2;
+
     if (isEndMarkerMenu) {
-      // 終点マーカーの場合は要素の左側に表示
-      popupX = element.x - 170; // メニューの幅(150px) + マージン(20px)
-      popupY = element.y + totalHeight / 2 - 135; // 中央に表示
+      // 終点マーカーの場合
+      if (isLeftDirection) {
+        // direction:leftでは右側に表示
+        popupX = element.x + element.width + 20; // 要素の右端 + マージン
+      } else {
+        // 通常は左側に表示
+        popupX = element.x - 170; // メニューの幅(150px) + マージン(20px)
+      }
+      popupY = element.y + menuOffsetY - 135; // マーカー位置に合わせて表示
     } else {
-      // 始点マーカーの場合は要素の右側に表示
-      popupX = element.x + element.width + 20; // 要素の右端 + マージン
-      popupY = element.y + totalHeight / 2 - 135; // 中央に表示
+      // 始点マーカーの場合
+      if (isLeftDirection) {
+        // direction:leftでは左側に表示
+        popupX = element.x - 170; // メニューの幅(150px) + マージン(20px)
+      } else {
+        // 通常は右側に表示
+        popupX = element.x + element.width + 20; // 要素の右端 + マージン
+      }
+      popupY = element.y + menuOffsetY - 135; // マーカー位置に合わせて表示
     }
 
     return (
@@ -745,6 +800,8 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
         )}
         <InputFields
           element={editingNode}
+          viewBoxMinX={viewBoxOffsets.minX}
+          viewBoxMinY={viewBoxOffsets.minY}
           onEndEditing={() => {
             dispatch({ type: 'END_EDITING' });
             if (svgRef.current) {

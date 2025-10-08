@@ -23,9 +23,16 @@ import { validateTextInput } from '../../utils/security/validation';
 interface InputFieldsProps {
   element?: Element;
   onEndEditing?: () => void;
+  viewBoxMinX: number;
+  viewBoxMinY: number;
 }
 
-const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
+const InputFields: React.FC<InputFieldsProps> = ({
+  element,
+  onEndEditing,
+  viewBoxMinX,
+  viewBoxMinY,
+}) => {
   const { dispatch, state } = useCanvas();
   const isMounted = useIsMounted();
   const fieldRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
@@ -209,8 +216,8 @@ const InputFields: React.FC<InputFieldsProps> = ({ element, onEndEditing }) => {
             onClick={(e) => e.stopPropagation()}
             style={{
               position: 'absolute',
-              left: `${element.x * state.zoomRatio}px`,
-              top: `${element.y * state.zoomRatio + yPosition}px`,
+              left: `${(element.x - viewBoxMinX) * state.zoomRatio}px`,
+              top: `${(element.y - viewBoxMinY) * state.zoomRatio + yPosition}px`,
               width: `${width}px`,
               height: `${height}px`,
               minWidth: `${SIZE.WIDTH.MAX * state.zoomRatio}px`,

@@ -16,6 +16,10 @@ export const MarkerElements: React.FC<MarkerElementsProps> = ({
         const { id, width, height, isFilled, shape, pointsOrAttributes } = config;
         const fillColor = isFilled ? connectionPathColor : 'none';
 
+        // direction:leftの場合、orient="auto-start-reverse"を使用する必要があるが、
+        // SVGマーカーは個別のパスに対してorientを設定できないため、
+        // マーカー定義レベルでは常に"auto"を使用し、
+        // パス側でマーカーの選択を制御する
         const markerProps = {
           id,
           markerWidth: width,
