@@ -1,4 +1,4 @@
-import { ChatOperation } from '../../domain/chat/models/ChatOperation';
+import { ChatOperation, ElementsTreeNode } from '../../domain/chat/models/ChatOperation';
 import { ChatOperationService } from '../../domain/chat/services/ChatOperationService';
 import { Element } from '../../domain/element/models/Element';
 import { IAIRepository, IConfigRepository } from '../../domain/ai/repositories/IAIRepository';
@@ -45,11 +45,6 @@ export class ChatAssistantService {
     const chatSystemPrompt = getChatSystemPrompt();
     const isFirstTurn = this.chatHistory.length === 0;
 
-    debugLog('[ChatAssistant] リクエスト:', {
-      selectedElement: selectedElementText,
-      instruction: userInput,
-    });
-
     // AI に指示を送信
     const modelType = this.configRepository.getModelType();
     const shouldIncludeSystemInstruction = !this.hasSentInitialSystemInstruction;
@@ -59,7 +54,7 @@ export class ChatAssistantService {
       modelType,
       this.chatHistory,
       shouldIncludeSystemInstruction ? chatSystemPrompt : undefined,
-      false,
+      true,
       true,
       shouldIncludeSystemInstruction,
     );
@@ -100,7 +95,6 @@ export class ChatAssistantService {
     }
 
     const cleanedResult = result.replace(/```json\s*|```\s*/g, '').trim();
-    debugLog('[ChatAssistant] クリーンアップ後のレスポンス:', cleanedResult);
 
     let operationsData: { operations: unknown[] };
     try {
@@ -133,6 +127,7 @@ export class ChatAssistantService {
         operation.targetIndex as number | undefined,
         operation.message as string | undefined,
         operation.direction as 'left' | 'right' | 'none' | undefined,
+        operation.elementsTree as ElementsTreeNode[] | undefined,
       );
     });
   }

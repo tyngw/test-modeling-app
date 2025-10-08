@@ -30,13 +30,6 @@ export const generateWithGeminiThread = async (
         ? prompt.substring(0, maxPromptLength) + '\n...(省略)'
         : prompt;
 
-    debugLog(
-      `[generateWithGeminiThread] 受信プロンプト長: ${prompt.length}, 切り詰め: ${truncatePrompt}, 最終プロンプト長: ${truncatedPrompt.length}`,
-    );
-    debugLog(
-      `[generateWithGeminiThread] 最終プロンプトの先頭100文字: "${truncatedPrompt.substring(0, 100)}..."`,
-    );
-
     if (truncatePrompt && prompt.length > maxPromptLength) {
       debugLog(
         `[generateWithGeminiThread] 警告: プロンプトが切り詰められました (${prompt.length} -> ${truncatedPrompt.length})`,

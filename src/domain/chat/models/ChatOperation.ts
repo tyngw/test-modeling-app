@@ -1,3 +1,9 @@
+export interface ElementsTreeNode {
+  parent: string;
+  children?: string[];
+  targetId?: string;
+}
+
 /**
  * チャット操作を表すドメインモデル
  */
@@ -13,6 +19,7 @@ export class ChatOperation {
     public readonly targetIndex?: number,
     public readonly message?: string,
     public readonly direction?: 'left' | 'right' | 'none',
+    public readonly elementsTree?: ElementsTreeNode[],
   ) {}
 
   /**
@@ -32,6 +39,12 @@ export class ChatOperation {
         return true;
       case 'DROP_ELEMENT':
         return !!this.targetNodeId;
+      case 'ADD_WITH_CHILDREN':
+        return !!(
+          this.elementsTree &&
+          this.elementsTree.length > 0 &&
+          this.elementsTree.every((node) => typeof node.parent === 'string' && node.parent.trim())
+        );
       case 'ERROR':
         return !!this.message;
       default:
@@ -49,6 +62,7 @@ export class ChatOperation {
       targetText: this.targetText,
       newText: this.newText,
       targetNodeId: this.targetNodeId,
+      elementsTree: this.elementsTree,
     };
     return `${this.type}_${JSON.stringify(details)}`;
   }
