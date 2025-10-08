@@ -2,6 +2,7 @@ import { ChatOperation } from '../../domain/chat/models/ChatOperation';
 import { ChatOperationService } from '../../domain/chat/services/ChatOperationService';
 import { Element } from '../../domain/element/models/Element';
 import { IAIRepository, IConfigRepository } from '../../domain/ai/repositories/IAIRepository';
+import { ChatHistoryEntry } from '../../domain/ai/models/SuggestionContext';
 import { createChatUserPromptOnly, getChatSystemPrompt } from '../../config/chatSystemPrompt';
 import { debugLog } from '../../utils/debugLogHelpers';
 
@@ -10,6 +11,9 @@ import { debugLog } from '../../utils/debugLogHelpers';
  * ドメインサービスとインフラストラクチャを調整
  */
 export class ChatAssistantService {
+  private chatHistory: ChatHistoryEntry[] = [];
+  private hasSentInitialSystemInstruction = false;
+
   constructor(
     private readonly aiRepository: IAIRepository,
     private readonly configRepository: IConfigRepository,
@@ -39,6 +43,7 @@ export class ChatAssistantService {
     });
 
     const chatSystemPrompt = getChatSystemPrompt();
+    const isFirstTurn = this.chatHistory.length === 0;
 
     debugLog('[ChatAssistant] リクエスト:', {
       selectedElement: selectedElementText,
@@ -47,16 +52,33 @@ export class ChatAssistantService {
 
     // AI に指示を送信
     const modelType = this.configRepository.getModelType();
-    const result = await this.aiRepository.generateSingle(
+    const shouldIncludeSystemInstruction = !this.hasSentInitialSystemInstruction;
+    const { response, updatedHistory } = await this.aiRepository.generateWithThread(
       chatUserPrompt,
       apiKey,
       modelType,
+      this.chatHistory,
+      shouldIncludeSystemInstruction ? chatSystemPrompt : undefined,
       false,
-      chatSystemPrompt,
+      true,
+      shouldIncludeSystemInstruction,
     );
 
+    if (shouldIncludeSystemInstruction && isFirstTurn) {
+      const systemEntry: ChatHistoryEntry = {
+        role: 'user',
+        parts: [{ text: chatSystemPrompt }],
+      };
+      this.chatHistory = [systemEntry, ...updatedHistory];
+    } else {
+      this.chatHistory = updatedHistory;
+    }
+    if (shouldIncludeSystemInstruction) {
+      this.hasSentInitialSystemInstruction = true;
+    }
+
     // レスポンスを解析
-    const operations = this.parseAIResponse(result);
+    const operations = this.parseAIResponse(response);
 
     // 操作を検証
     this.chatOperationService.validateOperations(operations);

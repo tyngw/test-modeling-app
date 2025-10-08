@@ -21,6 +21,7 @@ export const generateWithGeminiThread = async (
   customSystemPrompt?: string,
   forceJsonResponse = false,
   truncatePrompt = true,
+  includeSystemInstruction = true,
 ): Promise<{ response: string; updatedHistory: ChatHistory[] }> => {
   try {
     const maxPromptLength = 8000;
@@ -43,8 +44,6 @@ export const generateWithGeminiThread = async (
     }
 
     const endpoint = `${getApiEndpoint()}?key=${apiKey}`;
-    const systemPrompt = customSystemPrompt || getSystemPromptTemplate();
-
     const generationConfig: Record<string, unknown> = {
       temperature: 0.2,
       topP: 0.8,
@@ -64,13 +63,20 @@ export const generateWithGeminiThread = async (
       },
     ];
 
-    const requestPayload = {
+    const requestPayload: {
+      contents: ChatHistory[];
+      generationConfig: Record<string, unknown>;
+      systemInstruction?: { parts: { text: string }[] };
+    } = {
       contents: updatedHistory,
-      systemInstruction: {
-        parts: [{ text: systemPrompt }],
-      },
       generationConfig,
     };
+    if (includeSystemInstruction) {
+      const systemPrompt = customSystemPrompt || getSystemPromptTemplate();
+      requestPayload.systemInstruction = {
+        parts: [{ text: systemPrompt }],
+      };
+    }
 
     if (process.env.NODE_ENV === 'development') {
       debugLog('[Geminiスレッドリクエスト] 送信内容:', JSON.stringify(requestPayload, null, 2));

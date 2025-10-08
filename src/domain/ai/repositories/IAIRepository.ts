@@ -28,6 +28,7 @@ export interface IAIRepository {
     systemPrompt?: string,
     forceJsonResponse?: boolean,
     truncatePrompt?: boolean,
+    includeSystemInstruction?: boolean,
   ): Promise<{
     response: string;
     updatedHistory: ChatHistoryEntry[];
