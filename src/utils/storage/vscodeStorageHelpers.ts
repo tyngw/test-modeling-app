@@ -9,6 +9,7 @@
 
 import * as localStorageHelpers from './localStorageHelpers';
 import type { StyleSettings } from './localStorageHelpers';
+import { debugLog } from '../debugLogHelpers';
 
 // VSCode拡張機能用のストレージヘルパー
 // LocalStorageベースの実装を再利用してAPIを統一
@@ -170,7 +171,7 @@ export async function getCurrentFileName(): Promise<string | null> {
 
     return null;
   } catch (error) {
-    console.error('ファイル名の取得に失敗しました:', error);
+    debugLog('ファイル名の取得に失敗しました:', error);
     return null;
   }
 }

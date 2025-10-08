@@ -102,7 +102,7 @@ export function cleanupHierarchy(
     return clonedHierarchy;
   } else {
     // ルートが削除対象の場合は何らかの問題があるため、元の構造を返す
-    console.warn('Root node marked for deletion - returning original hierarchy');
+    debugLog('Root node marked for deletion - returning original hierarchy');
     return hierarchy;
   }
 }

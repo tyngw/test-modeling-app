@@ -8,6 +8,7 @@ import {
   HierarchicalSearchOptions,
 } from '../../types/hierarchicalTypes';
 import { findNodeInHierarchy, findParentNodeInHierarchy } from './hierarchicalConverter';
+import { debugLog } from '../debugLogHelpers';
 
 /**
  * 階層構造で兄弟要素を追加
@@ -30,13 +31,13 @@ export function addSiblingToHierarchy(
 
   if (!parentNode) {
     const error = `基準要素 ${siblingId} の親ノードが見つかりません`;
-    console.error(`[addSiblingToHierarchy] エラー: ${error}`);
+    debugLog(`[addSiblingToHierarchy] エラー: ${error}`);
     throw new Error(error);
   }
 
   if (!parentNode.children) {
     const error = `親ノードに子要素がありません`;
-    console.error(`[addSiblingToHierarchy] エラー: ${error}`);
+    debugLog(`[addSiblingToHierarchy] エラー: ${error}`);
     throw new Error(error);
   }
 
@@ -45,7 +46,7 @@ export function addSiblingToHierarchy(
 
   if (siblingIndex === -1) {
     const error = `基準要素 ${siblingId} が見つかりません`;
-    console.error(`[addSiblingToHierarchy] エラー: ${error}`);
+    debugLog(`[addSiblingToHierarchy] エラー: ${error}`);
     throw new Error(error);
   }
 
@@ -84,13 +85,13 @@ export function addMultipleSiblingsToHierarchy(
 
   if (!parentNode) {
     const error = `基準要素 ${siblingId} の親ノードが見つかりません`;
-    console.error(`[addMultipleSiblingsToHierarchy] エラー: ${error}`);
+    debugLog(`[addMultipleSiblingsToHierarchy] エラー: ${error}`);
     throw new Error(error);
   }
 
   if (!parentNode.children) {
     const error = `親ノードに子要素がありません`;
-    console.error(`[addMultipleSiblingsToHierarchy] エラー: ${error}`);
+    debugLog(`[addMultipleSiblingsToHierarchy] エラー: ${error}`);
     throw new Error(error);
   }
 
@@ -99,7 +100,7 @@ export function addMultipleSiblingsToHierarchy(
 
   if (siblingIndex === -1) {
     const error = `基準要素 ${siblingId} が見つかりません`;
-    console.error(`[addMultipleSiblingsToHierarchy] エラー: ${error}`);
+    debugLog(`[addMultipleSiblingsToHierarchy] エラー: ${error}`);
     throw new Error(error);
   }
 
@@ -144,7 +145,7 @@ export function addElementToHierarchy(
 
     if (!parentNode) {
       const error = `親ノード ${parentId} が見つかりません`;
-      console.error(`[addElementToHierarchy] エラー: ${error}`);
+      debugLog(`[addElementToHierarchy] エラー: ${error}`);
       throw new Error(error);
     }
 

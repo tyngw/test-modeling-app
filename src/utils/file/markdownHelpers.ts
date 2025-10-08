@@ -5,6 +5,7 @@ import { HierarchicalNode, HierarchicalStructure } from '../../types/hierarchica
 import { createNewElement } from '../element/elementHelpers';
 import { convertArrayToHierarchical } from '../hierarchical/hierarchicalConverter';
 import { getIndentSpacesPerLevel, setIndentSpacesPerLevel } from '../storage/localStorageHelpers';
+import { debugLog } from '../debugLogHelpers';
 
 type MarkdownMarkerProperties = Partial<{
   startMarker: MarkerType;
@@ -67,7 +68,7 @@ const detectAndApplyIndentPattern = (markdownText: string): number => {
   const currentSetting = getIndentSpacesPerLevel();
   if (detectedIndent !== currentSetting) {
     setIndentSpacesPerLevel(detectedIndent);
-    console.log(
+    debugLog(
       `Markdownファイルのインデントパターンを検出し、設定を${detectedIndent}スペースに更新しました`,
     );
   }

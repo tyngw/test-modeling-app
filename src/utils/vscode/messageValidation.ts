@@ -1,6 +1,8 @@
 // src/utils/vscode/messageValidation.ts
 'use client';
 
+import { debugLog } from '../debugLogHelpers';
+
 /**
  * VSCodeメッセージの検証ユーティリティ
  */
@@ -17,14 +19,14 @@ export interface VSCodeMessage {
  */
 export function validateBasicMessageStructure(message: unknown): message is VSCodeMessage {
   if (!message || typeof message !== 'object') {
-    console.error('[messageValidation] Message is not an object');
+    debugLog('[messageValidation] Message is not an object');
     return false;
   }
 
   const msg = message as Record<string, unknown>;
 
   if (typeof msg.type !== 'string') {
-    console.error('[messageValidation] Message type is not a string');
+    debugLog('[messageValidation] Message type is not a string');
     return false;
   }
 
@@ -50,7 +52,7 @@ export function validateMessageType(message: VSCodeMessage): boolean {
   ];
 
   if (!validTypes.includes(message.type)) {
-    console.warn('[messageValidation] Unknown message type:', message.type);
+    debugLog('[messageValidation] Unknown message type:', message.type);
     return false;
   }
 
@@ -66,14 +68,14 @@ export function validateMessageData(message: VSCodeMessage): boolean {
     case 'documentChanged':
     case 'documentUpdated':
       if (!message.data || typeof message.data !== 'object') {
-        console.error('[messageValidation] Invalid data for', message.type);
+        debugLog('[messageValidation] Invalid data for', message.type);
         return false;
       }
       break;
 
     case 'updateDocument':
       if (!message.data) {
-        console.error('[messageValidation] No data provided for updateDocument');
+        debugLog('[messageValidation] No data provided for updateDocument');
         return false;
       }
       break;
@@ -81,7 +83,7 @@ export function validateMessageData(message: VSCodeMessage): boolean {
     case 'showError':
     case 'showInfo':
       if (!message.message || typeof message.message !== 'string') {
-        console.error('[messageValidation] Invalid message for', message.type);
+        debugLog('[messageValidation] Invalid message for', message.type);
         return false;
       }
       break;
@@ -89,7 +91,7 @@ export function validateMessageData(message: VSCodeMessage): boolean {
     case 'ping':
     case 'pong':
       if (message.timestamp && typeof message.timestamp !== 'number') {
-        console.error('[messageValidation] Invalid timestamp for', message.type);
+        debugLog('[messageValidation] Invalid timestamp for', message.type);
         return false;
       }
       break;
