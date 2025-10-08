@@ -24,6 +24,7 @@ export const MarkerButton: React.FC<MarkerButtonProps> = ({
   _isInGroup = false,
 }) => {
   const { state } = useCanvas();
+  const isMindmapMode = state.layoutMode === 'mindmap';
 
   // ボタン表示条件のチェック
   if (isEndMarker) {
@@ -59,6 +60,11 @@ export const MarkerButton: React.FC<MarkerButtonProps> = ({
       : absolutePosition.x + element.width + MARKER.WIDTH / 2; // 通常は右側
   }
 
+  // マインドマップモードでは接続線が下端に来るため、ボタンも下端に配置
+  const buttonY = isMindmapMode
+    ? absolutePosition.y + totalHeight // 下端
+    : absolutePosition.y + totalHeight / 2; // 中央
+
   return (
     <g
       key={`marker-button-${buttonId}`}
@@ -69,7 +75,7 @@ export const MarkerButton: React.FC<MarkerButtonProps> = ({
       {hoverId === buttonId && (
         <circle
           cx={buttonX}
-          cy={absolutePosition.y + totalHeight / 2}
+          cy={buttonY}
           r={MARKER.WIDTH / 2}
           fill="#bfbfbf"
           opacity={0.5}
@@ -78,7 +84,7 @@ export const MarkerButton: React.FC<MarkerButtonProps> = ({
       )}
       <circle
         cx={buttonX}
-        cy={absolutePosition.y + totalHeight / 2}
+        cy={buttonY}
         r={MARKER.WIDTH / 2}
         fill="transparent"
         stroke="transparent"

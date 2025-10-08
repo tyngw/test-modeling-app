@@ -7,6 +7,7 @@ import {
   EQUILATERAL_MARKER,
 } from '../../config/elementSettings';
 import { getMarkerUrlByType } from '../../config/markerConfigs';
+import { useCanvas } from '../../context/CanvasContext';
 
 interface ConnectionPathProps {
   parentElement: CanvasElement;
@@ -26,6 +27,8 @@ export const ConnectionPath: React.FC<ConnectionPathProps> = ({
   strokeColor = CONNECTION_PATH_STYLE.COLOR,
   strokeWidth = CONNECTION_PATH_STYLE.STROKE,
 }) => {
+  const { state } = useCanvas();
+  const isMindmapMode = state.layoutMode === 'mindmap';
   let startOffset = 0;
   switch (parentElement.startMarker) {
     case 'arrow':
@@ -73,6 +76,15 @@ export const ConnectionPath: React.FC<ConnectionPathProps> = ({
   // 要素の方向に応じてパスを計算
   const direction = element.direction || 'right';
 
+  // マインドマップモードでは接続線を要素の下端に接続、通常モードでは中央に接続
+  const parentConnectionY = isMindmapMode
+    ? parentPos.y + parentElement.height // 下端
+    : parentPos.y + parentElement.height / 2; // 中央
+
+  const elementConnectionY = isMindmapMode
+    ? elementPos.y + totalHeight // 下端
+    : elementPos.y + totalHeight / 2; // 中央
+
   let pathCommands = '';
 
   // マインドマップモードでルート要素（direction: none）の場合の特別処理
@@ -80,17 +92,17 @@ export const ConnectionPath: React.FC<ConnectionPathProps> = ({
     // 子要素の方向に応じて接続パスを計算
     if (direction === 'left') {
       pathCommands = [
-        `M ${parentPos.x - startOffset},${parentPos.y + parentElement.height / 2}`,
-        `C ${parentPos.x - CURVE_CONTROL_OFFSET},${parentPos.y + parentElement.height / 2}`,
-        `${elementPos.x + element.width + CURVE_CONTROL_OFFSET},${elementPos.y + totalHeight / 2}`,
-        `${elementPos.x + element.width + endOffset},${elementPos.y + totalHeight / 2}`,
+        `M ${parentPos.x - startOffset},${parentConnectionY}`,
+        `C ${parentPos.x - CURVE_CONTROL_OFFSET},${parentConnectionY}`,
+        `${elementPos.x + element.width + CURVE_CONTROL_OFFSET},${elementConnectionY}`,
+        `${elementPos.x + element.width + endOffset},${elementConnectionY}`,
       ].join(' ');
     } else {
       pathCommands = [
-        `M ${parentPos.x + parentElement.width + startOffset},${parentPos.y + parentElement.height / 2}`,
-        `C ${parentPos.x + parentElement.width + CURVE_CONTROL_OFFSET},${parentPos.y + parentElement.height / 2}`,
-        `${elementPos.x - CURVE_CONTROL_OFFSET},${elementPos.y + totalHeight / 2}`,
-        `${elementPos.x - endOffset},${elementPos.y + totalHeight / 2}`,
+        `M ${parentPos.x + parentElement.width + startOffset},${parentConnectionY}`,
+        `C ${parentPos.x + parentElement.width + CURVE_CONTROL_OFFSET},${parentConnectionY}`,
+        `${elementPos.x - CURVE_CONTROL_OFFSET},${elementConnectionY}`,
+        `${elementPos.x - endOffset},${elementConnectionY}`,
       ].join(' ');
     }
   } else if (direction === 'left') {
@@ -98,18 +110,18 @@ export const ConnectionPath: React.FC<ConnectionPathProps> = ({
     // direction:leftの場合、親要素のstartMarkerは左端に配置されるため、
     // startOffsetを引く（右向きマーカーなので）
     pathCommands = [
-      `M ${parentPos.x - startOffset},${parentPos.y + parentElement.height / 2}`,
-      `C ${parentPos.x - CURVE_CONTROL_OFFSET},${parentPos.y + parentElement.height / 2}`,
-      `${elementPos.x + element.width + CURVE_CONTROL_OFFSET},${elementPos.y + totalHeight / 2}`,
-      `${elementPos.x + element.width + endOffset},${elementPos.y + totalHeight / 2}`,
+      `M ${parentPos.x - startOffset},${parentConnectionY}`,
+      `C ${parentPos.x - CURVE_CONTROL_OFFSET},${parentConnectionY}`,
+      `${elementPos.x + element.width + CURVE_CONTROL_OFFSET},${elementConnectionY}`,
+      `${elementPos.x + element.width + endOffset},${elementConnectionY}`,
     ].join(' ');
   } else {
     // 右方向の場合（デフォルト）
     pathCommands = [
-      `M ${parentPos.x + parentElement.width + startOffset},${parentPos.y + parentElement.height / 2}`,
-      `C ${parentPos.x + parentElement.width + CURVE_CONTROL_OFFSET},${parentPos.y + parentElement.height / 2}`,
-      `${elementPos.x - CURVE_CONTROL_OFFSET},${elementPos.y + totalHeight / 2}`,
-      `${elementPos.x - endOffset},${elementPos.y + totalHeight / 2}`,
+      `M ${parentPos.x + parentElement.width + startOffset},${parentConnectionY}`,
+      `C ${parentPos.x + parentElement.width + CURVE_CONTROL_OFFSET},${parentConnectionY}`,
+      `${elementPos.x - CURVE_CONTROL_OFFSET},${elementConnectionY}`,
+      `${elementPos.x - endOffset},${elementConnectionY}`,
     ].join(' ');
   }
 

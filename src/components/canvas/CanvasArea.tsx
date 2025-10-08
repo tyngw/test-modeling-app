@@ -704,10 +704,14 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
 
     const totalHeight = element.height;
     const isLeftDirection = element.direction === 'left';
+    const isMindmapMode = state.layoutMode === 'mindmap';
 
     // ポップアップメニューの表示位置を計算
     // direction:leftの場合、マーカーの位置が逆になるため、メニューの位置も逆にする
     let popupX, popupY;
+
+    // マインドマップモードでは接続線が下端に来るため、メニューも下端に配置
+    const menuOffsetY = isMindmapMode ? totalHeight : totalHeight / 2;
 
     if (isEndMarkerMenu) {
       // 終点マーカーの場合
@@ -718,7 +722,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
         // 通常は左側に表示
         popupX = element.x - 170; // メニューの幅(150px) + マージン(20px)
       }
-      popupY = element.y + totalHeight / 2 - 135; // 中央に表示
+      popupY = element.y + menuOffsetY - 135; // マーカー位置に合わせて表示
     } else {
       // 始点マーカーの場合
       if (isLeftDirection) {
@@ -728,7 +732,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
         // 通常は右側に表示
         popupX = element.x + element.width + 20; // 要素の右端 + マージン
       }
-      popupY = element.y + totalHeight / 2 - 135; // 中央に表示
+      popupY = element.y + menuOffsetY - 135; // マーカー位置に合わせて表示
     }
 
     return (
