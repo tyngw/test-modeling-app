@@ -50,6 +50,7 @@ import {
   getElementCountFromHierarchy,
   updateAllElementsInHierarchy,
   createElementsMapFromHierarchy,
+  updateDescendantDirections,
 } from '../utils/hierarchical/hierarchicalConverter';
 import { updateHierarchyWithElementChanges } from '../utils/hierarchical/hierarchicalMaintainer';
 import {
@@ -1725,6 +1726,15 @@ const actionHandlers: Record<string, ActionHandler> = {
             direction,
           };
           debugLog(`Element ${id} direction updated to: ${direction}`);
+
+          // マインドマップモードの場合、子孫要素のdirectionも更新
+          // 背景：親要素が右側から左側に移動した場合、子要素も左側に配置される必要がある
+          // レイアウト計算では子要素のdirection値に基づいて配置が決まるため、
+          // 親のdirection変更時に子要素のdirectionを更新しないと表示が崩れる
+          if (state.layoutMode === 'mindmap') {
+            updateDescendantDirections(targetNode, direction);
+            debugLog(`Element ${id} descendants direction updated to: ${direction}`);
+          }
         }
       }
 
