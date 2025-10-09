@@ -43,6 +43,9 @@ import {
 } from '../../utils/storage/localStorageHelpers';
 import { calculateDropCoordinates } from '../../utils/dropCoordinateHelpers';
 
+const AUTO_SCROLL_THRESHOLD = 120;
+const AUTO_SCROLL_MAX_SPEED = 24;
+
 // デバッグログ機能（開発時のデバッグ用）
 const DEBUG_ENABLED = false; // 本番環境ではfalseに設定
 const debugLog = (_message: string, ..._args: unknown[]) => {
@@ -90,6 +93,12 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
   toggleHelp: _toggleHelp,
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
+  const pointerPositionRef = useRef<{ clientX: number; clientY: number }>({
+    clientX: -1,
+    clientY: -1,
+  });
+  const autoScrollFrameRef = useRef<number | null>(null);
   const [isClient, setIsClient] = useState(false);
   const { state, dispatch } = useCanvas();
   // ElementsMapをuseMemoで安定化 - hierarchicalDataが変更された時のみ再計算
@@ -154,6 +163,127 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     return { x: svgPoint.x, y: svgPoint.y };
   }, []);
 
+  const stopAutoScroll = useCallback(() => {
+    if (autoScrollFrameRef.current !== null) {
+      cancelAnimationFrame(autoScrollFrameRef.current);
+      autoScrollFrameRef.current = null;
+    }
+  }, []);
+
+  const updateAutoScroll = useCallback(() => {
+    const container = canvasContainerRef.current;
+    if (!container) return;
+
+    const { clientX, clientY } = pointerPositionRef.current;
+    if (clientX < 0 || clientY < 0) return;
+
+    const rect = container.getBoundingClientRect();
+
+    const distanceLeft = clientX - rect.left;
+    const distanceRight = rect.right - clientX;
+    const distanceTop = clientY - rect.top;
+    const distanceBottom = rect.bottom - clientY;
+
+    let deltaX = 0;
+    if (distanceLeft < AUTO_SCROLL_THRESHOLD) {
+      const intensity = (AUTO_SCROLL_THRESHOLD - Math.max(distanceLeft, 0)) / AUTO_SCROLL_THRESHOLD;
+      deltaX = -Math.ceil(intensity * AUTO_SCROLL_MAX_SPEED);
+    } else if (distanceRight < AUTO_SCROLL_THRESHOLD) {
+      const intensity =
+        (AUTO_SCROLL_THRESHOLD - Math.max(distanceRight, 0)) / AUTO_SCROLL_THRESHOLD;
+      deltaX = Math.ceil(intensity * AUTO_SCROLL_MAX_SPEED);
+    }
+
+    let deltaY = 0;
+    if (distanceTop < AUTO_SCROLL_THRESHOLD) {
+      const intensity = (AUTO_SCROLL_THRESHOLD - Math.max(distanceTop, 0)) / AUTO_SCROLL_THRESHOLD;
+      deltaY = -Math.ceil(intensity * AUTO_SCROLL_MAX_SPEED);
+    } else if (distanceBottom < AUTO_SCROLL_THRESHOLD) {
+      const intensity =
+        (AUTO_SCROLL_THRESHOLD - Math.max(distanceBottom, 0)) / AUTO_SCROLL_THRESHOLD;
+      deltaY = Math.ceil(intensity * AUTO_SCROLL_MAX_SPEED);
+    }
+
+    if (deltaX === 0 && deltaY === 0) {
+      return;
+    }
+
+    const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+
+    const applyScroll = (axis: 'horizontal' | 'vertical', delta: number) => {
+      if (delta === 0) return false;
+      if (axis === 'horizontal') {
+        const before = container.scrollLeft;
+        const maxScrollLeft = Math.max(container.scrollWidth - container.clientWidth, 0);
+        const next = clamp(before + delta, 0, maxScrollLeft);
+        container.scrollLeft = next;
+        if (next !== before) {
+          return true;
+        }
+        if (maxScrollLeft === 0 && typeof document !== 'undefined') {
+          const scrollElement = document.scrollingElement;
+          if (scrollElement) {
+            const beforeDoc = scrollElement.scrollLeft;
+            const nextDoc = clamp(
+              beforeDoc + delta,
+              0,
+              Math.max(scrollElement.scrollWidth - scrollElement.clientWidth, 0),
+            );
+            scrollElement.scrollLeft = nextDoc;
+            return nextDoc !== beforeDoc;
+          }
+        }
+        return false;
+      }
+
+      const before = container.scrollTop;
+      const maxScrollTop = Math.max(container.scrollHeight - container.clientHeight, 0);
+      const next = clamp(before + delta, 0, maxScrollTop);
+      container.scrollTop = next;
+      if (next !== before) {
+        return true;
+      }
+      if (maxScrollTop === 0 && typeof document !== 'undefined') {
+        const scrollElement = document.scrollingElement;
+        if (scrollElement) {
+          const beforeDoc = scrollElement.scrollTop;
+          const nextDoc = clamp(
+            beforeDoc + delta,
+            0,
+            Math.max(scrollElement.scrollHeight - scrollElement.clientHeight, 0),
+          );
+          scrollElement.scrollTop = nextDoc;
+          return nextDoc !== beforeDoc;
+        }
+      }
+      return false;
+    };
+
+    applyScroll('horizontal', deltaX);
+    applyScroll('vertical', deltaY);
+  }, []);
+
+  const handleAutoScrollPointerUpdate = useCallback((event: MouseEvent | TouchEvent) => {
+    if ('touches' in event) {
+      if (event.touches.length === 0) return;
+      const touch = event.touches[0];
+      pointerPositionRef.current = {
+        clientX: touch.clientX,
+        clientY: touch.clientY,
+      };
+    } else {
+      pointerPositionRef.current = {
+        clientX: event.clientX,
+        clientY: event.clientY,
+      };
+    }
+  }, []);
+
+  const handleAutoScrollDragEnd = useCallback(() => {
+    pointerPositionRef.current = { clientX: -1, clientY: -1 };
+    stopAutoScroll();
+  }, [stopAutoScroll]);
+
   const {
     handleMouseDown,
     handleMouseUp,
@@ -165,7 +295,31 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     dropTargetDirection,
     siblingInfo,
     isDragInProgress,
-  } = useElementDragEffect({ viewBoxOffsets, resolveEventCoordinates });
+  } = useElementDragEffect({
+    viewBoxOffsets,
+    resolveEventCoordinates,
+    onDragMove: handleAutoScrollPointerUpdate,
+    onDragEnd: handleAutoScrollDragEnd,
+  });
+
+  useEffect(() => {
+    if (!isDragInProgress) {
+      pointerPositionRef.current = { clientX: -1, clientY: -1 };
+      stopAutoScroll();
+      return;
+    }
+
+    const tick = () => {
+      updateAutoScroll();
+      autoScrollFrameRef.current = requestAnimationFrame(tick);
+    };
+
+    tick();
+
+    return () => {
+      stopAutoScroll();
+    };
+  }, [isDragInProgress, updateAutoScroll, stopAutoScroll]);
 
   // カスタムフックの使用
   useResizeEffect({
@@ -758,6 +912,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
       />
       {/* Canvas領域 */}
       <div
+        ref={canvasContainerRef}
         style={{
           ...canvasContainerStyle,
           touchAction: isPinching ? 'none' : 'manipulation',
