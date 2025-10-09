@@ -38,11 +38,15 @@ export type { DropTargetInfo, ElementDragEffectResult };
 interface DragEffectOptions {
   viewBoxOffsets?: { minX: number; minY: number };
   resolveEventCoordinates?: (event: MouseEvent | TouchEvent) => { x: number; y: number } | null;
+  onDragMove?: (event: MouseEvent | TouchEvent) => void;
+  onDragEnd?: () => void;
 }
 
 export const useElementDragEffect = ({
   viewBoxOffsets = { minX: 0, minY: 0 },
   resolveEventCoordinates,
+  onDragMove,
+  onDragEnd,
 }: DragEffectOptions = {}): ElementDragEffectResult => {
   const { state, dispatch } = useCanvas();
   const { addToast } = useToast();
@@ -210,6 +214,9 @@ export const useElementDragEffect = ({
       setDraggingElement(null);
       setCurrentDropTarget(null);
       elementOriginalPositions.current.clear();
+      if (onDragEnd) {
+        onDragEnd();
+      }
     }
   }, [
     draggingElement,
@@ -218,6 +225,7 @@ export const useElementDragEffect = ({
     addToast,
     resetElementsPosition,
     state.hierarchicalData,
+    onDragEnd,
   ]);
 
   // ドラッグ中に実行される処理
@@ -273,6 +281,10 @@ export const useElementDragEffect = ({
         type: 'MOVE_ELEMENT',
         payload: { id: draggingElement.id, ...newPosition },
       });
+
+      if (onDragMove) {
+        onDragMove(e);
+      }
     },
     [
       draggingElement,
@@ -282,6 +294,7 @@ export const useElementDragEffect = ({
       state.zoomRatio,
       state.hierarchicalData,
       resolveCoordinates,
+      onDragMove,
     ],
   );
 
