@@ -54,20 +54,23 @@ const ModalWindow: React.FC<ModalWindowProps> = ({
   // モーダルが開いている間、背景のスクロールを防ぐ
   useEffect(() => {
     if (isOpen) {
-      // 現在のスクロール位置を保存
-      const scrollY = window.scrollY;
+      // 元のoverflowスタイルを保存
+      const originalOverflow = document.body.style.overflow;
+      const originalPaddingRight = document.body.style.paddingRight;
+
+      // スクロールバーの幅を計算（スクロールバーが消えることによるレイアウトシフトを防ぐ）
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+
+      // スクロールを無効化し、スクロールバーの幅分のパディングを追加
       document.body.style.overflow = 'hidden';
-      document.body.style.position = 'fixed';
-      document.body.style.top = `-${scrollY}px`;
-      document.body.style.width = '100%';
+      if (scrollbarWidth > 0) {
+        document.body.style.paddingRight = `${scrollbarWidth}px`;
+      }
 
       return () => {
         // モーダルを閉じる時に元に戻す
-        document.body.style.overflow = '';
-        document.body.style.position = '';
-        document.body.style.top = '';
-        document.body.style.width = '';
-        window.scrollTo(0, scrollY);
+        document.body.style.overflow = originalOverflow;
+        document.body.style.paddingRight = originalPaddingRight;
       };
     }
   }, [isOpen]);
