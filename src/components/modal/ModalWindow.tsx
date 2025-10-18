@@ -51,6 +51,27 @@ const ModalWindow: React.FC<ModalWindowProps> = ({
     // debugLog(`[DEBUG] ModalWindow(${modalId}) theme updated`);
   }, [isMounted, modalId]);
 
+  // モーダルが開いている間、背景のスクロールを防ぐ
+  useEffect(() => {
+    if (isOpen) {
+      // 現在のスクロール位置を保存
+      const scrollY = window.scrollY;
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
+
+      return () => {
+        // モーダルを閉じる時に元に戻す
+        document.body.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [isOpen]);
+
   // モーダルが開かれたときに一度だけonOpenを呼び出す
   useEffect(() => {
     // isOpenがfalseからtrueに変わった時のみ実行
@@ -211,12 +232,10 @@ const ModalWindow: React.FC<ModalWindowProps> = ({
         <div
           style={{
             position: 'relative',
-            maxHeight: 'calc(80vh - 56px)', // モーダルの上下パディングを考慮
             marginTop: icon ? '40px' : title ? '24px' : '16px',
-            overflowY: 'auto',
+            // スクロールは子コンポーネント側で制御するため、ここでは設定しない
+            overflowY: 'visible',
             overflowX: 'hidden',
-            scrollbarWidth: 'thin',
-            scrollbarColor: `${currentTheme.MODAL.TEXT_COLOR}40 transparent`,
           }}
         >
           {children}

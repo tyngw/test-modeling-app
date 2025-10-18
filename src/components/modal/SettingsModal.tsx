@@ -397,28 +397,34 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             borderRadius: 1,
             display: 'flex',
             flexDirection: 'column',
-            height: '80vh',
-            maxHeight: 600,
+            // タブ切り替え時にサイズが変わらないよう固定の高さを設定
+            height: 'min(600px, calc(80vh - 120px))', // 600pxまたは画面高さの80%の小さい方
           }}
         >
-          <Tabs
-            value={activeTab}
-            onChange={(_, newValue) => setActiveTab(newValue)}
-            variant="scrollable"
-            scrollButtons="auto"
-            allowScrollButtonsMobile
-            textColor="primary"
-            indicatorColor="primary"
-          >
-            {SETTINGS_TABS.map((tab) => (
-              <Tab key={tab.id} label={tab.label} />
-            ))}
-          </Tabs>
+          {/* タブヘッダー（固定） */}
+          <Box sx={{ flexShrink: 0 }}>
+            <Tabs
+              value={activeTab}
+              onChange={(_, newValue) => setActiveTab(newValue)}
+              variant="scrollable"
+              scrollButtons="auto"
+              allowScrollButtonsMobile
+              textColor="primary"
+              indicatorColor="primary"
+            >
+              {SETTINGS_TABS.map((tab) => (
+                <Tab key={tab.id} label={tab.label} />
+              ))}
+            </Tabs>
+          </Box>
+
+          {/* スクロール可能なコンテンツエリア */}
           <Box
             sx={{
               mt: 2,
               flex: 1,
               overflowY: 'auto',
+              minHeight: 0, // flexboxでのスクロールを正しく機能させるために必要
               // スクロールバーのスタイリング
               '&::-webkit-scrollbar': {
                 width: '8px',
@@ -450,12 +456,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 ),
             )}
           </Box>
+
+          {/* ボタンエリア（固定） */}
           <Box
             sx={{
               mt: 2,
               pt: 2,
+              flexShrink: 0, // ボタンエリアが縮小されないようにする
               display: 'flex',
-              flexWrap: 'wrap', // ボタンが見切れないよう折り返し
+              flexWrap: 'wrap',
               gap: 1,
               justifyContent: 'space-between',
               alignItems: 'center',
