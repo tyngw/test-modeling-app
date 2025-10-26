@@ -20,6 +20,42 @@ interface ParsedMarkdownLine {
 
 const DEFAULT_MARKER: MarkerType = 'none';
 
+const normalizeMarkdownOutline = (markdownText: string): string => {
+  let insideCodeFence = false;
+
+  return markdownText
+    .split('\n')
+    .map((rawLine) => {
+      const trimmedLine = rawLine.trim();
+
+      if (!trimmedLine) {
+        return rawLine;
+      }
+
+      if (trimmedLine.startsWith('```')) {
+        insideCodeFence = !insideCodeFence;
+        return rawLine;
+      }
+
+      if (insideCodeFence || trimmedLine.startsWith('#')) {
+        return rawLine;
+      }
+
+      if (/^\s*[-*+]\s+/.test(rawLine)) {
+        return rawLine;
+      }
+
+      const leadingWhitespace = (rawLine.match(/^(\s*)/) ?? [''])[0];
+
+      // 背景: アウトライン構造を維持するため、ハイフンなしノードにプレフィックスを付与
+      // 前提: ノード定義は1行ずつであり、段落としてのMarkdownは扱わない
+      // トレードオフ: 通常のテキスト行もノード化されるが、Webview側で正しいアウトラインに再整形される
+      // インデントを保持したまま箇条書きマーカーを追加
+      return `${leadingWhitespace}- ${trimmedLine}`;
+    })
+    .join('\n');
+};
+
 /**
  * Markdownテキストからインデントパターンを検出し、設定に反映する
  * @param markdownText 解析対象のMarkdownテキスト
@@ -29,19 +65,32 @@ const detectAndApplyIndentPattern = (markdownText: string): number => {
   const lines = markdownText.split('\n');
   const indentCounts: number[] = [];
 
-  // インデントされた行を検出
-  for (const line of lines) {
-    if (!line.trim() || line.trim().startsWith('#')) {
+  let insideCodeFence = false;
+
+  // インデントされた行を検出（ハイフン有無に依存しない）
+  for (const rawLine of lines) {
+    const trimmedLine = rawLine.trim();
+
+    if (!trimmedLine) {
       continue;
     }
 
-    const dashIndex = line.indexOf('-');
-    if (dashIndex === -1) {
+    if (trimmedLine.startsWith('```')) {
+      insideCodeFence = !insideCodeFence;
       continue;
     }
 
-    const indent = line.slice(0, dashIndex);
-    const spaceCount = indent.replace(/\t/g, '  ').length;
+    if (insideCodeFence || trimmedLine.startsWith('#')) {
+      continue;
+    }
+
+    const normalizedLine = rawLine.replace(/\t/g, '  ');
+
+    const bulletMatch = normalizedLine.match(/^(\s*)[-*+]\s+/);
+    const indentCandidate = bulletMatch
+      ? bulletMatch[1]
+      : (normalizedLine.match(/^(\s+)/)?.[0] ?? '');
+    const spaceCount = indentCandidate.length;
 
     // インデントがある行のみ記録
     if (spaceCount > 0) {
@@ -168,27 +217,42 @@ const buildElementsFromParsedLines = (lines: ParsedMarkdownLine[]): Element[] =>
 
 export const loadMarkdownAsHierarchical = (markdownText: string): HierarchicalStructure | null => {
   if (!markdownText || !markdownText.trim()) {
+    debugLog('[loadMarkdownAsHierarchical] Empty markdown text');
     return null;
   }
 
-  // インデントパターンを検出し、設定に反映
-  const spacesPerLevel = detectAndApplyIndentPattern(markdownText);
+  // 背景: 箇条書きマーカーがない行を正規化してから、インデントパターンを検出
+  // 前提: normalizeMarkdownOutlineは元のインデントを保持したまま`- `を追加する
+  // トレードオフ: 正規化後のテキストで検出するため、元のファイル形式に依存しない
+  const normalizedMarkdown = normalizeMarkdownOutline(markdownText);
+  debugLog('[loadMarkdownAsHierarchical] Normalized markdown:', normalizedMarkdown);
+
+  // インデントパターンを検出し、設定に反映（正規化後のテキストを使用）
+  const spacesPerLevel = detectAndApplyIndentPattern(normalizedMarkdown);
+  debugLog('[loadMarkdownAsHierarchical] Detected spaces per level:', spacesPerLevel);
 
   const parsedLines: ParsedMarkdownLine[] = [];
 
-  markdownText.split('\n').forEach((line) => {
+  normalizedMarkdown.split('\n').forEach((line) => {
     const parsed = parseMarkdownLine(line, spacesPerLevel);
     if (parsed) {
       parsedLines.push(parsed);
     }
   });
 
+  debugLog('[loadMarkdownAsHierarchical] Parsed lines count:', parsedLines.length);
+
   if (parsedLines.length === 0) {
+    debugLog('[loadMarkdownAsHierarchical] No valid lines parsed');
     return null;
   }
 
   const elements = buildElementsFromParsedLines(parsedLines);
   const hierarchical = convertArrayToHierarchical(elements);
+
+  debugLog(
+    `[loadMarkdownAsHierarchical] Created hierarchical structure with ${elements.length} elements`,
+  );
 
   return hierarchical;
 };
