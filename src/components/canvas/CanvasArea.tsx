@@ -743,98 +743,131 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
 
   // ドラッグ中の要素の接続パスプレビューを描画
   const renderDraggingElementConnectionPath = () => {
-    if (!currentDropTarget || !draggingElement || !dropPosition) return null;
+    if (!draggingElement) return null;
 
-    // 型ガード: currentDropTarget がCanvasElement であることを確認
-    const target = currentDropTarget as CanvasElement;
+    // ドロップ候補がある場合は新しい接続先へのプレビューを表示
+    if (currentDropTarget && dropPosition) {
+      // 型ガード: currentDropTarget がCanvasElement であることを確認
+      const target = currentDropTarget as CanvasElement;
 
-    const parentNode =
-      state.hierarchicalData && dropPosition !== 'child'
-        ? findParentNodeInHierarchy(state.hierarchicalData, target.id)
-        : null;
-    const newParent =
-      dropPosition === 'child' ? target : parentNode ? elementsCache[parentNode.data.id] : null;
+      const parentNode =
+        state.hierarchicalData && dropPosition !== 'child'
+          ? findParentNodeInHierarchy(state.hierarchicalData, target.id)
+          : null;
+      const newParent =
+        dropPosition === 'child' ? target : parentNode ? elementsCache[parentNode.data.id] : null;
 
-    if (!newParent) return null;
+      if (!newParent) return null;
 
-    // ドロップ座標を計算（ユーティリティ関数を使用）
-    const resolvedDropInsertX =
-      dropInsertX !== undefined
-        ? dropInsertX
-        : currentDropTarget &&
-            typeof currentDropTarget === 'object' &&
-            'insertX' in currentDropTarget
-          ? (currentDropTarget as { insertX: number }).insertX
-          : undefined;
+      // ドロップ座標を計算（ユーティリティ関数を使用）
+      const resolvedDropInsertX =
+        dropInsertX !== undefined
+          ? dropInsertX
+          : currentDropTarget &&
+              typeof currentDropTarget === 'object' &&
+              'insertX' in currentDropTarget
+            ? (currentDropTarget as { insertX: number }).insertX
+            : undefined;
 
-    const coordinates = calculateDropCoordinates({
-      elements: elementsCache,
-      hierarchicalData: state.hierarchicalData,
-      currentDropTarget: target,
-      draggingElement,
-      dropPosition,
-      dropInsertY,
-      dropInsertX: resolvedDropInsertX,
-      dropTargetDirection,
-      direction: dropTargetDirection,
-      siblingInfo,
-    });
+      const coordinates = calculateDropCoordinates({
+        elements: elementsCache,
+        hierarchicalData: state.hierarchicalData,
+        currentDropTarget: target,
+        draggingElement,
+        dropPosition,
+        dropInsertY,
+        dropInsertX: resolvedDropInsertX,
+        dropTargetDirection,
+        direction: dropTargetDirection,
+        siblingInfo,
+      });
 
-    if (!coordinates) return null;
+      if (!coordinates) return null;
 
-    // betweenモードの場合、正しいdirectionを計算
-    let previewDirection = dropTargetDirection ?? draggingElement.direction;
+      // betweenモードの場合、正しいdirectionを計算
+      let previewDirection = dropTargetDirection ?? draggingElement.direction;
 
-    if (dropPosition === 'between') {
-      // betweenモードでは兄弟要素のdirectionを継承
-      if (target.direction) {
-        previewDirection = target.direction;
-      } else if (newParent && newParent.direction === 'none') {
-        // 親がルート要素の場合、siblingInfoから方向を決定
-        if (siblingInfo?.prevElement?.direction) {
-          previewDirection = siblingInfo.prevElement.direction;
-        } else if (siblingInfo?.nextElement?.direction) {
-          previewDirection = siblingInfo.nextElement.direction;
-        } else {
-          // フォールバック: 座標位置で判定
-          const rootCenterX = newParent.x + newParent.width / 2;
-          previewDirection = coordinates.x < rootCenterX ? 'left' : 'right';
+      if (dropPosition === 'between') {
+        // betweenモードでは兄弟要素のdirectionを継承
+        if (target.direction) {
+          previewDirection = target.direction;
+        } else if (newParent && newParent.direction === 'none') {
+          // 親がルート要素の場合、siblingInfoから方向を決定
+          if (siblingInfo?.prevElement?.direction) {
+            previewDirection = siblingInfo.prevElement.direction;
+          } else if (siblingInfo?.nextElement?.direction) {
+            previewDirection = siblingInfo.nextElement.direction;
+          } else {
+            // フォールバック: 座標位置で判定
+            const rootCenterX = newParent.x + newParent.width / 2;
+            previewDirection = coordinates.x < rootCenterX ? 'left' : 'right';
+          }
+        } else if (newParent) {
+          // 親がルート要素以外の場合、親のdirectionを継承
+          previewDirection = newParent.direction || 'right';
         }
-      } else if (newParent) {
-        // 親がルート要素以外の場合、親のdirectionを継承
-        previewDirection = newParent.direction || 'right';
-      }
-    } else if (dropPosition === 'child') {
-      // childモードでは、ドロップ先要素の設定に基づいて決定
-      const targetParentNode = state.hierarchicalData
-        ? findParentNodeInHierarchy(state.hierarchicalData, target.id)
-        : null;
-      const isTargetRoot = target.direction === 'none' && !targetParentNode;
+      } else if (dropPosition === 'child') {
+        // childモードでは、ドロップ先要素の設定に基づいて決定
+        const targetParentNode = state.hierarchicalData
+          ? findParentNodeInHierarchy(state.hierarchicalData, target.id)
+          : null;
+        const isTargetRoot = target.direction === 'none' && !targetParentNode;
 
-      if (isTargetRoot) {
-        // ルート要素への子要素追加の場合、座標位置で判定
-        const rootCenterX = target.x + target.width / 2;
-        previewDirection = coordinates.x < rootCenterX ? 'left' : 'right';
-      } else {
-        // 通常の子要素追加の場合、親のdirectionを継承
-        previewDirection = target.direction || 'right';
+        if (isTargetRoot) {
+          // ルート要素への子要素追加の場合、座標位置で判定
+          const rootCenterX = target.x + target.width / 2;
+          previewDirection = coordinates.x < rootCenterX ? 'left' : 'right';
+        } else {
+          // 通常の子要素追加の場合、親のdirectionを継承
+          previewDirection = target.direction || 'right';
+        }
       }
+
+      return (
+        <ConnectionPath
+          parentElement={newParent}
+          element={{
+            ...draggingElement,
+            x: coordinates.x,
+            y: coordinates.y,
+            direction: previewDirection, // 計算された正しいdirectionを設定
+          }}
+          absolutePositions={{
+            parent: { x: newParent.x, y: newParent.y },
+            element: { x: coordinates.x, y: coordinates.y },
+          }}
+          strokeColor={CONNECTION_PATH_STYLE.DRAGGING_COLOR}
+          strokeWidth={CONNECTION_PATH_STYLE.STROKE}
+        />
+      );
     }
+
+    // ドロップ候補がない場合は元の階層の接続線を表示
+    const originalParentNode = state.hierarchicalData
+      ? findParentNodeInHierarchy(state.hierarchicalData, draggingElement.id)
+      : null;
+    const originalParent = originalParentNode ? elementsCache[originalParentNode.data.id] : null;
+
+    if (!originalParent) return null;
+
+    // ドラッグ中の要素の現在座標を取得
+    const draggedElementCurrentPos = elementsCache[draggingElement.id];
+    const currentX = draggedElementCurrentPos?.x ?? draggingElement.x;
+    const currentY = draggedElementCurrentPos?.y ?? draggingElement.y;
 
     return (
       <ConnectionPath
-        parentElement={newParent}
+        parentElement={originalParent}
         element={{
           ...draggingElement,
-          x: coordinates.x,
-          y: coordinates.y,
-          direction: previewDirection, // 計算された正しいdirectionを設定
+          x: currentX,
+          y: currentY,
         }}
         absolutePositions={{
-          parent: { x: newParent.x, y: newParent.y },
-          element: { x: coordinates.x, y: coordinates.y },
+          parent: { x: originalParent.x, y: originalParent.y },
+          element: { x: currentX, y: currentY },
         }}
-        strokeColor={CONNECTION_PATH_STYLE.DRAGGING_COLOR}
+        strokeColor="#000000"
         strokeWidth={CONNECTION_PATH_STYLE.STROKE}
       />
     );
