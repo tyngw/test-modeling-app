@@ -113,10 +113,6 @@ export const useElementDragEffect = ({
         y: zoomAdjustedPos.y - element.y,
       });
 
-      debugLog(
-        `[Drag started] Element: ${element.id}, startPos: (${zoomAdjustedPos.x}, ${zoomAdjustedPos.y})`,
-      );
-
       // ドラッグ開始時に選択されている全要素の元の位置を保存（階層構造ベース）
       elementOriginalPositions.current.clear();
       const selectedElements = state.hierarchicalData
@@ -128,7 +124,7 @@ export const useElementDragEffect = ({
         elementOriginalPositions.current.set(element.id, { x: element.x, y: element.y });
       });
     },
-    [state.hierarchicalData, state.zoomRatio, dispatch, resolveCoordinates],
+    [state.hierarchicalData, resolveCoordinates],
   );
 
   const resetElementsPosition = useCallback(() => {
@@ -262,12 +258,6 @@ export const useElementDragEffect = ({
             currentDropTarget.insertX !== dropTarget.insertX));
 
       if (isTargetChanged) {
-        debugLog(`[setCurrentDropTarget] Setting drop target:`, dropTarget);
-        if (dropTarget) {
-          debugLog(
-            `[setCurrentDropTarget] Direction: ${dropTarget.direction}, InsertX: ${dropTarget.insertX}`,
-          );
-        }
         setCurrentDropTarget(dropTarget);
       }
 

@@ -74,7 +74,6 @@ const estimateDepthFromXPosition = (
     // X座標の範囲にパディングを追加して判定
     const padding = OFFSET.X;
     if (mouseX >= range.minX - padding && mouseX <= range.maxX + padding) {
-      debugLog(`[estimateDepthFromXPosition] Mouse X=${mouseX} estimated at depth=${depth}`);
       return depth;
     }
   }
@@ -91,7 +90,6 @@ const estimateDepthFromXPosition = (
     }
   });
 
-  debugLog(`[estimateDepthFromXPosition] No exact match, closest depth=${closestDepth}`);
   return closestDepth;
 };
 
@@ -218,10 +216,6 @@ export const calculatePositionAndDistance = (
     (direction === 'right' && isOnRightSideInYRange) ||
     (direction === 'left' && isOnLeftSideInYRange);
 
-  if (isRootInMindmap) {
-    debugLog(`[Root calc] isOnValidSide: ${isOnValidSide}, direction: ${direction}`);
-  }
-
   let result: {
     position: 'child' | 'between';
     insertY: number;
@@ -252,10 +246,6 @@ export const calculatePositionAndDistance = (
         result.insertX = element.x - element.width - OFFSET.X - (draggingElement?.width ?? 0);
       }
     }
-    debugLog(`Drop position mode (inside element ${element.id}):`, 'child');
-    debugLog(
-      `[Inside element] Element ${element.id} - direction: ${result.direction}, insertX: ${result.insertX}`,
-    );
   } else if (isOnValidSide) {
     // 要素の適切な側（方向に応じた）かつY座標範囲内の場合 (between mode)
     const children = getChildren(element, hierarchicalData);
@@ -264,9 +254,6 @@ export const calculatePositionAndDistance = (
     let childDirection: DirectionType = direction;
     if (isRootInMindmap) {
       childDirection = isOnLeftSideInYRange ? 'left' : 'right';
-      debugLog(
-        `[childDirection calculation] isOnLeftSideInYRange: ${isOnLeftSideInYRange}, childDirection: ${childDirection}`,
-      );
     }
 
     if (children.length === 0) {
@@ -286,7 +273,6 @@ export const calculatePositionAndDistance = (
         siblingInfo: {}, // siblingInfoは保持
         direction: childDirection,
       };
-      debugLog(`Drop position mode (${childDirection} side, no children):`, 'child');
     } else {
       // 子要素がある場合は、子要素の間に挿入
       const insertX =
@@ -303,8 +289,6 @@ export const calculatePositionAndDistance = (
           siblingInfo: {},
           direction: childDirection,
         };
-        debugLog(`Drop position mode (${childDirection} side, root with children):`, 'child');
-        debugLog(`[Root result] direction set to: ${childDirection}, insertX: ${insertX}`);
       } else {
         let prevElement: Element | undefined;
         let nextElement: Element | undefined;
@@ -381,8 +365,6 @@ export const calculatePositionAndDistance = (
             direction: childDirection,
           };
         }
-
-        debugLog(`Drop position mode (${childDirection} side, with children):`, 'between');
       }
     }
   } else if (
@@ -391,7 +373,6 @@ export const calculatePositionAndDistance = (
     !findParentNodeInHierarchy(hierarchicalData, element.id)
   ) {
     // ルート要素の場合は兄弟判定をスキップし、デフォルトのchild位置を返す
-    debugLog(`[Root element ${element.id}] Not on valid side, using default child position`);
 
     // ルート要素の場合、マウス位置で左右を判定
     let childDirection: DirectionType = 'right';
@@ -427,7 +408,6 @@ export const calculatePositionAndDistance = (
 
     // parentIdがnullの場合（ルート要素の兄弟）は、betweenモードを使用しない
     if (!parentId) {
-      debugLog(`[Sibling of root element ${element.id}] Skipping between mode for root siblings`);
       result = {
         position: 'child',
         insertY: element.y + element.height / 2,
@@ -439,10 +419,6 @@ export const calculatePositionAndDistance = (
       const siblings = getChildrenFromHierarchy(hierarchicalData, parentId)
         .filter((el) => el.visible && el.id !== draggingElementId)
         .sort((a, b) => a.y - b.y);
-
-      debugLog(
-        `[calculatePositionAndDistance] Found ${siblings.length} siblings (excluding dragging element) for element ${element.id}`,
-      );
 
       // 兄弟要素間の位置を計算
       let prevElement: Element | null = null;
@@ -558,17 +534,6 @@ export const calculatePositionAndDistance = (
   const dy = mouseY - centerY;
   const distanceSq = dx * dx + dy * dy;
 
-  // デバッグログ: 詳細な判定情報を出力
-  debugLog(
-    `[Position calc] Element ${element.id}: mouseInside=${isInsideElement}, onValidSide=${isOnValidSide}, position=${result.position}, distanceSq=${distanceSq.toFixed(2)}`,
-  );
-
-  if (isRootInMindmap) {
-    debugLog(
-      `[Root calc] Final result - position: ${result.position}, distanceSq: ${distanceSq}, insertY: ${result.insertY}, direction: ${result.direction}`,
-    );
-  }
-
   return { ...result, distanceSq };
 };
 
@@ -674,10 +639,6 @@ export const findDropTarget = (params: FindDropTargetParams): DropTargetInfo => 
       ? prioritizedCandidates.map(({ element }) => element)
       : candidates;
 
-  debugLog(
-    `[findDropTarget] Estimated depth: ${estimatedDepth}, candidates: ${candidates.length}, prioritized: ${finalCandidates.length}`,
-  );
-
   // 要素を親IDでグループ化
   const elementsByParent = groupElementsByParent(allElements, selectedElementIds, hierarchicalData);
 
@@ -736,29 +697,16 @@ export const findDropTarget = (params: FindDropTargetParams): DropTargetInfo => 
     );
 
     if (isValidRootSideDrop) {
-      debugLog(
-        `[findDropTarget] PRIORITY: Valid root side drop detected for element ${element.id}, position: ${position}`,
-      );
       // ルート要素への側面ドロップは最高優先度
       closestTarget = { element, position, insertY, insertX, siblingInfo, direction };
-      debugLog(`[findDropTarget] Root side drop - direction: ${direction}, insertX: ${insertX}`);
       break; // ルート要素が見つかったら即座に選択
     } else if (distanceSq < minSquaredDistance) {
       minSquaredDistance = distanceSq;
       closestTarget = { element, position, insertY, insertX, siblingInfo, direction };
-      debugLog(
-        `[findDropTarget] New closest: ${element.id}, distance: ${distanceSq}, direction: ${direction}`,
-      );
     }
   }
 
-  if (closestTarget) {
-    debugLog(
-      `[findDropTarget] Final selection: ${closestTarget.element.id}, position: ${closestTarget.position}, direction: ${closestTarget.direction}`,
-    );
-  } else {
-    debugLog(`[findDropTarget] No drop target found in candidates`);
-
+  if (!closestTarget) {
     // 候補が見つからない場合、ルート要素への直接ドロップを検討
     if (rootElement) {
       const rootCenterX = rootElement.x + rootElement.width / 2;
@@ -777,7 +725,6 @@ export const findDropTarget = (params: FindDropTargetParams): DropTargetInfo => 
       if (mouseY >= dropAreaTop && mouseY <= dropAreaBottom) {
         if (mouseX >= leftAreaLeft && mouseX <= leftAreaRight) {
           // 左側領域への直接ドロップ
-          debugLog(`[findDropTarget] Direct drop to root left area`);
           return {
             element: rootElement,
             position: 'child',
@@ -787,7 +734,6 @@ export const findDropTarget = (params: FindDropTargetParams): DropTargetInfo => 
           };
         } else if (mouseX >= rightAreaLeft && mouseX <= rightAreaRight) {
           // 右側領域への直接ドロップ
-          debugLog(`[findDropTarget] Direct drop to root right area`);
           return {
             element: rootElement,
             position: 'child',
@@ -798,8 +744,6 @@ export const findDropTarget = (params: FindDropTargetParams): DropTargetInfo => 
         }
       }
     }
-
-    debugLog(`[findDropTarget] No valid drop target found`);
   }
 
   return closestTarget;

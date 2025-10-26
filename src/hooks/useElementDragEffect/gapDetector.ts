@@ -156,20 +156,12 @@ const checkDirectionGap = (
       gapAreaRight = gapAreaLeft + OFFSET.X * 2 + (draggingElement?.width ?? 0);
     }
 
-    debugLog(
-      `[${direction === 'left' ? 'Left' : 'Right'} gap check] mouse(${mouseX},${mouseY}), gapArea(${gapAreaLeft},${gapAreaTop},${gapAreaRight},${gapAreaBottom})`,
-    );
-
     if (
       mouseX >= gapAreaLeft &&
       mouseX <= gapAreaRight &&
       mouseY >= gapAreaTop &&
       mouseY <= gapAreaBottom
     ) {
-      debugLog(
-        `[${direction === 'left' ? 'Left' : 'Right'} gap found] Between ${currentElement.id} and ${nextElement.id}`,
-      );
-
       const insertX =
         direction === 'left'
           ? parentElement.x - parentElement.width - OFFSET.X - (draggingElement?.width ?? 0)
@@ -252,7 +244,6 @@ export const detectBottomGap = (params: GapDetectionParams): DropTargetInfo => {
             ? parentElement.x - parentElement.width - OFFSET.X - (draggingElement?.width ?? 0)
             : parentElement.x + parentElement.width + OFFSET.X;
 
-        debugLog(`[Bottom area found] Below ${lastElement.id}, direction: ${targetDirection}`);
         return {
           element: lastElement,
           position: 'between',
