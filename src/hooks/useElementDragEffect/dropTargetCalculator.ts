@@ -16,11 +16,84 @@ import {
   findParentNodeInHierarchy,
   getAllVisibleElementsFromHierarchy,
   getChildrenFromHierarchy,
+  getDepthFromHierarchy,
 } from '../../utils/hierarchical/hierarchicalConverter';
 import { DropTargetInfo } from './types';
 import { getChildren, isRootElement } from './hierarchyHelpers';
 import { filterDropCandidates, groupElementsByParent } from './candidateFilter';
 import { detectGapBetweenElements, detectBottomGap } from './gapDetector';
+
+/**
+ * マウスのX座標から最も近い階層深度を推定
+ *
+ * X座標の位置から、どの階層レベルに属するかを判定します。
+ * これにより、子要素の階層にいる場合は親の階層の要素を候補から除外できます。
+ *
+ * @param mouseX - マウスのX座標
+ * @param elements - 全ての表示中の要素
+ * @param hierarchicalData - 階層構造データ
+ * @param rootElement - ルート要素
+ * @returns 推定される階層深度（0がルート）
+ */
+const estimateDepthFromXPosition = (
+  mouseX: number,
+  elements: Element[],
+  hierarchicalData: HierarchicalStructure | null,
+  rootElement: Element | null,
+): number => {
+  if (!hierarchicalData || !rootElement) return 0;
+
+  // 各階層のX座標範囲を計算
+  // 階層ごとに要素をグループ化し、そのX座標範囲を取得
+  const depthRanges = new Map<number, { minX: number; maxX: number }>();
+
+  elements.forEach((element) => {
+    const depth = getDepthFromHierarchy(hierarchicalData, element.id);
+    const elemMinX = Math.min(element.x, element.x + element.width);
+    const elemMaxX = Math.max(element.x, element.x + element.width);
+
+    const currentRange = depthRanges.get(depth);
+    if (!currentRange) {
+      depthRanges.set(depth, { minX: elemMinX, maxX: elemMaxX });
+    } else {
+      depthRanges.set(depth, {
+        minX: Math.min(currentRange.minX, elemMinX),
+        maxX: Math.max(currentRange.maxX, elemMaxX),
+      });
+    }
+  });
+
+  // マウスのX座標が含まれる最も深い階層を探す
+  // 深い階層から順に確認（子要素を優先）
+  const depths = Array.from(depthRanges.keys()).sort((a, b) => b - a);
+
+  for (const depth of depths) {
+    const range = depthRanges.get(depth);
+    if (!range) continue;
+
+    // X座標の範囲にパディングを追加して判定
+    const padding = OFFSET.X;
+    if (mouseX >= range.minX - padding && mouseX <= range.maxX + padding) {
+      debugLog(`[estimateDepthFromXPosition] Mouse X=${mouseX} estimated at depth=${depth}`);
+      return depth;
+    }
+  }
+
+  // どの範囲にも該当しない場合は、最も近い階層を返す
+  let closestDepth = 0;
+  let minDistance = Infinity;
+
+  depthRanges.forEach((range, depth) => {
+    const distance = Math.min(Math.abs(mouseX - range.minX), Math.abs(mouseX - range.maxX));
+    if (distance < minDistance) {
+      minDistance = distance;
+      closestDepth = depth;
+    }
+  });
+
+  debugLog(`[estimateDepthFromXPosition] No exact match, closest depth=${closestDepth}`);
+  return closestDepth;
+};
 
 /**
  * 子要素エリアのドロップ位置を計算
@@ -572,6 +645,39 @@ export const findDropTarget = (params: FindDropTargetParams): DropTargetInfo => 
     targetDirection,
   );
 
+  // X座標から階層深度を推定
+  // これにより、子要素の階層にマウスがある場合は親の階層を除外できる
+  const estimatedDepth = estimateDepthFromXPosition(
+    mouseX,
+    allElements,
+    hierarchicalData,
+    rootElement,
+  );
+
+  // 候補要素を階層深度でフィルタリング
+  // 推定された階層深度と同じか、それより深い階層の要素のみを優先
+  const candidatesWithDepth = candidates.map((element) => ({
+    element,
+    depth: hierarchicalData ? getDepthFromHierarchy(hierarchicalData, element.id) : 0,
+  }));
+
+  // 推定深度に最も近い階層の要素を優先
+  // 同じ階層の要素があればそれを優先し、なければ±1階層の要素を検討
+  const prioritizedCandidates = candidatesWithDepth.filter(({ depth }) => {
+    // 推定深度と同じ階層、または±1階層以内の要素を候補とする
+    return Math.abs(depth - estimatedDepth) <= 1;
+  });
+
+  // 優先候補が存在する場合はそれを使用、なければ全候補を使用
+  const finalCandidates =
+    prioritizedCandidates.length > 0
+      ? prioritizedCandidates.map(({ element }) => element)
+      : candidates;
+
+  debugLog(
+    `[findDropTarget] Estimated depth: ${estimatedDepth}, candidates: ${candidates.length}, prioritized: ${finalCandidates.length}`,
+  );
+
   // 要素を親IDでグループ化
   const elementsByParent = groupElementsByParent(allElements, selectedElementIds, hierarchicalData);
 
@@ -598,7 +704,7 @@ export const findDropTarget = (params: FindDropTargetParams): DropTargetInfo => 
   let closestTarget: DropTargetInfo = null;
   let minSquaredDistance = Infinity;
 
-  for (const element of candidates) {
+  for (const element of finalCandidates) {
     const { position, distanceSq, insertY, insertX, siblingInfo, direction } =
       calculatePositionAndDistance(element, mouseX, mouseY, hierarchicalData, draggingElement);
 
