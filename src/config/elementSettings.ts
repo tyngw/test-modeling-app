@@ -33,6 +33,14 @@ export const ELEM_STYLE = {
   SHADDOW: {
     COLOR: 'rgba(0, 0, 0, 0.5)',
   },
+  // マインドマップモード用の選択時スタイル
+  MINDMAP_SELECTED: {
+    PADDING: 1, // 選択時の枠線の余白
+    BORDER_RADIUS: 6, // 選択時の角丸の半径
+    SHADOW_OFFSET_Y: 6, // 影のY軸オフセット
+    SHADOW_COLOR: 'rgba(0, 0, 0, 0.3)', // 影の色
+    SHADOW_BLUR: 3, // 影のぼかし量（px）
+  },
   RX: 2,
   STROKE: '2px',
   STROKE_WIDTH: 2,

@@ -454,38 +454,55 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
         />
         {element.texts.length === 1 && isMounted && (
           <>
-            {/* 影用のライン（選択時のみ表示） */}
+            {/* 選択時のみ四方に枠線を表示（角丸を大きく、余白を追加） */}
             {element.selected && (
-              <line
-                x1={element.x + 2}
-                y1={element.y + element.height + 2}
-                x2={element.x + element.width + 1}
-                y2={element.y + element.height + 2}
-                strokeOpacity={0.4}
-                stroke={strokeColor}
-                strokeWidth={element.selected && strokeWidth === 0 ? 2 : strokeWidth}
-                strokeLinecap="round"
-                pointerEvents="none"
-                data-exclude-from-export="true"
-              />
+              <>
+                {/* 影付き下線 */}
+                <line
+                  x1={element.x - ELEM_STYLE.MINDMAP_SELECTED.PADDING}
+                  y1={element.y + element.height + ELEM_STYLE.MINDMAP_SELECTED.SHADOW_OFFSET_Y}
+                  x2={element.x + element.width + ELEM_STYLE.MINDMAP_SELECTED.PADDING}
+                  y2={element.y + element.height + ELEM_STYLE.MINDMAP_SELECTED.SHADOW_OFFSET_Y}
+                  stroke={ELEM_STYLE.MINDMAP_SELECTED.SHADOW_COLOR}
+                  strokeWidth={strokeWidth === 0 ? 2 : strokeWidth}
+                  strokeLinecap="round"
+                  pointerEvents="none"
+                  style={{ filter: `blur(${ELEM_STYLE.MINDMAP_SELECTED.SHADOW_BLUR}px)` }}
+                  data-exclude-from-export="true"
+                />
+                {/* 枠線（角丸を大きく、余白を追加） */}
+                <rect
+                  x={element.x - ELEM_STYLE.MINDMAP_SELECTED.PADDING}
+                  y={element.y - ELEM_STYLE.MINDMAP_SELECTED.PADDING}
+                  width={element.width + ELEM_STYLE.MINDMAP_SELECTED.PADDING * 2}
+                  height={element.height + ELEM_STYLE.MINDMAP_SELECTED.PADDING * 2}
+                  rx={ELEM_STYLE.MINDMAP_SELECTED.BORDER_RADIUS}
+                  fill="none"
+                  stroke={selectedStrokeColor}
+                  strokeWidth={strokeWidth === 0 ? 2 : strokeWidth}
+                  strokeDasharray={element.tentative ? '4 2' : 'none'}
+                  pointerEvents="none"
+                  data-exclude-from-export="true"
+                />
+              </>
             )}
-            {/* メインのライン */}
-            <line
-              x1={element.x}
-              y1={element.y + element.height}
-              x2={element.x + element.width}
-              y2={element.y + element.height}
-              stroke={
-                element.selected
-                  ? selectedStrokeColor
-                  : element.tentative
+            {/* 通常時は下線のみを表示 */}
+            {!element.selected && (
+              <line
+                x1={element.x}
+                y1={element.y + element.height}
+                x2={element.x + element.width}
+                y2={element.y + element.height}
+                stroke={
+                  element.tentative
                     ? '#9E9E9E' // tentativeかつ非選択
                     : strokeColor // 設定された線の色を使用
-              }
-              strokeWidth={element.selected && strokeWidth === 0 ? 2 : strokeWidth}
-              strokeDasharray={element.tentative ? '4 2' : 'none'}
-              pointerEvents="none"
-            />
+                }
+                strokeWidth={strokeWidth === 0 ? 2 : strokeWidth}
+                strokeDasharray={element.tentative ? '4 2' : 'none'}
+                pointerEvents="none"
+              />
+            )}
           </>
         )}
 
