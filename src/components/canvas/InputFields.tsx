@@ -229,7 +229,7 @@ const InputFields: React.FC<InputFieldsProps> = ({
               minWidth: `${SIZE.WIDTH.MAX * state.zoomRatio}px`,
               maxWidth: `${SIZE.WIDTH.MAX * state.zoomRatio}px`,
               minHeight: `${SIZE.SECTION_HEIGHT * state.zoomRatio}px`,
-              margin: '1px 1px',
+              margin: 0,
               fontSize: `${DEFAULT_FONT_SIZE * state.zoomRatio}px`,
               lineHeight: `${LINE_HEIGHT_RATIO}em`,
               padding: `0 3px`,
