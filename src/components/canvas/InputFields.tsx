@@ -172,7 +172,13 @@ const InputFields: React.FC<InputFieldsProps> = ({
   );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>, index: number) => {
-    const keyCombo = [e.ctrlKey && 'Ctrl', e.altKey && 'Alt', e.metaKey && 'Meta', e.key]
+    const keyCombo = [
+      e.ctrlKey && 'Ctrl',
+      e.altKey && 'Alt',
+      e.metaKey && 'Meta',
+      e.shiftKey && 'Shift',
+      e.key,
+    ]
       .filter(Boolean)
       .join('+');
 
