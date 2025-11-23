@@ -76,52 +76,46 @@ const createElement = (
 // Mock getNumberOfSections function
 const getNumberOfSections = () => 3;
 
-// Test case: The problematic JSON from user report
+// Test case: Complex nested structure with multiple branches (simulates the reported issue)
 const testProblematicData = (): boolean => {
-  console.log('Testing problematic JSON data...');
+  console.log('Testing complex nested structure with multiple branches...');
 
+  // Create a structure that can cause overlap issues:
+  // - Two sibling branches with deep subtrees
+  // - Each branch has nodes with multiple children at various levels
   const problematicData: HierarchicalStructure = {
     version: '1.0.0',
     root: {
-      data: createElement('1', ['root']),
+      data: createElement('root', ['root']),
       children: [
         {
-          data: createElement('1763856268586qtp44a857', ['child']),
+          data: createElement('child', ['child']),
           children: [
             {
-              data: createElement(
-                '1763856268586epk453ksv',
-                ['B-Park-004-R001-A002'],
-                300,
-                69.2,
-              ),
+              // First branch with deep nested structure
+              data: createElement('branch1', ['branch1-item'], 300, 69.2),
               children: [
                 {
-                  data: createElement(
-                    '17638562685869dp2c4600',
-                    ['ユーザーインタラクション'],
-                    262,
-                    24.4,
-                  ),
+                  data: createElement('b1-level2', ['b1-level2'], 262, 24.4),
                   children: [
                     {
-                      data: createElement('176385626858666nigjy7d', ['入力処理'], 150, 24.4),
+                      data: createElement('b1-level3a', ['b1-level3a'], 150, 24.4),
                       children: [
                         {
-                          data: createElement('1763856268586bi17ukj4f', ['キューイング'], 134, 24.4),
+                          data: createElement('b1-level4a', ['b1-level4a'], 134, 24.4),
                           children: [],
                         },
                       ],
                     },
                     {
-                      data: createElement('1763856268586ou6xfahux', ['枚数指定'], 166, 24.4),
+                      data: createElement('b1-level3b', ['b1-level3b'], 166, 24.4),
                       children: [
                         {
-                          data: createElement('1763856268586pf2fuic7i', ['カウント'], 262, 24.4),
+                          data: createElement('b1-level4b1', ['b1-level4b1'], 262, 24.4),
                           children: [],
                         },
                         {
-                          data: createElement('1763856268586k4ig5dn10', ['誤入力防止'], 102, 24.4),
+                          data: createElement('b1-level4b2', ['b1-level4b2'], 102, 24.4),
                           children: [],
                         },
                       ],
@@ -131,51 +125,47 @@ const testProblematicData = (): boolean => {
               ],
             },
             {
-              data: createElement(
-                '1763856268586szexs4jh1',
-                ['B-Park-004-R002-A001'],
-                300,
-                69.2,
-              ),
+              // Second branch with deep nested structure
+              data: createElement('branch2', ['branch2-item'], 300, 69.2),
               children: [
                 {
-                  data: createElement('1763856268586ucunyxn0g', ['金額計算'], 166, 24.4),
+                  data: createElement('b2-level2', ['b2-level2'], 166, 24.4),
                   children: [
                     {
-                      data: createElement('1763856268586r444l0zdq', ['演算処理'], 134, 24.4),
+                      data: createElement('b2-level3a', ['b2-level3a'], 134, 24.4),
                       children: [
                         {
-                          data: createElement('1763856268586zqf9s98bu', ['整数演算'], 207, 24.4),
+                          data: createElement('b2-level4a1', ['b2-level4a1'], 207, 24.4),
                           children: [],
                         },
                         {
-                          data: createElement('17638562685864a55jh56s', ['オーバーフロー'], 150, 24.4),
+                          data: createElement('b2-level4a2', ['b2-level4a2'], 150, 24.4),
                           children: [],
                         },
                       ],
                     },
                     {
-                      data: createElement('1763856268586uzh1kdv2d', ['境界値'], 134, 24.4),
+                      data: createElement('b2-level3b', ['b2-level3b'], 134, 24.4),
                       children: [
                         {
-                          data: createElement('1763856268586wer5b0krc', ['枚数上限'], 167, 24.4),
+                          data: createElement('b2-level4b1', ['b2-level4b1'], 167, 24.4),
                           children: [],
                         },
                         {
-                          data: createElement('1763856268586smk8zor22', ['料金単価'], 150, 24.4),
+                          data: createElement('b2-level4b2', ['b2-level4b2'], 150, 24.4),
                           children: [],
                         },
                       ],
                     },
                     {
-                      data: createElement('1763856268586wcswduhv8', ['ビジネスロジック'], 198, 24.4),
+                      data: createElement('b2-level3c', ['b2-level3c'], 198, 24.4),
                       children: [
                         {
-                          data: createElement('1763856268586m6p6f3e5s', ['料金計算式'], 134, 24.4),
+                          data: createElement('b2-level4c1', ['b2-level4c1'], 134, 24.4),
                           children: [],
                         },
                         {
-                          data: createElement('1763856268586o34egkfll', ['区分単価'], 283, 24.4),
+                          data: createElement('b2-level4c2', ['b2-level4c2'], 283, 24.4),
                           children: [],
                         },
                       ],
