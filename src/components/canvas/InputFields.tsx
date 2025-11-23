@@ -76,35 +76,28 @@ const InputFields: React.FC<InputFieldsProps> = ({
     }
   }, [element, isMounted]);
 
-  const calculateDynamicHeight = useCallback(
-    (text: string) => {
-      // テキストが空の場合の処理
-      if (!text || text.trim() === '') {
-        return SIZE.SECTION_HEIGHT * state.zoomRatio;
-      }
+  const calculateDynamicHeight = useCallback((text: string) => {
+    // テキストが空の場合の処理
+    if (!text || text.trim() === '') {
+      return SIZE.SECTION_HEIGHT;
+    }
 
-      const width = SIZE.WIDTH.MAX;
-      // DOM要素の実際のコンテンツ幅（パディングを除いた幅）
-      const contentWidth = width - TEXTAREA_PADDING.HORIZONTAL;
+    // TextDisplayAreaと同じ幅でテキスト折り返しを計算
+    const width = SIZE.WIDTH.MAX;
 
-      // 一貫性のある高さ計算を使用
-      const contentHeight = calculateTextHeight(
-        text,
-        contentWidth,
-        state.zoomRatio,
-        DEFAULT_FONT_SIZE,
-        LINE_HEIGHT_RATIO,
-      );
-      const padding = TEXTAREA_PADDING.VERTICAL * state.zoomRatio;
-      const calculatedHeight = Math.max(
-        SIZE.SECTION_HEIGHT * state.zoomRatio,
-        contentHeight + padding,
-      );
+    // 論理座標での高さを計算（zoomRatio=1として計算）
+    const contentHeight = calculateTextHeight(
+      text,
+      width, // TextDisplayAreaと同じ幅を使用
+      1, // zoomRatioを1として論理座標で計算
+      DEFAULT_FONT_SIZE,
+      LINE_HEIGHT_RATIO,
+    );
+    const padding = TEXTAREA_PADDING.VERTICAL;
+    const calculatedHeight = Math.max(SIZE.SECTION_HEIGHT, contentHeight + padding);
 
-      return calculatedHeight;
-    },
-    [state.zoomRatio],
-  );
+    return calculatedHeight;
+  }, []);
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>, index: number) => {
@@ -130,7 +123,7 @@ const InputFields: React.FC<InputFieldsProps> = ({
 
       setLocalHeights((prev) => {
         const newHeights = [...prev];
-        newHeights[index] = height / state.zoomRatio;
+        newHeights[index] = height;
         return newHeights;
       });
 
@@ -141,10 +134,10 @@ const InputFields: React.FC<InputFieldsProps> = ({
 
       const textarea = fieldRefs.current[index];
       if (textarea) {
-        textarea.style.height = `${height}px`;
+        textarea.style.height = `${height}px`; // 論理座標での高さ
       }
     },
-    [element, state.zoomRatio, dispatch, calculateDynamicHeight],
+    [element, dispatch, calculateDynamicHeight],
   );
 
   const handleTabNavigation = useCallback(
@@ -203,11 +196,12 @@ const InputFields: React.FC<InputFieldsProps> = ({
   return (
     <>
       {element.texts.map((text, index) => {
-        const yPosition =
-          localHeights.slice(0, index).reduce((sum, h) => sum + h, 0) * state.zoomRatio;
-
-        const width = SIZE.WIDTH.MAX * state.zoomRatio;
+        // 論理座標でのY位置（CSS transformでスケーリングされる）
+        const yPosition = localHeights.slice(0, index).reduce((sum, h) => sum + h, 0);
         const height = calculateDynamicHeight(text);
+
+        // TextDisplayAreaと同じ幅とパディングを使用
+        const contentWidth = SIZE.WIDTH.MAX - TEXTAREA_PADDING.HORIZONTAL;
 
         return (
           <textarea
@@ -222,31 +216,37 @@ const InputFields: React.FC<InputFieldsProps> = ({
             onClick={(e) => e.stopPropagation()}
             style={{
               position: 'absolute',
+              // 論理座標で配置し、CSS transformでスケーリング
               left: `${(element.x - viewBoxMinX) * state.zoomRatio}px`,
-              top: `${(element.y - viewBoxMinY) * state.zoomRatio + yPosition}px`,
-              width: `${width}px`,
+              top: `${(element.y - viewBoxMinY + yPosition) * state.zoomRatio}px`,
+              width: `${contentWidth}px`,
               height: `${height}px`,
-              minWidth: `${SIZE.WIDTH.MAX * state.zoomRatio}px`,
-              maxWidth: `${SIZE.WIDTH.MAX * state.zoomRatio}px`,
-              minHeight: `${SIZE.SECTION_HEIGHT * state.zoomRatio}px`,
+              minWidth: `${contentWidth}px`,
+              maxWidth: `${contentWidth}px`,
+              minHeight: `${SIZE.SECTION_HEIGHT}px`,
               margin: 0,
-              fontSize: `${DEFAULT_FONT_SIZE * state.zoomRatio}px`,
-              lineHeight: `${LINE_HEIGHT_RATIO}em`,
-              padding: `0 3px`,
+              fontSize: `${DEFAULT_FONT_SIZE}px`,
+              lineHeight: LINE_HEIGHT_RATIO,
+              // TextDisplayAreaと同じパディング
+              padding: `${TEXTAREA_PADDING.VERTICAL * 0.5}px ${TEXTAREA_PADDING.HORIZONTAL * 0.5}px`,
               fontFamily,
               backgroundColor,
               color: textColor,
-              boxSizing: 'border-box',
+              // TextDisplayAreaと同じbox-sizing
+              boxSizing: 'content-box',
               WebkitFontSmoothing: 'antialiased',
               MozOsxFontSmoothing: 'grayscale',
               overflow: 'hidden',
               whiteSpace: 'pre-wrap',
-              wordWrap: 'break-word',
+              wordBreak: 'break-word',
               resize: 'none',
               zIndex: 10000,
               opacity: 1,
               transition: 'all 0.2s ease-in-out',
               pointerEvents: 'all',
+              // CSS transformでSVGと同じ方法でスケーリング
+              transform: `scale(${state.zoomRatio})`,
+              transformOrigin: 'top left',
             }}
           />
         );
