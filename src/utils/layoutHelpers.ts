@@ -11,6 +11,8 @@ interface LayoutResult {
   newY: number;
   leftMaxY: number;
   rightMaxY: number;
+  minY: number; // サブツリーの最小Y座標（上端）
+  maxY: number; // サブツリーの最大Y座標（下端）
 }
 
 // マインドマップ用の追加オフセット（現在は未使用）
@@ -379,9 +381,9 @@ const layoutNodeFromHierarchy = (
           layoutMode,
           node, // 親要素の情報を渡す
         );
-        // 次の兄弟要素のY座標 = 子要素とその子孫要素の最大Y座標 + OFFSET.Y
-        leftCurrentY = result.newY + OFFSET.Y;
-        leftMaxY = Math.max(leftMaxY, result.leftMaxY, result.rightMaxY);
+        // 次の兄弟要素のY座標 = サブツリーの実際の最大Y座標 + OFFSET.Y
+        leftCurrentY = result.maxY + OFFSET.Y;
+        leftMaxY = Math.max(leftMaxY, result.leftMaxY, result.rightMaxY, result.maxY);
       }
 
       // 右側の子要素をレイアウト
@@ -397,9 +399,9 @@ const layoutNodeFromHierarchy = (
           layoutMode,
           node, // 親要素の情報を渡す
         );
-        // 次の兄弟要素のY座標 = 子要素とその子孫要素の最大Y座標 + OFFSET.Y
-        rightCurrentY = result.newY + OFFSET.Y;
-        rightMaxY = Math.max(rightMaxY, result.leftMaxY, result.rightMaxY);
+        // 次の兄弟要素のY座標 = サブツリーの実際の最大Y座標 + OFFSET.Y
+        rightCurrentY = result.maxY + OFFSET.Y;
+        rightMaxY = Math.max(rightMaxY, result.leftMaxY, result.rightMaxY, result.maxY);
       }
 
       currentY = Math.max(leftMaxY, rightMaxY);
@@ -415,15 +417,48 @@ const layoutNodeFromHierarchy = (
           layoutMode,
           node, // 親要素の情報を渡す
         );
-        // 次の兄弟要素のY座標 = 子要素とその子孫要素の最大Y座標 + OFFSET.Y
-        childCurrentY = result.newY + OFFSET.Y;
-        leftMaxY = Math.max(leftMaxY, result.leftMaxY);
-        rightMaxY = Math.max(rightMaxY, result.rightMaxY);
+        // 次の兄弟要素のY座標 = サブツリーの実際の最大Y座標 + OFFSET.Y
+        // result.maxYを使用して、センタリング後の実際の下端を考慮する
+        childCurrentY = result.maxY + OFFSET.Y;
+        leftMaxY = Math.max(leftMaxY, result.leftMaxY, result.maxY);
+        rightMaxY = Math.max(rightMaxY, result.rightMaxY, result.maxY);
       }
       currentY = Math.max(leftMaxY, rightMaxY);
     }
 
     // 親要素と子要素群の中央配置（最も高い要素を基準にする）
+    let subtreeMinY = startY;
+    let subtreeMaxY = currentY;
+
+    // サブツリー全体の実際の範囲を計算する関数
+    const calculateSubtreeBounds = (
+      rootNode: HierarchicalNode,
+    ): { minY: number; maxY: number } => {
+      let minY = rootNode.data.y;
+      let maxY = rootNode.data.y + rootNode.data.height;
+
+      const traverse = (n: HierarchicalNode) => {
+        minY = Math.min(minY, n.data.y);
+        maxY = Math.max(maxY, n.data.y + n.data.height);
+        if (n.children) {
+          n.children.forEach(traverse);
+        }
+      };
+
+      if (rootNode.children) {
+        rootNode.children.forEach(traverse);
+      }
+      return { minY, maxY };
+    };
+
+    // サブツリー全体を移動する関数
+    const shiftSubtree = (rootNode: HierarchicalNode, offset: number) => {
+      rootNode.data.y += offset;
+      if (rootNode.children) {
+        rootNode.children.forEach((child) => shiftSubtree(child, offset));
+      }
+    };
+
     if (node.children.length > 0) {
       // 全ての子要素をY座標でソートして、最上位・最下位要素を取得
       const allChildElements = node.children.map((child) => child.data);
@@ -476,17 +511,36 @@ const layoutNodeFromHierarchy = (
           );
         }
 
+        // サブツリー全体の実際の範囲を計算（センタリング後）
+        const bounds = calculateSubtreeBounds(node);
+        subtreeMinY = bounds.minY;
+        subtreeMaxY = bounds.maxY;
+
+        // サブツリーの上端がstartYより上に出ている場合、全体を下にシフト
+        if (subtreeMinY < startY) {
+          const shiftAmount = startY - subtreeMinY;
+          shiftSubtree(node, shiftAmount);
+          subtreeMinY = startY;
+          subtreeMaxY = subtreeMaxY + shiftAmount;
+
+          debugLog(
+            `[layoutNodeFromHierarchy] サブツリーを下方にシフト「${element.texts}」 id=${element.id} - シフト量: ${shiftAmount}`,
+          );
+        }
+
         // 最終的な最大Y座標を計算
-        const allElementsMaxY = Math.max(
-          element.y + element.height, // 親要素の下端
-          ...sortedChildren.map((child) => child.y + child.height), // 全子要素の下端
-        );
-        currentY = Math.max(currentY, allElementsMaxY);
+        currentY = subtreeMaxY;
       }
+    } else {
+      subtreeMinY = element.y;
+      subtreeMaxY = element.y + element.height;
     }
-    return { newY: currentY, leftMaxY, rightMaxY };
+
+    return { newY: currentY, leftMaxY, rightMaxY, minY: subtreeMinY, maxY: subtreeMaxY };
   } else {
     // 子要素がない場合
-    return { newY: currentY, leftMaxY: currentY, rightMaxY: currentY };
+    const minY = element.y;
+    const maxY = element.y + element.height;
+    return { newY: currentY, leftMaxY: currentY, rightMaxY: currentY, minY, maxY };
   }
 };
