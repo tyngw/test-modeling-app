@@ -4,18 +4,12 @@ import { HierarchicalStructure, HierarchicalNode } from '../../types/hierarchica
 import { Element } from '../../types/types';
 
 // Helper function to check if two rectangles overlap
-const doElementsOverlap = (
-  e1: Element,
-  e2: Element,
-  minGap: number = 0,
-): boolean => {
+const doElementsOverlap = (e1: Element, e2: Element, minGap = 0): boolean => {
   // Check if horizontal ranges overlap
-  const horizontalOverlap =
-    e1.x < e2.x + e2.width + minGap && e1.x + e1.width + minGap > e2.x;
+  const horizontalOverlap = e1.x < e2.x + e2.width + minGap && e1.x + e1.width + minGap > e2.x;
 
   // Check if vertical ranges overlap
-  const verticalOverlap =
-    e1.y < e2.y + e2.height + minGap && e1.y + e1.height + minGap > e2.y;
+  const verticalOverlap = e1.y < e2.y + e2.height + minGap && e1.y + e1.height + minGap > e2.y;
 
   return horizontalOverlap && verticalOverlap;
 };
@@ -38,7 +32,7 @@ const collectAllElements = (hierarchical: HierarchicalStructure): Element[] => {
 // Helper function to find all overlapping pairs
 const findOverlappingPairs = (
   elements: Element[],
-  minGap: number = 0,
+  minGap = 0,
 ): Array<{ e1: Element; e2: Element }> => {
   const overlaps: Array<{ e1: Element; e2: Element }> = [];
 
@@ -57,8 +51,8 @@ const findOverlappingPairs = (
 const createElement = (
   id: string,
   texts: string[] = ['text'],
-  width: number = 50,
-  height: number = 24.4,
+  width = 50,
+  height = 24.4,
 ): Element => ({
   id,
   texts,

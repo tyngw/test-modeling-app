@@ -431,9 +431,7 @@ const layoutNodeFromHierarchy = (
     let subtreeMaxY = currentY;
 
     // サブツリー全体の実際の範囲を計算する関数
-    const calculateSubtreeBounds = (
-      rootNode: HierarchicalNode,
-    ): { minY: number; maxY: number } => {
+    const calculateSubtreeBounds = (rootNode: HierarchicalNode): { minY: number; maxY: number } => {
       let minY = rootNode.data.y;
       let maxY = rootNode.data.y + rootNode.data.height;
 
