@@ -33,7 +33,8 @@ The app is available at [https://tyngw.github.io/test-modeling-app/](https://tyn
 
 - `Tab`: Add a child element to the selected item
 - `Delete`: Delete the selected element
-- `Enter`: Edit the selected element
+- `Enter`: Edit the selected element / Exit edit mode
+- `Shift+Enter`: Add a newline while editing
 - `Esc`: Exit edit mode
 - While editing, `Tab`: Move focus to the next textbox
 - `Ctrl + Z`: Undo the last action
