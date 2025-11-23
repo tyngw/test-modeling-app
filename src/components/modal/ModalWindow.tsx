@@ -236,8 +236,9 @@ const ModalWindow: React.FC<ModalWindowProps> = ({
           style={{
             position: 'relative',
             marginTop: icon ? '40px' : title ? '24px' : '16px',
-            // スクロールは子コンポーネント側で制御するため、ここでは設定しない
-            overflowY: 'visible',
+            // ビューポートの高さを超えないように制限
+            maxHeight: 'calc(80vh - 100px)',
+            overflowY: 'auto',
             overflowX: 'hidden',
           }}
         >
