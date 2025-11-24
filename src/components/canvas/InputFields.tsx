@@ -43,6 +43,7 @@ const InputFields: React.FC<InputFieldsProps> = ({
   const [fontFamily, setFontFamily] = useState('');
   const [backgroundColor, setBackgroundColor] = useState('');
   const [textColor, setTextColor] = useState('');
+  const [isComposing, setIsComposing] = useState(false);
 
   useEffect(() => {
     if (!isMounted) return;
@@ -165,6 +166,11 @@ const InputFields: React.FC<InputFieldsProps> = ({
   );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>, index: number) => {
+    // IME変換中はキーアクションを実行しない
+    if (isComposing || e.nativeEvent.isComposing) {
+      return;
+    }
+
     const keyCombo = [
       e.ctrlKey && 'Ctrl',
       e.altKey && 'Alt',
@@ -191,6 +197,14 @@ const InputFields: React.FC<InputFieldsProps> = ({
     }
   };
 
+  const handleCompositionStart = useCallback(() => {
+    setIsComposing(true);
+  }, []);
+
+  const handleCompositionEnd = useCallback(() => {
+    setIsComposing(false);
+  }, []);
+
   if (!element || !isMounted) return null;
 
   return (
@@ -213,6 +227,8 @@ const InputFields: React.FC<InputFieldsProps> = ({
             value={text}
             onChange={(e) => handleChange(e, index)}
             onKeyDown={(e) => handleKeyDown(e, index)}
+            onCompositionStart={handleCompositionStart}
+            onCompositionEnd={handleCompositionEnd}
             onClick={(e) => e.stopPropagation()}
             style={{
               position: 'absolute',
