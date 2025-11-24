@@ -452,7 +452,7 @@ const IdeaElement: React.FC<IdeaElementProps> = ({
             filter: element.selected && element.texts.length > 1 ? 'url(#boxShadow)' : 'none',
           }}
         />
-        {element.texts.length === 1 && isMounted && (
+        {element.texts.length === 1 && (
           <>
             {/* 選択時のみ四方に枠線を表示（角丸を大きく、余白を追加） */}
             {element.selected && (
