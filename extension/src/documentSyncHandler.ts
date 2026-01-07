@@ -115,6 +115,34 @@ export class DocumentSyncHandler {
   }
 
   /**
+   * ```tree コードブロック内の内容を更新し、コードブロック外の文字列を保持
+   * @param originalContent 元のマークダウンファイルの内容
+   * @param newTreeContent 新しいツリー構造のマークダウン（コードブロックなし）
+   * @returns 更新後のマークダウンファイルの内容
+   */
+  private updateTreeCodeBlock(
+    originalContent: string,
+    newTreeContent: string,
+  ): string {
+    // ```tree で始まるコードブロックを検索
+    const treeBlockRegex = /(```tree\s*\n)([\s\S]*?)(```)/g;
+    const match = treeBlockRegex.exec(originalContent);
+
+    if (match) {
+      // コードブロックが見つかった場合、内容だけを更新
+      const beforeBlock = originalContent.substring(0, match.index);
+      const afterBlock = originalContent.substring(match.index + match[0].length);
+      return `${beforeBlock}${match[1]}${newTreeContent}\n${match[3]}${afterBlock}`;
+    } else {
+      // コードブロックが見つからない場合、新しく追加
+      // 既存の内容の最後に追加
+      const trimmedOriginal = originalContent.trimEnd();
+      const separator = trimmedOriginal && !trimmedOriginal.endsWith('\n') ? '\n\n' : '\n';
+      return `${trimmedOriginal}${separator}\`\`\`tree\n${newTreeContent}\n\`\`\``;
+    }
+  }
+
+  /**
    * Webviewからの更新を処理
    */
   async handleWebviewUpdate(data: unknown): Promise<void> {
@@ -139,7 +167,11 @@ export class DocumentSyncHandler {
         throw new Error('Markdown payload missing serialized content');
       }
 
-      contentToWrite = markdownSource;
+      // 背景: VSCode拡張機能として動作している場合、```tree コードブロック内の内容だけを更新
+      // 前提: 元のファイル内容を読み取り、コードブロック外の文字列を保持
+      // トレードオフ: コードブロックが見つからない場合は新しく作成する
+      const originalContent = this.document.getText();
+      contentToWrite = this.updateTreeCodeBlock(originalContent, markdownSource);
     } else {
       if (typeof payload.serializedContent === 'string') {
         contentToWrite = payload.serializedContent;
