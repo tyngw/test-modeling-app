@@ -6,6 +6,7 @@ import { createNewElement } from '../element/elementHelpers';
 import { convertArrayToHierarchical } from '../hierarchical/hierarchicalConverter';
 import { getIndentSpacesPerLevel, setIndentSpacesPerLevel } from '../storage/localStorageHelpers';
 import { debugLog } from '../debugLogHelpers';
+import { isVSCodeExtension } from '../environment/environmentDetector';
 
 type MarkdownMarkerProperties = Partial<{
   startMarker: MarkerType;
@@ -19,6 +20,26 @@ interface ParsedMarkdownLine {
 }
 
 const DEFAULT_MARKER: MarkerType = 'none';
+
+/**
+ * VSCode拡張機能として動作している場合、```tree で始まるコードブロック内のコンテンツを抽出
+ * @param markdownText マークダウンテキスト
+ * @returns 抽出されたコンテンツ、見つからない場合はnull
+ */
+const extractTreeCodeBlock = (markdownText: string): string | null => {
+  // ```tree で始まるコードブロックを検索
+  const treeBlockRegex = /```tree\s*\n([\s\S]*?)```/g;
+  const match = treeBlockRegex.exec(markdownText);
+
+  if (match && match[1]) {
+    const content = match[1].trim();
+    debugLog('[extractTreeCodeBlock] Found tree code block, content length:', content.length);
+    return content;
+  }
+
+  debugLog('[extractTreeCodeBlock] No tree code block found');
+  return null;
+};
 
 const normalizeMarkdownOutline = (markdownText: string): string => {
   let insideCodeFence = false;
@@ -221,10 +242,24 @@ export const loadMarkdownAsHierarchical = (markdownText: string): HierarchicalSt
     return null;
   }
 
+  // 背景: VSCode拡張機能として動作している場合、```tree で始まるコードブロック内の要素のみを認識
+  // 前提: コードブロックが見つからない場合は、ツリー構造として認識しない
+  // トレードオフ: 通常のマークダウンファイル全体を処理する従来の動作は、VSCode拡張機能以外の環境でのみ有効
+  let textToProcess = markdownText;
+  if (isVSCodeExtension()) {
+    const treeBlockContent = extractTreeCodeBlock(markdownText);
+    if (treeBlockContent === null) {
+      debugLog('[loadMarkdownAsHierarchical] VSCode extension mode: No tree code block found');
+      return null;
+    }
+    textToProcess = treeBlockContent;
+    debugLog('[loadMarkdownAsHierarchical] VSCode extension mode: Using tree code block content');
+  }
+
   // 背景: 箇条書きマーカーがない行を正規化してから、インデントパターンを検出
   // 前提: normalizeMarkdownOutlineは元のインデントを保持したまま`- `を追加する
   // トレードオフ: 正規化後のテキストで検出するため、元のファイル形式に依存しない
-  const normalizedMarkdown = normalizeMarkdownOutline(markdownText);
+  const normalizedMarkdown = normalizeMarkdownOutline(textToProcess);
   debugLog('[loadMarkdownAsHierarchical] Normalized markdown:', normalizedMarkdown);
 
   // インデントパターンを検出し、設定に反映（正規化後のテキストを使用）
