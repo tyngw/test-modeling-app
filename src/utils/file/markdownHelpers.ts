@@ -30,13 +30,13 @@ const extractTreeCodeBlock = (markdownText: string): string | null => {
   // ```tree で始まるコードブロックを検索
   const treeBlockRegex = /```tree\s*\n([\s\S]*?)```/g;
   const match = treeBlockRegex.exec(markdownText);
-  
+
   if (match && match[1]) {
     const content = match[1].trim();
     debugLog('[extractTreeCodeBlock] Found tree code block, content length:', content.length);
     return content;
   }
-  
+
   debugLog('[extractTreeCodeBlock] No tree code block found');
   return null;
 };
