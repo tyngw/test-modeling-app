@@ -34,6 +34,7 @@
     "build": "tsc && next build",
     "build:extension": "chmod +x scripts/build-extension.sh && ./scripts/build-extension.sh",
     "build:extension:quick": "chmod +x scripts/build-extension-quick.sh && ./scripts/build-extension-quick.sh",
+    "build:extension:package": "chmod +x scripts/build-and-package-extension.sh && ./scripts/build-and-package-extension.sh",
     "build:all": "npm run build && npm run build:extension",
     "test": "react-scripts test --watchAll=false",
     "test:watch": "react-scripts test",
