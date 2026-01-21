@@ -21,6 +21,8 @@ import { getTabsState, setTabsState } from '../utils/storage/localStorageHelpers
 import { TabState, TabsStorage, TabsContextValue, LayoutMode } from '../types/tabTypes';
 import { convertFlatToHierarchical } from '../utils/hierarchical/hierarchicalConverter';
 import { debugLog } from '../utils/debugLogHelpers';
+import { isVSCodeExtension, isVSCodeEditorMode } from '../utils/environment/environmentDetector';
+import { HierarchicalStructure } from '../types/hierarchicalTypes';
 
 const TabsContext = createContext<TabsContextValue | undefined>(undefined);
 
@@ -106,11 +108,36 @@ const createInitialTabState = (currentSections?: number): TabState => {
   };
 };
 
+// VSCode拡張機能用の空のタブを作成
+// 背景: 拡張機能からのinitializeWithFileメッセージを受け取るまで、デフォルト要素を表示しない
+// 前提: 拡張機能が常にファイルデータを送信する
+const createEmptyTabState = (): TabState => {
+  const emptyTab: TabState = {
+    id: uuidv4(),
+    name: '読み込み中...',
+    isSaved: true,
+    lastSavedElements: '{}',
+    state: {
+      hierarchicalData: null as unknown as HierarchicalStructure,
+      width: typeof window !== 'undefined' ? window.innerWidth : 0,
+      height: typeof window !== 'undefined' ? window.innerHeight : 0,
+      zoomRatio: 1,
+      numberOfSections: 1,
+      layoutMode: 'default',
+    },
+    layoutMode: 'default',
+  };
+  return emptyTab;
+};
+
 // ローカルストレージから状態を読み込む
+// 背景: VSCode拡張機能とブラウザ環境で初期化方法が異なる
+// 前提: environmentDetectorで環境を正確に判定
 const loadTabsState = (): TabsStorage => {
-  // VSCode拡張機能の場合は常に新しいタブを作成（過去の状態を保持しない）
-  if (typeof window !== 'undefined' && window.acquireVsCodeApi) {
-    const initialTab = createInitialTabState();
+  // VSCode拡張機能（エディタ連携モード）の場合は空のタブを作成
+  // initializeWithFileメッセージを受け取るまでデフォルト要素を表示しない
+  if (isVSCodeExtension() && isVSCodeEditorMode()) {
+    const initialTab = createEmptyTabState();
     return {
       tabs: [initialTab],
       currentTabId: initialTab.id,
@@ -176,7 +203,7 @@ export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     // VSCode拡張機能ではローカルストレージに保存しない
-    if (typeof window !== 'undefined' && window.acquireVsCodeApi) {
+    if (isVSCodeExtension() && isVSCodeEditorMode()) {
       return;
     }
     saveTabsToLocalStorage(tabs, currentTabId);
@@ -184,7 +211,7 @@ export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const addTab = useCallback(() => {
     // VSCode拡張機能では新しいタブを作成せず、現在のタブIDを返す
-    if (typeof window !== 'undefined' && window.acquireVsCodeApi) {
+    if (isVSCodeExtension() && isVSCodeEditorMode()) {
       return currentTabId;
     }
 
