@@ -4,6 +4,12 @@
   "description": "VSCode extension for Test Modeling App",
   "version": "0.1.0",
   "publisher": "tyngw",
+  "license": "MIT",
+  "readme": "../README.md",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tyngw/test-modeling-app"
+  },
   "engines": {
     "vscode": "^1.60.0"
   },
