@@ -215,7 +215,6 @@ function patchWebpackRuntime() {
   const chunksDir = path.join(__dirname, '../extension/webview/_next/static/chunks');
   
   if (!fs.existsSync(chunksDir)) {
-    console.error('❌ chunks directory が見つかりません');
     return;
   }
 
@@ -224,7 +223,6 @@ function patchWebpackRuntime() {
   const webpackFiles = files.filter(f => f.startsWith('webpack-') && f.endsWith('.js'));
 
   if (webpackFiles.length === 0) {
-    console.error('❌ webpack runtime file が見つかりません');
     return;
   }
 
@@ -238,9 +236,6 @@ function patchWebpackRuntime() {
     if (content.match(originalPattern)) {
       content = content.replace(originalPattern, 'r.p=window.__webpack_public_path__||"/$1"');
       fs.writeFileSync(filePath, content);
-      console.log(`✅ ${filename} のwebpack public pathをパッチしました`);
-    } else {
-      console.log(`ℹ️  ${filename} には該当するパターンが見つかりませんでした`);
     }
   });
 }

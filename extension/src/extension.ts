@@ -39,7 +39,6 @@ export function activate(context: vscode.ExtensionContext) {
 
   // アクティブなWebview-エディタペアを管理
   const activeWebviews = new Map<string, WebviewEditorPair>();
-  // webview map initialized
 
   // スタンドアロンモードでWebviewを開くコマンド
   const openModelerCommand = vscode.commands.registerCommand('testModelingApp.openModeler', () => {
@@ -86,7 +85,6 @@ export function activate(context: vscode.ExtensionContext) {
    * ファイルをTest Modeling Viewで開く
    */
   async function openFileInModelingView(uri?: vscode.Uri) {
-    // open file in modeling view
     try {
       let targetUri = uri;
 
@@ -94,37 +92,30 @@ export function activate(context: vscode.ExtensionContext) {
       if (!targetUri) {
         const activeEditor = vscode.window.activeTextEditor;
         if (!activeEditor) {
-          console.error('[Extension] アクティブエディタが見つかりません');
           vscode.window.showErrorMessage('開くファイルが見つかりません');
           return;
         }
         targetUri = activeEditor.document.uri;
-        // using active editor URI
       }
 
       // サポートされているファイル形式かチェック
       const fileExtension = path.extname(targetUri.fsPath).toLowerCase();
-      // fileExtension determined
       if (!['.json', '.md', '.markdown'].includes(fileExtension)) {
-        console.error('[Extension] サポートされていないファイル形式:', fileExtension);
         vscode.window.showErrorMessage('JSON、Markdownファイルのみサポートされています');
         return;
       }
 
       const documentKey = targetUri.toString();
-      // documentKey set
 
       // 既に開いているWebviewがあるかチェック
       const existingPair = activeWebviews.get(documentKey);
       if (existingPair) {
-        // reveal existing webview
         existingPair.panel.reveal();
         return;
       }
 
       // ドキュメントを開く
       const document = await vscode.workspace.openTextDocument(targetUri);
-      // document opened
 
       // ファイル内容を読み込み・検証
       let fileData: unknown;
@@ -135,13 +126,10 @@ export function activate(context: vscode.ExtensionContext) {
           fileData = initialDocumentContent;
           fileType = 'markdown';
         } else {
-          // parse JSON
           fileData = JSON.parse(initialDocumentContent);
           fileType = 'json';
         }
       } catch (error) {
-        console.error('[Extension] ファイル解析エラー:', error);
-        console.error('[Extension] 内容のプレビュー:', initialDocumentContent.substring(0, 200));
         vscode.window.showErrorMessage(`ファイルの解析に失敗しました: ${error}`);
         return;
       }
@@ -159,7 +147,6 @@ export function activate(context: vscode.ExtensionContext) {
       );
       // 同期ハンドラーを作成
       const syncHandler = new DocumentSyncHandler(panel, document);
-      // syncHandler created
 
       // ペアを登録
       const pair: WebviewEditorPair = {
@@ -171,13 +158,11 @@ export function activate(context: vscode.ExtensionContext) {
 
       // Webviewコンテンツを設定（エディタ連携モード）
       panel.webview.html = getWebviewContent(panel.webview, context, true);
-      // webview content set
 
       // 初期データ送信用の関数
       // 背景: クロージャで必要な変数をキャプチャ
       const fileName = path.basename(targetUri.fsPath);
       const sendInitialData = () => {
-        // send initial data
         panel.webview.postMessage({
           type: 'initializeWithFile',
           data: {
@@ -212,7 +197,6 @@ export function activate(context: vscode.ExtensionContext) {
         activeWebviews.delete(documentKey);
         pair.syncHandler.dispose();
       });
-      // finished opening view
     } catch (error) {
       console.error('ファイルを開く際にエラーが発生しました:', error);
       vscode.window.showErrorMessage(`ファイルを開けませんでした: ${error}`);
@@ -419,14 +403,10 @@ function getWebviewContent(
   context: vscode.ExtensionContext,
   isEditorMode: boolean = false,
 ): string {
-  // generate webview content
-
   const webviewPath = path.join(context.extensionPath, 'webview');
   const htmlPath = path.join(webviewPath, 'index.html');
-  // html path
 
   if (!fs.existsSync(htmlPath)) {
-    console.error('[Extension] HTMLファイルが見つかりません:', htmlPath);
     return `<!DOCTYPE html>
 <html>
 <head><title>Error</title></head>
@@ -480,10 +460,9 @@ function getWebviewContent(
             const api = acquireVsCodeApi();
             window.vscode = api;
             window.__testModelingAppVscodeApi = api;
-            // VSCode API acquired
           }
         } catch (error) {
-          console.error('Failed to acquire VSCode API:', error);
+          // VSCode API取得失敗 - 環境がVSCode拡張でない可能性がある
         }
       })();
     </script>`;
@@ -538,10 +517,7 @@ function getWebviewContent(
     );
   }
 
-  console.log('[Extension] getWebviewContent: 完了。最終的なHTMLサイズ:', html.length);
   return html;
 }
 
-export function deactivate() {
-  console.log('[Extension] ===== Test Modeling App extension が非アクティブ化されました =====');
-}
+export function deactivate() {}
