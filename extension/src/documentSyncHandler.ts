@@ -120,10 +120,7 @@ export class DocumentSyncHandler {
    * @param newTreeContent 新しいツリー構造のマークダウン（コードブロックなし）
    * @returns 更新後のマークダウンファイルの内容
    */
-  private updateTreeCodeBlock(
-    originalContent: string,
-    newTreeContent: string,
-  ): string {
+  private updateTreeCodeBlock(originalContent: string, newTreeContent: string): string {
     // ```tree で始まるコードブロックを検索
     const treeBlockRegex = /(```tree\s*\n)([\s\S]*?)(```)/g;
     const match = treeBlockRegex.exec(originalContent);
@@ -181,7 +178,6 @@ export class DocumentSyncHandler {
         throw new Error('JSON payload is empty');
       }
     }
-
     const success = await this.syncManager.startDocumentUpdate(contentToWrite);
 
     if (!success) {

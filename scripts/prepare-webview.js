@@ -167,11 +167,11 @@ function prepareWebviewHTML() {
   // CSPを削除（extension.tsで設定するため）
   html = html.replace(/<meta[^>]*Content-Security-Policy[^>]*>/gi, '');
 
-  // 静的リソースのパスを書き換え（Next.jsの/_next/パスをプレースホルダーに置換）
-  // 既にプレースホルダーが存在する場合はスキップ
-  if (!html.includes('{{WEBVIEW_CSPURI}}')) {
-    html = html.replace(/\/_next\//g, '{{WEBVIEW_CSPURI}}/_next/');
-  }
+  // 背景: VS Code拡張では、静的リソースのパスを実行時に動的に生成する必要がある
+  // 前提: ビルド時はNext.jsのデフォルトパス（/_next/）をそのまま残す
+  // トレードオフ: extension.tsで実行時に全パスを完全なWebview URIに置き換えることで、
+  //              webpackの内部実装に依存せず、堅牢なパス解決を実現
+  // 注意: ここでは意図的にパスを書き換えない（extension.tsで処理）
   
   // VSCodeテーマ変数を追加
   const vscodeStyles = `
@@ -205,5 +205,42 @@ function prepareWebviewHTML() {
   console.log('✅ Webview HTML が正常に変換されました');
 }
 
+/**
+ * webpack runtimeのJavaScriptファイル内のハードコードされたパスを動的パスに変換
+ * 背景: webpackはJSコード内にr.p="/_next/"のようなハードコードされたパスを持っている
+ * 前提: これを実行時に取得できるようにwindow.__webpack_public_path__を参照するコードに変更
+ * トレードオフ: ビルド時にファイルを書き換えるが、これが最も確実な方法
+ */
+function patchWebpackRuntime() {
+  const chunksDir = path.join(__dirname, '../extension/webview/_next/static/chunks');
+  
+  if (!fs.existsSync(chunksDir)) {
+    return;
+  }
+
+  // webpack-*.js ファイルを検索
+  const files = fs.readdirSync(chunksDir);
+  const webpackFiles = files.filter(f => f.startsWith('webpack-') && f.endsWith('.js'));
+
+  if (webpackFiles.length === 0) {
+    return;
+  }
+
+  webpackFiles.forEach(filename => {
+    const filePath = path.join(chunksDir, filename);
+    let content = fs.readFileSync(filePath, 'utf8');
+    
+    // r.p="/_next/" を window.__webpack_public_path__ || "/_next/" に置換
+    // これにより、グローバル変数が設定されていればそれを使い、なければデフォルト値を使う
+    const originalPattern = /r\.p\s*=\s*"\/(_next\/)"/;
+    if (content.match(originalPattern)) {
+      content = content.replace(originalPattern, 'r.p=window.__webpack_public_path__||"/$1"');
+      fs.writeFileSync(filePath, content);
+    }
+  });
+}
+
 // スクリプト実行
 prepareWebviewHTML();
+patchWebpackRuntime();
+

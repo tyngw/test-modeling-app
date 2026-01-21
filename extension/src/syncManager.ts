@@ -151,7 +151,6 @@ export class SyncManager {
       if (success) {
         await this.document.save();
         this.updateSyncedContent(newContent);
-        console.log('[SyncManager] Document updated successfully');
         return true;
       } else {
         console.error('[SyncManager] Failed to apply workspace edit');
