@@ -19,7 +19,12 @@ export class SyncManager {
     private readonly panel: vscode.WebviewPanel,
     private readonly document: vscode.TextDocument,
   ) {
-    this.lastSyncedContentHash = this.computeContentHash(document.getText());
+    console.log('[SyncManager] 初期化開始');
+    const initialContent = document.getText();
+    console.log('[SyncManager] - 初期コンテンツ長:', initialContent.length);
+    this.lastSyncedContentHash = this.computeContentHash(initialContent);
+    console.log('[SyncManager] - 初期ハッシュ:', this.lastSyncedContentHash);
+    console.log('[SyncManager] 初期化完了');
   }
 
   /**
@@ -125,6 +130,8 @@ export class SyncManager {
    * Webviewからエディタへの更新を開始
    */
   async startDocumentUpdate(newContent: string): Promise<boolean> {
+    console.log('[SyncManager] ドキュメント更新を開始');
+    console.log('[SyncManager] - 新しいコンテンツ長:', newContent.length);
     if (this.isUpdatingFromWebview) {
       console.warn('[SyncManager] Update already in progress, skipping');
       return false;
@@ -136,6 +143,7 @@ export class SyncManager {
     }
 
     try {
+      console.log('[SyncManager] 更新フラグを設定');
       this.isUpdatingFromWebview = true;
 
       const editContent = this.normalizeContentForDocument(newContent);
@@ -146,10 +154,14 @@ export class SyncManager {
       );
 
       edit.replace(this.document.uri, fullRange, editContent);
+      console.log('[SyncManager] ワークスペース編集を適用中...');
       const success = await vscode.workspace.applyEdit(edit);
 
       if (success) {
+        console.log('[SyncManager] ワークスペース編集の適用に成功');
+        console.log('[SyncManager] ドキュメントを保存中...');
         await this.document.save();
+        console.log('[SyncManager] ドキュメントを保存しました');
         this.updateSyncedContent(newContent);
         console.log('[SyncManager] Document updated successfully');
         return true;
@@ -159,8 +171,12 @@ export class SyncManager {
       }
     } catch (error) {
       console.error('[SyncManager] Error updating document:', error);
+      if (error instanceof Error) {
+        console.error('[SyncManager] Error stack:', error.stack);
+      }
       return false;
     } finally {
+      console.log('[SyncManager] 更新フラグをクリア');
       this.isUpdatingFromWebview = false;
     }
   }
