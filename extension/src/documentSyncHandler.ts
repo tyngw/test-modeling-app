@@ -36,24 +36,18 @@ export class DocumentSyncHandler {
     private readonly panel: vscode.WebviewPanel,
     private readonly document: vscode.TextDocument,
   ) {
-    console.log('[DocumentSyncHandler] 初期化開始');
-    console.log('[DocumentSyncHandler] - document URI:', document.uri.toString());
     this.syncManager = new SyncManager(panel, document);
-    console.log('[DocumentSyncHandler] SyncManagerを作成しました');
     this.setupEventListeners();
-    console.log('[DocumentSyncHandler] 初期化完了');
   }
 
   /**
    * イベントリスナーを設定
    */
   private setupEventListeners(): void {
-    console.log('[DocumentSyncHandler] イベントリスナーを設定中...');
     // ドキュメント変更の監視
     this.changeSubscription = vscode.workspace.onDidChangeTextDocument((e) => {
       this.handleDocumentChange(e);
     });
-    console.log('[DocumentSyncHandler] ドキュメント変更監視を設定しました');
 
     // パネルの表示状態変更の監視
     this.viewStateSubscription = this.panel.onDidChangeViewState(() => {
@@ -149,7 +143,6 @@ export class DocumentSyncHandler {
    * Webviewからの更新を処理
    */
   async handleWebviewUpdate(data: unknown): Promise<void> {
-    console.log('[DocumentSyncHandler] Webviewからの更新を処理開始');
     if (!data || typeof data !== 'object') {
       console.error('[DocumentSyncHandler] 無効な更新ペイロード');
       throw new Error('Invalid update payload');
@@ -157,12 +150,12 @@ export class DocumentSyncHandler {
 
     const payload = data as DocumentUpdatePayload;
     const fileType = detectFileTypeFromUri(this.document.uri);
-    console.log('[DocumentSyncHandler] - fileType:', fileType);
+    // fileType used below
 
     let contentToWrite = '';
 
     if (fileType === 'markdown') {
-      console.log('[DocumentSyncHandler] Markdownファイルとして処理');
+      // Markdown handling
       const markdownSource =
         typeof payload.serializedContent === 'string'
           ? payload.serializedContent
@@ -174,7 +167,7 @@ export class DocumentSyncHandler {
         console.error('[DocumentSyncHandler] Markdownコンテンツが見つかりません');
         throw new Error('Markdown payload missing serialized content');
       }
-      console.log('[DocumentSyncHandler] Markdownコンテンツの長さ:', markdownSource.length);
+      // markdownSource length available
 
       // 背景: VSCode拡張機能として動作している場合、```tree コードブロック内の内容だけを更新
       // 前提: 元のファイル内容を読み取り、コードブロック外の文字列を保持
@@ -182,27 +175,22 @@ export class DocumentSyncHandler {
       const originalContent = this.document.getText();
       contentToWrite = this.updateTreeCodeBlock(originalContent, markdownSource);
     } else {
-      console.log('[DocumentSyncHandler] JSONファイルとして処理');
+      // JSON handling
       if (typeof payload.serializedContent === 'string') {
         contentToWrite = payload.serializedContent;
-        console.log('[DocumentSyncHandler] serializedContentを使用。長さ:', contentToWrite.length);
       } else if (typeof payload.content !== 'undefined') {
         contentToWrite = JSON.stringify(payload.content, null, 2);
-        console.log('[DocumentSyncHandler] contentをJSON化。長さ:', contentToWrite.length);
       } else {
         console.error('[DocumentSyncHandler] JSONペイロードが空です');
         throw new Error('JSON payload is empty');
       }
     }
-
-    console.log('[DocumentSyncHandler] ドキュメント更新を開始...');
     const success = await this.syncManager.startDocumentUpdate(contentToWrite);
 
     if (!success) {
       console.error('[DocumentSyncHandler] ドキュメント更新に失敗しました');
       throw new Error('Failed to update document');
     }
-    console.log('[DocumentSyncHandler] ドキュメント更新に成功しました');
 
     // 成功応答をWebviewに送信
     this.sendUpdateAcknowledgment(payload, fileType, contentToWrite);

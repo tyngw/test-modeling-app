@@ -35,13 +35,11 @@ interface WebviewEditorPair {
  * VSCode拡張機能のメインエントリーポイント
  */
 export function activate(context: vscode.ExtensionContext) {
-  console.log('[Extension] ===== Test Modeling App extension が起動しました =====');
-  console.log('[Extension] Extension path:', context.extensionPath);
-  console.log('[Extension] VS Code version:', vscode.version);
+  console.log('Test Modeling App extension が起動しました');
 
   // アクティブなWebview-エディタペアを管理
   const activeWebviews = new Map<string, WebviewEditorPair>();
-  console.log('[Extension] Webview管理マップを初期化しました');
+  // webview map initialized
 
   // スタンドアロンモードでWebviewを開くコマンド
   const openModelerCommand = vscode.commands.registerCommand('testModelingApp.openModeler', () => {
@@ -62,7 +60,6 @@ export function activate(context: vscode.ExtensionContext) {
    * スタンドアロンWebviewを作成（従来の動作）
    */
   function createStandaloneWebview() {
-    console.log('[Extension] スタンドアロンWebviewを作成開始');
     const panel = vscode.window.createWebviewPanel(
       'testModelingApp',
       'Test Modeling App',
@@ -74,10 +71,7 @@ export function activate(context: vscode.ExtensionContext) {
       },
     );
 
-    console.log('[Extension] スタンドアロンWebviewパネルを作成しました');
-    console.log('[Extension] Webviewコンテンツを生成中...');
     panel.webview.html = getWebviewContent(panel.webview, context, false);
-    console.log('[Extension] Webviewコンテンツを設定しました');
 
     panel.webview.onDidReceiveMessage(
       async (message) => {
@@ -92,14 +86,12 @@ export function activate(context: vscode.ExtensionContext) {
    * ファイルをTest Modeling Viewで開く
    */
   async function openFileInModelingView(uri?: vscode.Uri) {
-    console.log('[Extension] ===== ファイルをTest Modeling Viewで開く処理を開始 =====');
-    console.log('[Extension] 指定されたURI:', uri?.toString());
+    // open file in modeling view
     try {
       let targetUri = uri;
 
       // URIが指定されていない場合は、アクティブエディタから取得
       if (!targetUri) {
-        console.log('[Extension] URIが指定されていないため、アクティブエディタから取得');
         const activeEditor = vscode.window.activeTextEditor;
         if (!activeEditor) {
           console.error('[Extension] アクティブエディタが見つかりません');
@@ -107,12 +99,12 @@ export function activate(context: vscode.ExtensionContext) {
           return;
         }
         targetUri = activeEditor.document.uri;
-        console.log('[Extension] アクティブエディタから取得したURI:', targetUri.toString());
+        // using active editor URI
       }
 
       // サポートされているファイル形式かチェック
       const fileExtension = path.extname(targetUri.fsPath).toLowerCase();
-      console.log('[Extension] ファイル拡張子:', fileExtension);
+      // fileExtension determined
       if (!['.json', '.md', '.markdown'].includes(fileExtension)) {
         console.error('[Extension] サポートされていないファイル形式:', fileExtension);
         vscode.window.showErrorMessage('JSON、Markdownファイルのみサポートされています');
@@ -120,36 +112,32 @@ export function activate(context: vscode.ExtensionContext) {
       }
 
       const documentKey = targetUri.toString();
-      console.log('[Extension] ドキュメントキー:', documentKey);
+      // documentKey set
 
       // 既に開いているWebviewがあるかチェック
       const existingPair = activeWebviews.get(documentKey);
       if (existingPair) {
-        console.log('[Extension] 既に開いているWebviewが見つかりました。再表示します');
+        // reveal existing webview
         existingPair.panel.reveal();
         return;
       }
 
       // ドキュメントを開く
-      console.log('[Extension] ドキュメントを開いています...');
       const document = await vscode.workspace.openTextDocument(targetUri);
-      console.log('[Extension] ドキュメントを開きました。行数:', document.lineCount);
+      // document opened
 
       // ファイル内容を読み込み・検証
       let fileData: unknown;
       let fileType: 'json' | 'markdown';
       const initialDocumentContent = document.getText();
-      console.log('[Extension] ドキュメント内容を取得。長さ:', initialDocumentContent.length);
       try {
         if (fileExtension === '.md' || fileExtension === '.markdown') {
-          console.log('[Extension] Markdownファイルとして処理します');
           fileData = initialDocumentContent;
           fileType = 'markdown';
         } else {
-          console.log('[Extension] JSONファイルとして解析します');
+          // parse JSON
           fileData = JSON.parse(initialDocumentContent);
           fileType = 'json';
-          console.log('[Extension] JSON解析成功');
         }
       } catch (error) {
         console.error('[Extension] ファイル解析エラー:', error);
@@ -159,7 +147,6 @@ export function activate(context: vscode.ExtensionContext) {
       }
 
       // Webviewパネルを作成
-      console.log('[Extension] Webviewパネルを作成中...');
       const panel = vscode.window.createWebviewPanel(
         'testModelingAppEditor',
         `Test Modeling - ${path.basename(targetUri.fsPath)}`,
@@ -170,12 +157,9 @@ export function activate(context: vscode.ExtensionContext) {
           localResourceRoots: [vscode.Uri.file(path.join(context.extensionPath, 'webview'))],
         },
       );
-      console.log('[Extension] Webviewパネルを作成しました');
-
       // 同期ハンドラーを作成
-      console.log('[Extension] 同期ハンドラーを作成中...');
       const syncHandler = new DocumentSyncHandler(panel, document);
-      console.log('[Extension] 同期ハンドラーを作成しました');
+      // syncHandler created
 
       // ペアを登録
       const pair: WebviewEditorPair = {
@@ -186,21 +170,14 @@ export function activate(context: vscode.ExtensionContext) {
       activeWebviews.set(documentKey, pair);
 
       // Webviewコンテンツを設定（エディタ連携モード）
-      console.log('[Extension] Webviewコンテンツを生成中（エディタモード）...');
       panel.webview.html = getWebviewContent(panel.webview, context, true);
-      console.log('[Extension] Webviewコンテンツを設定しました');
+      // webview content set
 
       // 初期データ送信用の関数
       // 背景: クロージャで必要な変数をキャプチャ
       const fileName = path.basename(targetUri.fsPath);
       const sendInitialData = () => {
-        console.log('[Extension] 初期データをWebviewに送信中...');
-        console.log('[Extension] - fileName:', fileName);
-        console.log('[Extension] - fileType:', fileType);
-        console.log(
-          '[Extension] - content length:',
-          typeof fileData === 'string' ? fileData.length : JSON.stringify(fileData).length,
-        );
+        // send initial data
         panel.webview.postMessage({
           type: 'initializeWithFile',
           data: {
@@ -210,7 +187,6 @@ export function activate(context: vscode.ExtensionContext) {
             isEditorMode: true,
           },
         });
-        console.log('[Extension] 初期データを送信しました');
       };
 
       // Webviewからのメッセージを処理
@@ -221,7 +197,6 @@ export function activate(context: vscode.ExtensionContext) {
         async (message) => {
           // ready メッセージを受け取ったら初期データを送信
           if (message.type === 'ready' && !isInitialized) {
-            console.log('[Extension] Webview is ready, sending initial data...');
             isInitialized = true;
             sendInitialData();
             return;
@@ -234,19 +209,12 @@ export function activate(context: vscode.ExtensionContext) {
 
       // パネルが閉じられたときの処理
       panel.onDidDispose(() => {
-        console.log('[Extension] Webviewパネルが閉じられました:', documentKey);
         activeWebviews.delete(documentKey);
         pair.syncHandler.dispose();
-        console.log('[Extension] リソースをクリーンアップしました');
       });
-
-      console.log('[Extension] ===== ファイルをTest Modeling Viewで開く処理が完了しました =====');
+      // finished opening view
     } catch (error) {
-      console.error('[Extension] ===== ファイルを開く際にエラーが発生しました =====');
-      console.error('[Extension] エラー詳細:', error);
-      if (error instanceof Error) {
-        console.error('[Extension] エラースタック:', error.stack);
-      }
+      console.error('ファイルを開く際にエラーが発生しました:', error);
       vscode.window.showErrorMessage(`ファイルを開けませんでした: ${error}`);
     }
   }
@@ -451,13 +419,11 @@ function getWebviewContent(
   context: vscode.ExtensionContext,
   isEditorMode: boolean = false,
 ): string {
-  console.log('[Extension] getWebviewContent: 開始');
-  console.log('[Extension] - extensionPath:', context.extensionPath);
-  console.log('[Extension] - isEditorMode:', isEditorMode);
+  // generate webview content
 
   const webviewPath = path.join(context.extensionPath, 'webview');
   const htmlPath = path.join(webviewPath, 'index.html');
-  console.log('[Extension] - htmlPath:', htmlPath);
+  // html path
 
   if (!fs.existsSync(htmlPath)) {
     console.error('[Extension] HTMLファイルが見つかりません:', htmlPath);
@@ -468,9 +434,7 @@ function getWebviewContent(
 </html>`;
   }
 
-  console.log('[Extension] HTMLファイルを読み込み中...');
   let html = fs.readFileSync(htmlPath, 'utf8');
-  console.log('[Extension] HTMLファイルを読み込みました。サイズ:', html.length);
 
   // HTMLタグにVSCode環境フラグを埋め込む
   const htmlTagRegex = /<html([^>]*)>/i;
@@ -494,14 +458,10 @@ function getWebviewContent(
   const webviewBaseUri = webview.asWebviewUri(vscode.Uri.file(extensionPath));
   const webviewResourceBase = `${webviewBaseUri}/webview`;
 
-  console.log('[Extension] Webview resource base:', webviewResourceBase);
-
   // 背景: Next.jsの静的エクスポートでは、全てのパスが/_next/から始まる
   // 前提: HTMLに含まれる相対パスを完全なVS Code Webview URIに置き換える
   // トレードオフ: HTMLが大きくなるが、明示的で分かりやすい
   html = html.replace(/(['"])\/_next\//g, `$1${webviewResourceBase}/_next/`);
-
-  console.log('[Extension] パスを完全なWebview URIに置換しました');
 
   // Bootstrap script を追加（最初の<script>タグの前に挿入）
   // 背景: Webpackのpublic pathを実行時に設定する必要がある
@@ -510,12 +470,8 @@ function getWebviewContent(
   const environmentScript = `<script>
       // Webpackのpublic pathを設定（webpack起動前に実行される必要がある）
       __webpack_public_path__ = '${webviewResourceBase}/_next/';
-      console.log('[Bootstrap] Webpack public path set to:', __webpack_public_path__);
-      
       window.isVSCodeExtension = true;
       window.isVSCodeEditorMode = ${isEditorMode};
-      console.log('[Bootstrap] VSCode extension mode initialized');
-      console.log('[Bootstrap] Editor mode:', ${isEditorMode});
       
       // VSCode APIを取得してキャッシュ
       (function() {
@@ -524,10 +480,10 @@ function getWebviewContent(
             const api = acquireVsCodeApi();
             window.vscode = api;
             window.__testModelingAppVscodeApi = api;
-            console.log('[Bootstrap] VSCode API acquired');
+            // VSCode API acquired
           }
         } catch (error) {
-          console.error('[Bootstrap] Failed to acquire VSCode API:', error);
+          console.error('Failed to acquire VSCode API:', error);
         }
       })();
     </script>`;
@@ -544,7 +500,6 @@ function getWebviewContent(
         // __webpack_require__ (通常は 'r' として難読化されている) を探す
         if (typeof __webpack_require__ !== 'undefined' && __webpack_require__.p) {
           __webpack_require__.p = '${webviewResourceBase}/_next/';
-          console.log('[Bootstrap] Webpack public path overridden:', __webpack_require__.p);
           return true;
         }
         return false;
