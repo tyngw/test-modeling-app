@@ -15,6 +15,7 @@ import { SYSTEM_PROMPT_TEMPLATE } from '../../config/systemPrompt';
 import { VERSION } from '../../constants/version';
 import { sanitizeText } from '../security/sanitization';
 import { validateSettingValue } from '../security/validation';
+import { debugLog } from '../debugLogHelpers';
 
 // Style settings interface to define structure of the "styles" key
 export interface StyleSettings {
@@ -72,13 +73,13 @@ export const safeLocalStorage = {
       // 取得したデータの基本的な安全性チェック
       if (value.length > 1024 * 1024) {
         // 1MB制限
-        console.warn(`LocalStorage値が大きすぎます: ${key}`);
+        debugLog(`LocalStorage値が大きすぎます: ${key}`);
         return null;
       }
 
       return value;
     } catch (e) {
-      console.error('localStorage access failed:', e);
+      debugLog('localStorage access failed:', e);
       return null;
     }
   },
@@ -87,26 +88,26 @@ export const safeLocalStorage = {
 
     // キーの検証
     if (!key || typeof key !== 'string' || key.trim().length === 0) {
-      console.error('無効なlocalStorageキー:', key);
+      debugLog('無効なlocalStorageキー:', key);
       return;
     }
 
     // 値の検証とサニタイズ
     if (typeof value !== 'string') {
-      console.error('localStorageの値は文字列である必要があります');
+      debugLog('localStorageの値は文字列である必要があります');
       return;
     }
 
     // サイズ制限チェック（1MB）
     if (value.length > 1024 * 1024) {
-      console.error('localStorageの値が大きすぎます');
+      debugLog('localStorageの値が大きすぎます');
       return;
     }
 
     try {
       localStorage.setItem(key, value);
     } catch (e) {
-      console.error('localStorage access failed:', e);
+      debugLog('localStorage access failed:', e);
     }
   },
   removeItem: (key: string): void => {
@@ -114,7 +115,7 @@ export const safeLocalStorage = {
     try {
       localStorage.removeItem(key);
     } catch (e) {
-      console.error('localStorage access failed:', e);
+      debugLog('localStorage access failed:', e);
     }
   },
 };
@@ -170,7 +171,7 @@ const setSetting = <T extends Record<string, unknown> | string | number | boolea
 
   // 設定値の検証
   if (!validateSettingValue(key, value)) {
-    console.warn(`設定値が無効です: ${key} = ${value}`);
+    debugLog(`設定値が無効です: ${key} = ${value}`);
     return;
   }
 
@@ -209,7 +210,7 @@ export const getStyles = (): StyleSettings => {
     }
     return { ...DEFAULT_STYLES, ...parsedStyles };
   } catch (e) {
-    console.error('Failed to parse styles:', e);
+    debugLog('Failed to parse styles:', e);
     return DEFAULT_STYLES;
   }
 };
@@ -319,7 +320,7 @@ export const getApiKey = (): string => {
     const bytes = CryptoJS.AES.decrypt(stored, ENCRYPTION_KEY);
     return bytes.toString(CryptoJS.enc.Utf8);
   } catch (e) {
-    console.error('API key decryption failed:', e);
+    debugLog('API key decryption failed:', e);
     return '';
   }
 };
@@ -329,7 +330,7 @@ export const setApiKey = (value: string): void => {
     const encrypted = CryptoJS.AES.encrypt(value, ENCRYPTION_KEY).toString();
     safeLocalStorage.setItem(APIKEY_KEY, encrypted);
   } catch (e) {
-    console.error('API key encryption failed:', e);
+    debugLog('API key encryption failed:', e);
   }
 };
 

@@ -10,7 +10,6 @@
 import { Element } from '../../types/types';
 import { HierarchicalStructure } from '../../types/hierarchicalTypes';
 import { OFFSET } from '../../config/elementSettings';
-import { debugLog } from '../../utils/debugLogHelpers';
 import { findParentNodeInHierarchy } from '../../utils/hierarchical/hierarchicalConverter';
 
 /**
@@ -72,10 +71,6 @@ export const isInDropArea = (params: DropAreaCheckParams): boolean => {
       mouseY >= dropAreaTop &&
       mouseY <= dropAreaBottom;
 
-    debugLog(
-      `[Root drop area] direction:${targetDirection}, mouse(${mouseX},${mouseY}), area(${dropAreaLeft},${dropAreaTop},${dropAreaRight},${dropAreaBottom}), inArea: ${inArea}`,
-    );
-
     return inArea;
   } else {
     // 非ルート要素の場合
@@ -86,9 +81,6 @@ export const isInDropArea = (params: DropAreaCheckParams): boolean => {
 
     if (parentNode?.data.id === rootElement?.id) {
       if (element.direction !== targetDirection) {
-        debugLog(
-          `[Direction filter] Excluding ${element.id} (direction: ${element.direction}, target: ${targetDirection})`,
-        );
         return false;
       }
     }
@@ -107,12 +99,6 @@ export const isInDropArea = (params: DropAreaCheckParams): boolean => {
       mouseX <= dropAreaRight &&
       mouseY >= dropAreaTop &&
       mouseY <= dropAreaBottom;
-
-    if (inArea) {
-      debugLog(
-        `[Candidate found] ${element.id} (direction: ${element.direction}, target: ${targetDirection})`,
-      );
-    }
 
     return inArea;
   }
@@ -166,15 +152,6 @@ export const filterDropCandidates = (
       rootElement,
       targetDirection,
     });
-  });
-
-  debugLog(`[filterDropCandidates] Found ${candidates.length} candidates`);
-  candidates.forEach((candidate: Element) => {
-    const isRoot =
-      candidate.direction === 'none' &&
-      hierarchicalData &&
-      findParentNodeInHierarchy(hierarchicalData, candidate.id) === null;
-    debugLog(`[filterDropCandidates] Candidate: ${candidate.id}, isRoot: ${isRoot}`);
   });
 
   return candidates;

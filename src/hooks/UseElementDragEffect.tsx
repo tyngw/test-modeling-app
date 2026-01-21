@@ -38,11 +38,15 @@ export type { DropTargetInfo, ElementDragEffectResult };
 interface DragEffectOptions {
   viewBoxOffsets?: { minX: number; minY: number };
   resolveEventCoordinates?: (event: MouseEvent | TouchEvent) => { x: number; y: number } | null;
+  onDragMove?: (event: MouseEvent | TouchEvent) => void;
+  onDragEnd?: () => void;
 }
 
 export const useElementDragEffect = ({
   viewBoxOffsets = { minX: 0, minY: 0 },
   resolveEventCoordinates,
+  onDragMove,
+  onDragEnd,
 }: DragEffectOptions = {}): ElementDragEffectResult => {
   const { state, dispatch } = useCanvas();
   const { addToast } = useToast();
@@ -109,10 +113,6 @@ export const useElementDragEffect = ({
         y: zoomAdjustedPos.y - element.y,
       });
 
-      debugLog(
-        `[Drag started] Element: ${element.id}, startPos: (${zoomAdjustedPos.x}, ${zoomAdjustedPos.y})`,
-      );
-
       // ドラッグ開始時に選択されている全要素の元の位置を保存（階層構造ベース）
       elementOriginalPositions.current.clear();
       const selectedElements = state.hierarchicalData
@@ -124,7 +124,7 @@ export const useElementDragEffect = ({
         elementOriginalPositions.current.set(element.id, { x: element.x, y: element.y });
       });
     },
-    [state.hierarchicalData, state.zoomRatio, dispatch, resolveCoordinates],
+    [state.hierarchicalData, resolveCoordinates],
   );
 
   const resetElementsPosition = useCallback(() => {
@@ -210,6 +210,9 @@ export const useElementDragEffect = ({
       setDraggingElement(null);
       setCurrentDropTarget(null);
       elementOriginalPositions.current.clear();
+      if (onDragEnd) {
+        onDragEnd();
+      }
     }
   }, [
     draggingElement,
@@ -218,6 +221,7 @@ export const useElementDragEffect = ({
     addToast,
     resetElementsPosition,
     state.hierarchicalData,
+    onDragEnd,
   ]);
 
   // ドラッグ中に実行される処理
@@ -254,12 +258,6 @@ export const useElementDragEffect = ({
             currentDropTarget.insertX !== dropTarget.insertX));
 
       if (isTargetChanged) {
-        debugLog(`[setCurrentDropTarget] Setting drop target:`, dropTarget);
-        if (dropTarget) {
-          debugLog(
-            `[setCurrentDropTarget] Direction: ${dropTarget.direction}, InsertX: ${dropTarget.insertX}`,
-          );
-        }
         setCurrentDropTarget(dropTarget);
       }
 
@@ -273,6 +271,10 @@ export const useElementDragEffect = ({
         type: 'MOVE_ELEMENT',
         payload: { id: draggingElement.id, ...newPosition },
       });
+
+      if (onDragMove) {
+        onDragMove(e);
+      }
     },
     [
       draggingElement,
@@ -282,6 +284,7 @@ export const useElementDragEffect = ({
       state.zoomRatio,
       state.hierarchicalData,
       resolveCoordinates,
+      onDragMove,
     ],
   );
 

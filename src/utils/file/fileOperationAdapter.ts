@@ -11,6 +11,7 @@ import {
 } from './fileHelpers';
 import { convertArrayToHierarchical } from '../hierarchical/hierarchicalConverter';
 import { loadMarkdownAsHierarchical } from './markdownHelpers';
+import { debugLog } from '../debugLogHelpers';
 
 /**
  * ファイル操作の抽象化インターフェース
@@ -155,7 +156,7 @@ class VSCodeFileOperations implements FileOperationAdapter {
           fileName,
         );
       } catch (error) {
-        console.error('SVG保存エラー:', error);
+        debugLog('SVG保存エラー:', error);
         reject(error);
       }
     });
@@ -213,7 +214,7 @@ class VSCodeFileOperations implements FileOperationAdapter {
           fileName,
         );
       } catch (error) {
-        console.error('要素保存エラー:', error);
+        debugLog('要素保存エラー:', error);
         reject(error);
       }
     });
@@ -274,7 +275,7 @@ class VSCodeFileOperations implements FileOperationAdapter {
           fileName,
         );
       } catch (error) {
-        console.error('階層構造保存エラー:', error);
+        debugLog('階層構造保存エラー:', error);
         reject(error);
       }
     });
@@ -363,7 +364,7 @@ class VSCodeFileOperations implements FileOperationAdapter {
                 });
               }
             } catch (error) {
-              console.error('📂 Error processing loaded file:', error);
+              debugLog('📂 Error processing loaded file:', error);
               reject(error);
             }
           }
@@ -394,7 +395,7 @@ class VSCodeFileOperations implements FileOperationAdapter {
         // VSCode拡張のファイル読み込みAPIを呼び出し
         vscodeAPI.loadFile(fileName);
       } catch (error) {
-        console.error('ファイル読み込みエラー:', error);
+        debugLog('ファイル読み込みエラー:', error);
         reject(error);
       }
     });

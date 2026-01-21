@@ -21,6 +21,7 @@ export const generateWithGeminiThread = async (
   customSystemPrompt?: string,
   forceJsonResponse = false,
   truncatePrompt = true,
+  includeSystemInstruction = true,
 ): Promise<{ response: string; updatedHistory: ChatHistory[] }> => {
   try {
     const maxPromptLength = 8000;
@@ -29,13 +30,6 @@ export const generateWithGeminiThread = async (
         ? prompt.substring(0, maxPromptLength) + '\n...(省略)'
         : prompt;
 
-    debugLog(
-      `[generateWithGeminiThread] 受信プロンプト長: ${prompt.length}, 切り詰め: ${truncatePrompt}, 最終プロンプト長: ${truncatedPrompt.length}`,
-    );
-    debugLog(
-      `[generateWithGeminiThread] 最終プロンプトの先頭100文字: "${truncatedPrompt.substring(0, 100)}..."`,
-    );
-
     if (truncatePrompt && prompt.length > maxPromptLength) {
       debugLog(
         `[generateWithGeminiThread] 警告: プロンプトが切り詰められました (${prompt.length} -> ${truncatedPrompt.length})`,
@@ -43,8 +37,6 @@ export const generateWithGeminiThread = async (
     }
 
     const endpoint = `${getApiEndpoint()}?key=${apiKey}`;
-    const systemPrompt = customSystemPrompt || getSystemPromptTemplate();
-
     const generationConfig: Record<string, unknown> = {
       temperature: 0.2,
       topP: 0.8,
@@ -64,13 +56,20 @@ export const generateWithGeminiThread = async (
       },
     ];
 
-    const requestPayload = {
+    const requestPayload: {
+      contents: ChatHistory[];
+      generationConfig: Record<string, unknown>;
+      systemInstruction?: { parts: { text: string }[] };
+    } = {
       contents: updatedHistory,
-      systemInstruction: {
-        parts: [{ text: systemPrompt }],
-      },
       generationConfig,
     };
+    if (includeSystemInstruction) {
+      const systemPrompt = customSystemPrompt || getSystemPromptTemplate();
+      requestPayload.systemInstruction = {
+        parts: [{ text: systemPrompt }],
+      };
+    }
 
     if (process.env.NODE_ENV === 'development') {
       debugLog('[Geminiスレッドリクエスト] 送信内容:', JSON.stringify(requestPayload, null, 2));

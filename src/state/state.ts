@@ -405,7 +405,7 @@ const createInitialState = (): State => {
 
   // hierarchicalDataがnullの場合のフォールバック
   if (!hierarchicalData) {
-    console.error('Failed to create initial hierarchical data');
+    debugLog('Failed to create initial hierarchical data');
     // フォールバック：直接階層構造を作成
     const fallbackHierarchicalData = {
       root: {
@@ -1788,7 +1788,7 @@ const actionHandlers: Record<string, ActionHandler> = {
     // 最初の要素をクリップボードに保存（複数選択時は最初の要素のみ）
     if (clipboardDataList.length > 0) {
       cutToClipboard(clipboardDataList[0]).catch((error) => {
-        console.error('Failed to cut elements to clipboard:', error);
+        debugLog('Failed to cut elements to clipboard:', error);
       });
     }
 
@@ -1809,7 +1809,7 @@ const actionHandlers: Record<string, ActionHandler> = {
       const clipboardData = getSelectedAndChildren(state.hierarchicalData, selectedElements[0]);
       if (clipboardData) {
         copyToClipboard(clipboardData).catch((error) => {
-          console.error('Failed to copy elements to clipboard:', error);
+          debugLog('Failed to copy elements to clipboard:', error);
         });
       }
     } else {
@@ -1855,7 +1855,7 @@ const actionHandlers: Record<string, ActionHandler> = {
         };
 
         copyToClipboard(combinedClipboardData).catch((error) => {
-          console.error('Failed to copy multiple elements to clipboard:', error);
+          debugLog('Failed to copy multiple elements to clipboard:', error);
         });
       }
     }
@@ -2169,7 +2169,7 @@ const actionHandlers: Record<string, ActionHandler> = {
         cacheValid: true,
       };
     } catch (error) {
-      console.error('PASTE_CLIPBOARD_ELEMENTS: Error occurred:', error);
+      debugLog('PASTE_CLIPBOARD_ELEMENTS: Error occurred:', error);
       return state;
     }
   }),

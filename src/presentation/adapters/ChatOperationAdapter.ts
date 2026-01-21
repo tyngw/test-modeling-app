@@ -1,4 +1,4 @@
-import { ChatOperation } from '../../domain/chat/models/ChatOperation';
+import { ChatOperation, ElementsTreeNode } from '../../domain/chat/models/ChatOperation';
 import { ChatOperationResult } from '../../domain/chat/models/ChatOperationResult';
 import { Element } from '../../domain/element/models/Element';
 import { Action } from '../../types/actionTypes';
@@ -40,10 +40,6 @@ export class ChatOperationAdapter {
         await new Promise((resolve) => setTimeout(resolve, 300));
       }
 
-      debugLog(
-        `[ChatOperationAdapter] 操作 ${i + 1}/${operations.length} 実行中: ${operation.type}, currentSelectedElementId=${currentSelectedElementId}`,
-      );
-
       const result = await this.executeOperation(
         operation,
         currentSelectedElementId,
@@ -56,7 +52,6 @@ export class ChatOperationAdapter {
       // 新しい選択要素IDがある場合は更新
       if (result.hasNewSelection()) {
         currentSelectedElementId = result.newSelectedElementId!;
-        debugLog(`[ChatOperationAdapter] 選択要素IDを更新: ${currentSelectedElementId}`);
         await new Promise((resolve) => setTimeout(resolve, 400));
       }
 
@@ -65,11 +60,6 @@ export class ChatOperationAdapter {
         await new Promise((resolve) => setTimeout(resolve, 200));
       }
     }
-
-    debugLog('[ChatOperationAdapter] 結果:', {
-      operationsCount: operations.length,
-      results: results,
-    });
 
     return results.length === 1
       ? results[0]
@@ -94,7 +84,20 @@ export class ChatOperationAdapter {
 
     switch (operation.type) {
       case 'ADD_ELEMENTS':
-        return this.executeAddElements(operation, effectiveSelectedElementId, currentTab);
+        return this.executeAddElements(
+          operation,
+          effectiveSelectedElementId,
+          currentTab,
+          getLatestState,
+        );
+
+      case 'ADD_WITH_CHILDREN':
+        return this.executeAddElementsWithChildren(
+          operation,
+          effectiveSelectedElementId,
+          currentTab,
+          getLatestState,
+        );
 
       case 'SELECT_ELEMENT':
         return this.executeSelectElement(operation, currentTab);
@@ -130,65 +133,113 @@ export class ChatOperationAdapter {
   /**
    * ADD_ELEMENTS操作を実行
    */
-  private executeAddElements(
+  private async executeAddElements(
     operation: ChatOperation,
     selectedElementId: string,
     currentTab: TabState,
+    getLatestState?: () => TabState | undefined,
   ): Promise<ChatOperationResult> {
     const elements = operation.elements || [];
     const targetId = operation.targetId === 'current' ? selectedElementId : operation.targetId;
     const autoSelect = operation.autoSelect || false;
 
-    // 対象要素の存在確認
-    if (targetId && !findElementInHierarchy(currentTab.state.hierarchicalData, targetId)) {
-      throw new Error(
-        `対象要素（ID: ${targetId}）が見つかりません。要素が削除されている可能性があります。`,
+    const addedElementIds = await this.addElementsInternal(
+      elements,
+      targetId,
+      currentTab,
+      getLatestState,
+    );
+
+    this.markOperationComplete(operation);
+
+    if (autoSelect && addedElementIds.length > 0) {
+      const firstElementId = addedElementIds[0];
+      const firstElementText = elements[0];
+
+      setTimeout(() => {
+        this.dispatch({
+          type: 'SELECT_ELEMENT',
+          payload: { id: firstElementId },
+        });
+      }, 100);
+
+      return ChatOperationResult.success(
+        `${elements.length}個の要素を追加し、「${firstElementText}」を選択しました`,
+        firstElementId,
       );
     }
 
-    return new Promise<ChatOperationResult>((resolve, reject) => {
-      this.dispatch({
-        type: 'ADD_ELEMENTS_SILENT',
-        payload: {
-          targetNodeId: targetId,
-          targetPosition: 'child',
-          texts: elements,
-          tentative: false,
-          onSuccess: (addedElementIds: string[]) => {
-            debugLog(`[ChatOperationAdapter] 要素追加成功: ${addedElementIds.join(', ')}`);
-            this.markOperationComplete(operation);
+    return ChatOperationResult.success(
+      `${elements.length}個の要素を追加しました: ${elements.join(', ')}`,
+    );
+  }
 
-            if (autoSelect && addedElementIds.length > 0) {
-              const firstElementId = addedElementIds[0];
-              const firstElementText = elements[0];
+  private async executeAddElementsWithChildren(
+    operation: ChatOperation,
+    selectedElementId: string,
+    currentTab: TabState,
+    getLatestState?: () => TabState | undefined,
+  ): Promise<ChatOperationResult> {
+    const nodes: ElementsTreeNode[] = operation.elementsTree || [];
+    if (nodes.length === 0) {
+      this.markOperationComplete(operation);
+      return ChatOperationResult.success('追加対象の親子要素がありませんでした');
+    }
 
-              setTimeout(() => {
-                this.dispatch({
-                  type: 'SELECT_ELEMENT',
-                  payload: { id: firstElementId },
-                });
-              }, 100);
+    const baseTargetId = operation.targetId === 'current' ? selectedElementId : operation.targetId;
+    const summaries: string[] = [];
+    let latestParentId: string | undefined;
 
-              resolve(
-                ChatOperationResult.success(
-                  `${elements.length}個の要素を追加し、「${firstElementText}」を選択しました`,
-                  firstElementId,
-                ),
-              );
-            } else {
-              resolve(
-                ChatOperationResult.success(
-                  `${elements.length}個の要素を追加しました: ${elements.join(', ')}`,
-                ),
-              );
-            }
-          },
-          onError: (errorMessage: string) => {
-            reject(new Error(`要素の追加に失敗しました: ${errorMessage}`));
-          },
-        },
-      });
-    });
+    for (const node of nodes) {
+      if (!node || !node.parent?.trim()) {
+        continue;
+      }
+
+      const parentTargetId =
+        node.targetId === 'current'
+          ? selectedElementId
+          : node.targetId
+            ? node.targetId
+            : baseTargetId;
+
+      const parentIds = await this.addElementsInternal(
+        [node.parent],
+        parentTargetId,
+        currentTab,
+        getLatestState,
+      );
+
+      if (parentIds.length === 0) {
+        continue;
+      }
+
+      const parentId = parentIds[0];
+      summaries.push(`親要素「${node.parent}」を追加`);
+      latestParentId = parentId;
+
+      if (node.children && node.children.length > 0) {
+        await this.addElementsInternal(node.children, parentId, currentTab, getLatestState);
+        summaries.push(`  └ 子要素: ${node.children.join(', ')}`);
+      }
+    }
+
+    this.markOperationComplete(operation);
+
+    if (operation.autoSelect && latestParentId) {
+      const targetId = latestParentId;
+      setTimeout(() => {
+        this.dispatch({
+          type: 'SELECT_ELEMENT',
+          payload: { id: targetId },
+        });
+      }, 100);
+    }
+
+    const message = summaries.length
+      ? `${nodes.length}組の親子要素を追加しました:\n${summaries.join('\n')}`
+      : '親子要素の追加対象が見つかりませんでした';
+
+    return ChatOperationResult.success(message, operation.autoSelect ? latestParentId : undefined);
   }
 
   /**
@@ -359,6 +410,35 @@ export class ChatOperationAdapter {
 
     this.operationTimestamps.set(operationKey, now);
     return false;
+  }
+
+  private async addElementsInternal(
+    elements: string[],
+    targetId: string | undefined,
+    _currentTab: TabState,
+    _getLatestState?: () => TabState | undefined,
+  ): Promise<string[]> {
+    if (elements.length === 0) {
+      return [];
+    }
+
+    return await new Promise<string[]>((resolve, reject) => {
+      this.dispatch({
+        type: 'ADD_ELEMENTS_SILENT',
+        payload: {
+          targetNodeId: targetId,
+          targetPosition: 'child',
+          texts: elements,
+          tentative: false,
+          onSuccess: (addedElementIds: string[]) => {
+            resolve(addedElementIds);
+          },
+          onError: (errorMessage: string) => {
+            reject(new Error(`要素の追加に失敗しました: ${errorMessage}`));
+          },
+        },
+      });
+    });
   }
 
   /**

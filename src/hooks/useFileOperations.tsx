@@ -9,6 +9,7 @@ import { TabState } from '../types/tabTypes';
 import { State } from '../state/state';
 import { isVSCodeExtension } from '../utils/environment/environmentDetector';
 import { storageAdapter } from '../utils/storage/storageAdapter';
+import { debugLog } from '../utils/debugLogHelpers';
 
 interface UseFileOperationsParams {
   currentTab: TabState | undefined;
@@ -49,7 +50,7 @@ export function useFileOperations({
         saveSvg(svgElement, 'download.svg');
       }
     } catch (error) {
-      console.error('[handleSaveSvg] Error during SVG save:', error);
+      debugLog('[handleSaveSvg] Error during SVG save:', error);
       addToast(error instanceof Error ? error.message : 'SVGの保存中にエラーが発生しました');
     }
   }, [addToast]);
@@ -95,7 +96,7 @@ export function useFileOperations({
         updateTabSaveStatus(currentTab.id, true, currentElementsJson);
       }
     } catch (error) {
-      console.error('[handleSaveElements] Error during file save:', error);
+      debugLog('[handleSaveElements] Error during file save:', error);
       addToast(error instanceof Error ? error.message : 'ファイルの保存中にエラーが発生しました');
     }
   }, [currentTab, updateTabSaveStatus, addToast]);
@@ -149,7 +150,7 @@ export function useFileOperations({
         // 新しいタブに切り替え
         switchTab(newTabId);
       } catch (error: unknown) {
-        console.error('[handleLoadElements] Error during file load:', error);
+        debugLog('[handleLoadElements] Error during file load:', error);
         addToast(
           error instanceof Error ? error.message : 'ファイルの読み込み中にエラーが発生しました',
         );

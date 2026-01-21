@@ -23,6 +23,7 @@ export const keyActionMap: { [key: string]: string } = {
 
 export const inputFieldKeyActionMap: { [key: string]: string } = {
   Tab: 'NEXT_FIELD',
+  Enter: 'END_EDITING',
   Escape: 'END_EDITING',
   'Ctrl+Enter': 'END_EDITING',
   'Alt+Enter': 'END_EDITING',

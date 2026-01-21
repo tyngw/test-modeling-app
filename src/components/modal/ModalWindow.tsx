@@ -51,6 +51,30 @@ const ModalWindow: React.FC<ModalWindowProps> = ({
     // debugLog(`[DEBUG] ModalWindow(${modalId}) theme updated`);
   }, [isMounted, modalId]);
 
+  // モーダルが開いている間、背景のスクロールを防ぐ
+  useEffect(() => {
+    if (isOpen) {
+      // 元のoverflowスタイルを保存
+      const originalOverflow = document.body.style.overflow;
+      const originalPaddingRight = document.body.style.paddingRight;
+
+      // スクロールバーの幅を計算（スクロールバーが消えることによるレイアウトシフトを防ぐ）
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+
+      // スクロールを無効化し、スクロールバーの幅分のパディングを追加
+      document.body.style.overflow = 'hidden';
+      if (scrollbarWidth > 0) {
+        document.body.style.paddingRight = `${scrollbarWidth}px`;
+      }
+
+      return () => {
+        // モーダルを閉じる時に元に戻す
+        document.body.style.overflow = originalOverflow;
+        document.body.style.paddingRight = originalPaddingRight;
+      };
+    }
+  }, [isOpen]);
+
   // モーダルが開かれたときに一度だけonOpenを呼び出す
   useEffect(() => {
     // isOpenがfalseからtrueに変わった時のみ実行
@@ -211,12 +235,11 @@ const ModalWindow: React.FC<ModalWindowProps> = ({
         <div
           style={{
             position: 'relative',
-            maxHeight: 'calc(80vh - 56px)', // モーダルの上下パディングを考慮
             marginTop: icon ? '40px' : title ? '24px' : '16px',
+            // ビューポートの高さを超えないように制限
+            maxHeight: 'calc(80vh - 100px)',
             overflowY: 'auto',
             overflowX: 'hidden',
-            scrollbarWidth: 'thin',
-            scrollbarColor: `${currentTheme.MODAL.TEXT_COLOR}40 transparent`,
           }}
         >
           {children}

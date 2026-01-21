@@ -35,6 +35,7 @@ extension/node_modules/
 extension/webview/
 extension/package-lock.json
 extension/*.vsix
+extension/LICENSE
 
 # Extension build artifacts
 *.vsix

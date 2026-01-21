@@ -4,6 +4,7 @@ import { ElementsMap } from '../../types/elementTypes';
 import { HierarchicalStructure, HierarchicalNode } from '../../types/hierarchicalTypes';
 import { findNodeInHierarchy } from '../hierarchical/hierarchicalConverter';
 import { getIndentSpacesPerLevel } from '../storage/localStorageHelpers';
+import { debugLog } from '../debugLogHelpers';
 
 // クリップボード用のデータ構造（階層構造ベース）
 export interface ClipboardData {
@@ -52,7 +53,7 @@ const parseClipboardElementData = (clipboardText: string): ClipboardData | null 
     try {
       parsedData = JSON.parse(jsonData);
     } catch (e) {
-      console.error('Failed to parse JSON data:', e);
+      debugLog('Failed to parse JSON data:', e);
       return null;
     }
 
@@ -89,7 +90,7 @@ const parseClipboardElementData = (clipboardText: string): ClipboardData | null 
 
     return null;
   } catch (e) {
-    console.error('Failed to parse clipboard element data:', e);
+    debugLog('Failed to parse clipboard element data:', e);
     return null;
   }
 };
@@ -115,7 +116,7 @@ const createClipboardText = (clipboardData: ClipboardData): string => {
 
   const textRepresentation = getElementText(clipboardData.subtree);
   if (!textRepresentation || textRepresentation.trim() === '') {
-    console.warn('createClipboardText: Generated text representation is empty');
+    debugLog('createClipboardText: Generated text representation is empty');
     return '';
   }
 
@@ -187,7 +188,7 @@ export const copyToClipboard = async (clipboardData: ClipboardData): Promise<boo
 
   // 空のテキストの場合は失敗として扱う
   if (!textToCopy || textToCopy.trim() === '') {
-    console.error('No text to copy - clipboard data may be empty or invalid');
+    debugLog('No text to copy - clipboard data may be empty or invalid');
     return false;
   }
 
@@ -200,7 +201,7 @@ export const copyToClipboard = async (clipboardData: ClipboardData): Promise<boo
       return await fallbackCopyToClipboard(textToCopy);
     }
   } catch (err) {
-    console.error('Failed to copy to clipboard:', err);
+    debugLog('Failed to copy to clipboard:', err);
     return false;
   }
 };
@@ -222,7 +223,7 @@ export const cutToClipboard = async (clipboardData: ClipboardData): Promise<bool
 
   // 空のテキストの場合は失敗として扱う
   if (!textToCopy || textToCopy.trim() === '') {
-    console.error('No text to cut - clipboard data may be empty or invalid');
+    debugLog('No text to cut - clipboard data may be empty or invalid');
     return false;
   }
 
@@ -235,7 +236,7 @@ export const cutToClipboard = async (clipboardData: ClipboardData): Promise<bool
       return await fallbackCopyToClipboard(textToCopy);
     }
   } catch (err) {
-    console.error('Failed to cut to clipboard:', err);
+    debugLog('Failed to cut to clipboard:', err);
     return false;
   }
 };
@@ -265,7 +266,7 @@ const fallbackCopyToClipboard = (text: string): Promise<boolean> => {
       document.body.removeChild(textArea);
       resolve(successful);
     } catch (err) {
-      console.error('Fallback copy failed:', err);
+      debugLog('Fallback copy failed:', err);
       document.body.removeChild(textArea);
       resolve(false);
     }
@@ -287,7 +288,7 @@ export const getGlobalCopiedElements = async (): Promise<ClipboardData | null> =
     }
     return null;
   } catch (e) {
-    console.error('Failed to read clipboard for copied elements:', e);
+    debugLog('Failed to read clipboard for copied elements:', e);
     return null;
   }
 };
@@ -307,7 +308,7 @@ export const getGlobalCutElements = async (): Promise<ClipboardData | null> => {
     }
     return null;
   } catch (e) {
-    console.error('Failed to read clipboard for cut elements:', e);
+    debugLog('Failed to read clipboard for cut elements:', e);
     return null;
   }
 };
@@ -333,7 +334,7 @@ export const readClipboardAsHierarchy = async (): Promise<string[] | null> => {
 
     return lines;
   } catch (error) {
-    console.error('クリップボード読み取りエラー:', error);
+    debugLog('クリップボード読み取りエラー:', error);
     return null;
   }
 };
@@ -355,17 +356,31 @@ export const parseHierarchicalText = (
 
   const result = lines.map((line) => {
     // タブまたは連続するスペースをインデントとして認識
-    const tabMatch = line.match(/^(\t*)/);
-    const spaceMatch = line.match(/^( {0,})/);
+    let whitespaceLength = 0;
+    let tabCount = 0;
+    while (whitespaceLength < line.length) {
+      const codePoint = line.charCodeAt(whitespaceLength);
+      if (codePoint === 9) {
+        tabCount += 1;
+        whitespaceLength += 1;
+        continue;
+      }
+      if (codePoint === 32) {
+        whitespaceLength += 1;
+        continue;
+      }
+      break;
+    }
+    const spaceCount = whitespaceLength - tabCount;
 
     let level = 0;
-    if (tabMatch && tabMatch[1]) {
-      level = tabMatch[1].length; // タブの数
-    } else if (spaceMatch && spaceMatch[1]) {
-      level = Math.floor(spaceMatch[1].length / spacesPerLevel); // 設定されたスペース数を1レベルとして計算
+    if (tabCount > 0) {
+      level = tabCount; // タブの数
+    } else if (spaceCount > 0) {
+      level = Math.floor(spaceCount / spacesPerLevel); // 設定されたスペース数を1レベルとして計算
     }
 
-    const text = line.replace(/^[\t ]*/, '').trim(); // インデントを除去
+    const text = line.slice(whitespaceLength).trim(); // インデントを除去
 
     return {
       text,
@@ -412,7 +427,7 @@ export const getClipboardDataForPaste = async (): Promise<{
 
     return null;
   } catch (e) {
-    console.error('Failed to read clipboard for paste:', e);
+    debugLog('Failed to read clipboard for paste:', e);
     return null;
   }
 };

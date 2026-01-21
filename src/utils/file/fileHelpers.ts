@@ -19,6 +19,7 @@ import {
   isLegacyMapFormat,
 } from '../../types/hierarchicalTypes';
 import { convertArrayToHierarchical } from '../hierarchical/hierarchicalConverter';
+import { debugLog } from '../debugLogHelpers';
 
 /**
  * 古いバージョンの要素データ形式を表す型
@@ -223,7 +224,7 @@ export const loadElements = (
             // IDが欠けている要素をフィルタリング
             const validRawElements = rawElements.filter((elem) => {
               if (!elem.id && !Object.prototype.hasOwnProperty.call(elem, 'id')) {
-                console.warn('IDが欠けている要素を削除します');
+                debugLog('IDが欠けている要素を削除します');
                 return false;
               }
               return true;
@@ -247,7 +248,7 @@ export const loadElements = (
             // IDが欠けている要素をフィルタリング
             const validRawElements = rawElements.filter((elem) => {
               if (!elem.id && !Object.prototype.hasOwnProperty.call(elem, 'id')) {
-                console.warn('IDが欠けている要素を削除します');
+                debugLog('IDが欠けている要素を削除します');
                 return false;
               }
               return true;
@@ -271,7 +272,7 @@ export const loadElements = (
             // IDが欠けている要素をフィルタリング
             const validRawElements = rawElements.filter((elem) => {
               if (!elem.id && !Object.prototype.hasOwnProperty.call(elem, 'id')) {
-                console.warn('IDが欠けている要素を削除します');
+                debugLog('IDが欠けている要素を削除します');
                 return false;
               }
               return true;
@@ -289,7 +290,7 @@ export const loadElements = (
               {} as Record<string, Element>,
             );
           } else {
-            console.error('認識できないデータ形式です');
+            debugLog('認識できないデータ形式です');
             throw new Error('認識できないデータ形式です');
           }
 
@@ -304,7 +305,7 @@ export const loadElements = (
         // 常に階層構造として返す
         resolve({ hierarchicalData, fileName: file.name });
       } catch (error) {
-        console.error('ファイル読み込みエラー:', error);
+        debugLog('ファイル読み込みエラー:', error);
         reject(
           new Error(
             `Error: ファイルの読み込みに失敗しました - ${error instanceof Error ? error.message : String(error)}`,
@@ -314,7 +315,7 @@ export const loadElements = (
     };
 
     reader.onerror = () => {
-      console.error('ファイル読み込みエラー');
+      debugLog('ファイル読み込みエラー');
       reject(new Error('Error: ファイルの読み込みに失敗しました'));
     };
     reader.readAsText(file);
@@ -529,7 +530,7 @@ export const saveElements = (elements: Element[], fileName: string) => {
   const hierarchicalData = convertArrayToHierarchical(elements);
 
   if (!hierarchicalData) {
-    console.error('階層構造への変換に失敗しました');
+    debugLog('階層構造への変換に失敗しました');
     // フォールバック: 元の配列形式で保存
     const elementsToSave = elements.map((element) => {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars

@@ -147,20 +147,12 @@ export function useChatAssistant({ currentTab, dispatch, getLatestState }: UseCh
           ? formatHierarchicalStructureForPrompt(currentTab.state.hierarchicalData)
           : '階層構造データがありません';
 
-        debugLog('[ChatAssistant] リクエスト開始:', {
-          selectedElement: selectedElement?.texts[0] || '未選択',
-          instruction: userInput,
-          structureLength: currentStructure.length,
-        });
-
         // 応用サービスを使用してチャット操作を生成
         const operations = await chatAssistantService.generateChatOperations(
           userInput,
           selectedElement,
           currentStructure,
         );
-
-        debugLog(`[ChatAssistant] 生成された操作数: ${operations.length}`);
 
         // 操作を実行
         const result = await operationAdapter.executeOperations(

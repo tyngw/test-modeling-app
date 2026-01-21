@@ -18,9 +18,15 @@ export const useKeyboardHandler = ({
 }: UseKeyboardHandlerProps) => {
   return useCallback(
     async (e: React.KeyboardEvent) => {
-      e.preventDefault();
       const keyCombo = `${e.ctrlKey || e.metaKey ? 'Ctrl+' : ''}${e.shiftKey ? 'Shift+' : ''}${e.key}`;
       const actionType = keyActionMap[keyCombo];
+
+      // アプリで処理するキーイベントのみpreventDefaultを実行
+      if (!actionType) {
+        return; // アプリで処理しないキーイベントはそのまま通過させる
+      }
+
+      e.preventDefault();
 
       if (actionType === 'PASTE_ELEMENT') {
         // クリップボード優先でペーストデータを取得

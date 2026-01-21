@@ -16,11 +16,82 @@ import {
   findParentNodeInHierarchy,
   getAllVisibleElementsFromHierarchy,
   getChildrenFromHierarchy,
+  getDepthFromHierarchy,
 } from '../../utils/hierarchical/hierarchicalConverter';
 import { DropTargetInfo } from './types';
 import { getChildren, isRootElement } from './hierarchyHelpers';
 import { filterDropCandidates, groupElementsByParent } from './candidateFilter';
 import { detectGapBetweenElements, detectBottomGap } from './gapDetector';
+
+/**
+ * マウスのX座標から最も近い階層深度を推定
+ *
+ * X座標の位置から、どの階層レベルに属するかを判定します。
+ * これにより、子要素の階層にいる場合は親の階層の要素を候補から除外できます。
+ *
+ * @param mouseX - マウスのX座標
+ * @param elements - 全ての表示中の要素
+ * @param hierarchicalData - 階層構造データ
+ * @param rootElement - ルート要素
+ * @returns 推定される階層深度（0がルート）
+ */
+const estimateDepthFromXPosition = (
+  mouseX: number,
+  elements: Element[],
+  hierarchicalData: HierarchicalStructure | null,
+  rootElement: Element | null,
+): number => {
+  if (!hierarchicalData || !rootElement) return 0;
+
+  // 各階層のX座標範囲を計算
+  // 階層ごとに要素をグループ化し、そのX座標範囲を取得
+  const depthRanges = new Map<number, { minX: number; maxX: number }>();
+
+  elements.forEach((element) => {
+    const depth = getDepthFromHierarchy(hierarchicalData, element.id);
+    const elemMinX = Math.min(element.x, element.x + element.width);
+    const elemMaxX = Math.max(element.x, element.x + element.width);
+
+    const currentRange = depthRanges.get(depth);
+    if (!currentRange) {
+      depthRanges.set(depth, { minX: elemMinX, maxX: elemMaxX });
+    } else {
+      depthRanges.set(depth, {
+        minX: Math.min(currentRange.minX, elemMinX),
+        maxX: Math.max(currentRange.maxX, elemMaxX),
+      });
+    }
+  });
+
+  // マウスのX座標が含まれる最も深い階層を探す
+  // 深い階層から順に確認（子要素を優先）
+  const depths = Array.from(depthRanges.keys()).sort((a, b) => b - a);
+
+  for (const depth of depths) {
+    const range = depthRanges.get(depth);
+    if (!range) continue;
+
+    // X座標の範囲にパディングを追加して判定
+    const padding = OFFSET.X;
+    if (mouseX >= range.minX - padding && mouseX <= range.maxX + padding) {
+      return depth;
+    }
+  }
+
+  // どの範囲にも該当しない場合は、最も近い階層を返す
+  let closestDepth = 0;
+  let minDistance = Infinity;
+
+  depthRanges.forEach((range, depth) => {
+    const distance = Math.min(Math.abs(mouseX - range.minX), Math.abs(mouseX - range.maxX));
+    if (distance < minDistance) {
+      minDistance = distance;
+      closestDepth = depth;
+    }
+  });
+
+  return closestDepth;
+};
 
 /**
  * 子要素エリアのドロップ位置を計算
@@ -145,10 +216,6 @@ export const calculatePositionAndDistance = (
     (direction === 'right' && isOnRightSideInYRange) ||
     (direction === 'left' && isOnLeftSideInYRange);
 
-  if (isRootInMindmap) {
-    debugLog(`[Root calc] isOnValidSide: ${isOnValidSide}, direction: ${direction}`);
-  }
-
   let result: {
     position: 'child' | 'between';
     insertY: number;
@@ -179,10 +246,6 @@ export const calculatePositionAndDistance = (
         result.insertX = element.x - element.width - OFFSET.X - (draggingElement?.width ?? 0);
       }
     }
-    debugLog(`Drop position mode (inside element ${element.id}):`, 'child');
-    debugLog(
-      `[Inside element] Element ${element.id} - direction: ${result.direction}, insertX: ${result.insertX}`,
-    );
   } else if (isOnValidSide) {
     // 要素の適切な側（方向に応じた）かつY座標範囲内の場合 (between mode)
     const children = getChildren(element, hierarchicalData);
@@ -191,9 +254,6 @@ export const calculatePositionAndDistance = (
     let childDirection: DirectionType = direction;
     if (isRootInMindmap) {
       childDirection = isOnLeftSideInYRange ? 'left' : 'right';
-      debugLog(
-        `[childDirection calculation] isOnLeftSideInYRange: ${isOnLeftSideInYRange}, childDirection: ${childDirection}`,
-      );
     }
 
     if (children.length === 0) {
@@ -213,7 +273,6 @@ export const calculatePositionAndDistance = (
         siblingInfo: {}, // siblingInfoは保持
         direction: childDirection,
       };
-      debugLog(`Drop position mode (${childDirection} side, no children):`, 'child');
     } else {
       // 子要素がある場合は、子要素の間に挿入
       const insertX =
@@ -230,8 +289,6 @@ export const calculatePositionAndDistance = (
           siblingInfo: {},
           direction: childDirection,
         };
-        debugLog(`Drop position mode (${childDirection} side, root with children):`, 'child');
-        debugLog(`[Root result] direction set to: ${childDirection}, insertX: ${insertX}`);
       } else {
         let prevElement: Element | undefined;
         let nextElement: Element | undefined;
@@ -308,8 +365,6 @@ export const calculatePositionAndDistance = (
             direction: childDirection,
           };
         }
-
-        debugLog(`Drop position mode (${childDirection} side, with children):`, 'between');
       }
     }
   } else if (
@@ -318,7 +373,6 @@ export const calculatePositionAndDistance = (
     !findParentNodeInHierarchy(hierarchicalData, element.id)
   ) {
     // ルート要素の場合は兄弟判定をスキップし、デフォルトのchild位置を返す
-    debugLog(`[Root element ${element.id}] Not on valid side, using default child position`);
 
     // ルート要素の場合、マウス位置で左右を判定
     let childDirection: DirectionType = 'right';
@@ -354,7 +408,6 @@ export const calculatePositionAndDistance = (
 
     // parentIdがnullの場合（ルート要素の兄弟）は、betweenモードを使用しない
     if (!parentId) {
-      debugLog(`[Sibling of root element ${element.id}] Skipping between mode for root siblings`);
       result = {
         position: 'child',
         insertY: element.y + element.height / 2,
@@ -366,10 +419,6 @@ export const calculatePositionAndDistance = (
       const siblings = getChildrenFromHierarchy(hierarchicalData, parentId)
         .filter((el) => el.visible && el.id !== draggingElementId)
         .sort((a, b) => a.y - b.y);
-
-      debugLog(
-        `[calculatePositionAndDistance] Found ${siblings.length} siblings (excluding dragging element) for element ${element.id}`,
-      );
 
       // 兄弟要素間の位置を計算
       let prevElement: Element | null = null;
@@ -485,17 +534,6 @@ export const calculatePositionAndDistance = (
   const dy = mouseY - centerY;
   const distanceSq = dx * dx + dy * dy;
 
-  // デバッグログ: 詳細な判定情報を出力
-  debugLog(
-    `[Position calc] Element ${element.id}: mouseInside=${isInsideElement}, onValidSide=${isOnValidSide}, position=${result.position}, distanceSq=${distanceSq.toFixed(2)}`,
-  );
-
-  if (isRootInMindmap) {
-    debugLog(
-      `[Root calc] Final result - position: ${result.position}, distanceSq: ${distanceSq}, insertY: ${result.insertY}, direction: ${result.direction}`,
-    );
-  }
-
   return { ...result, distanceSq };
 };
 
@@ -572,6 +610,35 @@ export const findDropTarget = (params: FindDropTargetParams): DropTargetInfo => 
     targetDirection,
   );
 
+  // X座標から階層深度を推定
+  // これにより、子要素の階層にマウスがある場合は親の階層を除外できる
+  const estimatedDepth = estimateDepthFromXPosition(
+    mouseX,
+    allElements,
+    hierarchicalData,
+    rootElement,
+  );
+
+  // 候補要素を階層深度でフィルタリング
+  // 推定された階層深度と同じか、それより深い階層の要素のみを優先
+  const candidatesWithDepth = candidates.map((element) => ({
+    element,
+    depth: hierarchicalData ? getDepthFromHierarchy(hierarchicalData, element.id) : 0,
+  }));
+
+  // 推定深度に最も近い階層の要素を優先
+  // 同じ階層の要素があればそれを優先し、なければ±1階層の要素を検討
+  const prioritizedCandidates = candidatesWithDepth.filter(({ depth }) => {
+    // 推定深度と同じ階層、または±1階層以内の要素を候補とする
+    return Math.abs(depth - estimatedDepth) <= 1;
+  });
+
+  // 優先候補が存在する場合はそれを使用、なければ全候補を使用
+  const finalCandidates =
+    prioritizedCandidates.length > 0
+      ? prioritizedCandidates.map(({ element }) => element)
+      : candidates;
+
   // 要素を親IDでグループ化
   const elementsByParent = groupElementsByParent(allElements, selectedElementIds, hierarchicalData);
 
@@ -598,7 +665,7 @@ export const findDropTarget = (params: FindDropTargetParams): DropTargetInfo => 
   let closestTarget: DropTargetInfo = null;
   let minSquaredDistance = Infinity;
 
-  for (const element of candidates) {
+  for (const element of finalCandidates) {
     const { position, distanceSq, insertY, insertX, siblingInfo, direction } =
       calculatePositionAndDistance(element, mouseX, mouseY, hierarchicalData, draggingElement);
 
@@ -630,29 +697,16 @@ export const findDropTarget = (params: FindDropTargetParams): DropTargetInfo => 
     );
 
     if (isValidRootSideDrop) {
-      debugLog(
-        `[findDropTarget] PRIORITY: Valid root side drop detected for element ${element.id}, position: ${position}`,
-      );
       // ルート要素への側面ドロップは最高優先度
       closestTarget = { element, position, insertY, insertX, siblingInfo, direction };
-      debugLog(`[findDropTarget] Root side drop - direction: ${direction}, insertX: ${insertX}`);
       break; // ルート要素が見つかったら即座に選択
     } else if (distanceSq < minSquaredDistance) {
       minSquaredDistance = distanceSq;
       closestTarget = { element, position, insertY, insertX, siblingInfo, direction };
-      debugLog(
-        `[findDropTarget] New closest: ${element.id}, distance: ${distanceSq}, direction: ${direction}`,
-      );
     }
   }
 
-  if (closestTarget) {
-    debugLog(
-      `[findDropTarget] Final selection: ${closestTarget.element.id}, position: ${closestTarget.position}, direction: ${closestTarget.direction}`,
-    );
-  } else {
-    debugLog(`[findDropTarget] No drop target found in candidates`);
-
+  if (!closestTarget) {
     // 候補が見つからない場合、ルート要素への直接ドロップを検討
     if (rootElement) {
       const rootCenterX = rootElement.x + rootElement.width / 2;
@@ -671,7 +725,6 @@ export const findDropTarget = (params: FindDropTargetParams): DropTargetInfo => 
       if (mouseY >= dropAreaTop && mouseY <= dropAreaBottom) {
         if (mouseX >= leftAreaLeft && mouseX <= leftAreaRight) {
           // 左側領域への直接ドロップ
-          debugLog(`[findDropTarget] Direct drop to root left area`);
           return {
             element: rootElement,
             position: 'child',
@@ -681,7 +734,6 @@ export const findDropTarget = (params: FindDropTargetParams): DropTargetInfo => 
           };
         } else if (mouseX >= rightAreaLeft && mouseX <= rightAreaRight) {
           // 右側領域への直接ドロップ
-          debugLog(`[findDropTarget] Direct drop to root right area`);
           return {
             element: rootElement,
             position: 'child',
@@ -692,8 +744,6 @@ export const findDropTarget = (params: FindDropTargetParams): DropTargetInfo => 
         }
       }
     }
-
-    debugLog(`[findDropTarget] No valid drop target found`);
   }
 
   return closestTarget;

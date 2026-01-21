@@ -145,7 +145,6 @@ export function activate(context: vscode.ExtensionContext) {
           localResourceRoots: [vscode.Uri.file(path.join(context.extensionPath, 'webview'))],
         },
       );
-
       // 同期ハンドラーを作成
       const syncHandler = new DocumentSyncHandler(panel, document);
 
@@ -160,20 +159,33 @@ export function activate(context: vscode.ExtensionContext) {
       // Webviewコンテンツを設定（エディタ連携モード）
       panel.webview.html = getWebviewContent(panel.webview, context, true);
 
-      // 初期データをWebviewに送信
-      panel.webview.postMessage({
-        type: 'initializeWithFile',
-        data: {
-          fileName: path.basename(targetUri.fsPath),
-          content: fileData,
-          fileType,
-          isEditorMode: true,
-        },
-      });
+      // 初期データ送信用の関数
+      // 背景: クロージャで必要な変数をキャプチャ
+      const fileName = path.basename(targetUri.fsPath);
+      const sendInitialData = () => {
+        panel.webview.postMessage({
+          type: 'initializeWithFile',
+          data: {
+            fileName,
+            content: fileData,
+            fileType,
+            isEditorMode: true,
+          },
+        });
+      };
 
       // Webviewからのメッセージを処理
+      // 背景: Webviewの準備完了を待ってから初期データを送信する必要がある
+      // 前提: Reactアプリが初期化され、メッセージハンドラーが設定された後に'ready'メッセージが送られる
+      let isInitialized = false;
       panel.webview.onDidReceiveMessage(
         async (message) => {
+          // ready メッセージを受け取ったら初期データを送信
+          if (message.type === 'ready' && !isInitialized) {
+            isInitialized = true;
+            sendInitialData();
+            return;
+          }
           await handleEditorWebviewMessage(message, pair);
         },
         undefined,
@@ -426,12 +438,18 @@ function getWebviewContent(
   const webviewBaseUri = webview.asWebviewUri(vscode.Uri.file(extensionPath));
   const webviewResourceBase = `${webviewBaseUri}/webview`;
 
-  // プレースホルダーを置換
-  html = html.replace(/{{WEBVIEW_CSPURI}}/g, webviewResourceBase);
+  // 背景: Next.jsの静的エクスポートでは、全てのパスが/_next/から始まる
+  // 前提: HTMLに含まれる相対パスを完全なVS Code Webview URIに置き換える
+  // トレードオフ: HTMLが大きくなるが、明示的で分かりやすい
+  html = html.replace(/(['"])\/_next\//g, `$1${webviewResourceBase}/_next/`);
 
-  // Bootstrap script を追加
-  const environmentScript = `
-    <script>
+  // Bootstrap script を追加（最初の<script>タグの前に挿入）
+  // 背景: Webpackのpublic pathを実行時に設定する必要がある
+  // 前提: __webpack_public_path__はwebpack起動前に設定する必要があり、どのscriptよりも先に実行される必要がある
+  // トレードオフ: グローバル変数を使うが、これがwebpackの標準的な手法
+  const environmentScript = `<script>
+      // Webpackのpublic pathを設定（webpack起動前に実行される必要がある）
+      __webpack_public_path__ = '${webviewResourceBase}/_next/';
       window.isVSCodeExtension = true;
       window.isVSCodeEditorMode = ${isEditorMode};
       
@@ -442,16 +460,40 @@ function getWebviewContent(
             const api = acquireVsCodeApi();
             window.vscode = api;
             window.__testModelingAppVscodeApi = api;
-            console.log('[Bootstrap] VSCode API acquired');
           }
         } catch (error) {
-          console.error('[Bootstrap] Failed to acquire VSCode API:', error);
+          // VSCode API取得失敗 - 環境がVSCode拡張でない可能性がある
         }
       })();
-    </script>
-  `;
+    </script>`;
 
-  html = html.replace('</head>', `${environmentScript}\n</head>`);
+  // 最初の<script>タグの直前に挿入（webpackが読み込まれる前に実行されるように）
+  html = html.replace(/<script/, `${environmentScript}<script`);
+
+  // さらに、webpackランタイムが読み込まれた直後にpublic pathを上書きする
+  // 背景: __webpack_public_path__が効かない場合の保険として、__webpack_require__.pを直接上書き
+  const webpackOverrideScript = `<script>
+    // webpackランタイムが初期化された直後にpublic pathを上書き
+    (function() {
+      const checkAndOverride = () => {
+        // __webpack_require__ (通常は 'r' として難読化されている) を探す
+        if (typeof __webpack_require__ !== 'undefined' && __webpack_require__.p) {
+          __webpack_require__.p = '${webviewResourceBase}/_next/';
+          return true;
+        }
+        return false;
+      };
+      
+      // 即座に試みる
+      if (!checkAndOverride()) {
+        // webpackがまだ読み込まれていない場合、少し待ってから再試行
+        setTimeout(checkAndOverride, 0);
+      }
+    })();
+  </script>`;
+
+  // webpack-*.jsが読み込まれた直後（</body>の前）に挿入
+  html = html.replace('</body>', `${webpackOverrideScript}</body>`);
 
   // CSPを設定
   const cspContent = [
@@ -478,6 +520,4 @@ function getWebviewContent(
   return html;
 }
 
-export function deactivate() {
-  console.log('Test Modeling App extension が非アクティブ化されました');
-}
+export function deactivate() {}

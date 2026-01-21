@@ -9,7 +9,6 @@
 
 import { Element } from '../../types/types';
 import { HierarchicalStructure } from '../../types/hierarchicalTypes';
-import { debugLog } from '../../utils/debugLogHelpers';
 import {
   findParentNodeInHierarchy,
   getChildrenFromHierarchy,
@@ -34,11 +33,6 @@ export const calculateTargetOrderValues = (
   hierarchicalData: HierarchicalStructure | null,
 ): { baseOrder: number } => {
   let baseOrder = 0;
-
-  debugLog(`[calculateTargetOrderValues] DropTarget: ${dropTarget?.element?.id}`);
-  debugLog(
-    `[calculateTargetOrderValues] DraggedElements: ${draggedElements.map((el) => el.id).join(', ')}`,
-  );
 
   if (dropTarget?.siblingInfo) {
     const { prevElement, nextElement } = dropTarget.siblingInfo;
@@ -85,7 +79,6 @@ export const calculateTargetOrderValues = (
     } else {
       // 兄弟要素がない場合（最初の子要素として追加）
       baseOrder = 0;
-      debugLog(`[calculateTargetOrderValues] No siblings - baseOrder: ${baseOrder}`);
     }
   } else if (dropTarget) {
     // child ドロップの場合
@@ -94,12 +87,8 @@ export const calculateTargetOrderValues = (
       ? getChildrenFromHierarchy(hierarchicalData, targetParentId).filter((el) => el.visible)
       : [];
     baseOrder = siblings.length; // 末尾に追加
-    debugLog(
-      `[calculateTargetOrderValues] Child drop - siblings length: ${siblings.length}, baseOrder: ${baseOrder}`,
-    );
   }
 
-  debugLog(`[calculateTargetOrderValues] Final baseOrder: ${baseOrder}`);
   return { baseOrder };
 };
 

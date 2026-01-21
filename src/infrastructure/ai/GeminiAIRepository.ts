@@ -32,6 +32,7 @@ export class GeminiAIRepository implements IAIRepository {
     systemPrompt?: string,
     forceJsonResponse = false,
     truncatePrompt = true,
+    includeSystemInstruction = true,
   ): Promise<{
     response: string;
     updatedHistory: ChatHistoryEntry[];
@@ -44,6 +45,7 @@ export class GeminiAIRepository implements IAIRepository {
       systemPrompt,
       forceJsonResponse,
       truncatePrompt,
+      includeSystemInstruction,
     );
   }
 }

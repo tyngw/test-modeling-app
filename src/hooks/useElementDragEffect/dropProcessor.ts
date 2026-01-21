@@ -79,9 +79,6 @@ export const validateParentChange = (
 
   // 自分自身を親にしようとしている場合は無効
   if (element.id === newParentId) {
-    debugLog(
-      `無効な操作: 自分自身を親にしようとしています element=${element.id}, newParentId=${newParentId}`,
-    );
     return {
       isValid: false,
       errorMessage: ToastMessages.dropSelfChild,
@@ -95,9 +92,6 @@ export const validateParentChange = (
       ? findParentNodeInHierarchy(hierarchicalData, newParentId)
       : null;
     const isDirectChild = newParentNode?.data.id === element.id;
-    debugLog(
-      `無効な操作: ${isDirectChild ? '自身の子要素' : '循環参照'} element=${element.id}, newParentId=${newParentId}`,
-    );
     return {
       isValid: false,
       errorMessage: isDirectChild
@@ -111,7 +105,6 @@ export const validateParentChange = (
     newParentId && hierarchicalData ? getDepthFromHierarchy(hierarchicalData, newParentId) : 0;
   const maxAllowedDepth = 10; // 最大深さの制限値
   if (newParentDepth >= maxAllowedDepth) {
-    debugLog(`無効な操作: 最大深さ超過 currentDepth=${newParentDepth}, max=${maxAllowedDepth}`);
     return {
       isValid: false,
       errorMessage: ToastMessages.dropInvalidHierarchy,
@@ -167,22 +160,13 @@ export const processChildDrop = (
       // ルート要素の場合、ドロップターゲット情報から方向を決定
       if (currentDropTarget?.direction) {
         newDirection = currentDropTarget.direction;
-        debugLog(
-          `[processChildDrop] Using dropTarget direction: ${newDirection} for element ${element.id}`,
-        );
       } else if (currentDropTarget?.insertX !== undefined) {
         // fallback: insertXから方向を判定
         const rootCenterX = target.x + target.width / 2;
         newDirection = currentDropTarget.insertX < rootCenterX ? 'left' : 'right';
-        debugLog(
-          `[processChildDrop] Fallback direction from insertX: ${newDirection} for element ${element.id}`,
-        );
       } else {
         // fallback: 要素の現在位置に基づいて判定
         newDirection = element.x < target.x ? 'left' : 'right';
-        debugLog(
-          `[processChildDrop] Fallback direction from element position: ${newDirection} for element ${element.id}`,
-        );
       }
     } else {
       // ルート要素以外の場合、親の方向を継承
@@ -249,14 +233,6 @@ export const processBetweenDrop = (
     adjustOrdersForNewElements,
   } = params;
 
-  // ドロップ処理時のデバッグログを追加
-  debugLog(
-    `[processBetweenDrop] target=${target.id}, siblingInfo: ${JSON.stringify({
-      prevElementId: currentDropTarget?.siblingInfo?.prevElement?.id,
-      nextElementId: currentDropTarget?.siblingInfo?.nextElement?.id,
-    })}`,
-  );
-
   // 要素間へのドロップ処理
   let newParentId: string | null;
 
@@ -266,21 +242,18 @@ export const processBetweenDrop = (
 
     if (prevElement && nextElement) {
       // 2つの要素の間にドロップする場合
-      debugLog(`  Between two elements: prev=${prevElement.id}, next=${nextElement.id}`);
       const prevParent = hierarchicalData
         ? findParentNodeInHierarchy(hierarchicalData, prevElement.id)
         : null;
       newParentId = prevParent?.data.id || null;
     } else if (prevElement) {
       // 最後の要素の後にドロップする場合
-      debugLog(`  After last element: prev=${prevElement.id}`);
       const prevParent = hierarchicalData
         ? findParentNodeInHierarchy(hierarchicalData, prevElement.id)
         : null;
       newParentId = prevParent?.data.id || null;
     } else if (nextElement) {
       // 最初の要素の前にドロップする場合
-      debugLog(`  Before first element: next=${nextElement.id}`);
       const nextParent = hierarchicalData
         ? findParentNodeInHierarchy(hierarchicalData, nextElement.id)
         : null;
@@ -288,12 +261,10 @@ export const processBetweenDrop = (
     } else {
       // siblingInfoはあるがprevElementもnextElementもない場合
       // 子要素が存在しない場合、親要素の子要素として追加
-      debugLog(`  No siblings: target=${target.id}`);
       newParentId = target.id;
     }
   } else {
     // 子要素が存在しない場合、親要素の子要素として追加
-    debugLog(`  No siblings info: target=${target.id}`);
     newParentId = target.id;
   }
 

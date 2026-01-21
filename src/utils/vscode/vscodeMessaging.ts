@@ -2,6 +2,7 @@
 'use client';
 
 import { isVSCodeEditorMode } from '../environment/environmentDetector';
+import { debugLog } from '../debugLogHelpers';
 
 export interface DocumentUpdatePayload {
   hierarchicalData?: unknown;
@@ -69,21 +70,21 @@ let pendingUpdatePayload: DocumentUpdatePayload | null = null;
  * markdown-table-editor方式: 状態変更を即座に送信
  */
 export function notifyDocumentUpdate(payload: DocumentUpdatePayload): void {
-  console.log('[vscodeMessaging] notifyDocumentUpdate called');
-  console.log('[vscodeMessaging] isVSCodeEditorMode:', isVSCodeEditorMode());
+  debugLog('[vscodeMessaging] notifyDocumentUpdate called');
+  debugLog('[vscodeMessaging] isVSCodeEditorMode:', isVSCodeEditorMode());
 
   if (!isVSCodeEditorMode()) {
-    console.log('[vscodeMessaging] Not in editor mode, skipping');
+    debugLog('[vscodeMessaging] Not in editor mode, skipping');
     return;
   }
 
   const vscode = getVSCodeAPI();
-  console.log('[vscodeMessaging] VSCode API available:', !!vscode);
+  debugLog('[vscodeMessaging] VSCode API available:', !!vscode);
 
   if (!vscode) {
-    console.error('[vscodeMessaging] VSCode API not available');
-    console.error('[vscodeMessaging] window.vscode:', !!window.vscode);
-    console.error(
+    debugLog('[vscodeMessaging] VSCode API not available');
+    debugLog('[vscodeMessaging] window.vscode:', !!window.vscode);
+    debugLog(
       '[vscodeMessaging] window.__testModelingAppVscodeApi:',
       !!window.__testModelingAppVscodeApi,
     );
@@ -91,7 +92,7 @@ export function notifyDocumentUpdate(payload: DocumentUpdatePayload): void {
   }
 
   if (isUpdating) {
-    console.log('[vscodeMessaging] Update in progress, queueing latest payload');
+    debugLog('[vscodeMessaging] Update in progress, queueing latest payload');
     pendingUpdatePayload = { ...payload };
     return;
   }
@@ -105,15 +106,15 @@ export function notifyDocumentUpdate(payload: DocumentUpdatePayload): void {
     timestamp: Date.now(),
   };
 
-  console.log('[vscodeMessaging] Sending updateDocument message');
-  console.log('[vscodeMessaging] Message type:', message.type);
-  console.log('[vscodeMessaging] Has data:', !!message.data);
+  debugLog('[vscodeMessaging] Sending updateDocument message');
+  debugLog('[vscodeMessaging] Message type:', message.type);
+  debugLog('[vscodeMessaging] Has data:', !!message.data);
 
   try {
     vscode.postMessage(message);
-    console.log('[vscodeMessaging] ✅ Message sent successfully');
+    debugLog('[vscodeMessaging] ✅ Message sent successfully');
   } catch (error) {
-    console.error('[vscodeMessaging] ❌ Error sending message:', error);
+    debugLog('[vscodeMessaging] ❌ Error sending message:', error);
     isUpdating = false;
     pendingUpdatePayload = null;
   }
@@ -134,7 +135,7 @@ export function setupVSCodeMessageListener(
   const vscode = getVSCodeAPI();
 
   if (vscode) {
-    console.log('[vscodeMessaging] VSCode API initialized');
+    debugLog('[vscodeMessaging] VSCode API initialized');
     // 準備完了を通知
     setTimeout(() => {
       vscode.postMessage({ type: 'ready' });
@@ -144,19 +145,19 @@ export function setupVSCodeMessageListener(
   const messageHandler = (event: MessageEvent) => {
     const message = event.data;
 
-    console.log('[vscodeMessaging] Message received from extension');
-    console.log('[vscodeMessaging] Message:', message);
+    debugLog('[vscodeMessaging] Message received from extension');
+    debugLog('[vscodeMessaging] Message:', message);
 
     if (!message || typeof message.type !== 'string') {
-      console.warn('[vscodeMessaging] Invalid message format');
+      debugLog('[vscodeMessaging] Invalid message format');
       return;
     }
 
-    console.log('[vscodeMessaging] Processing message type:', message.type);
+    debugLog('[vscodeMessaging] Processing message type:', message.type);
 
     switch (message.type) {
       case 'initializeWithFile':
-        console.log('[vscodeMessaging] Initializing with file');
+        debugLog('[vscodeMessaging] Initializing with file');
         if (message.data) {
           onInitializeWithFile(message.data);
         }
@@ -164,10 +165,10 @@ export function setupVSCodeMessageListener(
 
       case 'documentUpdated':
         // markdown-table-editor方式: 更新後の最新データを受信
-        console.log('[vscodeMessaging] Document updated from extension');
+        debugLog('[vscodeMessaging] Document updated from extension');
         isUpdating = false; // 更新完了
         if (message.data) {
-          console.log('[vscodeMessaging] Calling onDocumentUpdated');
+          debugLog('[vscodeMessaging] Calling onDocumentUpdated');
           onDocumentUpdated(message.data as DocumentUpdatedMessagePayload);
         }
 
@@ -179,13 +180,13 @@ export function setupVSCodeMessageListener(
         break;
 
       case 'updateError':
-        console.error('[vscodeMessaging] Update error from extension:', message.message);
+        debugLog('[vscodeMessaging] Update error from extension:', message.message);
         isUpdating = false;
         pendingUpdatePayload = null;
         break;
 
       default:
-        console.warn('[vscodeMessaging] Unknown message type:', message.type);
+        debugLog('[vscodeMessaging] Unknown message type:', message.type);
         break;
     }
   };
