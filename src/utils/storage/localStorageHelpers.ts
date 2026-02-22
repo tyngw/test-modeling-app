@@ -356,10 +356,10 @@ export const setSystemPromptTemplate = (value: string): void =>
 
 // API provider関連
 export const getApiProvider = (): ApiProvider => {
-  const stored = getSetting(API_PROVIDER_KEY, 'gemini');
+  const stored = getSetting(API_PROVIDER_KEY, 'gemini') as unknown;
   // APIプロバイダーの値を検証して型安全にする
-  if (stored === 'openai' || stored === 'gemini') {
-    return stored;
+  if (stored === 'openai') {
+    return 'openai';
   }
   return 'gemini'; // デフォルトはGemini
 };

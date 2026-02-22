@@ -496,7 +496,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                 color: currentTheme.MODAL.TEXT_COLOR,
                                 opacity: 0.9,
                                 wordBreak: 'break-all',
-                                mt: 0.5,
                                 marginTop: '0.5rem',
                               }}
                             >
