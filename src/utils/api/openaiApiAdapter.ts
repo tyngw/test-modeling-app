@@ -77,7 +77,8 @@ export class OpenAIApiAdapter {
       };
 
       // JSON形式の応答を強制する場合
-      if (forceJsonResponse) {
+      // ローカルLLMはresponse_formatをサポートしないため、クラウドAPIの場合のみ追加
+      if (forceJsonResponse && !isLocalLLMEndpoint(endpoint)) {
         // eslint-disable-next-line camelcase
         requestPayload.response_format = { type: 'json_object' };
       }
@@ -229,7 +230,9 @@ export class OpenAIApiAdapter {
         max_tokens: 2048,
       };
 
-      if (forceJsonResponse) {
+      // JSON形式の応答を強制する場合
+      // ローカルLLMはresponse_formatをサポートしないため、クラウドAPIの場合のみ追加
+      if (forceJsonResponse && !isLocalLLMEndpoint(endpoint)) {
         // eslint-disable-next-line camelcase
         requestPayload.response_format = { type: 'json_object' };
       }

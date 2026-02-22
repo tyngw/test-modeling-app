@@ -21,6 +21,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'エンドポイントとペイロードが必須です' }, { status: 400 });
     }
 
+    // ローカルLLM対応: response_formatはサポートされていないため削除
+    // これはローカルLLMサーバーとの互換性を確保するための防御的な修正
+    const isLocalServer =
+      endpoint.startsWith('http://localhost') ||
+      endpoint.startsWith('http://127.0.0.1') ||
+      endpoint.startsWith('http://192.168') ||
+      endpoint.startsWith('http://10.');
+
+    if (isLocalServer && payload.response_format) {
+      delete payload.response_format;
+    }
+
     // プロンプト長のプリチェック（ローカルLLMの制限対策）
     // 入力トークン数をラフに推定：日本語は1文字≈1トークン程度
     const messages = payload.messages || [];
@@ -30,11 +42,6 @@ export async function POST(request: NextRequest) {
     );
 
     // ローカルLLM（4096トークン制限）への対応：入力+出力で6000文字程度だと危ない
-    const isLocalServer =
-      endpoint.startsWith('http://localhost') ||
-      endpoint.startsWith('http://127.0.0.1') ||
-      endpoint.startsWith('http://192.168');
-
     if (isLocalServer && totalPromptLength > 5000) {
       // eslint-disable-next-line no-console
       console.warn(
