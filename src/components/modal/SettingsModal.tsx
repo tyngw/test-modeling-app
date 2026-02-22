@@ -65,8 +65,8 @@ interface SettingsModalProps {
 const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   onClose,
-  _dispatch,
-  _modalId,
+  dispatch, // eslint-disable-line @typescript-eslint/no-unused-vars
+  modalId, // eslint-disable-line @typescript-eslint/no-unused-vars
   onOpen,
 }) => {
   const isMounted = useIsMounted();
