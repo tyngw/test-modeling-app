@@ -10,7 +10,37 @@ import axios from 'axios';
  *   ブラウザのセキュリティポリシーでブロックされる（CORS、CSP）
  * - バックエンド経由でアクセスすることで、セキュリティを維持しながら
  *   ローカルサーバーへのアクセスを実現する
+ *
+ * セキュリティ: SSRF対策
+ * - 許可ホストのみをホワイトリスト方式で許可（ローカルネットワーク範囲に限定）
  */
+
+/**
+ * ホストが許可リストに含まれるかを検証
+ * SSRF対策: ローカルネットワークアドレスのみを許可
+ */
+function isAllowedHost(urlString: string): boolean {
+  try {
+    const url = new URL(urlString);
+    const hostname = url.hostname || url.host;
+
+    // 許可ホスト：ローカルネットワーク範囲のみ
+    // ローカルLLMサーバーをサポート（SSRF対策: 内部通信のみ許可）
+    const allowedPatterns = [
+      /^localhost$/i,
+      /^127\.\d+\.\d+\.\d+$/, // 127.0.x.x
+      /^192\.168\.\d+\.\d+$/, // 192.168.x.x
+      /^10\.\d+\.\d+\.\d+$/, // 10.x.x.x
+      /^172\.(1[6-9]|2[0-9]|3[01])\.\d+\.\d+$/, // 172.16.x.x - 172.31.x.x
+      /^169\.254\.\d+\.\d+$/, // 169.254.x.x (link-local)
+    ];
+
+    return allowedPatterns.some((pattern) => pattern.test(hostname));
+  } catch {
+    return false;
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -19,6 +49,16 @@ export async function POST(request: NextRequest) {
     // リクエスト検証
     if (!endpoint || !payload) {
       return NextResponse.json({ error: 'エンドポイントとペイロードが必須です' }, { status: 400 });
+    }
+
+    // セキュリティ: 許可ホストのみを許可（SSRF対策）
+    if (!isAllowedHost(endpoint)) {
+      // eslint-disable-next-line no-console
+      console.error(`[API Route Security] Disallowed host attempted: ${endpoint}`);
+      return NextResponse.json(
+        { error: 'アクセスが許可されていないエンドポイントです' },
+        { status: 403 },
+      );
     }
 
     // ローカルLLM対応: response_formatはサポートされていないため削除

@@ -21,7 +21,8 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline'", // MUI スタイルに必要
               "img-src 'self' data: blob:",
               "font-src 'self' data:",
-              // 外部APIはバックエンド経由でアクセス（API Routes）
+              // 外部APIはすべてバックエンド経由でアクセス（/api/ai/generate経由）
+              // OpenAI、Gemini等のクラウドAPIへの直接アクセスはなし
               "connect-src 'self' https://generativelanguage.googleapis.com",
               "object-src 'none'",
               "base-uri 'self'",

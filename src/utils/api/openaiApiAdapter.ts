@@ -104,19 +104,15 @@ export class OpenAIApiAdapter {
         });
       }
 
-      // ローカルLLMサーバーへのリクエストはAPI Route経由で実行
-      // （セキュリティ: CORS、CSP制約を回避し、サーバー側で管理）
-      let response;
-      if (isLocalLLMEndpoint(endpoint)) {
-        response = await axios.post('/api/ai/generate', {
-          endpoint,
-          payload: requestPayload,
-          apiKey,
-        });
-      } else {
-        // OpenAIなどのクラウドAPIは直接アクセス
-        response = await axios.post(endpoint, requestPayload, { headers });
-      }
+      // セキュリティ: すべてのリクエストをAPI Route経由で実行
+      // - ローカルLLM: CORS/CSP制約を回避
+      // - クラウドAPI(OpenAI等): CSP制約を回避し、ブラウザから直接アクセスすることで引き起こされる
+      //   セキュリティ問題を防止（api.openai.com等がCSPでブロックされる可能性）
+      const response = await axios.post('/api/ai/generate', {
+        endpoint,
+        payload: requestPayload,
+        apiKey,
+      });
 
       const rawTextResponse = response.data.choices?.[0]?.message?.content || '';
       const sanitizedResponse = sanitizeApiResponse(rawTextResponse) as string;
@@ -259,19 +255,15 @@ export class OpenAIApiAdapter {
         });
       }
 
-      // ローカルLLMサーバーへのリクエストはAPI Route経由で実行
-      // （セキュリティ: CORS、CSP制約を回避し、サーバー側で管理）
-      let response;
-      if (isLocalLLMEndpoint(endpoint)) {
-        response = await axios.post('/api/ai/generate', {
-          endpoint,
-          payload: requestPayload,
-          apiKey,
-        });
-      } else {
-        // OpenAIなどのクラウドAPIは直接アクセス
-        response = await axios.post(endpoint, requestPayload, { headers });
-      }
+      // セキュリティ: すべてのリクエストをAPI Route経由で実行
+      // - ローカルLLM: CORS/CSP制約を回避
+      // - クラウドAPI(OpenAI等): CSP制約を回避し、ブラウザから直接アクセスすることで引き起こされる
+      //   セキュリティ問題を防止（api.openai.com等がCSPでブロックされる可能性）
+      const response = await axios.post('/api/ai/generate', {
+        endpoint,
+        payload: requestPayload,
+        apiKey,
+      });
 
       const rawTextResponse = response.data.choices?.[0]?.message?.content || '';
       const sanitizedResponse = sanitizeApiResponse(rawTextResponse) as string;

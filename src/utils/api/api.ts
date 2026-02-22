@@ -3,7 +3,6 @@ import {
   getApiEndpoint,
   getSystemPromptTemplate,
   getApiProvider,
-  getPresetApiEndpoint,
 } from '../storage/localStorageHelpers';
 import { SYSTEM_PROMPT_TEMPLATE } from '../../config/systemPrompt';
 import { SuggestionResponse } from './schema';
@@ -341,7 +340,9 @@ const generateElementSuggestionsGemini = async (
   _modelType: string,
 ): Promise<SuggestionResponse> => {
   try {
-    const endpoint = `${getPresetApiEndpoint()}?key=${apiKey}`;
+    // カスタムエンドポイント対応: getApiEndpoint()を使用してカスタム値を考慮
+    // generateWithGemini*系と統一し、プロキシ経由での利用に対応
+    const endpoint = `${getApiEndpoint()}?key=${apiKey}`;
     const systemPrompt = getSystemPromptTemplate();
 
     // JSON形式のレスポンスを要求するリクエスト
