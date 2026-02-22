@@ -202,6 +202,8 @@ export function validateSettingValue(key: string, value: unknown): boolean {
     'prompt',
     'systemPromptTemplate',
     'modelType',
+    'apiProvider',
+    'apiEndpointCustom',
     'layoutMode',
     'numberOfSections',
     'markerType',
@@ -251,7 +253,17 @@ export function validateSettingValue(key: string, value: unknown): boolean {
       return typeof value === 'string' && (value === '' || validateTextInput(value, 50000));
 
     case 'modelType':
-      return typeof value === 'string' && ['gemini-2.0-flash', 'gemini-2.5-flash'].includes(value);
+      // モデル名は手入力対応：空でない文字列で、長さは100文字以内
+      // (gemini-2.0-flash, gpt-4o, gpt-4-turbo など各種モデルに対応)
+      return typeof value === 'string' && value.trim().length > 0 && value.length <= 100;
+
+    case 'apiProvider':
+      // APIプロバイダー: 'gemini' または 'openai'
+      return typeof value === 'string' && ['gemini', 'openai'].includes(value);
+
+    case 'apiEndpointCustom':
+      // カスタムエンドポイント: 空文字列か有効なURL
+      return typeof value === 'string' && (value === '' || validateExternalUrl(value));
 
     case 'layoutMode':
       return typeof value === 'string' && ['default', 'mindmap'].includes(value);

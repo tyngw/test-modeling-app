@@ -32,9 +32,11 @@ export class AIGenerationService {
     const prompt = this.configRepository.getPrompt();
     const systemPrompt = this.configRepository.getSystemPromptTemplate();
     const modelType = this.configRepository.getModelType();
+    const apiProvider = this.configRepository.getApiProvider();
 
-    if (!apiKey) {
-      throw new Error('APIキーが設定されていません。設定から登録してください。');
+    // APIキーの検証: Gemini は必須、OpenAI互換はオプション（ローカルLLM対応）
+    if (!apiKey && apiProvider === 'gemini') {
+      throw new Error('APIキーが設定されていません。Gemini API キーを設定から登録してください。');
     }
 
     if (!prompt) {
@@ -92,9 +94,11 @@ export class AIGenerationService {
   ): Promise<AIOperation[]> {
     const apiKey = this.configRepository.getApiKey();
     const modelType = this.configRepository.getModelType();
+    const apiProvider = this.configRepository.getApiProvider();
 
-    if (!apiKey) {
-      throw new Error('APIキーが設定されていません。設定から登録してください。');
+    // APIキーの検証: Gemini は必須、OpenAI互換はオプション（ローカルLLM対応）
+    if (!apiKey && apiProvider === 'gemini') {
+      throw new Error('APIキーが設定されていません。Gemini API キーを設定から登録してください。');
     }
 
     // プロンプトを構築
@@ -127,8 +131,10 @@ export class AIGenerationService {
     const apiKey = this.configRepository.getApiKey();
     const prompt = this.configRepository.getPrompt();
     const modelType = this.configRepository.getModelType();
+    const apiProvider = this.configRepository.getApiProvider();
 
-    if (!apiKey) {
+    // APIキーの検証: Gemini は必須、OpenAI互換はオプション（ローカルLLM対応）
+    if (!apiKey && apiProvider === 'gemini') {
       return [];
     }
 
@@ -238,8 +244,10 @@ export class AIGenerationService {
   private async initializeContext(inputText: string): Promise<void> {
     const apiKey = this.configRepository.getApiKey();
     const modelType = this.configRepository.getModelType();
+    const apiProvider = this.configRepository.getApiProvider();
 
-    if (!apiKey) {
+    // APIキーの検証: Gemini は必須、OpenAI互換はオプション（ローカルLLM対応）
+    if (!apiKey && apiProvider === 'gemini') {
       return;
     }
 

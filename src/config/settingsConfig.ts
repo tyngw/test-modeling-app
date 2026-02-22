@@ -135,22 +135,37 @@ export const SETTINGS_TABS: SettingTab[] = [
     label: 'API Setting',
     fields: [
       {
-        key: 'modelType',
-        label: 'Select Model',
+        key: 'apiProvider',
+        label: 'API Provider',
         type: 'radio',
-        helperText: 'APIモデルの選択',
-        defaultValue: 'gemini-2.0-flash',
+        helperText: '使用するAPIプロバイダーを選択してください',
+        defaultValue: 'gemini',
         options: [
-          { value: 'gemini-2.0-flash', label: 'Gemini-2.0-flash' },
-          { value: 'gemini-2.5-flash', label: 'Gemini-2.5-flash' },
+          { value: 'gemini', label: 'Google Gemini' },
+          { value: 'openai', label: 'OpenAI (互換API)' },
         ],
       },
       {
-        key: 'apiKey',
-        label: 'Gemini API Key',
+        key: 'modelType',
+        label: 'Model Name',
+        type: 'text',
+        helperText: 'AIモデル名を入力してください。（例：gemini-2.0-flash, gpt-4o）',
+        defaultValue: 'gemini-2.0-flash',
+      },
+      {
+        key: 'apiEndpointCustom',
+        label: 'Custom API Endpoint URL',
         type: 'text',
         helperText:
-          '入力されたキーは暗号化してlocalStorageに保存されます。サーバに送信されることはありません。',
+          '独自のエンドポイント URL（オプション）。空の場合はプロバイダーに応じたプリセット URL が自動で使用されます。',
+        defaultValue: '',
+      },
+      {
+        key: 'apiKey',
+        label: 'API Key',
+        type: 'text',
+        helperText:
+          'Gemini API: 必須。OpenAI互換: ローカルLLMを使用する場合はオプション（例：LM Studio）。入力されたキーは暗号化してlocalStorageに保存されます。',
         defaultValue: '',
       },
     ],
