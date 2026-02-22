@@ -52,13 +52,22 @@ const PROMPT_KEY = 'prompt';
 const SYSTEM_PROMPT_KEY = 'systemPromptTemplate';
 const APIKEY_KEY = 'apiKey';
 const MODEL_TYPE_KEY = 'modelType';
+const API_PROVIDER_KEY = 'apiProvider';
+const API_ENDPOINT_CUSTOM_KEY = 'apiEndpointCustom';
 
-const MODEL_ENDPOINTS: { [key: string]: string } = {
+// API provider type
+export type ApiProvider = 'gemini' | 'openai';
+
+// Preset endpoints for each provider and model
+const GEMINI_ENDPOINTS: { [key: string]: string } = {
   'gemini-2.0-flash':
     'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
   'gemini-2.5-flash':
     'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
 };
+
+// For backward compatibility
+const MODEL_ENDPOINTS: { [key: string]: string } = GEMINI_ENDPOINTS;
 
 // 暗号化キー（実際の本番環境ではより安全な方法を使用）
 const ENCRYPTION_KEY = 'test-modeling-app-key-2024';
@@ -345,6 +354,69 @@ export const getSystemPromptTemplate = (): string =>
 export const setSystemPromptTemplate = (value: string): void =>
   setSetting(SYSTEM_PROMPT_KEY, value);
 
+// API provider関連
+export const getApiProvider = (): ApiProvider => {
+  const stored = getSetting(API_PROVIDER_KEY, 'gemini');
+  // APIプロバイダーの値を検証して型安全にする
+  if (stored === 'openai' || stored === 'gemini') {
+    return stored;
+  }
+  return 'gemini'; // デフォルトはGemini
+};
+
+export const setApiProvider = (provider: ApiProvider): void => {
+  setSetting(API_PROVIDER_KEY, provider);
+};
+
+// エンドポイント取得（カスタムエンドポイント対応）
+export const getApiEndpoint = (): string => {
+  // カスタムエンドポイントが設定されている場合はそれを使用
+  const customEndpoint = safeLocalStorage.getItem(API_ENDPOINT_CUSTOM_KEY);
+  if (customEndpoint && customEndpoint.trim().length > 0) {
+    return customEndpoint;
+  }
+
+  // プリセットエンドポイントを取得
+  return getPresetApiEndpoint();
+};
+
+// プリセットエンドポイント取得（プロバイダーとモデルに基づく）
+export const getPresetApiEndpoint = (): string => {
+  const provider = getApiProvider();
+  const modelType = getModelType();
+
+  if (provider === 'openai') {
+    // OpenAI互換API: モデル名に関わらず固定エンドポイント
+    return 'https://api.openai.com/v1/chat/completions';
+  }
+
+  // Gemini API: モデル名を含めたエンドポイント
+  return `https://generativelanguage.googleapis.com/v1beta/models/${modelType}:generateContent`;
+};
+
+// カスタムエンドポイント操作
+export const getCustomApiEndpoint = (): string => {
+  const custom = safeLocalStorage.getItem(API_ENDPOINT_CUSTOM_KEY);
+  return custom || '';
+};
+
+export const setCustomApiEndpoint = (endpoint: string): void => {
+  if (endpoint && endpoint.trim().length > 0) {
+    const trimmedEndpoint = endpoint.trim();
+    // URLの基本的な検証
+    try {
+      new URL(trimmedEndpoint);
+      safeLocalStorage.setItem(API_ENDPOINT_CUSTOM_KEY, trimmedEndpoint);
+      debugLog('[CustomEndpoint] Set:', trimmedEndpoint);
+    } catch {
+      debugLog('Invalid URL format for custom endpoint:', trimmedEndpoint);
+    }
+  } else {
+    // 空の場合はカスタムエンドポイントをクリア
+    safeLocalStorage.removeItem(API_ENDPOINT_CUSTOM_KEY);
+  }
+};
+
 // モデルタイプ関連
 export const getModelType = (): string => {
   const currentModel = getSetting(MODEL_TYPE_KEY, Object.keys(MODEL_ENDPOINTS)[0]);
@@ -359,12 +431,6 @@ export const getModelType = (): string => {
 };
 
 export const setModelType = (value: string): void => setSetting(MODEL_TYPE_KEY, value);
-
-// エンドポイント取得
-export const getApiEndpoint = (): string => {
-  const modelType = getModelType();
-  return MODEL_ENDPOINTS[modelType] || MODEL_ENDPOINTS['gemini-2.0-flash'];
-};
 
 // タブの状態関連
 export const getTabsState = (): string | null => safeLocalStorage.getItem(TABS_STORAGE_KEY);

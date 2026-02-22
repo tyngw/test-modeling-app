@@ -1,19 +1,86 @@
 import axios from 'axios';
-import { getApiEndpoint, getSystemPromptTemplate } from '../storage/localStorageHelpers';
+import {
+  getApiEndpoint,
+  getSystemPromptTemplate,
+  getApiProvider,
+  getPresetApiEndpoint,
+} from '../storage/localStorageHelpers';
 import { SYSTEM_PROMPT_TEMPLATE } from '../../config/systemPrompt';
 import { SuggestionResponse } from './schema';
 import { sanitizeApiResponse } from '../security/sanitization';
 import { validateJsonData } from '../security/validation';
 import { debugLog } from '../debugLogHelpers';
+import { OpenAIApiAdapter, convertGeminiToOpenAIHistory } from './openaiApiAdapter';
 
-// スレッド管理用の型定義
+// スレッド管理用の型定義（Gemini形式）
 interface ChatHistory {
   role: 'user' | 'model';
   parts: { text: string }[];
 }
 
-// スレッド形式でのGemini API呼び出し
+// スレッド形式でのAPI呼び出し（プロバイダーに応じた分岐処理）
 export const generateWithGeminiThread = async (
+  prompt: string,
+  apiKey: string,
+  modelType: string,
+  chatHistory: ChatHistory[] = [],
+  customSystemPrompt?: string,
+  forceJsonResponse = false,
+  truncatePrompt = true,
+  includeSystemInstruction = true,
+): Promise<{ response: string; updatedHistory: ChatHistory[] }> => {
+  const provider = getApiProvider();
+
+  // OpenAI互換APIの場合
+  if (provider === 'openai') {
+    const endpoint = getApiEndpoint();
+    const systemPrompt = customSystemPrompt || getSystemPromptTemplate() || undefined;
+
+    // Gemini形式のチャット履歴をOpenAI形式に変換
+    const openaiHistory = convertGeminiToOpenAIHistory(chatHistory);
+
+    const result = await OpenAIApiAdapter.generateWithThread(
+      prompt,
+      apiKey,
+      modelType,
+      endpoint,
+      openaiHistory,
+      systemPrompt,
+      forceJsonResponse,
+      truncatePrompt,
+      includeSystemInstruction,
+    );
+
+    // OpenAI形式のレスポンスを処理
+    // 戻り値はOpenAI形式だが、他のコード互換性のためGemini形式に変換して返す必要がある
+    const geminiHistory: ChatHistory[] = result.updatedHistory
+      .filter((msg) => msg.role !== 'system')
+      .map((msg) => ({
+        role: msg.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: msg.content }],
+      }));
+
+    return {
+      response: result.response,
+      updatedHistory: geminiHistory,
+    };
+  }
+
+  // Gemini API（デフォルト）
+  return generateWithGeminiThreadInternal(
+    prompt,
+    apiKey,
+    modelType,
+    chatHistory,
+    customSystemPrompt,
+    forceJsonResponse,
+    truncatePrompt,
+    includeSystemInstruction,
+  );
+};
+
+// Gemini API実装（内部用）
+const generateWithGeminiThreadInternal = async (
   prompt: string,
   apiKey: string,
   _modelType: string,
@@ -112,6 +179,43 @@ export const generateWithGeminiThread = async (
 export const generateWithGemini = async (
   prompt: string,
   apiKey: string,
+  modelType: string,
+  useOriginalSystemPrompt = false,
+  customSystemPrompt?: string,
+  forceJsonResponse = false,
+): Promise<string> => {
+  const provider = getApiProvider();
+
+  // OpenAI互換APIの場合
+  if (provider === 'openai') {
+    const endpoint = getApiEndpoint();
+    const systemPrompt = customSystemPrompt || getSystemPromptTemplate() || undefined;
+
+    return OpenAIApiAdapter.generateSingle(
+      prompt,
+      apiKey,
+      modelType,
+      endpoint,
+      forceJsonResponse,
+      systemPrompt,
+    );
+  }
+
+  // Gemini API（デフォルト）
+  return generateWithGeminiInternal(
+    prompt,
+    apiKey,
+    modelType,
+    useOriginalSystemPrompt,
+    customSystemPrompt,
+    forceJsonResponse,
+  );
+};
+
+// Gemini API実装（内部用）
+const generateWithGeminiInternal = async (
+  prompt: string,
+  apiKey: string,
   _modelType: string,
   useOriginalSystemPrompt = false,
   customSystemPrompt?: string,
@@ -196,15 +300,48 @@ export const generateWithGemini = async (
   }
 };
 
-// 提案要素をJSON形式で取得する関数
+// 提案要素をJSON形式で取得する関数（プロバイダーに応じた分岐処理）
 export const generateElementSuggestions = async (
+  prompt: string,
+  apiKey: string,
+  modelType: string,
+): Promise<SuggestionResponse> => {
+  try {
+    const provider = getApiProvider();
+
+    // OpenAI互換APIの場合
+    if (provider === 'openai') {
+      const endpoint = getApiEndpoint();
+      const systemPrompt = getSystemPromptTemplate();
+
+      const response = await OpenAIApiAdapter.generateSingle(
+        prompt,
+        apiKey,
+        modelType,
+        endpoint,
+        true, // forceJsonResponse
+        systemPrompt,
+      );
+
+      return parseJsonSuggestionResponse(response);
+    }
+
+    // Gemini API（デフォルト）
+    return generateElementSuggestionsGemini(prompt, apiKey, modelType);
+  } catch (error) {
+    debugLog('Error generating suggestions:', error);
+    throw new Error('API呼び出しに失敗しました');
+  }
+};
+
+// Gemini用の提案要素生成（内部用）
+const generateElementSuggestionsGemini = async (
   prompt: string,
   apiKey: string,
   _modelType: string,
 ): Promise<SuggestionResponse> => {
   try {
-    // debugLog('prompt: \n', prompt);
-    const endpoint = `${getApiEndpoint()}?key=${apiKey}`;
+    const endpoint = `${getPresetApiEndpoint()}?key=${apiKey}`;
     const systemPrompt = getSystemPromptTemplate();
 
     // JSON形式のレスポンスを要求するリクエスト
@@ -226,8 +363,6 @@ export const generateElementSuggestions = async (
           topK: 40,
           maxOutputTokens: 1024,
           responseMimeType: 'application/json',
-          // responseSchemaを一時的に削除してテスト
-          // responseSchema: suggestionResponseSchema,
         },
       },
       {
@@ -237,45 +372,49 @@ export const generateElementSuggestions = async (
       },
     );
 
-    // JSONレスポンスの取得とサニタイゼーション
     const rawJsonText =
       response.data.candidates?.[0]?.content?.parts?.[0]?.text || '{"suggestions":[]}';
 
-    // JSONデータの検証
-    if (!validateJsonData(rawJsonText)) {
-      // // console.warn('Invalid JSON response from API, using empty suggestions');
-      return { suggestions: [] };
-    }
+    return parseJsonSuggestionResponse(rawJsonText);
+  } catch (error) {
+    debugLog('Error in generateElementSuggestionsGemini:', error);
+    throw new Error('API呼び出しに失敗しました');
+  }
+};
 
-    let jsonResponse: SuggestionResponse;
+// JSON形式の提案レスポンスをパース（共通処理）
+const parseJsonSuggestionResponse = (responseText: string): SuggestionResponse => {
+  // JSONデータの検証
+  if (!validateJsonData(responseText)) {
+    return { suggestions: [] };
+  }
 
-    try {
-      // 文字列形式の場合、JSONに変換
-      if (typeof rawJsonText === 'string') {
-        const parsedJson = JSON.parse(rawJsonText);
-        // APIレスポンスのサニタイゼーション
-        const sanitizedData = sanitizeApiResponse(parsedJson);
-        jsonResponse = sanitizedData as SuggestionResponse;
-      } else {
-        // 既にオブジェクトの場合はサニタイゼーションを適用
-        const sanitizedData = sanitizeApiResponse(rawJsonText);
-        jsonResponse = sanitizedData as SuggestionResponse;
-      }
+  try {
+    // 文字列形式の場合、JSONに変換
+    if (typeof responseText === 'string') {
+      const parsedJson = JSON.parse(responseText);
+      const sanitizedData = sanitizeApiResponse(parsedJson);
+      let jsonResponse = sanitizedData as unknown as SuggestionResponse;
 
       // responseにsuggestions配列が含まれていない場合は空配列を設定
       if (!jsonResponse.suggestions) {
         jsonResponse = { suggestions: [] };
       }
 
-      // debugLog('JSON Response:', jsonResponse);
       return jsonResponse;
-    } catch {
-      // // console.error('JSON parse error:', parseError);
-      // JSON解析エラーの場合は空の応答を返す
-      return { suggestions: [] };
+    } else {
+      // 既にオブジェクトの場合はサニタイゼーションを適用
+      const sanitizedData = sanitizeApiResponse(responseText);
+      let jsonResponse = sanitizedData as unknown as SuggestionResponse;
+
+      if (!jsonResponse.suggestions) {
+        jsonResponse = { suggestions: [] };
+      }
+
+      return jsonResponse;
     }
-  } catch {
-    // // console.error('Gemini API Error:', error);
-    throw new Error('API呼び出しに失敗しました');
+  } catch (error) {
+    debugLog('JSON parse error:', error);
+    return { suggestions: [] };
   }
 };

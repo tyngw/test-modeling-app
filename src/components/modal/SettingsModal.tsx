@@ -41,6 +41,10 @@ import {
   setApiKey,
   getIndentSpacesPerLevel,
   setIndentSpacesPerLevel,
+  getApiProvider,
+  setApiProvider,
+  getCustomApiEndpoint,
+  setCustomApiEndpoint,
 } from '../../utils/storage/localStorageHelpers';
 import { exportElementSettings, importElementSettings } from '../../utils/settingsExportImport';
 import { useTabs } from '../../context/TabsContext';
@@ -61,8 +65,8 @@ interface SettingsModalProps {
 const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   onClose,
-  dispatch,
-  modalId,
+  _dispatch,
+  _modalId,
   onOpen,
 }) => {
   const isMounted = useIsMounted();
@@ -106,6 +110,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       loadedValues['systemPromptTemplate'] = getSystemPromptTemplate();
       loadedValues['modelType'] = getModelType();
       loadedValues['prompt'] = getPrompt();
+      loadedValues['apiProvider'] = getApiProvider();
+      loadedValues['apiEndpointCustom'] = getCustomApiEndpoint();
 
       // Get numberOfSections and layoutMode from the current tab
       loadedValues['numberOfSections'] = getCurrentTabNumberOfSections();
@@ -186,6 +192,19 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     return true;
   };
 
+  // プリセットAPIエンドポイントを計算（現在の設定値に基づく）
+  const computePresetApiEndpoint = (): string => {
+    const provider = String(values['apiProvider'] || 'gemini');
+    const modelType = String(values['modelType'] || 'gemini-2.0-flash');
+
+    if (provider === 'openai') {
+      return 'https://api.openai.com/v1/chat/completions';
+    }
+
+    // Gemini: モデル名を含めたエンドポイント
+    return `https://generativelanguage.googleapis.com/v1beta/models/${modelType}:generateContent`;
+  };
+
   const handleValueChange = (field: SettingFieldType, value: string) => {
     // 数値フィールドの場合は数値として保存
     let processedValue: string | number = value;
@@ -234,6 +253,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
     const prompt = values['prompt'];
     if (prompt !== undefined) setPrompt(String(prompt));
+
+    const apiProvider = values['apiProvider'];
+    if (apiProvider !== undefined) setApiProvider(String(apiProvider) as 'gemini' | 'openai');
+
+    const apiEndpointCustom = values['apiEndpointCustom'];
+    if (apiEndpointCustom !== undefined) setCustomApiEndpoint(String(apiEndpointCustom));
 
     // Update current tab state for numberOfSections
     const numberOfSections = values['numberOfSections'];
@@ -288,6 +313,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       }
     }
 
+    // 保存完了後、モーダルのクローズ処理に委ねる（アニメーション制御はModalWindowで行われる）
     onClose();
   };
 
@@ -381,11 +407,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     <ModalWindow
       isOpen={isOpen}
       onClose={onClose}
-      closeOnOverlayClick={false}
       title="Preference"
       icon={<SettingsIcon />}
-      dispatch={dispatch}
-      modalId={modalId}
+      closeOnOverlayClick={false}
+      modalId="settings-modal"
       onOpen={onOpen}
     >
       <ThemeProvider theme={theme}>
@@ -444,13 +469,52 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 activeTab === tab.id && (
                   <Box key={tab.id}>
                     {tab.fields.map((field) => (
-                      <SettingField
-                        key={field.key}
-                        field={field}
-                        value={values[field.key] ?? field.defaultValue}
-                        error={errors[field.key]}
-                        onChange={(value) => handleValueChange(field, value)}
-                      />
+                      <Box key={field.key}>
+                        <SettingField
+                          field={field}
+                          value={values[field.key] ?? field.defaultValue}
+                          error={errors[field.key]}
+                          onChange={(value) => handleValueChange(field, value)}
+                        />
+                        {/* API設定タブでエンドポイントカスタマイズ フィールド表示時、プリセットURLを表示 */}
+                        {tab.id === 1 && field.key === 'apiEndpointCustom' && (
+                          <Box
+                            sx={{
+                              mt: 1,
+                              p: 1.5,
+                              backgroundColor: currentTheme.MODAL.BACKGROUND,
+                              border: `1px solid ${currentTheme.MODAL.TEXT_COLOR}40`,
+                              borderRadius: '4px',
+                              fontSize: '0.875rem',
+                            }}
+                          >
+                            <div style={{ color: currentTheme.MODAL.TEXT_COLOR, opacity: 0.8 }}>
+                              <strong>プリセットエンドポイント:</strong>
+                            </div>
+                            <div
+                              style={{
+                                color: currentTheme.MODAL.TEXT_COLOR,
+                                opacity: 0.9,
+                                wordBreak: 'break-all',
+                                mt: 0.5,
+                                marginTop: '0.5rem',
+                              }}
+                            >
+                              {computePresetApiEndpoint()}
+                            </div>
+                            <div
+                              style={{
+                                color: currentTheme.MODAL.TEXT_COLOR,
+                                opacity: 0.7,
+                                fontSize: '0.8rem',
+                                marginTop: '0.5rem',
+                              }}
+                            >
+                              (カスタムエンドポイントが空の場合、このURLが使用されます)
+                            </div>
+                          </Box>
+                        )}
+                      </Box>
                     ))}
                   </Box>
                 ),

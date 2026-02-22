@@ -43,8 +43,8 @@ export const SettingField: React.FC<SettingFieldProps> = ({
   const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = e.target.value;
 
-    // APIキーの場合は特別な処理（検証とサニタイズをスキップ）
-    if (field.key === 'apiKey') {
+    // APIキー、モデル名、カスタムエンドポイントURLは特別な処理
+    if (field.key === 'apiKey' || field.key === 'modelType' || field.key === 'apiEndpointCustom') {
       onChange(rawValue);
       return;
     }
@@ -55,7 +55,7 @@ export const SettingField: React.FC<SettingFieldProps> = ({
       return;
     }
 
-    // APIキー以外はサニタイズ
+    // その他はサニタイズ
     const safeValue = sanitizeText(rawValue);
     onChange(safeValue);
   };

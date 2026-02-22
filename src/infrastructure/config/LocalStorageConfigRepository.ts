@@ -1,8 +1,15 @@
 // src/infrastructure/config/LocalStorageConfigRepository.ts
 
-import { IConfigRepository } from '../../domain/ai/repositories/IAIRepository';
-import { getApiKey, getModelType, getPrompt } from '../../utils/storage';
-import { getSystemPromptTemplate } from '../../utils/storage/localStorageHelpers';
+import { IConfigRepository, ApiProvider } from '../../domain/ai/repositories/IAIRepository';
+import {
+  getApiKey,
+  getModelType,
+  getPrompt,
+  getSystemPromptTemplate,
+  getApiProvider as getStorageApiProvider,
+  getApiEndpoint as getStorageApiEndpoint,
+  getPresetApiEndpoint as getStoragePresetApiEndpoint,
+} from '../../utils/storage';
 
 /**
  * LocalStorageを使用した設定リポジトリの実装
@@ -34,5 +41,26 @@ export class LocalStorageConfigRepository implements IConfigRepository {
    */
   getSystemPromptTemplate(): string {
     return getSystemPromptTemplate();
+  }
+
+  /**
+   * APIプロバイダーを取得
+   */
+  getApiProvider(): ApiProvider {
+    return getStorageApiProvider();
+  }
+
+  /**
+   * APIエンドポイントURLを取得（カスタムエンドポイント対応）
+   */
+  getApiEndpoint(): string {
+    return getStorageApiEndpoint();
+  }
+
+  /**
+   * プリセットのAPIエンドポイントURLを取得
+   */
+  getPresetApiEndpoint(): string {
+    return getStoragePresetApiEndpoint();
   }
 }

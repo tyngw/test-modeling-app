@@ -2,6 +2,8 @@
 
 import { ChatHistoryEntry } from '../models/SuggestionContext';
 
+export type ApiProvider = 'gemini' | 'openai';
+
 /**
  * AI API呼び出しのリポジトリインターフェース
  */
@@ -58,4 +60,19 @@ export interface IConfigRepository {
    * システムプロンプトテンプレートを取得
    */
   getSystemPromptTemplate(): string;
+
+  /**
+   * APIプロバイダーを取得（'gemini'|'openai'）
+   */
+  getApiProvider(): ApiProvider;
+
+  /**
+   * APIエンドポイントURLを取得
+   */
+  getApiEndpoint(): string;
+
+  /**
+   * プリセットのAPIエンドポイントURLを取得
+   */
+  getPresetApiEndpoint(): string;
 }

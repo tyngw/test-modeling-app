@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
   distDir: 'build', // Changes the build output directory to `build`
   basePath: process.env.NEXT_PUBLIC_BASE_PATH, // 環境変数からbasePathを取得
   assetPrefix: process.env.NEXT_PUBLIC_BASE_PATH, // アセットプレフィックス追加
-  
+
   // セキュリティヘッダーの設定
   async headers() {
     return [
@@ -21,6 +21,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline'", // MUI スタイルに必要
               "img-src 'self' data: blob:",
               "font-src 'self' data:",
+              // 外部APIはバックエンド経由でアクセス（API Routes）
               "connect-src 'self' https://generativelanguage.googleapis.com",
               "object-src 'none'",
               "base-uri 'self'",
