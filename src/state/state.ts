@@ -665,8 +665,11 @@ const actionHandlers: Record<string, ActionHandler> = {
           ? getChildrenFromHierarchy(workingState.hierarchicalData, parentId)
           : workingState.hierarchicalData?.root.children?.map((child) => child.data) || [];
 
-        // IDでソート
-        siblings.sort((a, b) => a.id.localeCompare(b.id));
+        // Y座標でソート（視覚的な上から下の順序）
+        // NOTE: IDでのソートは不正確。ドラッグ&ドロップ後、要素のY座標（視覚的位置）は
+        // 変わるがIDは変わらないため、ID順と視覚順が一致しなくなる。
+        // Shift範囲選択は視覚的に「上から下」の順序で動作すべきなのでY座標でソートする。
+        siblings.sort((a, b) => a.y - b.y);
 
         const startIndex = siblings.findIndex((e) => e.id === firstSelected.id);
         const endIndex = siblings.findIndex((e) => e.id === id);
