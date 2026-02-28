@@ -373,6 +373,11 @@ export interface State {
   numberOfSections: number;
   /** レイアウトモード */
   layoutMode?: LayoutMode;
+  /**
+   * Shift範囲選択の起点（アンカー）要素ID。
+   * 非Shiftクリック時に更新され、Shiftクリック時は維持される。
+   */
+  selectionAnchorId?: string | null;
 }
 
 /**
@@ -655,8 +660,11 @@ const actionHandlers: Record<string, ActionHandler> = {
       let newSelectedIds: string[] = [];
 
       if (shiftKey && currentSelected.length > 0) {
+        // selectionAnchorId が設定されていればその要素を起点にする（連続Shift選択に対応）。
+        // 未設定の場合は firstSelected を fallback として使用する。
+        const anchorId = workingState.selectionAnchorId ?? firstSelected.id;
         const parentNode = workingState.hierarchicalData
-          ? findParentNodeInHierarchy(workingState.hierarchicalData, firstSelected.id)
+          ? findParentNodeInHierarchy(workingState.hierarchicalData, anchorId)
           : null;
         const parentId = parentNode?.data.id || null;
 
@@ -665,10 +673,13 @@ const actionHandlers: Record<string, ActionHandler> = {
           ? getChildrenFromHierarchy(workingState.hierarchicalData, parentId)
           : workingState.hierarchicalData?.root.children?.map((child) => child.data) || [];
 
-        // IDでソート
-        siblings.sort((a, b) => a.id.localeCompare(b.id));
+        // Y座標でソート（視覚的な上から下の順序）
+        // NOTE: IDでのソートは不正確。ドラッグ&ドロップ後、要素のY座標（視覚的位置）は
+        // 変わるがIDは変わらないため、ID順と視覚順が一致しなくなる。
+        // Shift範囲選択は視覚的に「上から下」の順序で動作すべきなのでY座標でソートする。
+        siblings.sort((a, b) => a.y - b.y);
 
-        const startIndex = siblings.findIndex((e) => e.id === firstSelected.id);
+        const startIndex = siblings.findIndex((e) => e.id === anchorId);
         const endIndex = siblings.findIndex((e) => e.id === id);
         const [start, end] = [Math.min(startIndex, endIndex), Math.max(startIndex, endIndex)];
         newSelectedIds = siblings.slice(start, end + 1).map((e) => e.id);
@@ -702,7 +713,14 @@ const actionHandlers: Record<string, ActionHandler> = {
 
       // Debug: SELECT_ELEMENT completed
 
-      return createStateFromHierarchicalResult(workingState, result);
+      // アンカー更新：Shiftクリックのときは既存アンカーを維持し、
+      // それ以外（通常クリック・Ctrlクリック）では新しいアンカーとしてリセットする。
+      const newAnchorId = shiftKey
+        ? (workingState.selectionAnchorId ?? firstSelected?.id ?? id)
+        : id;
+      const stateWithAnchor: State = { ...workingState, selectionAnchorId: newAnchorId };
+
+      return createStateFromHierarchicalResult(stateWithAnchor, result);
     },
   ),
 
