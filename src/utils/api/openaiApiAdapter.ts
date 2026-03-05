@@ -10,6 +10,71 @@ interface OpenAIMessage {
 }
 
 /**
+ * Thinking modelの思考過程をレスポンスから削除
+ * OpenAI のthinking models (o1, o3など)、またはローカルLLMの思考モデルを使用する場合、
+ * レスポンスに思考過程が含まれることがあり、それをフィルタリングする必要があります
+ *
+ * 対応する思考内容フォーマット：
+ * - <thinking>...</thinking> OpenAI o1/o3形式
+ * - "Thinking Process:" で始まる思考ブロック（LM Studioなど）
+ * - JSON形式の回答前の説明的なテキスト
+ *
+ * @param content APIからのレスポンス内容
+ * @returns フィルタリング後のテキスト（実際のレスポンスのみ）
+ */
+function filterThinkingContent(content: string): string {
+  if (!content) return content;
+
+  let filtered = content;
+
+  // パターン1: <thinking>...</thinking> ブロックを削除（OpenAI o1/o3形式）
+  filtered = filtered.replace(/<thinking>[\s\S]*?<\/thinking>/g, '').trim();
+
+  // パターン2: "Thinking Process:" で始まるブロックを削除（LM Studioなど）
+  // "Thinking Process:" か "Thinking:" で始まり、次の重要なセクション（##または{）まで削除
+  const thinkingMatch = filtered.match(
+    /^[\s\n]*(Thinking[^:]*Process|Thinking):[\s\S]*?(?=\n##|\n\{|^##|^\{|Output Format|Please respond|\n\n|$)/m,
+  );
+  if (thinkingMatch && thinkingMatch.index !== undefined) {
+    // マッチした思考テキストの後ろを抽出
+    const beforeThinking = filtered.substring(0, thinkingMatch.index);
+    const afterThinking = filtered.substring(thinkingMatch.index + thinkingMatch[0].length);
+    filtered = (beforeThinking + afterThinking).trim();
+  }
+
+  // パターン3: 複数の数字で始まるリスト形式の思考テキストをスキップ
+  // 例：1. 2. 3. という形式の分析テキスト
+  // JSON形式（{で始まる）や実際の回答が見つかるまでスキップ
+  if (filtered.match(/^\d+\.\s+\*\*[^*]*\*\*/)) {
+    // 思考プロセスリスト形式の場合、最初のセクション区切りまでを削除
+    const jsonStart = filtered.indexOf('{');
+    const sectionStart = filtered.indexOf('\n##');
+    const answerStart = filtered.indexOf('\n\n{');
+
+    // 最も早く出現する有効な区切りを探す
+    const validStarts = [jsonStart, sectionStart, answerStart].filter((i) => i >= 0);
+    if (validStarts.length > 0) {
+      const firstValidStart = Math.min(...validStarts);
+      filtered = filtered.substring(firstValidStart).trim();
+    }
+  }
+
+  // パターン4: 最初の重要なセクションマーカーの前のテキストを削除
+  // "Output Format", "[Output Format]", "##" などで実際の回答が始まる場合
+  const importantMarkers = ['Output Format', '[Output', 'Please respond', '```json', '{'];
+  for (const marker of importantMarkers) {
+    const idx = filtered.indexOf(marker);
+    if (idx > 0 && idx < filtered.length / 2) {
+      // マーカーが前半にある場合、それまでのテキストは思考の可能性が高い
+      filtered = filtered.substring(idx).trim();
+      break;
+    }
+  }
+
+  return filtered;
+}
+
+/**
  * ローカルLLMサーバーかどうかを判定
  * ローカル開発環境のLLMサーバー向けリクエストはAPI Route経由で処理
  */
@@ -115,7 +180,9 @@ export class OpenAIApiAdapter {
       });
 
       const rawTextResponse = response.data.choices?.[0]?.message?.content || '';
-      const sanitizedResponse = sanitizeApiResponse(rawTextResponse) as string;
+      // Thinking modelの場合、responseの中に思考過程が含まれているので、フィルタリング
+      const filteredResponse = filterThinkingContent(rawTextResponse);
+      const sanitizedResponse = sanitizeApiResponse(filteredResponse) as string;
 
       if (process.env.NODE_ENV === 'development') {
         debugLog('[OpenAI Response]:', sanitizedResponse);
@@ -266,7 +333,9 @@ export class OpenAIApiAdapter {
       });
 
       const rawTextResponse = response.data.choices?.[0]?.message?.content || '';
-      const sanitizedResponse = sanitizeApiResponse(rawTextResponse) as string;
+      // Thinking modelの場合、responseの中に思考過程が含まれているので、フィルタリング
+      const filteredResponse = filterThinkingContent(rawTextResponse);
+      const sanitizedResponse = sanitizeApiResponse(filteredResponse) as string;
 
       // チャット履歴を更新（新しいアシスタントメッセージを追加）
       const updatedMessages: OpenAIMessage[] = [...messages];
