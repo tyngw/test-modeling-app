@@ -36,10 +36,11 @@ function filterThinkingContent(content: string): string {
   // パターン2: "Thinking Process:" で始まるセクションを削除（LM Studioなど）
   // 以下の条件を満たす場合のみ削除：
   // - 文字列の開始に "Thinking Process:" または "Thinking:" が出現
-  // - その後に明確なセクション区切り（##、---、Output など）が続く
+  // - その後に明確なコンテンツ区切り（JSON、セクション見出し、出力スキーム等）が続く
   // - マッチ後にコンテンツが残る場合のみ適用
+  // LM Studio系では "Thinking Process: ..." の直後に改行+JSON本体が続くため、\n[{}[] を先読みに追加
   const thinkingInitial =
-    /^Thinking[:\s]+(?:Process)?[\s\S]*?(?=\n(?:---|\*\*|##|Output|Please|[A-Z][a-zA-Z\s]*:))/;
+    /^Thinking[:\s]+(?:Process)?[\s\S]*?(?=\n[{[]|\n#{1,}|\n---|\nOutput|\nPlease)/;
 
   const thinkingMatch = filtered.match(thinkingInitial);
   if (thinkingMatch) {
