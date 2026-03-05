@@ -1,3 +1,14 @@
+/* サイドパネル幅の CSS カスタムプロパティ (AppContent が動的に設定) */
+:root {
+  --app-side-panel-width: 0px;
+}
+
+/* サイドパネルのローディングスピナー */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 body {
   margin: 0;
   font-family:

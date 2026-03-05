@@ -14,6 +14,8 @@ import { useAIGeneration } from '../hooks/useAIGeneration';
 import { useTabManagement } from '../hooks/useTabManagement';
 import { useModalState } from '../hooks/useModalState';
 import { useTabs } from '../context/TabsContext';
+import { useChatAssistant } from '../hooks/useChatAssistant';
+import { SidePanel } from './side-panel/SidePanel';
 import {
   setupVSCodeMessageListener,
   notifyDocumentUpdate,
@@ -78,11 +80,47 @@ const AppContent: React.FC = () => {
     [handleCloseTabRequest, setTabToClose, setShowCloseConfirm],
   );
 
-  // AI生成機能
-  const { handleAIClick, isLoading } = useAIGeneration({
+  // AI生成機能、サジェスト機能用 ※ QuickMenuBar の AI アイコンを控厶します
+  const { handleAIClick } = useAIGeneration({
     currentTab,
     dispatch,
   });
+
+  // サイドパネルの開閉状態
+  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
+
+  const toggleSidePanel = useCallback(() => {
+    setIsSidePanelOpen((prev) => !prev);
+  }, []);
+
+  // サイドパネル幅を CSS カスタムプロパティに反映
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      '--app-side-panel-width',
+      isSidePanelOpen ? '360px' : '0px',
+    );
+  }, [isSidePanelOpen]);
+
+  // チャット機能 (useChatAssistant)
+  const getLatestState = useCallback(() => currentTab, [currentTab]);
+  const { handleChatMessage, isLoading: isChatLoading } = useChatAssistant({
+    currentTab,
+    dispatch,
+    getLatestState,
+  });
+
+  // 外部から AI アシスタントメッセージを受信しパネルを開く
+  const [externalChatMessage, setExternalChatMessage] = useState('');
+  useEffect(() => {
+    const handleAIAssistantMessage = (event: CustomEvent) => {
+      setIsSidePanelOpen(true);
+      setExternalChatMessage(event.detail.message as string);
+    };
+    window.addEventListener('aiAssistantMessage', handleAIAssistantMessage as EventListener);
+    return () => {
+      window.removeEventListener('aiAssistantMessage', handleAIAssistantMessage as EventListener);
+    };
+  }, []);
 
   // ファイル操作関連機能
   const { handleSaveSvg, handleSaveElements, handleLoadElements } = useFileOperations({
@@ -318,7 +356,7 @@ const AppContent: React.FC = () => {
           toggleHelp={toggleHelp}
           toggleSettings={toggleSettings}
           onAIClick={handleAIClick}
-          isAILoading={isLoading}
+          onToggleSidePanel={toggleSidePanel}
           isEditorMode={editorMode}
           isVSCodeExtension={extensionMode}
         />
@@ -339,7 +377,7 @@ const AppContent: React.FC = () => {
     switchTab,
     tabs,
     handleSaveSvg,
-    isLoading,
+    toggleSidePanel,
     environmentInfo,
   ]);
 
@@ -372,8 +410,70 @@ const AppContent: React.FC = () => {
         modalId="help-modal"
         onOpen={() => dispatch({ type: 'END_EDITING' })}
       />
+
+      {/* サイドパネル (AI アシスタント + プロンプト設定) */}
+      <SidePanelWrapper
+        isOpen={isSidePanelOpen}
+        onClose={toggleSidePanel}
+        onSendMessage={handleChatMessage}
+        isLoading={isChatLoading}
+        externalMessage={externalChatMessage}
+        onExternalMessageProcessed={() => setExternalChatMessage('')}
+      />
     </div>
   );
 };
+
+// ---------------------------------------------------------------------------
+// SidePanelWrapper: 外部メッセージ自動送信のラッパー
+// ---------------------------------------------------------------------------
+
+interface SidePanelWrapperProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSendMessage: (message: string) => Promise<string | void>;
+  isLoading: boolean;
+  externalMessage: string;
+  onExternalMessageProcessed: () => void;
+}
+
+function SidePanelWrapper({
+  isOpen,
+  onClose,
+  onSendMessage,
+  isLoading,
+  externalMessage,
+  onExternalMessageProcessed,
+}: SidePanelWrapperProps) {
+  const [pendingMessage, setPendingMessage] = useState('');
+
+  useEffect(() => {
+    if (externalMessage && externalMessage.trim()) {
+      setPendingMessage(externalMessage);
+      onExternalMessageProcessed();
+    }
+  }, [externalMessage, onExternalMessageProcessed]);
+
+  const handleSend = useCallback(
+    async (message: string) => {
+      const result = await onSendMessage(message);
+      setPendingMessage('');
+      return result;
+    },
+    [onSendMessage],
+  );
+
+  // pendingMessage があれば SidePanel 側で自動送信されるよう渡す仕組みは
+  // SidePanel 内部の externalMessage 対応で処理
+  return (
+    <SidePanel
+      isOpen={isOpen}
+      onClose={onClose}
+      onSendMessage={handleSend}
+      isLoading={isLoading}
+      externalMessage={pendingMessage}
+    />
+  );
+}
 
 export default AppContent;

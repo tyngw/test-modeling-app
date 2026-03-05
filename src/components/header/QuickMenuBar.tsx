@@ -29,6 +29,7 @@ import { getCanvasBackgroundColor } from '../../utils/storage/localStorageHelper
 import { useIsMounted } from '../../hooks/UseIsMounted';
 import LoadingIndicator from '../LoadingIndicator';
 import { tooltipTexts } from '../../constants/tooltipTexts';
+import { ChatIcon } from '../icons/ChatIcon';
 
 // 基本コンポーネントのインポート
 import IconButton from './menubar/IconButton';
@@ -41,6 +42,8 @@ interface QuickMenuBarProps {
   toggleHelp: () => void;
   toggleSettings: () => void;
   onAIClick: () => void;
+  /** AIアシスタントパネルを開閉します */
+  onToggleSidePanel: () => void;
   isAILoading?: boolean;
   isEditorMode: boolean;
   isVSCodeExtension: boolean;
@@ -63,6 +66,7 @@ const QuickMenuBar = ({
   toggleHelp,
   toggleSettings,
   onAIClick,
+  onToggleSidePanel,
   isAILoading,
   isEditorMode,
   isVSCodeExtension: isExtension,
@@ -123,8 +127,8 @@ const QuickMenuBar = ({
       <div
         style={{
           position: 'fixed',
-          width: '100%',
           left: 0,
+          right: 'var(--app-side-panel-width, 0px)',
           margin: 0,
           padding: 0,
           height: ICONBAR_HEIGHT,
@@ -285,6 +289,44 @@ const QuickMenuBar = ({
             icon={SettingsIcon}
             iconColor={theme.MENU_BAR.ICON_COLOR}
           />
+
+          <Divider color={theme.MENU_BAR.DIVIDER_COLOR} />
+
+          {/* AI アシスタント（サイドパネル）グループ */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '4px',
+            }}
+          >
+            <button
+              onClick={onToggleSidePanel}
+              aria-label="AIアシスタントパネルを開く"
+              title="AIアシスタント"
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '6px',
+                borderRadius: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s ease',
+                color: theme.MENU_BAR.ICON_COLOR,
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = 'rgba(0, 0, 0, 0.08)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = 'none';
+              }}
+            >
+              <ChatIcon size={20} />
+            </button>
+          </div>
         </div>
       </div>
       {isZoomLoading && (

@@ -67,22 +67,24 @@ const svgStyle = {
 };
 
 // Canvas領域の背景スタイル
+// right は CSS カスタムプロパティ --app-side-panel-width でサイドパネル幅を反映
 const canvasBackgroundStyle = {
-  position: 'fixed' as const, // absoluteからfixedに変更
+  position: 'fixed' as const,
   top: HEADER_HEIGHT,
   left: 0,
-  width: '100vw', // 100%から100vwに変更
-  height: 'calc(100vh - ' + HEADER_HEIGHT + 'px)', // 100%から計算値に変更
+  right: 'var(--app-side-panel-width, 0px)',
+  height: 'calc(100vh - ' + HEADER_HEIGHT + 'px)',
   overflow: 'hidden',
   zIndex: -1,
 };
 
 // Canvas領域のコンテナスタイル
+// right は CSS カスタムプロパティ --app-side-panel-width でサイドパネル幅を反映
 const canvasContainerStyle = {
   position: 'absolute' as const,
   top: HEADER_HEIGHT,
   left: 0,
-  right: 0,
+  right: 'var(--app-side-panel-width, 0px)',
   minWidth: '100%',
   minHeight: 'calc(100vh - ' + HEADER_HEIGHT + 'px)',
   overflow: 'auto',
