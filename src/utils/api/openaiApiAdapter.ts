@@ -16,8 +16,10 @@ interface OpenAIMessage {
  *
  * 対応する思考内容フォーマット：
  * - <thinking>...</thinking> OpenAI o1/o3形式
- * - "Thinking Process:" で始まる思考ブロック（LM Studioなど）
- * - JSON形式の回答前の説明的なテキスト
+ * - "Thinking Process:" で始まる明確なセクション
+ *
+ * 重要：このフィルターは思考内容の削除に特化し、
+ * 正常な回答コンテンツを削除しないよう設計されています
  *
  * @param content APIからのレスポンス内容
  * @returns フィルタリング後のテキスト（実際のレスポンスのみ）
@@ -28,46 +30,23 @@ function filterThinkingContent(content: string): string {
   let filtered = content;
 
   // パターン1: <thinking>...</thinking> ブロックを削除（OpenAI o1/o3形式）
-  filtered = filtered.replace(/<thinking>[\s\S]*?<\/thinking>/g, '').trim();
+  // 貪欲マッチではなく非貪欲マッチを使用して正確に思考フロックのみを削除
+  filtered = filtered.replace(/<thinking>[\s\S]*?<\/thinking>\s*/g, '').trim();
 
-  // パターン2: "Thinking Process:" で始まるブロックを削除（LM Studioなど）
-  // "Thinking Process:" か "Thinking:" で始まり、次の重要なセクション（##または{）まで削除
-  const thinkingMatch = filtered.match(
-    /^[\s\n]*(Thinking[^:]*Process|Thinking):[\s\S]*?(?=\n##|\n\{|^##|^\{|Output Format|Please respond|\n\n|$)/m,
-  );
-  if (thinkingMatch && thinkingMatch.index !== undefined) {
-    // マッチした思考テキストの後ろを抽出
-    const beforeThinking = filtered.substring(0, thinkingMatch.index);
-    const afterThinking = filtered.substring(thinkingMatch.index + thinkingMatch[0].length);
-    filtered = (beforeThinking + afterThinking).trim();
-  }
+  // パターン2: "Thinking Process:" で始まるセクションを削除（LM Studioなど）
+  // 以下の条件を満たす場合のみ削除：
+  // - 文字列の開始に "Thinking Process:" または "Thinking:" が出現
+  // - その後に明確なセクション区切り（##、---、Output など）が続く
+  // - マッチ後にコンテンツが残る場合のみ適用
+  const thinkingInitial =
+    /^Thinking[:\s]+(?:Process)?[\s\S]*?(?=\n(?:---|\*\*|##|Output|Please|[A-Z][a-zA-Z\s]*:))/;
 
-  // パターン3: 複数の数字で始まるリスト形式の思考テキストをスキップ
-  // 例：1. 2. 3. という形式の分析テキスト
-  // JSON形式（{で始まる）や実際の回答が見つかるまでスキップ
-  if (filtered.match(/^\d+\.\s+\*\*[^*]*\*\*/)) {
-    // 思考プロセスリスト形式の場合、最初のセクション区切りまでを削除
-    const jsonStart = filtered.indexOf('{');
-    const sectionStart = filtered.indexOf('\n##');
-    const answerStart = filtered.indexOf('\n\n{');
-
-    // 最も早く出現する有効な区切りを探す
-    const validStarts = [jsonStart, sectionStart, answerStart].filter((i) => i >= 0);
-    if (validStarts.length > 0) {
-      const firstValidStart = Math.min(...validStarts);
-      filtered = filtered.substring(firstValidStart).trim();
-    }
-  }
-
-  // パターン4: 最初の重要なセクションマーカーの前のテキストを削除
-  // "Output Format", "[Output Format]", "##" などで実際の回答が始まる場合
-  const importantMarkers = ['Output Format', '[Output', 'Please respond', '```json', '{'];
-  for (const marker of importantMarkers) {
-    const idx = filtered.indexOf(marker);
-    if (idx > 0 && idx < filtered.length / 2) {
-      // マーカーが前半にある場合、それまでのテキストは思考の可能性が高い
-      filtered = filtered.substring(idx).trim();
-      break;
+  const thinkingMatch = filtered.match(thinkingInitial);
+  if (thinkingMatch) {
+    const afterThinking = filtered.substring(thinkingMatch.index! + thinkingMatch[0].length).trim();
+    // 削除後にまだコンテンツがある場合のみ、思考部分を削除
+    if (afterThinking.length > 10) {
+      filtered = afterThinking;
     }
   }
 
