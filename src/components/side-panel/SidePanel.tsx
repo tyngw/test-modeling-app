@@ -3,8 +3,13 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import IconButton from '@mui/material/IconButton';
 import SendIcon from '@mui/icons-material/Send';
-import { ChatIcon } from '../icons/ChatIcon';
-import { getPrompt, setPrompt } from '../../utils/storage/localStorageHelpers';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import {
+  getPrompt,
+  setPrompt,
+  getSystemPromptTemplate,
+  setSystemPromptTemplate,
+} from '../../utils/storage/localStorageHelpers';
 
 // ---------------------------------------------------------------------------
 // 型定義
@@ -34,9 +39,6 @@ export interface SidePanelProps {
   onClearContext?: () => void;
 }
 
-/** サイドパネルの幅 (px) */
-const PANEL_WIDTH = 360;
-
 // ---------------------------------------------------------------------------
 // グローバルスタイル定義
 // ---------------------------------------------------------------------------
@@ -49,6 +51,30 @@ if (typeof document !== 'undefined') {
     style.textContent = `
       @keyframes side-panel-spin {
         to { transform: rotate(360deg); }
+      }
+      @keyframes slide-down-popover {
+        from {
+          opacity: 0;
+          transform: translateY(-8px);
+          max-height: 0;
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+          max-height: 500px;
+        }
+      }
+      @keyframes slide-up-popover {
+        from {
+          opacity: 1;
+          transform: translateY(0);
+          max-height: 500px;
+        }
+        to {
+          opacity: 0;
+          transform: translateY(-8px);
+          max-height: 0;
+        }
       }
     `;
     document.head.appendChild(style);
@@ -76,14 +102,22 @@ export function SidePanel({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [promptText, setPromptText] = useState('');
+  const [systemPromptText, setSystemPromptText] = useState('');
   const [isSaved, setIsSaved] = useState(false);
+  const [isSystemPromptOpen, setIsSystemPromptOpen] = useState(false);
+  const [isUserPromptOpen, setIsUserPromptOpen] = useState(true);
+  const [panelWidth, setPanelWidth] = useState(360);
+  const [isResizing, setIsResizing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  // コンテキストクリア時のレース対策: クリアのたびにインクリメント
+  const clearCountRef = useRef(0);
 
   // パネルオープン時にプロンプトを読み込む
   useEffect(() => {
     if (isOpen) {
       setPromptText(getPrompt());
+      setSystemPromptText(getSystemPromptTemplate());
       setIsSaved(false);
     }
   }, [isOpen]);
@@ -114,6 +148,9 @@ export function SidePanel({
       const text = overrideText ?? inputText.trim();
       if (!text || isLoading) return;
 
+      // このリクエスト開始時点のクリアカウントを記録
+      const capturedClearCount = clearCountRef.current;
+
       const userMessage: ChatMessage = {
         id: Date.now().toString(),
         text,
@@ -126,6 +163,8 @@ export function SidePanel({
 
       try {
         const result = await onSendMessage(text);
+        // コンテキストがクリアされていたらレスポンスを破棄
+        if (clearCountRef.current !== capturedClearCount) return;
         const assistantMessage: ChatMessage = {
           id: (Date.now() + 1).toString(),
           text: result || '操作を実行しました！',
@@ -134,6 +173,7 @@ export function SidePanel({
         };
         setMessages((prev) => [...prev, assistantMessage]);
       } catch (error) {
+        if (clearCountRef.current !== capturedClearCount) return;
         const errorMessage: ChatMessage = {
           id: (Date.now() + 1).toString(),
           text: `エラーが発生しました: ${error instanceof Error ? error.message : '不明なエラー'}`,
@@ -147,22 +187,51 @@ export function SidePanel({
   );
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    // IME変換確定（isComposing=true）の場合はsubmitしない
+    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
       handleSendMessage();
     }
   };
 
   const handleClearContext = useCallback(() => {
+    clearCountRef.current += 1;
     setMessages([]);
     onClearContext?.();
   }, [onClearContext]);
 
   const handleSavePrompt = useCallback(() => {
     setPrompt(promptText);
+    setSystemPromptTemplate(systemPromptText);
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 2000);
-  }, [promptText]);
+  }, [promptText, systemPromptText]);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    setIsResizing(true);
+    e.preventDefault();
+  }, []);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+      const newWidth = window.innerWidth - e.clientX;
+      setPanelWidth(Math.max(200, Math.min(newWidth, 800)));
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [isResizing]);
 
   if (!isOpen) return null;
 
@@ -173,15 +242,31 @@ export function SidePanel({
         right: 0,
         top: 0,
         height: '100vh',
-        width: `${PANEL_WIDTH}px`,
+        width: `${panelWidth}px`,
         display: 'flex',
         flexDirection: 'column',
         borderLeft: '1px solid #e5e7eb',
         background: '#f9fafb',
         zIndex: 200,
         boxShadow: '-4px 0 12px rgba(0, 0, 0, 0.08)',
+        userSelect: isResizing ? 'none' : 'auto',
       }}
     >
+      {/* リサイズハンドル */}
+      <div
+        onMouseDown={handleMouseDown}
+        style={{
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width: '4px',
+          cursor: 'col-resize',
+          background: isResizing ? '#3b82f6' : 'transparent',
+          transition: 'background 0.2s',
+          zIndex: 210,
+        }}
+      />
       {/* ヘッダー */}
       <div
         style={{
@@ -195,19 +280,14 @@ export function SidePanel({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div
-            style={{
-              width: '24px',
-              height: '24px',
-              background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+          <AutoAwesomeIcon
+            sx={{
+              fontSize: 20,
+              background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
             }}
-          >
-            <ChatIcon size={14} className="text-white" />
-          </div>
+          />
           <span style={{ fontWeight: '600', fontSize: '0.9rem', color: '#1f2937' }}>
             AIアシスタント
           </span>
@@ -399,7 +479,6 @@ export function SidePanel({
               onChange={(e) => setInputText(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="メッセージを入力..."
-              disabled={isLoading}
               style={{
                 flex: 1,
                 padding: '8px 12px',
@@ -473,72 +552,220 @@ export function SidePanel({
             flex: 1,
             display: 'flex',
             flexDirection: 'column',
-            padding: '16px',
-            gap: '12px',
+            padding: '12px 16px',
+            gap: '0',
+            overflowY: 'auto',
+            position: 'relative',
           }}
         >
-          <div>
+          {/* ユーザープロンプトアコーディオンヘッダー */}
+          <button
+            onClick={() => setIsUserPromptOpen(!isUserPromptOpen)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              width: '100%',
+              padding: '8px 0',
+              background: 'transparent',
+              border: 'none',
+              borderBottom: 'none',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              (e.target as HTMLElement).style.backgroundColor = 'rgba(59, 130, 246, 0.05)';
+            }}
+            onMouseLeave={(e) => {
+              (e.target as HTMLElement).style.backgroundColor = 'transparent';
+            }}
+          >
             <p
               style={{
                 fontSize: '0.875rem',
                 fontWeight: '600',
                 color: '#1f2937',
-                margin: '0 0 4px',
+                margin: 0,
               }}
             >
               ユーザープロンプト
             </p>
-            <p
+            <span
               style={{
                 fontSize: '0.75rem',
-                color: '#6b7280',
-                lineHeight: '1.5',
+                color: '#9ca3af',
+                transition: 'transform 0.2s ease',
+                transform: isUserPromptOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+              }}
+            >
+              ▼
+            </span>
+          </button>
+
+          {/* ユーザープロンプト入力欄（アニメーション付き） */}
+          <div
+            style={{
+              display: isUserPromptOpen ? 'flex' : 'none',
+              flexDirection: 'column',
+              gap: '4px',
+              flex: isUserPromptOpen ? 1 : 0,
+              animation: isUserPromptOpen
+                ? 'slide-down-popover 0.3s ease-out forwards'
+                : 'slide-up-popover 0.3s ease-out forwards',
+              overflow: 'hidden',
+              paddingTop: '8px',
+            }}
+          >
+            <p
+              style={{
+                fontSize: '0.7rem',
+                color: '#9ca3af',
+                lineHeight: '1.4',
                 margin: 0,
               }}
             >
               AIへのリクエスト時に自動的に追加されるカスタム指示を設定します。
             </p>
+            <textarea
+              value={promptText}
+              onChange={(e) => setPromptText(e.target.value)}
+              placeholder="例: 必ず日本語で回答してください。..."
+              style={{
+                flex: 1,
+                resize: 'none',
+                padding: '8px 10px',
+                border: '1px solid #e5e7eb',
+                borderRadius: '6px',
+                fontSize: '0.8rem',
+                lineHeight: '1.5',
+                outline: 'none',
+                backgroundColor: '#ffffff',
+                color: '#1f2937',
+                fontFamily: 'inherit',
+                transition: 'border-color 0.2s',
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = '#3b82f6';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = '#e5e7eb';
+              }}
+            />
           </div>
-          <textarea
-            value={promptText}
-            onChange={(e) => setPromptText(e.target.value)}
-            placeholder="例: 必ず日本語で回答してください。..."
+
+          {/* システムプロンプトアコーディオンヘッダー */}
+          <button
+            onClick={() => setIsSystemPromptOpen(!isSystemPromptOpen)}
             style={{
-              flex: 1,
-              resize: 'none',
-              padding: '10px 12px',
-              border: '1px solid #e5e7eb',
-              borderRadius: '8px',
-              fontSize: '0.85rem',
-              lineHeight: '1.6',
-              outline: 'none',
-              backgroundColor: '#ffffff',
-              color: '#1f2937',
-              fontFamily: 'inherit',
-              transition: 'border-color 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              width: '100%',
+              padding: '8px 0',
+              background: 'transparent',
+              border: 'none',
+              borderBottom: 'none',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              marginTop: isUserPromptOpen && isSystemPromptOpen ? '0' : '0',
             }}
-            onFocus={(e) => {
-              e.target.style.borderColor = '#3b82f6';
+            onMouseEnter={(e) => {
+              (e.target as HTMLElement).style.backgroundColor = 'rgba(59, 130, 246, 0.05)';
             }}
-            onBlur={(e) => {
-              e.target.style.borderColor = '#e5e7eb';
+            onMouseLeave={(e) => {
+              (e.target as HTMLElement).style.backgroundColor = 'transparent';
             }}
-          />
+          >
+            <p
+              style={{
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                color: '#1f2937',
+                margin: 0,
+              }}
+            >
+              システムプロンプト
+            </p>
+            <span
+              style={{
+                fontSize: '0.75rem',
+                color: '#9ca3af',
+                transition: 'transform 0.2s ease',
+                transform: isSystemPromptOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+              }}
+            >
+              ▼
+            </span>
+          </button>
+
+          {/* システムプロンプト入力欄（アニメーション付き） */}
+          <div
+            style={{
+              display: isSystemPromptOpen ? 'flex' : 'none',
+              flexDirection: 'column',
+              gap: '4px',
+              flex: isSystemPromptOpen ? 1 : 0,
+              animation: isSystemPromptOpen
+                ? 'slide-down-popover 0.3s ease-out forwards'
+                : 'slide-up-popover 0.3s ease-out forwards',
+              overflow: 'hidden',
+              paddingTop: '8px',
+            }}
+          >
+            <p
+              style={{
+                fontSize: '0.7rem',
+                color: '#9ca3af',
+                lineHeight: '1.4',
+                margin: 0,
+              }}
+            >
+              AIモデルのシステムレベルの動作を定義するテンプレートを設定します。
+            </p>
+            <textarea
+              value={systemPromptText}
+              onChange={(e) => setSystemPromptText(e.target.value)}
+              placeholder="例: あなたは開発を支援するAIアシスタントです。..."
+              style={{
+                flex: 1,
+                resize: 'none',
+                padding: '8px 10px',
+                border: '1px solid #e5e7eb',
+                borderRadius: '6px',
+                fontSize: '0.8rem',
+                lineHeight: '1.5',
+                outline: 'none',
+                backgroundColor: '#ffffff',
+                color: '#1f2937',
+                fontFamily: 'inherit',
+                transition: 'border-color 0.2s',
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = '#3b82f6';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = '#e5e7eb';
+              }}
+            />
+          </div>
+
+          {/* 保存ボタン */}
           <button
             onClick={handleSavePrompt}
             style={{
-              padding: '8px 16px',
+              padding: '6px 12px',
               background: isSaved
                 ? 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)'
                 : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
               color: '#ffffff',
               border: 'none',
-              borderRadius: '8px',
-              fontSize: '0.85rem',
+              borderRadius: '6px',
+              fontSize: '0.8rem',
               fontWeight: '600',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
               flexShrink: 0,
+              marginTop: '8px',
             }}
           >
             {isSaved ? '✓ 保存しました' : '保存する'}

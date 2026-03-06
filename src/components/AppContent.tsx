@@ -361,6 +361,7 @@ const AppContent: React.FC = () => {
           toggleSettings={toggleSettings}
           onAIClick={handleAIClick}
           onToggleSidePanel={toggleSidePanel}
+          isSidePanelOpen={isSidePanelOpen}
           isEditorMode={editorMode}
           isVSCodeExtension={extensionMode}
         />
@@ -382,6 +383,7 @@ const AppContent: React.FC = () => {
     tabs,
     handleSaveSvg,
     toggleSidePanel,
+    isSidePanelOpen,
     environmentInfo,
   ]);
 

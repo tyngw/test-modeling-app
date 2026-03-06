@@ -47,6 +47,8 @@ interface QuickMenuBarProps {
   onAIClick: () => void;
   /** AIアシスタントパネルを開閉します */
   onToggleSidePanel: () => void;
+  /** AIアシスタントパネルが開いているかどうか */
+  isSidePanelOpen?: boolean;
   isAILoading?: boolean;
   isEditorMode: boolean;
   isVSCodeExtension: boolean;
@@ -70,6 +72,7 @@ const QuickMenuBar = ({
   toggleSettings,
   onAIClick,
   onToggleSidePanel,
+  isSidePanelOpen = false,
   isAILoading,
   isEditorMode,
   isVSCodeExtension: isExtension,
@@ -307,46 +310,48 @@ const QuickMenuBar = ({
         </div>
 
         {/* ========== 固定：AIアシスタント（Reviews）ボタン ========== */}
-        {/* 常に右端に固定表示。他のボタンとは視覚的に区別されたデザイン */}
-        <div
-          style={{
-            flexShrink: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderLeft: `2px solid ${theme.MENU_BAR.DIVIDER_COLOR}`,
-            backgroundColor: theme.MENU_BAR.BACKGROUND,
-            paddingLeft: '2px',
-            paddingRight: '2px',
-          }}
-        >
-          <Tooltip title="AIアシスタント" placement="bottom">
-            <button
-              onClick={onToggleSidePanel}
-              aria-label="AIアシスタントパネルを開く"
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '6px 8px',
-                borderRadius: '4px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'all 0.2s ease',
-                color: theme.MENU_BAR.ICON_COLOR,
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.background = 'rgba(0, 0, 0, 0.08)';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.background = 'none';
-              }}
-            >
-              <ReviewsIcon sx={{ fontSize: 20 }} />
-            </button>
-          </Tooltip>
-        </div>
+        {/* 常に右端に固定表示。パネルが開いている間は非表示 */}
+        {!isSidePanelOpen && (
+          <div
+            style={{
+              flexShrink: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderLeft: `2px solid ${theme.MENU_BAR.DIVIDER_COLOR}`,
+              backgroundColor: theme.MENU_BAR.BACKGROUND,
+              paddingLeft: '2px',
+              paddingRight: '2px',
+            }}
+          >
+            <Tooltip title="AIアシスタント" placement="bottom">
+              <button
+                onClick={onToggleSidePanel}
+                aria-label="AIアシスタントパネルを開く"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '6px 8px',
+                  borderRadius: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s ease',
+                  color: theme.MENU_BAR.ICON_COLOR,
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.background = 'rgba(0, 0, 0, 0.08)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = 'none';
+                }}
+              >
+                <ReviewsIcon sx={{ fontSize: 20 }} />
+              </button>
+            </Tooltip>
+          </div>
+        )}
       </div>
       {isZoomLoading && (
         <div

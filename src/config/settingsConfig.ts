@@ -172,26 +172,6 @@ export const SETTINGS_TABS: SettingTab[] = [
   },
   {
     id: 2,
-    label: 'Prompt',
-    fields: [
-      {
-        key: 'prompt',
-        label: 'inputText',
-        type: 'text',
-        helperText: '',
-        defaultValue: '',
-      },
-      {
-        key: 'systemPromptTemplate',
-        label: 'SystemPromptTemplate',
-        type: 'text',
-        helperText: '',
-        defaultValue: '',
-      },
-    ],
-  },
-  {
-    id: 3,
     label: 'Paste Settings',
     fields: [
       {
