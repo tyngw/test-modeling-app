@@ -36,6 +36,24 @@ export interface SidePanelProps {
 const PANEL_WIDTH = 360;
 
 // ---------------------------------------------------------------------------
+// グローバルスタイル定義
+// ---------------------------------------------------------------------------
+// SidePanel内にのみスコープされたスピンアニメーション定義
+if (typeof document !== 'undefined') {
+  const styleId = 'side-panel-spin-animation';
+  if (!document.getElementById(styleId)) {
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.textContent = `
+      @keyframes side-panel-spin {
+        to { transform: rotate(360deg); }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // コンポーネント
 // ---------------------------------------------------------------------------
 
@@ -396,7 +414,7 @@ export function SidePanel({
                     border: '2px solid #ffffff',
                     borderTop: '2px solid transparent',
                     borderRadius: '50%',
-                    animation: 'spin 1s linear infinite',
+                    animation: 'side-panel-spin 1s linear infinite',
                   }}
                 />
               ) : (
