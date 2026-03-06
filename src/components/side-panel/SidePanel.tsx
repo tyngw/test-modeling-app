@@ -30,6 +30,8 @@ export interface SidePanelProps {
   isLoading?: boolean;
   /** 外部から自動送信するメッセージ (設定時に自動的にチャットへ送信) */
   externalMessage?: string;
+  /** コンテキスト（会話履歴）をクリアするコールバック */
+  onClearContext?: () => void;
 }
 
 /** サイドパネルの幅 (px) */
@@ -68,6 +70,7 @@ export function SidePanel({
   onSendMessage,
   isLoading = false,
   externalMessage,
+  onClearContext,
 }: SidePanelProps) {
   const [activeTab, setActiveTab] = useState<SidePanelTab>('chat');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -150,6 +153,11 @@ export function SidePanel({
     }
   };
 
+  const handleClearContext = useCallback(() => {
+    setMessages([]);
+    onClearContext?.();
+  }, [onClearContext]);
+
   const handleSavePrompt = useCallback(() => {
     setPrompt(promptText);
     setIsSaved(true);
@@ -204,29 +212,62 @@ export function SidePanel({
             AIアシスタント
           </span>
         </div>
-        <button
-          onClick={onClose}
-          aria-label="パネルを閉じる"
-          style={{
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            color: '#6b7280',
-            fontSize: '1.1rem',
-            lineHeight: 1,
-            padding: '4px 6px',
-            borderRadius: '4px',
-            transition: 'background 0.15s',
-          }}
-          onMouseOver={(e) => {
-            e.currentTarget.style.background = '#f3f4f6';
-          }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.background = 'none';
-          }}
-        >
-          ✕
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          {/* 新しい会話（コンテキストクリア）ボタン */}
+          <button
+            onClick={handleClearContext}
+            aria-label="新しい会話を開始"
+            title="新しい会話を開始（コンテキストをクリア）"
+            style={{
+              background: 'none',
+              border: '1px solid #d1d5db',
+              cursor: 'pointer',
+              color: '#6b7280',
+              fontSize: '1rem',
+              lineHeight: 1,
+              padding: '2px 7px',
+              borderRadius: '4px',
+              fontWeight: '600',
+              transition: 'all 0.15s',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.background = '#f3f4f6';
+              e.currentTarget.style.borderColor = '#9ca3af';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = 'none';
+              e.currentTarget.style.borderColor = '#d1d5db';
+            }}
+          >
+            +
+          </button>
+          <button
+            onClick={onClose}
+            aria-label="パネルを閉じる"
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: '#6b7280',
+              fontSize: '1.1rem',
+              lineHeight: 1,
+              padding: '4px 6px',
+              borderRadius: '4px',
+              transition: 'background 0.15s',
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.background = '#f3f4f6';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = 'none';
+            }}
+          >
+            ✕
+          </button>
+        </div>
       </div>
 
       {/* タブバー */}

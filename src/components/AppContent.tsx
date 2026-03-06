@@ -103,7 +103,11 @@ const AppContent: React.FC = () => {
 
   // チャット機能 (useChatAssistant)
   const getLatestState = useCallback(() => currentTab, [currentTab]);
-  const { handleChatMessage, isLoading: isChatLoading } = useChatAssistant({
+  const {
+    handleChatMessage,
+    isLoading: isChatLoading,
+    clearContext: clearChatContext,
+  } = useChatAssistant({
     currentTab,
     dispatch,
     getLatestState,
@@ -419,6 +423,7 @@ const AppContent: React.FC = () => {
         isLoading={isChatLoading}
         externalMessage={externalChatMessage}
         onExternalMessageProcessed={() => setExternalChatMessage('')}
+        onClearContext={clearChatContext}
       />
     </div>
   );
@@ -435,6 +440,7 @@ interface SidePanelWrapperProps {
   isLoading: boolean;
   externalMessage: string;
   onExternalMessageProcessed: () => void;
+  onClearContext: () => void;
 }
 
 function SidePanelWrapper({
@@ -444,6 +450,7 @@ function SidePanelWrapper({
   isLoading,
   externalMessage,
   onExternalMessageProcessed,
+  onClearContext,
 }: SidePanelWrapperProps) {
   const [pendingMessage, setPendingMessage] = useState('');
 
@@ -472,6 +479,7 @@ function SidePanelWrapper({
       onSendMessage={handleSend}
       isLoading={isLoading}
       externalMessage={pendingMessage}
+      onClearContext={onClearContext}
     />
   );
 }

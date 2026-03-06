@@ -191,5 +191,12 @@ export function useChatAssistant({ currentTab, dispatch, getLatestState }: UseCh
     ],
   );
 
-  return { handleChatMessage, isLoading };
+  /**
+   * チャット履歴（コンテキスト）をリセットする
+   */
+  const clearContext = useCallback(() => {
+    chatAssistantService.clearHistory();
+  }, [chatAssistantService]);
+
+  return { handleChatMessage, isLoading, clearContext };
 }
