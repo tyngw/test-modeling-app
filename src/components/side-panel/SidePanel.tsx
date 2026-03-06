@@ -61,14 +61,15 @@ if (typeof document !== 'undefined') {
         to {
           opacity: 1;
           transform: translateY(0);
-          max-height: 500px;
+          /* allow accordion to grow up to viewport height */
+          max-height: 100vh;
         }
       }
       @keyframes slide-up-popover {
         from {
           opacity: 1;
           transform: translateY(0);
-          max-height: 500px;
+          max-height: 100vh;
         }
         to {
           opacity: 0;
@@ -525,6 +526,12 @@ export function SidePanel({
                       : 'linear-gradient(135deg, #dbeafe 0%, #93c5fd 100%)',
                 },
               }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(59, 130, 246, 0.05)';
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+              }}
             >
               {isLoading ? (
                 <div
@@ -554,223 +561,257 @@ export function SidePanel({
             flexDirection: 'column',
             padding: '12px 16px',
             gap: '0',
-            overflowY: 'auto',
+            overflow: 'hidden',
             position: 'relative',
+            minHeight: 0,
           }}
         >
-          {/* ユーザープロンプトアコーディオンヘッダー */}
-          <button
-            onClick={() => setOpenAccordion(openAccordion === 'user' ? null : 'user')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              width: '100%',
-              padding: '8px 0',
-              background: 'transparent',
-              border: 'none',
-              borderBottom: 'none',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-            }}
-            onMouseEnter={(e) => {
-              (e.target as HTMLElement).style.backgroundColor = 'rgba(59, 130, 246, 0.05)';
-            }}
-            onMouseLeave={(e) => {
-              (e.target as HTMLElement).style.backgroundColor = 'transparent';
-            }}
-          >
-            <p
-              style={{
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                color: '#1f2937',
-                margin: 0,
-              }}
-            >
-              ユーザープロンプト
-            </p>
-            <span
-              style={{
-                fontSize: '0.75rem',
-                color: '#9ca3af',
-                transition: 'transform 0.2s ease',
-                transform: openAccordion === 'user' ? 'rotate(180deg)' : 'rotate(0deg)',
-              }}
-            >
-              ▼
-            </span>
-          </button>
-
-          {/* ユーザープロンプト入力欄（アニメーション付き） */}
+          {/* スクロール可能なコンテンツ領域 */}
           <div
             style={{
-              display: openAccordion === 'user' ? 'flex' : 'none',
+              flex: '1 1 auto',
+              display: 'flex',
               flexDirection: 'column',
-              gap: '4px',
-              flex: openAccordion === 'user' ? 1 : 0,
-              animation:
-                openAccordion === 'user'
-                  ? 'slide-down-popover 0.3s ease-out forwards'
-                  : 'slide-up-popover 0.3s ease-out forwards',
-              overflow: 'hidden',
-              paddingTop: '8px',
+              gap: '8px',
+              overflowY: 'auto',
+              paddingRight: '4px',
+              minHeight: 0,
             }}
           >
-            <p
+            {/* ユーザープロンプトアコーディオンヘッダー */}
+            <button
+              onClick={() => setOpenAccordion(openAccordion === 'user' ? null : 'user')}
               style={{
-                fontSize: '0.7rem',
-                color: '#9ca3af',
-                lineHeight: '1.4',
-                margin: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                width: '100%',
+                padding: '8px 0',
+                background: 'transparent',
+                border: 'none',
+                borderBottom: 'none',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(59, 130, 246, 0.05)';
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
               }}
             >
-              AIへのリクエスト時に自動的に追加されるカスタム指示を設定します。
-            </p>
-            <textarea
-              value={promptText}
-              onChange={(e) => setPromptText(e.target.value)}
-              placeholder="例: 必ず日本語で回答してください。..."
+              <p
+                style={{
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  color: '#1f2937',
+                  margin: 0,
+                }}
+              >
+                ユーザープロンプト
+              </p>
+              <span
+                style={{
+                  fontSize: '0.75rem',
+                  color: '#9ca3af',
+                  transition: 'transform 0.2s ease',
+                  transform: openAccordion === 'user' ? 'rotate(180deg)' : 'rotate(0deg)',
+                }}
+              >
+                ▼
+              </span>
+            </button>
+
+            {/* ユーザープロンプト入力欄（アニメーション付き） */}
+            <div
               style={{
-                flex: 1,
-                resize: 'none',
-                padding: '8px 10px',
-                border: '1px solid #e5e7eb',
-                borderRadius: '6px',
-                fontSize: '0.8rem',
-                lineHeight: '1.5',
-                outline: 'none',
-                backgroundColor: '#ffffff',
-                color: '#1f2937',
-                fontFamily: 'inherit',
-                transition: 'border-color 0.2s',
+                display: openAccordion === 'user' ? 'flex' : 'none',
+                flexDirection: 'column',
+                gap: '4px',
+                flex: openAccordion === 'user' ? '1 1 auto' : '0 0 auto',
+                animation:
+                  openAccordion === 'user'
+                    ? 'slide-down-popover 0.3s ease-out forwards'
+                    : 'slide-up-popover 0.3s ease-out forwards',
+                overflow: 'hidden',
+                paddingTop: '8px',
+                minHeight: 0,
               }}
-              onFocus={(e) => {
-                e.target.style.borderColor = '#3b82f6';
+            >
+              <p
+                style={{
+                  fontSize: '0.7rem',
+                  color: '#9ca3af',
+                  lineHeight: '1.4',
+                  margin: 0,
+                }}
+              >
+                AIへのリクエスト時に自動的に追加されるカスタム指示を設定します。
+              </p>
+              <textarea
+                value={promptText}
+                onChange={(e) => setPromptText(e.target.value)}
+                placeholder="例: 必ず日本語で回答してください。..."
+                style={{
+                  height: '100%',
+                  resize: 'none',
+                  padding: '8px 10px',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '6px',
+                  fontSize: '0.8rem',
+                  lineHeight: '1.5',
+                  outline: 'none',
+                  backgroundColor: '#ffffff',
+                  color: '#1f2937',
+                  fontFamily: 'inherit',
+                  transition: 'border-color 0.2s',
+                  minHeight: 0,
+                  overflowY: 'auto',
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#3b82f6';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#e5e7eb';
+                }}
+              />
+            </div>
+
+            {/* システムプロンプトアコーディオンヘッダー */}
+            <button
+              onClick={() => setOpenAccordion(openAccordion === 'system' ? null : 'system')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                width: '100%',
+                padding: '8px 0',
+                background: 'transparent',
+                border: 'none',
+                borderBottom: 'none',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
               }}
-              onBlur={(e) => {
-                e.target.style.borderColor = '#e5e7eb';
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(59, 130, 246, 0.05)';
               }}
-            />
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+              }}
+            >
+              <p
+                style={{
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  color: '#1f2937',
+                  margin: 0,
+                }}
+              >
+                システムプロンプト
+              </p>
+              <span
+                style={{
+                  fontSize: '0.75rem',
+                  color: '#9ca3af',
+                  transition: 'transform 0.2s ease',
+                  transform: openAccordion === 'system' ? 'rotate(180deg)' : 'rotate(0deg)',
+                }}
+              >
+                ▼
+              </span>
+            </button>
+
+            {/* システムプロンプト入力欄（アニメーション付き） */}
+            <div
+              style={{
+                display: openAccordion === 'system' ? 'flex' : 'none',
+                flexDirection: 'column',
+                gap: '4px',
+                flex: openAccordion === 'system' ? '1 1 auto' : '0 0 auto',
+                animation:
+                  openAccordion === 'system'
+                    ? 'slide-down-popover 0.3s ease-out forwards'
+                    : 'slide-up-popover 0.3s ease-out forwards',
+                overflow: 'hidden',
+                paddingTop: '8px',
+                minHeight: 0,
+              }}
+            >
+              <p
+                style={{
+                  fontSize: '0.7rem',
+                  color: '#9ca3af',
+                  lineHeight: '1.4',
+                  margin: 0,
+                }}
+              >
+                AIモデルのシステムレベルの動作を定義するテンプレートを設定します。
+              </p>
+              <textarea
+                value={systemPromptText}
+                onChange={(e) => setSystemPromptText(e.target.value)}
+                placeholder="例: あなたは開発を支援するAIアシスタントです。..."
+                style={{
+                  height: '100%',
+                  resize: 'none',
+                  padding: '8px 10px',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '6px',
+                  fontSize: '0.8rem',
+                  lineHeight: '1.5',
+                  outline: 'none',
+                  backgroundColor: '#ffffff',
+                  color: '#1f2937',
+                  fontFamily: 'inherit',
+                  transition: 'border-color 0.2s',
+                  minHeight: 0,
+                  overflowY: 'auto',
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#3b82f6';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#e5e7eb';
+                }}
+              />
+            </div>
           </div>
 
-          {/* システムプロンプトアコーディオンヘッダー */}
-          <button
-            onClick={() => setOpenAccordion(openAccordion === 'system' ? null : 'system')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              width: '100%',
-              padding: '8px 0',
-              background: 'transparent',
-              border: 'none',
-              borderBottom: 'none',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-            }}
-            onMouseEnter={(e) => {
-              (e.target as HTMLElement).style.backgroundColor = 'rgba(59, 130, 246, 0.05)';
-            }}
-            onMouseLeave={(e) => {
-              (e.target as HTMLElement).style.backgroundColor = 'transparent';
-            }}
-          >
-            <p
-              style={{
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                color: '#1f2937',
-                margin: 0,
-              }}
-            >
-              システムプロンプト
-            </p>
-            <span
-              style={{
-                fontSize: '0.75rem',
-                color: '#9ca3af',
-                transition: 'transform 0.2s ease',
-                transform: openAccordion === 'system' ? 'rotate(180deg)' : 'rotate(0deg)',
-              }}
-            >
-              ▼
-            </span>
-          </button>
-
-          {/* システムプロンプト入力欄（アニメーション付き） */}
+          {/* フッター: 保存ボタンを常に下部に固定 */}
           <div
             style={{
-              display: openAccordion === 'system' ? 'flex' : 'none',
-              flexDirection: 'column',
-              gap: '4px',
-              flex: openAccordion === 'system' ? 1 : 0,
-              animation:
-                openAccordion === 'system'
-                  ? 'slide-down-popover 0.3s ease-out forwards'
-                  : 'slide-up-popover 0.3s ease-out forwards',
-              overflow: 'hidden',
               paddingTop: '8px',
-            }}
-          >
-            <p
-              style={{
-                fontSize: '0.7rem',
-                color: '#9ca3af',
-                lineHeight: '1.4',
-                margin: 0,
-              }}
-            >
-              AIモデルのシステムレベルの動作を定義するテンプレートを設定します。
-            </p>
-            <textarea
-              value={systemPromptText}
-              onChange={(e) => setSystemPromptText(e.target.value)}
-              placeholder="例: あなたは開発を支援するAIアシスタントです。..."
-              style={{
-                flex: 1,
-                resize: 'none',
-                padding: '8px 10px',
-                border: '1px solid #e5e7eb',
-                borderRadius: '6px',
-                fontSize: '0.8rem',
-                lineHeight: '1.5',
-                outline: 'none',
-                backgroundColor: '#ffffff',
-                color: '#1f2937',
-                fontFamily: 'inherit',
-                transition: 'border-color 0.2s',
-              }}
-              onFocus={(e) => {
-                e.target.style.borderColor = '#3b82f6';
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = '#e5e7eb';
-              }}
-            />
-          </div>
-
-          {/* 保存ボタン */}
-          <button
-            onClick={handleSavePrompt}
-            style={{
-              padding: '6px 12px',
-              background: isSaved
-                ? 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)'
-                : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: '0.8rem',
-              fontWeight: '600',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
+              paddingBottom: '8px',
+              borderTop: '1px solid #e5e7eb',
+              background: '#ffffff',
+              display: 'flex',
+              justifyContent: 'center',
               flexShrink: 0,
-              marginTop: '8px',
             }}
           >
-            {isSaved ? '✓ 保存しました' : '保存する'}
-          </button>
+            <button
+              onClick={handleSavePrompt}
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                background: isSaved
+                  ? 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)'
+                  : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '0.9rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                flexShrink: 0,
+                textAlign: 'center',
+                boxSizing: 'border-box',
+              }}
+            >
+              {isSaved ? '✓ 保存しました' : '保存する'}
+            </button>
+          </div>
         </div>
       )}
     </div>
