@@ -104,8 +104,8 @@ export function SidePanel({
   const [promptText, setPromptText] = useState('');
   const [systemPromptText, setSystemPromptText] = useState('');
   const [isSaved, setIsSaved] = useState(false);
-  const [isSystemPromptOpen, setIsSystemPromptOpen] = useState(false);
-  const [isUserPromptOpen, setIsUserPromptOpen] = useState(true);
+  // アコーディオン状態: 'user' | 'system' | null（null=両方閉じている）
+  const [openAccordion, setOpenAccordion] = useState<'user' | 'system' | null>('user');
   const [panelWidth, setPanelWidth] = useState(360);
   const [isResizing, setIsResizing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -560,7 +560,7 @@ export function SidePanel({
         >
           {/* ユーザープロンプトアコーディオンヘッダー */}
           <button
-            onClick={() => setIsUserPromptOpen(!isUserPromptOpen)}
+            onClick={() => setOpenAccordion(openAccordion === 'user' ? null : 'user')}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -595,7 +595,7 @@ export function SidePanel({
                 fontSize: '0.75rem',
                 color: '#9ca3af',
                 transition: 'transform 0.2s ease',
-                transform: isUserPromptOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                transform: openAccordion === 'user' ? 'rotate(180deg)' : 'rotate(0deg)',
               }}
             >
               ▼
@@ -605,13 +605,14 @@ export function SidePanel({
           {/* ユーザープロンプト入力欄（アニメーション付き） */}
           <div
             style={{
-              display: isUserPromptOpen ? 'flex' : 'none',
+              display: openAccordion === 'user' ? 'flex' : 'none',
               flexDirection: 'column',
               gap: '4px',
-              flex: isUserPromptOpen ? 1 : 0,
-              animation: isUserPromptOpen
-                ? 'slide-down-popover 0.3s ease-out forwards'
-                : 'slide-up-popover 0.3s ease-out forwards',
+              flex: openAccordion === 'user' ? 1 : 0,
+              animation:
+                openAccordion === 'user'
+                  ? 'slide-down-popover 0.3s ease-out forwards'
+                  : 'slide-up-popover 0.3s ease-out forwards',
               overflow: 'hidden',
               paddingTop: '8px',
             }}
@@ -655,7 +656,7 @@ export function SidePanel({
 
           {/* システムプロンプトアコーディオンヘッダー */}
           <button
-            onClick={() => setIsSystemPromptOpen(!isSystemPromptOpen)}
+            onClick={() => setOpenAccordion(openAccordion === 'system' ? null : 'system')}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -667,7 +668,6 @@ export function SidePanel({
               borderBottom: 'none',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
-              marginTop: isUserPromptOpen && isSystemPromptOpen ? '0' : '0',
             }}
             onMouseEnter={(e) => {
               (e.target as HTMLElement).style.backgroundColor = 'rgba(59, 130, 246, 0.05)';
@@ -691,7 +691,7 @@ export function SidePanel({
                 fontSize: '0.75rem',
                 color: '#9ca3af',
                 transition: 'transform 0.2s ease',
-                transform: isSystemPromptOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                transform: openAccordion === 'system' ? 'rotate(180deg)' : 'rotate(0deg)',
               }}
             >
               ▼
@@ -701,13 +701,14 @@ export function SidePanel({
           {/* システムプロンプト入力欄（アニメーション付き） */}
           <div
             style={{
-              display: isSystemPromptOpen ? 'flex' : 'none',
+              display: openAccordion === 'system' ? 'flex' : 'none',
               flexDirection: 'column',
               gap: '4px',
-              flex: isSystemPromptOpen ? 1 : 0,
-              animation: isSystemPromptOpen
-                ? 'slide-down-popover 0.3s ease-out forwards'
-                : 'slide-up-popover 0.3s ease-out forwards',
+              flex: openAccordion === 'system' ? 1 : 0,
+              animation:
+                openAccordion === 'system'
+                  ? 'slide-down-popover 0.3s ease-out forwards'
+                  : 'slide-up-popover 0.3s ease-out forwards',
               overflow: 'hidden',
               paddingTop: '8px',
             }}
