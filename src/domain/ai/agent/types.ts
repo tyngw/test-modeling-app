@@ -47,6 +47,8 @@ export interface ToolCall {
 export interface ToolResultMessage {
   role: 'tool';
   toolCallId: string;
+  /** ツール名（Gemini function calling の functionResponse に必要） */
+  toolName: string;
   content: string;
 }
 

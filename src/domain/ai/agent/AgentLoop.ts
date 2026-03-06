@@ -97,6 +97,7 @@ export async function runAgentLoop(
           messages.push({
             role: 'tool',
             toolCallId: toolCall.id,
+            toolName: toolCall.function.name,
             content: truncated,
           });
         }
