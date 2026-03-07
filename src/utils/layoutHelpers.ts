@@ -354,17 +354,22 @@ const layoutNodeFromHierarchy = (
   element.y = startY;
   let currentY = startY + element.height;
 
+  // 可視な子要素のみをレイアウト対象とする（折り畳まれた子要素はスキップ）
+  const visibleChildren = node.children
+    ? node.children.filter((child) => child.data.visible !== false)
+    : [];
+
   // 子要素がある場合の処理
-  if (node.children && node.children.length > 0) {
+  if (visibleChildren.length > 0) {
     let leftMaxY = currentY;
     let rightMaxY = currentY;
 
     if (layoutMode === 'mindmap') {
       // マインドマップモードでは左右に分散配置
-      const leftChildren = node.children.filter(
+      const leftChildren = visibleChildren.filter(
         (child: HierarchicalNode) => child.data.direction === 'left',
       );
-      const rightChildren = node.children.filter(
+      const rightChildren = visibleChildren.filter(
         (child: HierarchicalNode) => child.data.direction === 'right',
       );
 
@@ -408,7 +413,7 @@ const layoutNodeFromHierarchy = (
     } else {
       // 通常モードでは縦に配置（兄弟要素間のY座標計算）
       let childCurrentY = startY; // 親要素と同じY座標から開始
-      for (const child of node.children) {
+      for (const child of visibleChildren) {
         const result = layoutNodeFromHierarchy(
           child,
           childCurrentY,
@@ -436,6 +441,8 @@ const layoutNodeFromHierarchy = (
       let maxY = rootNode.data.y + rootNode.data.height;
 
       const traverse = (n: HierarchicalNode) => {
+        // 非表示（折り畳まれた）ノードは境界計算から除外
+        if (n.data.visible === false) return;
         minY = Math.min(minY, n.data.y);
         maxY = Math.max(maxY, n.data.y + n.data.height);
         if (n.children) {
@@ -457,9 +464,9 @@ const layoutNodeFromHierarchy = (
       }
     };
 
-    if (node.children.length > 0) {
-      // 全ての子要素をY座標でソートして、最上位・最下位要素を取得
-      const allChildElements = node.children.map((child) => child.data);
+    if (visibleChildren.length > 0) {
+      // 可視な子要素をY座標でソートして、最上位・最下位要素を取得
+      const allChildElements = visibleChildren.map((child) => child.data);
       const sortedChildren = allChildElements
         .filter((child: Element) => child.y !== undefined)
         .sort((a, b) => a.y - b.y);
@@ -493,7 +500,7 @@ const layoutNodeFromHierarchy = (
             }
           };
 
-          node.children.forEach((child) => adjustChildrenPositions(child, offsetY));
+          visibleChildren.forEach((child) => adjustChildrenPositions(child, offsetY));
 
           debugLog(
             `[layoutNodeFromHierarchy] 親要素基準「${element.texts}」 id=${element.id} - 子要素群を移動（オフセット: ${offsetY}）`,
