@@ -81,8 +81,7 @@ const AppContent: React.FC = () => {
   );
 
   // AI生成機能、サジェスト機能用
-  // isLoading を受け取って QuickMenuBar へ渡す（ボタン無効化・スピナー表示のため）
-  const { handleAIClick, isLoading: isAILoading } = useAIGeneration({
+  const { handleAIClick } = useAIGeneration({
     currentTab,
     dispatch,
   });
@@ -364,7 +363,6 @@ const AppContent: React.FC = () => {
           isSidePanelOpen={isSidePanelOpen}
           isEditorMode={editorMode}
           isVSCodeExtension={extensionMode}
-          isAILoading={isAILoading}
         />
       </CanvasProvider>
     );
@@ -376,7 +374,6 @@ const AppContent: React.FC = () => {
     currentTabId,
     toggleSettings,
     handleAIClick,
-    isAILoading,
     handleLoadElements,
     handleSaveElements,
     addTab,
