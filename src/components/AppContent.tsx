@@ -81,7 +81,8 @@ const AppContent: React.FC = () => {
   );
 
   // AI生成機能、サジェスト機能用
-  const { handleAIClick } = useAIGeneration({
+  // isLoading を isAILoading として受け取り、QuickMenuBar に渡す
+  const { handleAIClick, isLoading: isAILoading } = useAIGeneration({
     currentTab,
     dispatch,
   });
@@ -359,6 +360,7 @@ const AppContent: React.FC = () => {
           toggleHelp={toggleHelp}
           toggleSettings={toggleSettings}
           onAIClick={handleAIClick}
+          isAILoading={isAILoading}
           onToggleSidePanel={toggleSidePanel}
           isSidePanelOpen={isSidePanelOpen}
           isEditorMode={editorMode}
