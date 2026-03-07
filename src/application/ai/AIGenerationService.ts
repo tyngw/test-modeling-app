@@ -18,11 +18,7 @@ import { IAIRepository, IConfigRepository } from '../../domain/ai/repositories/I
 import { runAgentLoop, AgentContext, LLMCallerFn } from '../../domain/ai/agent';
 import { createOpenAIAgentCaller } from '../../infrastructure/ai/OpenAIAgentCaller';
 import { createGeminiAgentCaller } from '../../infrastructure/ai/GeminiAgentCaller';
-import {
-  AGENT_ELEMENT_GENERATION_PROMPT,
-  AGENT_SUGGESTION_PROMPT,
-  AGENT_CHAT_PROMPT,
-} from '../../config/agentSystemPrompt';
+import { AGENT_ELEMENT_GENERATION_PROMPT, AGENT_CHAT_PROMPT } from '../../config/agentSystemPrompt';
 import { debugLog } from '../../utils/debugLogHelpers';
 
 /** エージェントループの最大ステップ数 */
@@ -196,9 +192,15 @@ export class AIGenerationService {
 
     try {
       const callLLM = this.createAgentCaller(apiKey, modelType, apiProvider);
-      const result = await runAgentLoop(AGENT_SUGGESTION_PROMPT, userPrompt, context, callLLM, {
-        maxSteps: AGENT_MAX_STEPS,
-      });
+      const result = await runAgentLoop(
+        AGENT_ELEMENT_GENERATION_PROMPT,
+        userPrompt,
+        context,
+        callLLM,
+        {
+          maxSteps: AGENT_MAX_STEPS,
+        },
+      );
 
       if (result.finishReason === 'error' || !result.response) {
         debugLog('[AIGenerationService] サジェストエージェントエラー: フォールバック実行');
