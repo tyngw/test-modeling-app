@@ -80,7 +80,7 @@ const AppContent: React.FC = () => {
     [handleCloseTabRequest, setTabToClose, setShowCloseConfirm],
   );
 
-  // AI生成機能、サジェスト機能用 ※ QuickMenuBar の AI アイコンを控厶します
+  // AI生成機能、サジェスト機能用
   const { handleAIClick } = useAIGeneration({
     currentTab,
     dispatch,
