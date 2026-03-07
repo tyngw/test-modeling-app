@@ -95,10 +95,9 @@ const AppContent: React.FC = () => {
 
   // サイドパネル幅を CSS カスタムプロパティに反映
   useEffect(() => {
-    document.documentElement.style.setProperty(
-      '--app-side-panel-width',
-      isSidePanelOpen ? '360px' : '0px',
-    );
+    if (!isSidePanelOpen) {
+      document.documentElement.style.setProperty('--app-side-panel-width', '0px');
+    }
   }, [isSidePanelOpen]);
 
   // チャット機能 (useChatAssistant)

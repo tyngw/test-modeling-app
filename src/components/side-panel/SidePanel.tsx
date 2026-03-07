@@ -111,6 +111,7 @@ export function SidePanel({
   const [isResizing, setIsResizing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
   // コンテキストクリア時のレース対策: クリアのたびにインクリメント
   const clearCountRef = useRef(0);
 
@@ -234,10 +235,38 @@ export function SidePanel({
     }
   }, [isResizing]);
 
+  // panelWidth が変わったら CSS カスタムプロパティを更新
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      '--app-side-panel-width',
+      `${Math.round(panelWidth)}px`,
+    );
+  }, [panelWidth]);
+
+  // ResizeObserver で実 DOM 幅を監視し、CSS 変数と state を同期
+  useEffect(() => {
+    const el = panelRef.current;
+    if (!el) return undefined;
+
+    const updateFromEl = () => {
+      const w = Math.round(el.getBoundingClientRect().width);
+      setPanelWidth((prev) => (prev === w ? prev : w));
+      document.documentElement.style.setProperty('--app-side-panel-width', `${w}px`);
+    };
+
+    const ro = new ResizeObserver(() => updateFromEl());
+    ro.observe(el);
+    // 初回同期
+    updateFromEl();
+
+    return () => ro.disconnect();
+  }, []);
+
   if (!isOpen) return null;
 
   return (
     <div
+      ref={panelRef}
       style={{
         position: 'fixed',
         right: 0,
