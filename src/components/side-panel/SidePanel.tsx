@@ -117,6 +117,49 @@ export function SidePanel({
   // 外部メッセージのキュー（isLoading 中に到着したメッセージを保持）
   const queuedExternalMessagesRef = useRef<string[]>([]);
 
+  const handleSendMessage = useCallback(
+    async (overrideText?: string) => {
+      const text = overrideText ?? inputText.trim();
+      if (!text || isLoading) return;
+
+      // このリクエスト開始時点のクリアカウントを記録
+      const capturedClearCount = clearCountRef.current;
+
+      const userMessage: ChatMessage = {
+        id: Date.now().toString(),
+        text,
+        sender: 'user',
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, userMessage]);
+      // 外部メッセージの場合は inputText をクリアしない
+      if (!overrideText) setInputText('');
+
+      try {
+        const result = await onSendMessage(text);
+        // コンテキストがクリアされていたらレスポンスを破棄
+        if (clearCountRef.current !== capturedClearCount) return;
+        const assistantMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          text: result || '操作を実行しました！',
+          sender: 'assistant',
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
+      } catch (error) {
+        if (clearCountRef.current !== capturedClearCount) return;
+        const errorMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          text: `エラーが発生しました: ${error instanceof Error ? error.message : '不明なエラー'}`,
+          sender: 'assistant',
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, errorMessage]);
+      }
+    },
+    [inputText, isLoading, onSendMessage],
+  );
+
   // パネルオープン時にプロンプトを読み込む
   useEffect(() => {
     if (isOpen) {
@@ -180,49 +223,6 @@ export function SidePanel({
       cancelled = true;
     };
   }, [isLoading, handleSendMessage]);
-
-  const handleSendMessage = useCallback(
-    async (overrideText?: string) => {
-      const text = overrideText ?? inputText.trim();
-      if (!text || isLoading) return;
-
-      // このリクエスト開始時点のクリアカウントを記録
-      const capturedClearCount = clearCountRef.current;
-
-      const userMessage: ChatMessage = {
-        id: Date.now().toString(),
-        text,
-        sender: 'user',
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, userMessage]);
-      // 外部メッセージの場合は inputText をクリアしない
-      if (!overrideText) setInputText('');
-
-      try {
-        const result = await onSendMessage(text);
-        // コンテキストがクリアされていたらレスポンスを破棄
-        if (clearCountRef.current !== capturedClearCount) return;
-        const assistantMessage: ChatMessage = {
-          id: (Date.now() + 1).toString(),
-          text: result || '操作を実行しました！',
-          sender: 'assistant',
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, assistantMessage]);
-      } catch (error) {
-        if (clearCountRef.current !== capturedClearCount) return;
-        const errorMessage: ChatMessage = {
-          id: (Date.now() + 1).toString(),
-          text: `エラーが発生しました: ${error instanceof Error ? error.message : '不明なエラー'}`,
-          sender: 'assistant',
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, errorMessage]);
-      }
-    },
-    [inputText, isLoading, onSendMessage],
-  );
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     // IME変換確定（isComposing=true）の場合はsubmitしない
