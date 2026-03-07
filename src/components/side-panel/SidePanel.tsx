@@ -114,8 +114,6 @@ export function SidePanel({
   const panelRef = useRef<HTMLDivElement | null>(null);
   // コンテキストクリア時のレース対策: クリアのたびにインクリメント
   const clearCountRef = useRef(0);
-  // 外部メッセージのキュー（isLoading 中に到着したメッセージを保持）
-  const queuedExternalMessagesRef = useRef<string[]>([]);
 
   // パネルオープン時にプロンプトを読み込む
   useEffect(() => {
@@ -140,46 +138,12 @@ export function SidePanel({
 
   // 外部メッセージを受け取ったとき自動送信
   useEffect(() => {
-    if (!externalMessage) return;
-    const msg = externalMessage.trim();
-    if (!msg) return;
-
-    // 送信中（isLoading）の場合は破棄せずキューに追加
-    if (isLoading) {
-      queuedExternalMessagesRef.current.push(msg);
-      return;
+    if (externalMessage && externalMessage.trim()) {
+      handleSendMessage(externalMessage.trim());
     }
-
-    // 直接送信
-    handleSendMessage(msg);
-  }, [externalMessage, isLoading, handleSendMessage]);
-
-  // isLoading が終わったタイミングでキューを順次処理
-  useEffect(() => {
-    if (isLoading) return;
-    if (queuedExternalMessagesRef.current.length === 0) return;
-
-    let cancelled = false;
-
-    (async () => {
-      while (queuedExternalMessagesRef.current.length > 0 && !cancelled) {
-        const next = queuedExternalMessagesRef.current.shift()!;
-        // 各メッセージは順次送信して結果を反映
-        // handleSendMessage は onSendMessage を await するためここで await する
-        try {
-          // eslint-disable-next-line no-await-in-loop
-          await handleSendMessage(next);
-        } catch (e) {
-          // エラーが起きた場合はログだけ残し次へ（UI上でエラーメッセージは handleSendMessage が追加する）
-          // 続行
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isLoading, handleSendMessage]);
+    // handleSendMessage は externalMessage 変化時のみ呼ぶ
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [externalMessage]);
 
   const handleSendMessage = useCallback(
     async (overrideText?: string) => {
