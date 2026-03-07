@@ -14,7 +14,7 @@ import { Element as DiagramElement } from '../types/types';
 import { State } from '../state/state';
 import { createElementsMapFromHierarchy } from '../utils/hierarchical/hierarchicalConverter';
 import { v4 as uuidv4 } from 'uuid';
-import { DEFAULT_POSITION, NUMBER_OF_SECTIONS } from '../config/elementSettings';
+import { DEFAULT_POSITION, NUMBER_OF_SECTIONS, SIZE } from '../config/elementSettings';
 import { createNewElement } from '../utils/element/elementHelpers';
 import { convertLegacyElement } from '../utils/file/fileHelpers';
 import { getTabsState, setTabsState } from '../utils/storage/localStorageHelpers';
@@ -340,10 +340,39 @@ export const TabsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const updateCurrentTabNumberOfSections = useCallback(
     (value: number) => {
       const clampedValue = Math.max(1, Math.min(10, value));
-      updateTabState(currentTabId, (prevState) => ({
-        ...prevState,
-        numberOfSections: clampedValue,
-      }));
+      updateTabState(currentTabId, (prevState) => {
+        const root = prevState.hierarchicalData?.root;
+        const rootData = root?.data;
+        const hasNoChildren = !root?.children || root.children.length === 0;
+        const allTextsEmpty = rootData?.texts.every((t) => t.trim() === '') ?? true;
+        const isInitialState = hasNoChildren && allTextsEmpty;
+
+        if (isInitialState && rootData) {
+          // 初期状態（子なし・テキスト空）の場合は既存ルート要素のセクション数も更新する
+          const updatedRootData = {
+            ...rootData,
+            texts: Array(clampedValue).fill(''),
+            height: SIZE.SECTION_HEIGHT * clampedValue,
+            sectionHeights: Array(clampedValue).fill(SIZE.SECTION_HEIGHT),
+          };
+          return {
+            ...prevState,
+            numberOfSections: clampedValue,
+            hierarchicalData: {
+              ...prevState.hierarchicalData!,
+              root: {
+                ...root,
+                data: updatedRootData,
+              },
+            },
+          };
+        }
+
+        return {
+          ...prevState,
+          numberOfSections: clampedValue,
+        };
+      });
     },
     [currentTabId, updateTabState],
   );
