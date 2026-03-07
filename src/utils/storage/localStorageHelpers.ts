@@ -11,7 +11,7 @@ import {
   DEFAULT_CANVAS_BACKGROUND_COLOR,
   DEFAULT_TEXT_COLOR,
 } from '../../config/elementSettings';
-import { SYSTEM_PROMPT_TEMPLATE } from '../../config/systemPrompt';
+import { AGENT_ELEMENT_GENERATION_PROMPT } from '../../config/agentSystemPrompt';
 import { VERSION } from '../../constants/version';
 import { sanitizeText } from '../security/sanitization';
 import { validateSettingValue } from '../security/validation';
@@ -349,7 +349,7 @@ export const getPrompt = (): string => getSetting(PROMPT_KEY, '');
 export const setPrompt = (prompt: string): void => setSetting(PROMPT_KEY, prompt);
 
 export const getSystemPromptTemplate = (): string =>
-  getSetting(SYSTEM_PROMPT_KEY, SYSTEM_PROMPT_TEMPLATE);
+  getSetting(SYSTEM_PROMPT_KEY, AGENT_ELEMENT_GENERATION_PROMPT);
 
 export const setSystemPromptTemplate = (value: string): void =>
   setSetting(SYSTEM_PROMPT_KEY, value);
