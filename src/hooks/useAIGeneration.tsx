@@ -116,6 +116,34 @@ export function useAIGeneration({ currentTab, dispatch }: UseAIGenerationParams)
     [currentTab],
   );
 
+  // サジェストを子要素として追加する関数
+  const addSuggestionsAsChildren = useCallback(
+    async (selectedElementId: string, suggestions: string[]): Promise<void> => {
+      if (!currentTab?.state.hierarchicalData) {
+        return;
+      }
+
+      debugLog(`[Suggestion] 子要素として追加開始: 選択要素=${selectedElementId}`);
+
+      dispatch({
+        type: 'ADD_ELEMENTS_SILENT',
+        payload: {
+          targetNodeId: selectedElementId,
+          targetPosition: 'child',
+          texts: suggestions,
+          tentative: true,
+          onError: (errorMessage: string) => {
+            debugLog(`[Suggestion] 子要素追加エラー: ${errorMessage}`);
+          },
+          onSuccess: (addedElementIds: string[]) => {
+            debugLog(`[Suggestion] 子要素追加成功: ${addedElementIds.join(', ')}`);
+          },
+        },
+      });
+    },
+    [currentTab, dispatch],
+  );
+
   // サジェストを兄弟要素として追加する関数
   const addSuggestionsAsSiblings = useCallback(
     async (selectedElementId: string, suggestions: string[]): Promise<void> => {
@@ -335,44 +363,6 @@ export function useAIGeneration({ currentTab, dispatch }: UseAIGenerationParams)
     [],
   );
 
-  const findParentElement = useCallback(
-    (elementId: string, _elementsMap: Record<string, Element>): Element | null => {
-      const searchInHierarchy = (nodes: unknown, _parentElement?: Element): Element | null => {
-        if (!nodes) return null;
-
-        const nodeArray = Array.isArray(nodes)
-          ? nodes
-          : Object.values(nodes as Record<string, unknown>);
-
-        for (const node of nodeArray) {
-          const hierarchicalNode = node as Record<string, unknown>;
-          const element = (hierarchicalNode.data || hierarchicalNode) as Element;
-
-          if (hierarchicalNode.children && Array.isArray(hierarchicalNode.children)) {
-            for (const child of hierarchicalNode.children as Record<string, unknown>[]) {
-              const childElement = (child.data || child) as Element;
-              if (childElement.id === elementId) {
-                return element;
-              }
-            }
-
-            const found = searchInHierarchy(hierarchicalNode.children, element);
-            if (found) return found;
-          }
-        }
-
-        return null;
-      };
-
-      if (currentTab?.state.hierarchicalData) {
-        return searchInHierarchy(currentTab.state.hierarchicalData);
-      }
-
-      return null;
-    },
-    [currentTab],
-  );
-
   // 兄弟ノードサジェスト機能
   const handleSiblingNodeSuggestion = useCallback(
     async (parentElementId: string, fromEndEditing = false): Promise<void> => {
@@ -541,17 +531,74 @@ export function useAIGeneration({ currentTab, dispatch }: UseAIGenerationParams)
         );
 
         if (hasChildren) {
+          // 子要素がある場合: 兄弟要素をサジェスト
           setTimeout(() => {
             handleSiblingNodeSuggestion(selectedElement.id);
           }, 300);
         } else {
-          const elementsMap = createElementsMapFromHierarchy(currentTab.state.hierarchicalData);
-          const parentElement = findParentElement(selectedElement.id, elementsMap);
+          // 子要素がない場合（新規追加要素）: その要素の子要素をサジェスト生成
+          debugLog(
+            '[EndEditingSuggestion] 子要素がない新規要素のため、子要素をサジェストして追加します',
+          );
+          try {
+            setIsLoading(true);
+            aiGenerationService.setSuggestionExecuting(true);
 
-          if (parentElement) {
-            handleSiblingNodeSuggestion(parentElement.id, true);
-          } else {
-            handleSiblingNodeSuggestion(selectedElement.id, true);
+            if (!currentTab) {
+              return;
+            }
+
+            // 現在の構造をフォーマット
+            const structureText = currentTab.state.hierarchicalData
+              ? formatHierarchicalStructureForPrompt(currentTab.state.hierarchicalData)
+              : '階層構造データがありません';
+
+            // ドメイン型に変換
+            const domainSelectedElement = new DomainElement(
+              selectedElement.id,
+              selectedElement.texts,
+              selectedElement.x,
+              selectedElement.y,
+              selectedElement.width,
+              selectedElement.height,
+              selectedElement.sectionHeights,
+              selectedElement.editing,
+              selectedElement.selected,
+              selectedElement.visible,
+              selectedElement.tentative,
+              selectedElement.startMarker,
+              selectedElement.endMarker,
+              selectedElement.direction,
+              selectedElement.tempParentId,
+            );
+
+            debugLog('[EndEditingSuggestion] 子要素生成開始');
+
+            // generateElements を使用して、選択要素の子要素を生成
+            const childSuggestions = await aiGenerationService.generateElements(
+              domainSelectedElement,
+              structureText,
+            );
+
+            if (childSuggestions.length > 0) {
+              debugLog(
+                `[EndEditingSuggestion] ${childSuggestions.length}個の子要素の提案を生成: ${childSuggestions.join(', ')}`,
+              );
+              // 提案を子要素として追加
+              await addSuggestionsAsChildren(selectedElement.id, childSuggestions);
+            } else {
+              debugLog('[EndEditingSuggestion] 子要素の提案が生成されませんでした');
+            }
+          } catch (error: unknown) {
+            debugLog(
+              `[EndEditingSuggestion] 子要素生成エラー: ${error instanceof Error ? error.message : '不明なエラー'}`,
+            );
+          } finally {
+            setIsLoading(false);
+            setTimeout(() => {
+              aiGenerationService.setSuggestionExecuting(false);
+              debugLog('[EndEditingSuggestion] 実行フラグをクリアしました');
+            }, 500);
           }
         }
       } catch (error: unknown) {
@@ -565,7 +612,8 @@ export function useAIGeneration({ currentTab, dispatch }: UseAIGenerationParams)
     handleSiblingNodeSuggestion,
     isSuggestionEnabled,
     checkElementHasChildren,
-    findParentElement,
+    aiGenerationService,
+    addSuggestionsAsChildren,
   ]);
 
   // グローバルにサジェスト関数を登録
