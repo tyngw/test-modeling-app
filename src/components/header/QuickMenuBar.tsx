@@ -10,6 +10,9 @@ import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
 import PlaylistRemoveIcon from '@mui/icons-material/PlaylistRemove';
 import AutoFixOffIcon from '@mui/icons-material/AutoFixOff';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import ReviewsIcon from '@mui/icons-material/Reviews';
+import Tooltip from '@mui/material/Tooltip';
 import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
 import UnfoldLessIcon from '@mui/icons-material/UnfoldLess';
 import UndoIcon from '@mui/icons-material/Undo';
@@ -29,6 +32,7 @@ import { getCanvasBackgroundColor } from '../../utils/storage/localStorageHelper
 import { useIsMounted } from '../../hooks/UseIsMounted';
 import LoadingIndicator from '../LoadingIndicator';
 import { tooltipTexts } from '../../constants/tooltipTexts';
+// ChatIconは ReviewsIcon(MUI)に変更したため削除
 
 // 基本コンポーネントのインポート
 import IconButton from './menubar/IconButton';
@@ -41,6 +45,10 @@ interface QuickMenuBarProps {
   toggleHelp: () => void;
   toggleSettings: () => void;
   onAIClick: () => void;
+  /** AIアシスタントパネルを開閉します */
+  onToggleSidePanel: () => void;
+  /** AIアシスタントパネルが開いているかどうか */
+  isSidePanelOpen?: boolean;
   isAILoading?: boolean;
   isEditorMode: boolean;
   isVSCodeExtension: boolean;
@@ -63,6 +71,8 @@ const QuickMenuBar = ({
   toggleHelp,
   toggleSettings,
   onAIClick,
+  onToggleSidePanel,
+  isSidePanelOpen = false,
   isAILoading,
   isEditorMode,
   isVSCodeExtension: isExtension,
@@ -123,169 +133,225 @@ const QuickMenuBar = ({
       <div
         style={{
           position: 'fixed',
-          width: '100%',
           left: 0,
+          right: 'var(--app-side-panel-width, 0px)',
           margin: 0,
           padding: 0,
           height: ICONBAR_HEIGHT,
-          overflowX: 'auto',
-          WebkitOverflowScrolling: 'touch',
-          msOverflowStyle: 'none', // IEとEdge用
-          scrollbarWidth: 'none', // Firefox用
+          display: 'flex',
+          alignItems: 'stretch',
+          backgroundColor: theme.MENU_BAR.BACKGROUND,
         }}
         ref={containerRef}
       >
+        {/* スクロール可能なボタン群 */}
         <div
           style={{
-            display: 'flex',
-            justifyContent: 'left',
-            alignItems: 'center',
-            height: '100%',
-            backgroundColor: theme.MENU_BAR.BACKGROUND,
-            padding: isExtension ? '0' : '0 20px', // VSCode拡張機能ではpaddingなし
-            margin: 0,
-            minWidth: 'max-content', // コンテンツ幅を維持
+            flex: 1,
+            overflowX: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            msOverflowStyle: 'none', // IEとEdge用
+            scrollbarWidth: 'none', // Firefox用
           }}
         >
-          {/* VSCode環境では隠しinputは完全に除外 */}
-          {!isExtension && (
-            <input
-              type="file"
-              ref={fileInput}
-              onChange={loadElements}
-              style={{ display: 'none' }}
-              accept=".json"
-            />
-          )}
-
-          {/* ファイル操作グループ - エディタモードでは新規・開く・保存を非表示 */}
-          {!isEditorMode && (
-            <>
-              <IconButton
-                tooltip={tooltipTexts.NEW}
-                onClick={addTab}
-                icon={InsertDriveFileOutlinedIcon}
-                iconColor={theme.MENU_BAR.ICON_COLOR}
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'left',
+              alignItems: 'center',
+              height: '100%',
+              backgroundColor: theme.MENU_BAR.BACKGROUND,
+              padding: isExtension ? '0' : '0 20px', // VSCode拡張機能ではpaddingなし
+              margin: 0,
+              minWidth: 'max-content', // コンテンツ幅を維持
+            }}
+          >
+            {/* VSCode環境では隠しinputは完全に除外 */}
+            {!isExtension && (
+              <input
+                type="file"
+                ref={fileInput}
+                onChange={loadElements}
+                style={{ display: 'none' }}
+                accept=".json"
               />
-              <IconButton
-                tooltip={tooltipTexts.OPEN}
-                onClick={handleFileOpen}
-                icon={FolderOpenOutlinedIcon}
-                iconColor={theme.MENU_BAR.ICON_COLOR}
-              />
-              <IconButton
-                tooltip={tooltipTexts.SAVE}
-                onClick={saveElements}
-                icon={SaveAsOutlinedIcon}
-                iconColor={theme.MENU_BAR.ICON_COLOR}
-              />
-            </>
-          )}
-          <IconButton
-            tooltip={tooltipTexts.SAVE_SVG}
-            onClick={saveSvg}
-            icon={SaveAltIcon}
-            iconColor={theme.MENU_BAR.ICON_COLOR}
-          />
+            )}
 
-          <Divider color={theme.MENU_BAR.DIVIDER_COLOR} />
-
-          {/* 要素操作グループ */}
-          <IconButton
-            tooltip={tooltipTexts.ADD}
-            onClick={handleAction('ADD_ELEMENT')}
-            icon={PlaylistAddIcon}
-            iconColor={theme.MENU_BAR.ICON_COLOR}
-          />
-          <IconButton
-            tooltip={tooltipTexts.DELETE}
-            onClick={handleAction('DELETE_ELEMENT')}
-            icon={PlaylistRemoveIcon}
-            iconColor={theme.MENU_BAR.ICON_COLOR}
-          />
-          <IconButton
-            tooltip={isAILoading ? 'AI生成中...' : tooltipTexts.AI}
-            onClick={isAILoading ? undefined : onAIClick}
-            icon={isAILoading ? undefined : AutoFixOffIcon}
-            iconColor={theme.MENU_BAR.ICON_COLOR}
-            disabled={isAILoading}
-            customContent={
-              isAILoading ? (
-                <CircularProgress
-                  size={20}
-                  thickness={4}
-                  sx={{ color: theme.MENU_BAR.ICON_COLOR }}
+            {/* ファイル操作グループ - エディタモードでは新規・開く・保存を非表示 */}
+            {!isEditorMode && (
+              <>
+                <IconButton
+                  tooltip={tooltipTexts.NEW}
+                  onClick={addTab}
+                  icon={InsertDriveFileOutlinedIcon}
+                  iconColor={theme.MENU_BAR.ICON_COLOR}
                 />
-              ) : undefined
-            }
-          />
-          <IconButton
-            tooltip={isSuggestionEnabled ? 'サジェスト機能をOFFにする' : 'サジェスト機能をONにする'}
-            onClick={toggleSuggestion}
-            icon={isSuggestionEnabled ? AutoFixHighIcon : AutoFixOffIcon}
-            iconColor={isSuggestionEnabled ? theme.MENU_BAR.ICON_COLOR : '#999'}
-          />
-          <IconButton
-            tooltip={tooltipTexts.EXPAND}
-            onClick={handleAction('EXPAND_ELEMENT')}
-            icon={UnfoldMoreIcon}
-            iconColor={theme.MENU_BAR.ICON_COLOR}
-          />
-          <IconButton
-            tooltip={tooltipTexts.COLLAPSE}
-            onClick={handleAction('COLLAPSE_ELEMENT')}
-            icon={UnfoldLessIcon}
-            iconColor={theme.MENU_BAR.ICON_COLOR}
-          />
+                <IconButton
+                  tooltip={tooltipTexts.OPEN}
+                  onClick={handleFileOpen}
+                  icon={FolderOpenOutlinedIcon}
+                  iconColor={theme.MENU_BAR.ICON_COLOR}
+                />
+                <IconButton
+                  tooltip={tooltipTexts.SAVE}
+                  onClick={saveElements}
+                  icon={SaveAsOutlinedIcon}
+                  iconColor={theme.MENU_BAR.ICON_COLOR}
+                />
+              </>
+            )}
+            <IconButton
+              tooltip={tooltipTexts.SAVE_SVG}
+              onClick={saveSvg}
+              icon={SaveAltIcon}
+              iconColor={theme.MENU_BAR.ICON_COLOR}
+            />
 
-          <Divider color={theme.MENU_BAR.DIVIDER_COLOR} />
+            <Divider color={theme.MENU_BAR.DIVIDER_COLOR} />
 
-          {/* 履歴操作グループ */}
-          <IconButton
-            tooltip={tooltipTexts.UNDO}
-            onClick={handleAction('UNDO')}
-            icon={UndoIcon}
-            iconColor={theme.MENU_BAR.ICON_COLOR}
-          />
-          <IconButton
-            tooltip={tooltipTexts.REDO}
-            onClick={handleAction('REDO')}
-            icon={RedoIcon}
-            iconColor={theme.MENU_BAR.ICON_COLOR}
-          />
+            {/* 要素操作グループ */}
+            <IconButton
+              tooltip={tooltipTexts.ADD}
+              onClick={handleAction('ADD_ELEMENT')}
+              icon={PlaylistAddIcon}
+              iconColor={theme.MENU_BAR.ICON_COLOR}
+            />
+            <IconButton
+              tooltip={tooltipTexts.DELETE}
+              onClick={handleAction('DELETE_ELEMENT')}
+              icon={PlaylistRemoveIcon}
+              iconColor={theme.MENU_BAR.ICON_COLOR}
+            />
+            <IconButton
+              tooltip={isAILoading ? 'AI生成中...' : tooltipTexts.AI}
+              onClick={isAILoading ? undefined : onAIClick}
+              icon={isAILoading ? undefined : AutoAwesomeIcon}
+              iconColor={theme.MENU_BAR.ICON_COLOR}
+              disabled={isAILoading}
+              customContent={
+                isAILoading ? (
+                  <CircularProgress
+                    size={20}
+                    thickness={4}
+                    sx={{ color: theme.MENU_BAR.ICON_COLOR }}
+                  />
+                ) : undefined
+              }
+            />
+            <IconButton
+              tooltip={
+                isSuggestionEnabled ? 'サジェスト機能をOFFにする' : 'サジェスト機能をONにする'
+              }
+              onClick={toggleSuggestion}
+              icon={isSuggestionEnabled ? AutoFixHighIcon : AutoFixOffIcon}
+              iconColor={isSuggestionEnabled ? theme.MENU_BAR.ICON_COLOR : '#999'}
+            />
+            <IconButton
+              tooltip={tooltipTexts.EXPAND}
+              onClick={handleAction('EXPAND_ELEMENT')}
+              icon={UnfoldMoreIcon}
+              iconColor={theme.MENU_BAR.ICON_COLOR}
+            />
+            <IconButton
+              tooltip={tooltipTexts.COLLAPSE}
+              onClick={handleAction('COLLAPSE_ELEMENT')}
+              icon={UnfoldLessIcon}
+              iconColor={theme.MENU_BAR.ICON_COLOR}
+            />
 
-          <Divider color={theme.MENU_BAR.DIVIDER_COLOR} />
+            <Divider color={theme.MENU_BAR.DIVIDER_COLOR} />
 
-          {/* ズーム操作グループ */}
-          <IconButton
-            tooltip={tooltipTexts.ZOOM_IN}
-            onClick={handleAction('ZOOM_IN')}
-            icon={ZoomInIcon}
-            iconColor={theme.MENU_BAR.ICON_COLOR}
-          />
-          <IconButton
-            tooltip={tooltipTexts.ZOOM_OUT}
-            onClick={handleAction('ZOOM_OUT')}
-            icon={ZoomOutIcon}
-            iconColor={theme.MENU_BAR.ICON_COLOR}
-          />
+            {/* 履歴操作グループ */}
+            <IconButton
+              tooltip={tooltipTexts.UNDO}
+              onClick={handleAction('UNDO')}
+              icon={UndoIcon}
+              iconColor={theme.MENU_BAR.ICON_COLOR}
+            />
+            <IconButton
+              tooltip={tooltipTexts.REDO}
+              onClick={handleAction('REDO')}
+              icon={RedoIcon}
+              iconColor={theme.MENU_BAR.ICON_COLOR}
+            />
 
-          <Divider color={theme.MENU_BAR.DIVIDER_COLOR} />
+            <Divider color={theme.MENU_BAR.DIVIDER_COLOR} />
 
-          {/* ユーティリティグループ */}
-          <IconButton
-            tooltip={tooltipTexts.HELP}
-            onClick={toggleHelp}
-            icon={HelpOutlineOutlinedIcon}
-            iconColor={theme.MENU_BAR.ICON_COLOR}
-          />
-          <IconButton
-            tooltip={tooltipTexts.SETTINGS}
-            onClick={toggleSettings}
-            icon={SettingsIcon}
-            iconColor={theme.MENU_BAR.ICON_COLOR}
-          />
+            {/* ズーム操作グループ */}
+            <IconButton
+              tooltip={tooltipTexts.ZOOM_IN}
+              onClick={handleAction('ZOOM_IN')}
+              icon={ZoomInIcon}
+              iconColor={theme.MENU_BAR.ICON_COLOR}
+            />
+            <IconButton
+              tooltip={tooltipTexts.ZOOM_OUT}
+              onClick={handleAction('ZOOM_OUT')}
+              icon={ZoomOutIcon}
+              iconColor={theme.MENU_BAR.ICON_COLOR}
+            />
+
+            <Divider color={theme.MENU_BAR.DIVIDER_COLOR} />
+
+            {/* ユーティリティグループ */}
+            <IconButton
+              tooltip={tooltipTexts.HELP}
+              onClick={toggleHelp}
+              icon={HelpOutlineOutlinedIcon}
+              iconColor={theme.MENU_BAR.ICON_COLOR}
+            />
+            <IconButton
+              tooltip={tooltipTexts.SETTINGS}
+              onClick={toggleSettings}
+              icon={SettingsIcon}
+              iconColor={theme.MENU_BAR.ICON_COLOR}
+            />
+          </div>
         </div>
+
+        {/* ========== 固定：AIアシスタント（Reviews）ボタン ========== */}
+        {/* 常に右端に固定表示。パネルが開いている間は非表示 */}
+        {!isSidePanelOpen && (
+          <div
+            style={{
+              flexShrink: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderLeft: `2px solid ${theme.MENU_BAR.DIVIDER_COLOR}`,
+              backgroundColor: theme.MENU_BAR.BACKGROUND,
+              paddingLeft: '2px',
+              paddingRight: '2px',
+            }}
+          >
+            <Tooltip title="AIアシスタント" placement="bottom">
+              <button
+                onClick={onToggleSidePanel}
+                aria-label="AIアシスタントパネルを開く"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '6px 8px',
+                  borderRadius: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s ease',
+                  color: theme.MENU_BAR.ICON_COLOR,
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.background = 'rgba(0, 0, 0, 0.08)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = 'none';
+                }}
+              >
+                <ReviewsIcon sx={{ fontSize: 20 }} />
+              </button>
+            </Tooltip>
+          </div>
+        )}
       </div>
       {isZoomLoading && (
         <div

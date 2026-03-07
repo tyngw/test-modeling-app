@@ -133,6 +133,14 @@ export class ChatAssistantService {
   }
 
   /**
+   * チャット履歴をリセットする（新しい会話を開始するとき）
+   */
+  clearHistory(): void {
+    this.chatHistory = [];
+    this.hasSentInitialSystemInstruction = false;
+  }
+
+  /**
    * エラーメッセージをユーザーフレンドリーに変換
    */
   createFriendlyErrorMessage(error: Error): string {

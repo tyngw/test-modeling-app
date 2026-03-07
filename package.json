@@ -29,7 +29,7 @@
     "postcss": "8.4.31"
   },
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev",
     "start": "npx serve@latest ./build",
     "build": "tsc && next build",
     "extension:build": "./scripts/build-extension.sh",

@@ -4,7 +4,6 @@ import {
   getSystemPromptTemplate,
   getApiProvider,
 } from '../storage/localStorageHelpers';
-import { SYSTEM_PROMPT_TEMPLATE } from '../../config/systemPrompt';
 import { SuggestionResponse } from './schema';
 import { sanitizeApiResponse } from '../security/sanitization';
 import { validateJsonData } from '../security/validation';
@@ -216,7 +215,7 @@ const generateWithGeminiInternal = async (
   prompt: string,
   apiKey: string,
   _modelType: string,
-  useOriginalSystemPrompt = false,
+  _useOriginalSystemPrompt = false,
   customSystemPrompt?: string,
   forceJsonResponse = false,
 ): Promise<string> => {
@@ -229,9 +228,7 @@ const generateWithGeminiInternal = async (
         : prompt;
 
     const endpoint = `${getApiEndpoint()}?key=${apiKey}`;
-    const systemPrompt =
-      customSystemPrompt ||
-      (useOriginalSystemPrompt ? SYSTEM_PROMPT_TEMPLATE : getSystemPromptTemplate());
+    const systemPrompt = customSystemPrompt || getSystemPromptTemplate();
 
     // generationConfigの構築
     const generationConfig: Record<string, unknown> = {

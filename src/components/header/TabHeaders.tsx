@@ -34,8 +34,8 @@ const TabHeaders: React.FC<TabHeadersProps> = React.memo(function TabHeaders({
     <div
       style={{
         position: 'fixed',
-        width: '100%',
         left: 0,
+        right: 'var(--app-side-panel-width, 0px)',
         margin: 0,
         padding: 0,
         height: TABBAR_HEIGHT,
