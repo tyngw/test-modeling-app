@@ -5,9 +5,10 @@ import type {
   IConfigRepository,
 } from '../../../domain/ai/repositories/IAIRepository';
 import {
-  AGENT_ELEMENT_GENERATION_PROMPT,
-  AGENT_FULL_HIERARCHY_GENERATION_PROMPT,
+  resolveElementGenerationSystemPrompt,
+  resolveFullHierarchySystemPrompt,
 } from '../../../config/agentSystemPrompt';
+import { getDefaultPromptTemplates } from '../../../config/promptTemplates';
 
 const mockRunAgentLoop = jest.fn();
 
@@ -51,11 +52,15 @@ function createAiRepository(): IAIRepository {
 }
 
 function createConfigRepository(systemPromptTemplate: string): IConfigRepository {
+  const promptTemplates = getDefaultPromptTemplates();
+  promptTemplates.system.customSystemPrompt = systemPromptTemplate;
+
   return {
     getApiKey: () => 'test-key',
     getModelType: () => 'test-model',
     getPrompt: () => '仕様書本文',
     getSystemPromptTemplate: () => systemPromptTemplate,
+    getPromptTemplates: () => promptTemplates,
     getApiProvider: () => 'openai',
     getApiEndpoint: () => 'http://localhost:1234/v1/chat/completions',
     getPresetApiEndpoint: () => 'http://localhost:1234/v1/chat/completions',
@@ -108,7 +113,9 @@ describe('AIGenerationService', () => {
     const [actualSystemPrompt, actualUserPrompt, actualContext, , actualOptions] =
       mockRunAgentLoop.mock.calls[0];
 
-    expect(actualSystemPrompt).toBe(AGENT_ELEMENT_GENERATION_PROMPT);
+    expect(actualSystemPrompt).toBe(
+      resolveElementGenerationSystemPrompt(createConfigRepository('   ').getPromptTemplates()),
+    );
     expect(actualUserPrompt).toContain('ソフトウェアテストのパラダイム');
     expect(actualContext).toEqual(
       expect.objectContaining({
@@ -137,7 +144,9 @@ describe('AIGenerationService', () => {
     const [actualSystemPrompt, actualUserPrompt, actualContext, , actualOptions] =
       mockRunAgentLoop.mock.calls[0];
 
-    expect(actualSystemPrompt).toBe(AGENT_FULL_HIERARCHY_GENERATION_PROMPT);
+    expect(actualSystemPrompt).toBe(
+      resolveFullHierarchySystemPrompt(createConfigRepository('   ').getPromptTemplates()),
+    );
     expect(actualUserPrompt).toContain('配下の要素階層全体');
     expect(actualContext).toEqual(
       expect.objectContaining({

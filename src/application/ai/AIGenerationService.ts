@@ -14,7 +14,6 @@ import { AIOperation } from '../../domain/ai/models/AIOperation';
 import { SuggestionContext } from '../../domain/ai/models/SuggestionContext';
 import { AIResponseParser } from '../../domain/ai/services/AIResponseParser';
 import { FullHierarchyGenerationResult } from '../../domain/ai/services/AIResponseParser';
-import { HierarchicalGenerationItem } from '../../domain/ai/services/AIResponseParser';
 import { PromptBuilder } from '../../domain/ai/services/PromptBuilder';
 import { buildHierarchyFromSpecificationOutline } from '../../domain/ai/services/SpecificationHierarchyBuilder';
 import { IAIRepository, IConfigRepository } from '../../domain/ai/repositories/IAIRepository';
@@ -22,26 +21,17 @@ import { runAgentLoop, AgentContext, LLMCallerFn } from '../../domain/ai/agent';
 import { createOpenAIAgentCaller } from '../../infrastructure/ai/OpenAIAgentCaller';
 import { createGeminiAgentCaller } from '../../infrastructure/ai/GeminiAgentCaller';
 import {
-  AGENT_ELEMENT_GENERATION_PROMPT,
-  AGENT_CHAT_PROMPT,
-  AGENT_FULL_HIERARCHY_GENERATION_PROMPT,
+  getAgentChatPrompt,
+  resolveElementGenerationSystemPrompt,
+  resolveFullHierarchySystemPrompt,
 } from '../../config/agentSystemPrompt';
+import { PromptTemplates } from '../../config/promptTemplates';
 import { debugLog } from '../../utils/debugLogHelpers';
 
 /** エージェントループの最大ステップ数 */
 const AGENT_MAX_STEPS = 5;
 const FULL_GENERATION_AGENT_MAX_STEPS = 8;
 const FULL_GENERATION_MAX_ATTEMPTS = 3;
-
-const FULL_HIERARCHY_OUTPUT_APPENDIX = `
-【追加要件】最終回答は必ず以下のJSON形式のみで返してください。
-{
-  "rootText": "更新後のルート名",
-  "hierarchicalItems": [
-    { "text": "分類A", "level": 0, "originalLine": "- 分類A" }
-  ]
-}
-`.trim();
 
 /**
  * AI生成機能の応用サービス
@@ -76,7 +66,7 @@ export class AIGenerationService {
   ): Promise<string[]> {
     const apiKey = this.configRepository.getApiKey();
     const prompt = this.configRepository.getPrompt();
-    const systemPrompt = this.configRepository.getSystemPromptTemplate();
+    const promptTemplates = this.configRepository.getPromptTemplates();
     const modelType = this.configRepository.getModelType();
     const apiProvider = this.configRepository.getApiProvider();
 
@@ -104,7 +94,7 @@ export class AIGenerationService {
     try {
       const callLLM = this.createAgentCaller(apiKey, modelType, apiProvider);
       const result = await runAgentLoop(
-        this.resolveElementGenerationSystemPrompt(systemPrompt),
+        resolveElementGenerationSystemPrompt(promptTemplates),
         `選択要素「${targetElement.texts[0] || targetElement.id}」の子要素を仕様書に基づいて生成してください。`,
         context,
         callLLM,
@@ -117,9 +107,9 @@ export class AIGenerationService {
           targetElement,
           currentStructure,
           prompt,
+          promptTemplates,
           apiKey,
           modelType,
-          systemPrompt,
         );
       }
 
@@ -130,9 +120,9 @@ export class AIGenerationService {
         targetElement,
         currentStructure,
         prompt,
+        promptTemplates,
         apiKey,
         modelType,
-        systemPrompt,
       );
     }
   }
@@ -147,7 +137,7 @@ export class AIGenerationService {
   ): Promise<FullHierarchyGenerationResult> {
     const apiKey = this.configRepository.getApiKey();
     const prompt = this.configRepository.getPrompt();
-    const systemPrompt = this.configRepository.getSystemPromptTemplate();
+    const promptTemplates = this.configRepository.getPromptTemplates();
     const modelType = this.configRepository.getModelType();
     const apiProvider = this.configRepository.getApiProvider();
 
@@ -197,10 +187,11 @@ export class AIGenerationService {
                   targetElement.tempParentId,
                 ),
                 context.hierarchyDraftText || '',
+                promptTemplates,
               );
 
         const result = await runAgentLoop(
-          this.resolveFullHierarchySystemPrompt(systemPrompt),
+          resolveFullHierarchySystemPrompt(promptTemplates),
           userPrompt,
           context,
           callLLM,
@@ -256,9 +247,9 @@ export class AIGenerationService {
         currentStructure,
         selectedSubtreeText,
         prompt,
+        promptTemplates,
         apiKey,
         modelType,
-        systemPrompt,
       );
     } catch (err) {
       debugLog('[AIGenerationService] 全生成エージェント例外: フォールバック実行', err);
@@ -267,9 +258,9 @@ export class AIGenerationService {
         currentStructure,
         selectedSubtreeText,
         prompt,
+        promptTemplates,
         apiKey,
         modelType,
-        systemPrompt,
       );
     }
   }
@@ -285,6 +276,7 @@ export class AIGenerationService {
   ): Promise<AIOperation[]> {
     const apiKey = this.configRepository.getApiKey();
     const prompt = this.configRepository.getPrompt();
+    const promptTemplates = this.configRepository.getPromptTemplates();
     const modelType = this.configRepository.getModelType();
     const apiProvider = this.configRepository.getApiProvider();
 
@@ -303,9 +295,15 @@ export class AIGenerationService {
 
     try {
       const callLLM = this.createAgentCaller(apiKey, modelType, apiProvider);
-      const result = await runAgentLoop(AGENT_CHAT_PROMPT, message, context, callLLM, {
-        maxSteps: AGENT_MAX_STEPS,
-      });
+      const result = await runAgentLoop(
+        getAgentChatPrompt(promptTemplates),
+        message,
+        context,
+        callLLM,
+        {
+          maxSteps: AGENT_MAX_STEPS,
+        },
+      );
 
       if (result.finishReason === 'error' || !result.response) {
         debugLog('[AIGenerationService] チャットエージェントエラー: フォールバック実行');
@@ -313,6 +311,7 @@ export class AIGenerationService {
           message,
           currentStructure,
           selectedElement,
+          promptTemplates,
           apiKey,
           modelType,
         );
@@ -325,6 +324,7 @@ export class AIGenerationService {
         message,
         currentStructure,
         selectedElement,
+        promptTemplates,
         apiKey,
         modelType,
       );
@@ -342,6 +342,7 @@ export class AIGenerationService {
   ): Promise<string[]> {
     const apiKey = this.configRepository.getApiKey();
     const prompt = this.configRepository.getPrompt();
+    const promptTemplates = this.configRepository.getPromptTemplates();
     const modelType = this.configRepository.getModelType();
     const apiProvider = this.configRepository.getApiProvider();
 
@@ -365,7 +366,7 @@ export class AIGenerationService {
     try {
       const callLLM = this.createAgentCaller(apiKey, modelType, apiProvider);
       const result = await runAgentLoop(
-        this.resolveElementGenerationSystemPrompt(this.configRepository.getSystemPromptTemplate()),
+        resolveElementGenerationSystemPrompt(promptTemplates),
         userPrompt,
         context,
         callLLM,
@@ -382,6 +383,7 @@ export class AIGenerationService {
           parentElement,
           currentStructure,
           prompt,
+          promptTemplates,
           apiKey,
           modelType,
         );
@@ -395,6 +397,7 @@ export class AIGenerationService {
         parentElement,
         currentStructure,
         prompt,
+        promptTemplates,
         apiKey,
         modelType,
       );
@@ -464,24 +467,6 @@ export class AIGenerationService {
     };
   }
 
-  /**
-   * 要素生成エージェント用のシステムプロンプトを解決する
-   * 設定画面で保存されたプロンプトがあればそれを優先し、未設定時は既定値を使う
-   */
-  private resolveElementGenerationSystemPrompt(systemPrompt: string): string {
-    const trimmedSystemPrompt = systemPrompt.trim();
-    return trimmedSystemPrompt.length > 0 ? trimmedSystemPrompt : AGENT_ELEMENT_GENERATION_PROMPT;
-  }
-
-  private resolveFullHierarchySystemPrompt(systemPrompt: string): string {
-    const trimmedSystemPrompt = systemPrompt.trim();
-    if (trimmedSystemPrompt.length === 0) {
-      return AGENT_FULL_HIERARCHY_GENERATION_PROMPT;
-    }
-
-    return `${AGENT_FULL_HIERARCHY_GENERATION_PROMPT}\n\n【追加のカスタム指示】\n${trimmedSystemPrompt}\n\n${FULL_HIERARCHY_OUTPUT_APPENDIX}`;
-  }
-
   private shouldRefineFullHierarchy(
     generationResult: FullHierarchyGenerationResult,
     specificationText: string,
@@ -494,7 +479,8 @@ export class AIGenerationService {
     const headingCount = (specificationText.match(/^#{1,6}\s+/gm) || []).length;
     const sectionMarkerCount = (specificationText.match(/^≣\s+/gm) || []).length;
     const isLongDocument = specificationText.length >= 2500;
-    const requiresDeepHierarchy = hasNumberedItems || headingCount + sectionMarkerCount >= 3 || isLongDocument;
+    const requiresDeepHierarchy =
+      hasNumberedItems || headingCount + sectionMarkerCount >= 3 || isLongDocument;
     const hasTooFewItems = isLongDocument && generationResult.hierarchicalItems.length < 8;
 
     return requiresDeepHierarchy && (deepestLevel < 2 || hasTooFewItems);
@@ -505,9 +491,13 @@ export class AIGenerationService {
       (item) => `${'  '.repeat(item.level)}- ${item.text}`,
     );
 
-    return ['更新候補ルート:', `- ${generationResult.rootText}`, '', '更新候補サブツリー:', ...lines].join(
-      '\n',
-    );
+    return [
+      '更新候補ルート:',
+      `- ${generationResult.rootText}`,
+      '',
+      '更新候補サブツリー:',
+      ...lines,
+    ].join('\n');
   }
 
   /**
@@ -565,9 +555,9 @@ export class AIGenerationService {
     targetElement: Element,
     currentStructure: string,
     prompt: string,
+    promptTemplates: PromptTemplates,
     apiKey: string,
     modelType: string,
-    systemPrompt: string,
   ): Promise<string[]> {
     // 関連セクションに仕様書を事前加工
     const focusedPrompt = this.extractFocusedSpecification(prompt, targetElement.texts);
@@ -577,13 +567,14 @@ export class AIGenerationService {
       focusedPrompt,
       currentStructure,
       false,
+      promptTemplates,
     );
     const result = await this.aiRepository.generateSingle(
       userPrompt,
       apiKey,
       modelType,
       true,
-      systemPrompt,
+      resolveElementGenerationSystemPrompt(promptTemplates),
     );
     return this.responseParser.extractElementsFromText(result);
   }
@@ -592,12 +583,14 @@ export class AIGenerationService {
     message: string,
     currentStructure: string,
     selectedElement: string | undefined,
+    promptTemplates: PromptTemplates,
     apiKey: string,
     modelType: string,
   ): Promise<AIOperation[]> {
     const userPrompt = this.promptBuilder.buildChatPrompt(
       message,
       currentStructure,
+      promptTemplates,
       selectedElement,
     );
     const result = await this.aiRepository.generateSingle(userPrompt, apiKey, modelType, true);
@@ -609,6 +602,7 @@ export class AIGenerationService {
     parentElement: Element | null,
     currentStructure: string,
     prompt: string,
+    promptTemplates: PromptTemplates,
     apiKey: string,
     modelType: string,
   ): Promise<string[]> {
@@ -618,6 +612,7 @@ export class AIGenerationService {
       prompt,
       currentStructure,
       false,
+      promptTemplates,
     );
     const response = await this.aiRepository.generateWithThread(
       suggestionPrompt,
@@ -635,9 +630,9 @@ export class AIGenerationService {
     currentStructure: string,
     selectedSubtreeText: string,
     prompt: string,
+    promptTemplates: PromptTemplates,
     apiKey: string,
     modelType: string,
-    systemPrompt: string,
   ): Promise<FullHierarchyGenerationResult> {
     const focusedPrompt = this.extractFocusedSpecification(prompt, targetElement.texts);
 
@@ -646,6 +641,7 @@ export class AIGenerationService {
       focusedPrompt,
       currentStructure,
       selectedSubtreeText,
+      promptTemplates,
     );
 
     const result = await this.aiRepository.generateSingle(
@@ -653,7 +649,7 @@ export class AIGenerationService {
       apiKey,
       modelType,
       true,
-      this.resolveFullHierarchySystemPrompt(systemPrompt),
+      resolveFullHierarchySystemPrompt(promptTemplates),
     );
 
     const parsedResult = this.responseParser.extractFullHierarchyResultFromText(
@@ -679,7 +675,9 @@ export class AIGenerationService {
   }
 
   private scoreFullHierarchyQuality(generationResult: FullHierarchyGenerationResult): number {
-    const topLevelCount = generationResult.hierarchicalItems.filter((item) => item.level === 0).length;
+    const topLevelCount = generationResult.hierarchicalItems.filter(
+      (item) => item.level === 0,
+    ).length;
     const deepestLevel = generationResult.hierarchicalItems.reduce(
       (maxLevel, item) => Math.max(maxLevel, item.level),
       0,

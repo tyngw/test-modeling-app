@@ -201,6 +201,7 @@ export function validateSettingValue(key: string, value: unknown): boolean {
     'wordWrap',
     'prompt',
     'systemPromptTemplate',
+    'promptTemplates',
     'modelType',
     'apiProvider',
     'apiEndpointCustom',
@@ -251,6 +252,9 @@ export function validateSettingValue(key: string, value: unknown): boolean {
     case 'systemPromptTemplate':
       // プロンプトフィールドは空文字列も許可
       return typeof value === 'string' && (value === '' || validateTextInput(value, 50000));
+
+    case 'promptTemplates':
+      return typeof value === 'string' && validateTextInput(value, 200000);
 
     case 'modelType':
       // モデル名は手入力対応：空でない文字列で、長さは100文字以内

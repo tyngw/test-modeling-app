@@ -5,11 +5,13 @@ import {
   getApiKey,
   getModelType,
   getPrompt,
+  getPromptTemplates,
   getSystemPromptTemplate,
   getApiProvider as getStorageApiProvider,
   getApiEndpoint as getStorageApiEndpoint,
   getPresetApiEndpoint as getStoragePresetApiEndpoint,
 } from '../../utils/storage';
+import { PromptTemplates } from '../../config/promptTemplates';
 
 /**
  * LocalStorageを使用した設定リポジトリの実装
@@ -41,6 +43,13 @@ export class LocalStorageConfigRepository implements IConfigRepository {
    */
   getSystemPromptTemplate(): string {
     return getSystemPromptTemplate();
+  }
+
+  /**
+   * プロンプトテンプレートを取得
+   */
+  getPromptTemplates(): PromptTemplates {
+    return getPromptTemplates();
   }
 
   /**

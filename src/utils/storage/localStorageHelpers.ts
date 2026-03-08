@@ -11,7 +11,12 @@ import {
   DEFAULT_CANVAS_BACKGROUND_COLOR,
   DEFAULT_TEXT_COLOR,
 } from '../../config/elementSettings';
-import { AGENT_ELEMENT_GENERATION_PROMPT } from '../../config/agentSystemPrompt';
+import {
+  PromptTemplates,
+  getDefaultPromptTemplates,
+  parsePromptTemplatesJson,
+  stringifyPromptTemplates,
+} from '../../config/promptTemplates';
 import { VERSION } from '../../constants/version';
 import { sanitizeText } from '../security/sanitization';
 import { validateSettingValue } from '../security/validation';
@@ -50,6 +55,7 @@ const TABS_STORAGE_KEY = 'tabsState';
 export const VERSION_KEY = 'appVersion';
 const PROMPT_KEY = 'prompt';
 const SYSTEM_PROMPT_KEY = 'systemPromptTemplate';
+const PROMPT_TEMPLATES_KEY = 'promptTemplates';
 const APIKEY_KEY = 'apiKey';
 const MODEL_TYPE_KEY = 'modelType';
 const API_PROVIDER_KEY = 'apiProvider';
@@ -136,7 +142,13 @@ const checkAndUpdateVersion = () => {
   if (storedVersion !== VERSION) {
     const keys = Object.keys(localStorage);
     keys.forEach((key) => {
-      if (key !== TABS_STORAGE_KEY && key !== APIKEY_KEY && key !== PROMPT_KEY) {
+      if (
+        key !== TABS_STORAGE_KEY &&
+        key !== APIKEY_KEY &&
+        key !== PROMPT_KEY &&
+        key !== SYSTEM_PROMPT_KEY &&
+        key !== PROMPT_TEMPLATES_KEY
+      ) {
         safeLocalStorage.removeItem(key);
       }
     });
@@ -348,11 +360,66 @@ export const getPrompt = (): string => getSetting(PROMPT_KEY, '');
 
 export const setPrompt = (prompt: string): void => setSetting(PROMPT_KEY, prompt);
 
-export const getSystemPromptTemplate = (): string =>
-  getSetting(SYSTEM_PROMPT_KEY, AGENT_ELEMENT_GENERATION_PROMPT);
+function readLegacyCustomSystemPrompt(): string {
+  return getSetting(SYSTEM_PROMPT_KEY, '');
+}
+
+export const getPromptTemplates = (): PromptTemplates => {
+  const storedPromptTemplates = safeLocalStorage.getItem(PROMPT_TEMPLATES_KEY);
+  const legacyCustomSystemPrompt = readLegacyCustomSystemPrompt();
+
+  if (!storedPromptTemplates) {
+    const migratedPromptTemplates = getDefaultPromptTemplates();
+    if (legacyCustomSystemPrompt.trim().length > 0)
+      migratedPromptTemplates.system.customSystemPrompt = legacyCustomSystemPrompt;
+
+    safeLocalStorage.setItem(
+      PROMPT_TEMPLATES_KEY,
+      stringifyPromptTemplates(migratedPromptTemplates),
+    );
+    return migratedPromptTemplates;
+  }
+
+  try {
+    return parsePromptTemplatesJson(storedPromptTemplates, {
+      legacyCustomSystemPrompt,
+    });
+  } catch (error) {
+    debugLog('promptTemplates parse failed:', error);
+    const fallbackPromptTemplates = getDefaultPromptTemplates();
+    if (legacyCustomSystemPrompt.trim().length > 0)
+      fallbackPromptTemplates.system.customSystemPrompt = legacyCustomSystemPrompt;
+
+    safeLocalStorage.setItem(
+      PROMPT_TEMPLATES_KEY,
+      stringifyPromptTemplates(fallbackPromptTemplates),
+    );
+    return fallbackPromptTemplates;
+  }
+};
+
+export const getPromptTemplatesJson = (): string => stringifyPromptTemplates(getPromptTemplates());
+
+export const setPromptTemplatesJson = (value: string): void => {
+  const normalizedPromptTemplates = parsePromptTemplatesJson(value, {
+    legacyCustomSystemPrompt: readLegacyCustomSystemPrompt(),
+  });
+
+  setSetting(PROMPT_TEMPLATES_KEY, stringifyPromptTemplates(normalizedPromptTemplates));
+};
+
+export const getSystemPromptTemplate = (): string => getPromptTemplates().system.customSystemPrompt;
 
 export const setSystemPromptTemplate = (value: string): void =>
-  setSetting(SYSTEM_PROMPT_KEY, value);
+  setPromptTemplatesJson(
+    stringifyPromptTemplates({
+      ...getPromptTemplates(),
+      system: {
+        ...getPromptTemplates().system,
+        customSystemPrompt: value,
+      },
+    }),
+  );
 
 // API provider関連
 export const getApiProvider = (): ApiProvider => {

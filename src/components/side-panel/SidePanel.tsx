@@ -6,9 +6,9 @@ import SendIcon from '@mui/icons-material/Send';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import {
   getPrompt,
+  getPromptTemplatesJson,
   setPrompt,
-  getSystemPromptTemplate,
-  setSystemPromptTemplate,
+  setPromptTemplatesJson,
 } from '../../utils/storage/localStorageHelpers';
 
 // ---------------------------------------------------------------------------
@@ -103,10 +103,11 @@ export function SidePanel({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [promptText, setPromptText] = useState('');
-  const [systemPromptText, setSystemPromptText] = useState('');
+  const [promptTemplatesText, setPromptTemplatesText] = useState('');
+  const [promptTemplatesError, setPromptTemplatesError] = useState('');
   const [isSaved, setIsSaved] = useState(false);
-  // アコーディオン状態: 'user' | 'system' | null（null=両方閉じている）
-  const [openAccordion, setOpenAccordion] = useState<'user' | 'system' | null>('user');
+  // アコーディオン状態: 'input' | 'templates' | null（null=両方閉じている）
+  const [openAccordion, setOpenAccordion] = useState<'input' | 'templates' | null>('input');
   const [panelWidth, setPanelWidth] = useState(360);
   const [isResizing, setIsResizing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -119,7 +120,8 @@ export function SidePanel({
   useEffect(() => {
     if (isOpen) {
       setPromptText(getPrompt());
-      setSystemPromptText(getSystemPromptTemplate());
+      setPromptTemplatesText(getPromptTemplatesJson());
+      setPromptTemplatesError('');
       setIsSaved(false);
     }
   }, [isOpen]);
@@ -203,11 +205,20 @@ export function SidePanel({
   }, [onClearContext]);
 
   const handleSavePrompt = useCallback(() => {
-    setPrompt(promptText);
-    setSystemPromptTemplate(systemPromptText);
+    try {
+      setPrompt(promptText);
+      setPromptTemplatesJson(promptTemplatesText);
+      setPromptTemplatesError('');
+    } catch (error) {
+      setPromptTemplatesError(
+        error instanceof Error ? error.message : 'プロンプトJSONを保存できませんでした。',
+      );
+      return;
+    }
+
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 2000);
-  }, [promptText, systemPromptText]);
+  }, [promptText, promptTemplatesText]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     setIsResizing(true);
@@ -609,7 +620,7 @@ export function SidePanel({
           >
             {/* ユーザープロンプトアコーディオンヘッダー */}
             <button
-              onClick={() => setOpenAccordion(openAccordion === 'user' ? null : 'user')}
+              onClick={() => setOpenAccordion(openAccordion === 'input' ? null : 'input')}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -637,14 +648,14 @@ export function SidePanel({
                   margin: 0,
                 }}
               >
-                ユーザープロンプト
+                入力情報
               </p>
               <span
                 style={{
                   fontSize: '0.75rem',
                   color: '#9ca3af',
                   transition: 'transform 0.2s ease',
-                  transform: openAccordion === 'user' ? 'rotate(180deg)' : 'rotate(0deg)',
+                  transform: openAccordion === 'input' ? 'rotate(180deg)' : 'rotate(0deg)',
                 }}
               >
                 ▼
@@ -654,12 +665,12 @@ export function SidePanel({
             {/* ユーザープロンプト入力欄（アニメーション付き） */}
             <div
               style={{
-                display: openAccordion === 'user' ? 'flex' : 'none',
+                display: openAccordion === 'input' ? 'flex' : 'none',
                 flexDirection: 'column',
                 gap: '4px',
-                flex: openAccordion === 'user' ? '1 1 auto' : '0 0 auto',
+                flex: openAccordion === 'input' ? '1 1 auto' : '0 0 auto',
                 animation:
-                  openAccordion === 'user'
+                  openAccordion === 'input'
                     ? 'slide-down-popover 0.3s ease-out forwards'
                     : 'slide-up-popover 0.3s ease-out forwards',
                 overflow: 'hidden',
@@ -675,12 +686,12 @@ export function SidePanel({
                   margin: 0,
                 }}
               >
-                AIへのリクエスト時に自動的に追加されるカスタム指示を設定します。
+                仕様書や入力情報として使う本文を保存します。AI生成時はこの内容を参照します。
               </p>
               <textarea
                 value={promptText}
                 onChange={(e) => setPromptText(e.target.value)}
-                placeholder="例: 必ず日本語で回答してください。..."
+                placeholder="例: リスクベースドテストの定義と実施手順..."
                 style={{
                   height: '100%',
                   resize: 'none',
@@ -706,9 +717,9 @@ export function SidePanel({
               />
             </div>
 
-            {/* システムプロンプトアコーディオンヘッダー */}
+            {/* プロンプトJSONアコーディオンヘッダー */}
             <button
-              onClick={() => setOpenAccordion(openAccordion === 'system' ? null : 'system')}
+              onClick={() => setOpenAccordion(openAccordion === 'templates' ? null : 'templates')}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -736,29 +747,29 @@ export function SidePanel({
                   margin: 0,
                 }}
               >
-                システムプロンプト
+                AIプロンプトJSON
               </p>
               <span
                 style={{
                   fontSize: '0.75rem',
                   color: '#9ca3af',
                   transition: 'transform 0.2s ease',
-                  transform: openAccordion === 'system' ? 'rotate(180deg)' : 'rotate(0deg)',
+                  transform: openAccordion === 'templates' ? 'rotate(180deg)' : 'rotate(0deg)',
                 }}
               >
                 ▼
               </span>
             </button>
 
-            {/* システムプロンプト入力欄（アニメーション付き） */}
+            {/* プロンプトJSON入力欄（アニメーション付き） */}
             <div
               style={{
-                display: openAccordion === 'system' ? 'flex' : 'none',
+                display: openAccordion === 'templates' ? 'flex' : 'none',
                 flexDirection: 'column',
                 gap: '4px',
-                flex: openAccordion === 'system' ? '1 1 auto' : '0 0 auto',
+                flex: openAccordion === 'templates' ? '1 1 auto' : '0 0 auto',
                 animation:
-                  openAccordion === 'system'
+                  openAccordion === 'templates'
                     ? 'slide-down-popover 0.3s ease-out forwards'
                     : 'slide-up-popover 0.3s ease-out forwards',
                 overflow: 'hidden',
@@ -776,10 +787,27 @@ export function SidePanel({
               >
                 AIモデルのシステムレベルの動作を定義するテンプレートを設定します。
               </p>
+              <p
+                style={{
+                  fontSize: '0.7rem',
+                  color: promptTemplatesError ? '#dc2626' : '#9ca3af',
+                  lineHeight: '1.4',
+                  margin: 0,
+                }}
+              >
+                {promptTemplatesError ||
+                  'すべてのAIプロンプト定義をJSONで一元管理します。保存時にJSONを検証します。'}
+              </p>
               <textarea
-                value={systemPromptText}
-                onChange={(e) => setSystemPromptText(e.target.value)}
-                placeholder="例: あなたは開発を支援するAIアシスタントです。..."
+                value={promptTemplatesText}
+                onChange={(e) => {
+                  setPromptTemplatesText(e.target.value);
+                  if (promptTemplatesError) setPromptTemplatesError('');
+                }}
+                placeholder={`{
+  "version": 1,
+  ...
+}`}
                 style={{
                   height: '100%',
                   resize: 'none',
@@ -791,7 +819,7 @@ export function SidePanel({
                   outline: 'none',
                   backgroundColor: '#ffffff',
                   color: '#1f2937',
-                  fontFamily: 'inherit',
+                  fontFamily: 'ui-monospace, SFMono-Regular, SFMono-Regular, Menlo, monospace',
                   transition: 'border-color 0.2s',
                   minHeight: 0,
                   overflowY: 'auto',
