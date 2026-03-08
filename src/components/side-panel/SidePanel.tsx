@@ -6,10 +6,12 @@ import SendIcon from '@mui/icons-material/Send';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import {
   getPrompt,
-  getPromptTemplatesJson,
   setPrompt,
-  setPromptTemplatesJson,
+  getSystemPromptKeys,
+  getSystemPromptByKey,
+  setSystemPromptByKey,
 } from '../../utils/storage/localStorageHelpers';
+import { PromptTemplates } from '../../config/promptTemplates';
 
 // ---------------------------------------------------------------------------
 // 型定義
@@ -103,8 +105,10 @@ export function SidePanel({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [promptText, setPromptText] = useState('');
-  const [promptTemplatesText, setPromptTemplatesText] = useState('');
-  const [promptTemplatesError, setPromptTemplatesError] = useState('');
+  const [selectedSystemPromptKey, setSelectedSystemPromptKey] =
+    useState<keyof PromptTemplates['system']>('customSystemPrompt');
+  const [selectedSystemPrompt, setSelectedSystemPrompt] = useState('');
+  const [systemPromptError, setSystemPromptError] = useState('');
   const [isSaved, setIsSaved] = useState(false);
   // アコーディオン状態: 'input' | 'templates' | null（null=両方閉じている）
   const [openAccordion, setOpenAccordion] = useState<'input' | 'templates' | null>('input');
@@ -120,8 +124,11 @@ export function SidePanel({
   useEffect(() => {
     if (isOpen) {
       setPromptText(getPrompt());
-      setPromptTemplatesText(getPromptTemplatesJson());
-      setPromptTemplatesError('');
+      // 最初のシステムプロンプトを読み込む
+      const firstKey = getSystemPromptKeys()[0];
+      setSelectedSystemPromptKey(firstKey);
+      setSelectedSystemPrompt(getSystemPromptByKey(firstKey));
+      setSystemPromptError('');
       setIsSaved(false);
     }
   }, [isOpen]);
@@ -207,18 +214,18 @@ export function SidePanel({
   const handleSavePrompt = useCallback(() => {
     try {
       setPrompt(promptText);
-      setPromptTemplatesJson(promptTemplatesText);
-      setPromptTemplatesError('');
+      setSystemPromptByKey(selectedSystemPromptKey, selectedSystemPrompt);
+      setSystemPromptError('');
     } catch (error) {
-      setPromptTemplatesError(
-        error instanceof Error ? error.message : 'プロンプトJSONを保存できませんでした。',
+      setSystemPromptError(
+        error instanceof Error ? error.message : 'プロンプトを保存できませんでした。',
       );
       return;
     }
 
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 2000);
-  }, [promptText, promptTemplatesText]);
+  }, [promptText, selectedSystemPromptKey, selectedSystemPrompt]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     setIsResizing(true);
@@ -717,7 +724,7 @@ export function SidePanel({
               />
             </div>
 
-            {/* プロンプトJSONアコーディオンヘッダー */}
+            {/* AIプロンプトアコーディオンヘッダー */}
             <button
               onClick={() => setOpenAccordion(openAccordion === 'templates' ? null : 'templates')}
               style={{
@@ -747,7 +754,7 @@ export function SidePanel({
                   margin: 0,
                 }}
               >
-                AIプロンプトJSON
+                AIプロンプト設定
               </p>
               <span
                 style={{
@@ -761,7 +768,7 @@ export function SidePanel({
               </span>
             </button>
 
-            {/* プロンプトJSON入力欄（アニメーション付き） */}
+            {/* AIプロンプト入力欄（アニメーション付き） */}
             <div
               style={{
                 display: openAccordion === 'templates' ? 'flex' : 'none',
@@ -785,29 +792,64 @@ export function SidePanel({
                   margin: 0,
                 }}
               >
-                AIモデルのシステムレベルの動作を定義するテンプレートを設定します。
+                AIモデルのシステムレベルの動作を定義するプロンプトをテキストで編集します。
               </p>
+
+              {/* プロンプトキー選択ドロップダウン */}
+              <select
+                value={selectedSystemPromptKey}
+                onChange={(e) => {
+                  const newKey = e.target.value as keyof PromptTemplates['system'];
+                  setSelectedSystemPromptKey(newKey);
+                  setSelectedSystemPrompt(getSystemPromptByKey(newKey));
+                  setSystemPromptError('');
+                }}
+                style={{
+                  padding: '8px 10px',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '6px',
+                  fontSize: '0.8rem',
+                  backgroundColor: '#ffffff',
+                  color: '#1f2937',
+                  outline: 'none',
+                  cursor: 'pointer',
+                  transition: 'border-color 0.2s',
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#3b82f6';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#e5e7eb';
+                }}
+              >
+                <option value="customSystemPrompt">カスタムシステムプロンプト</option>
+                <option value="agentElementGeneration">エージェント - 子要素生成</option>
+                <option value="agentFullHierarchyGeneration">エージェント - 全体構造再設計</option>
+                <option value="agentChat">エージェント - チャット操作</option>
+                <option value="chatAssistant">チャットアシスタント</option>
+                <option value="fullHierarchyOutputAppendix">出力形式補足</option>
+              </select>
+
               <p
                 style={{
                   fontSize: '0.7rem',
-                  color: promptTemplatesError ? '#dc2626' : '#9ca3af',
+                  color: systemPromptError ? '#dc2626' : '#9ca3af',
                   lineHeight: '1.4',
                   margin: 0,
                 }}
               >
-                {promptTemplatesError ||
-                  'すべてのAIプロンプト定義をJSONで一元管理します。保存時にJSONを検証します。'}
+                {systemPromptError ||
+                  '選択したプロンプトをテキスト形式で編集できます。保存時に内容を保存します。'}
               </p>
+
+              {/* プロンプトテキスト入力欄 */}
               <textarea
-                value={promptTemplatesText}
+                value={selectedSystemPrompt}
                 onChange={(e) => {
-                  setPromptTemplatesText(e.target.value);
-                  if (promptTemplatesError) setPromptTemplatesError('');
+                  setSelectedSystemPrompt(e.target.value);
+                  if (systemPromptError) setSystemPromptError('');
                 }}
-                placeholder={`{
-  "version": 1,
-  ...
-}`}
+                placeholder="プロンプトテキストをここに入力..."
                 style={{
                   height: '100%',
                   resize: 'none',
@@ -819,10 +861,12 @@ export function SidePanel({
                   outline: 'none',
                   backgroundColor: '#ffffff',
                   color: '#1f2937',
-                  fontFamily: 'ui-monospace, SFMono-Regular, SFMono-Regular, Menlo, monospace',
+                  fontFamily: 'inherit',
                   transition: 'border-color 0.2s',
                   minHeight: 0,
                   overflowY: 'auto',
+                  whiteSpace: 'pre-wrap',
+                  wordWrap: 'break-word',
                 }}
                 onFocus={(e) => {
                   e.target.style.borderColor = '#3b82f6';

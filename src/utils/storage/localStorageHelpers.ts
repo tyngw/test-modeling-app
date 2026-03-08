@@ -421,6 +421,42 @@ export const setSystemPromptTemplate = (value: string): void =>
     }),
   );
 
+/**
+ * 編集可能なシステムプロンプトのキーを取得
+ */
+export const getSystemPromptKeys = (): (keyof PromptTemplates['system'])[] => [
+  'customSystemPrompt',
+  'agentElementGeneration',
+  'agentFullHierarchyGeneration',
+  'agentChat',
+  'chatAssistant',
+  'fullHierarchyOutputAppendix',
+];
+
+/**
+ * 指定されたキーのシステムプロンプトを取得
+ */
+export const getSystemPromptByKey = (key: keyof PromptTemplates['system']): string => {
+  const promptTemplates = getPromptTemplates();
+  return promptTemplates.system[key] || '';
+};
+
+/**
+ * 指定されたキーのシステムプロンプトを設定
+ */
+export const setSystemPromptByKey = (key: keyof PromptTemplates['system'], value: string): void => {
+  const promptTemplates = getPromptTemplates();
+  setPromptTemplatesJson(
+    stringifyPromptTemplates({
+      ...promptTemplates,
+      system: {
+        ...promptTemplates.system,
+        [key]: value,
+      },
+    }),
+  );
+};
+
 // API provider関連
 export const getApiProvider = (): ApiProvider => {
   const stored = getSetting(API_PROVIDER_KEY, 'gemini') as unknown;
