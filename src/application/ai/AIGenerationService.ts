@@ -64,7 +64,10 @@ export class AIGenerationService {
       throw new Error('プロンプトが設定されていません。');
     }
 
-    const context = this.buildAgentContext(prompt, currentStructure, {
+    // 選択要素に関連するセクションを抽出して、仕様書を事前加工
+    const focusedPrompt = this.extractFocusedSpecification(prompt, targetElement.texts);
+
+    const context = this.buildAgentContext(focusedPrompt, currentStructure, {
       id: targetElement.id,
       texts: targetElement.texts,
     });
@@ -72,7 +75,7 @@ export class AIGenerationService {
     try {
       const callLLM = this.createAgentCaller(apiKey, modelType, apiProvider);
       const result = await runAgentLoop(
-        AGENT_ELEMENT_GENERATION_PROMPT,
+        this.resolveElementGenerationSystemPrompt(systemPrompt),
         `選択要素「${targetElement.texts[0] || targetElement.id}」の子要素を仕様書に基づいて生成してください。`,
         context,
         callLLM,
@@ -193,7 +196,7 @@ export class AIGenerationService {
     try {
       const callLLM = this.createAgentCaller(apiKey, modelType, apiProvider);
       const result = await runAgentLoop(
-        AGENT_ELEMENT_GENERATION_PROMPT,
+        this.resolveElementGenerationSystemPrompt(this.configRepository.getSystemPromptTemplate()),
         userPrompt,
         context,
         callLLM,
@@ -283,6 +286,62 @@ export class AIGenerationService {
     return { specificationText, structureText, selectedElement, parentElement };
   }
 
+  /**
+   * 要素生成エージェント用のシステムプロンプトを解決する
+   * 設定画面で保存されたプロンプトがあればそれを優先し、未設定時は既定値を使う
+   */
+  private resolveElementGenerationSystemPrompt(systemPrompt: string): string {
+    const trimmedSystemPrompt = systemPrompt.trim();
+    return trimmedSystemPrompt.length > 0 ? trimmedSystemPrompt : AGENT_ELEMENT_GENERATION_PROMPT;
+  }
+
+  /**
+   * 選択要素に関連するセクションを抽出して、仕様書を事前加工する
+   * エージェント検索の精度を向上させるため、関連セクションを優先配置
+   */
+  private extractFocusedSpecification(fullSpec: string, selectedTexts: string[]): string {
+    if (!fullSpec || !selectedTexts || selectedTexts.length === 0) return fullSpec;
+
+    const targetText = selectedTexts[0].toLowerCase();
+
+    // 見出し（#）またはマーク（≣）で分割
+    const sections = fullSpec.split(/\n(?=#{1,6}\s|≣\s)/);
+
+    // 各セクションをスコアリング
+    const scored = sections.map((section) => {
+      const lowerSection = section.toLowerCase();
+      // 見出し行
+      const firstLine = section.split('\n')[0];
+      const isHeading = firstLine.startsWith('#') || firstLine.startsWith('≣');
+
+      let score = 0;
+      // 見出しに対象テキストが含まれたら大幅加点
+      if (isHeading && lowerSection.includes(targetText)) score += 100;
+      // セクション内に対象テキストが含まれたら加点
+      if (lowerSection.includes(targetText)) score += 10;
+      // 対象テキストの各単語の出現によるスコアリング
+      const words = targetText.split(/\s+/).filter((w) => w.length > 2);
+      for (const word of words) {
+        const matches = lowerSection.match(new RegExp(word, 'g'));
+        if (matches) score += matches.length;
+      }
+
+      return { text: section, score };
+    });
+
+    // 関連度の高いセクションを前に配置
+    const sorted = scored.sort((a, b) => b.score - a.score);
+
+    if (sorted.some((s) => s.score > 0)) {
+      return sorted
+        .map((s) => s.text)
+        .filter((s) => s.trim().length > 0)
+        .join('\n\n');
+    }
+
+    return fullSpec;
+  }
+
   // ---------------------------------------------------------------------------
   // フォールバック（エージェント失敗時の単発呼び出し）
   // ---------------------------------------------------------------------------
@@ -295,9 +354,12 @@ export class AIGenerationService {
     modelType: string,
     systemPrompt: string,
   ): Promise<string[]> {
+    // 関連セクションに仕様書を事前加工
+    const focusedPrompt = this.extractFocusedSpecification(prompt, targetElement.texts);
+
     const userPrompt = this.promptBuilder.buildElementGenerationPrompt(
       targetElement,
-      prompt,
+      focusedPrompt,
       currentStructure,
       false,
     );

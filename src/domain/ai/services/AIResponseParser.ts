@@ -79,14 +79,14 @@ export class AIResponseParser {
       // JSON形式として解析を試行
       const jsonElements = this.parseJsonElements(response);
       if (jsonElements.length > 0) {
-        return jsonElements.slice(0, 3); // 最大3個まで
+        return jsonElements;
       }
     } catch {
       // サジェストのJSON解析失敗、テキスト形式で解析
     }
 
     // フォールバック: テキスト形式として解析
-    return this.parseTextElements(response).slice(0, 3);
+    return this.parseTextElements(response);
   }
 
   /**
