@@ -94,6 +94,20 @@ export function createOpenAIAgentCaller(
         messagesCount: openaiMessages.length,
         toolsCount: tools?.length || 0,
       });
+
+      // デバッグ用: 実際に送るメッセージ内容のプレビューを出力（長すぎる場合は切り詰め）
+      try {
+        const preview = openaiMessages.map((m) => ({
+          role: m.role,
+          content: typeof m.content === 'string' ? m.content.slice(0, 400) : m.content,
+          // If the snake_case key exists, read it via bracket access and expose under camelCase
+          // to avoid linting camelcase rules on identifiers
+          toolCallId: (m as any)['tool_call_id'] as string | undefined,
+        }));
+        debugLog('[OpenAIAgentCaller] Message preview:', preview);
+      } catch (e) {
+        debugLog('[OpenAIAgentCaller] Message preview error', String(e));
+      }
     }
 
     // /api/ai/generate プロキシ経由で送信
