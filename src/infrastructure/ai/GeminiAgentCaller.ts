@@ -181,6 +181,30 @@ export function createGeminiAgentCaller(apiKey: string, modelType: string): LLMC
         contentsCount: contents.length,
         toolsCount: functionDeclarations.length,
       });
+
+      // デバッグ用: 実際に送信するリクエストボディのプレビュー
+      try {
+        const preview = {
+          systemInstruction: systemMsg ? (systemMsg.content || '').slice(0, 400) : undefined,
+          contentsPreview: contents.slice(0, 6).map((c) => ({
+            role: c.role,
+            partsPreview: c.parts.slice(0, 3).map((p) => ({
+              text: p.text ? String(p.text).slice(0, 300) : undefined,
+              functionCall: p.functionCall
+                ? {
+                    name: p.functionCall.name,
+                    argsPreview: JSON.stringify(p.functionCall.args).slice(0, 300),
+                  }
+                : undefined,
+            })),
+          })),
+          functions: functionDeclarations.map((f) => f.name),
+          generationConfig: requestBody.generationConfig,
+        };
+        debugLog('[GeminiAgentCaller] Request preview:', preview);
+      } catch (e) {
+        debugLog('[GeminiAgentCaller] Request preview error', String(e));
+      }
     }
 
     const endpoint = `${GEMINI_BASE_URL}/${modelType}:generateContent?key=${apiKey}`;
