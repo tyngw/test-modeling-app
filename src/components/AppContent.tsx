@@ -14,7 +14,6 @@ import { useAIGeneration } from '../hooks/useAIGeneration';
 import { useTabManagement } from '../hooks/useTabManagement';
 import { useModalState } from '../hooks/useModalState';
 import { useTabs } from '../context/TabsContext';
-import { useChatAssistant } from '../hooks/useChatAssistant';
 import { SidePanel } from './side-panel/SidePanel';
 import {
   setupVSCodeMessageListener,
@@ -85,6 +84,7 @@ const AppContent: React.FC = () => {
   const {
     handleAIClick,
     handleAIFullGenerationClick,
+    handleAIClickForChat,
     isAIBusy,
     isChildGenerationLoading,
     isFullGenerationLoading,
@@ -107,17 +107,11 @@ const AppContent: React.FC = () => {
     }
   }, [isSidePanelOpen]);
 
-  // チャット機能 (useChatAssistant)
-  const getLatestState = useCallback(() => currentTab, [currentTab]);
-  const {
-    handleChatMessage,
-    isLoading: isChatLoading,
-    clearContext: clearChatContext,
-  } = useChatAssistant({
-    currentTab,
-    dispatch,
-    getLatestState,
-  });
+  // サイドパネルのチャット機能は既存のAgenticチャット操作を利用する
+  const clearChatContext = useCallback(() => {
+    // Agenticチャットは毎回必要な情報を動的に取得するため、
+    // UI以外にクリア対象の会話コンテキストを保持しない
+  }, []);
 
   // 外部から AI アシスタントメッセージを受信しパネルを開く
   const [externalChatMessage, setExternalChatMessage] = useState('');
@@ -435,8 +429,8 @@ const AppContent: React.FC = () => {
       <SidePanelWrapper
         isOpen={isSidePanelOpen}
         onClose={toggleSidePanel}
-        onSendMessage={handleChatMessage}
-        isLoading={isChatLoading}
+        onSendMessage={handleAIClickForChat}
+        isLoading={isAIBusy}
         externalMessage={externalChatMessage}
         onExternalMessageProcessed={() => setExternalChatMessage('')}
         onClearContext={clearChatContext}

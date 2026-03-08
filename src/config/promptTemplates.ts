@@ -73,6 +73,19 @@ export function normalizePromptTemplates(
     templates.system.customSystemPrompt = legacyCustomSystemPrompt;
   }
 
+  const rawSystemTemplates = overrides?.system;
+  const hasLegacyChatOverride =
+    typeof rawSystemTemplates?.chatAssistant === 'string' &&
+    rawSystemTemplates.chatAssistant.trim() !== defaultTemplates.system.chatAssistant.trim();
+  const hasAgentChatOverride = typeof rawSystemTemplates?.agentChat === 'string';
+
+  if (hasLegacyChatOverride && !hasAgentChatOverride) {
+    templates.system.agentChat = rawSystemTemplates.chatAssistant as string;
+  }
+
+  // 旧chatAssistantは後方互換のためagentChatと同じ内容として扱う
+  templates.system.chatAssistant = templates.system.agentChat;
+
   return templates;
 }
 

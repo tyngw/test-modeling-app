@@ -429,7 +429,6 @@ export const getSystemPromptKeys = (): (keyof PromptTemplates['system'])[] => [
   'agentElementGeneration',
   'agentFullHierarchyGeneration',
   'agentChat',
-  'chatAssistant',
   'fullHierarchyOutputAppendix',
 ];
 
@@ -438,6 +437,11 @@ export const getSystemPromptKeys = (): (keyof PromptTemplates['system'])[] => [
  */
 export const getSystemPromptByKey = (key: keyof PromptTemplates['system']): string => {
   const promptTemplates = getPromptTemplates();
+
+  if (key === 'chatAssistant') {
+    return promptTemplates.system.agentChat || '';
+  }
+
   return promptTemplates.system[key] || '';
 };
 
@@ -446,12 +450,15 @@ export const getSystemPromptByKey = (key: keyof PromptTemplates['system']): stri
  */
 export const setSystemPromptByKey = (key: keyof PromptTemplates['system'], value: string): void => {
   const promptTemplates = getPromptTemplates();
+  const normalizedKey = key === 'chatAssistant' ? 'agentChat' : key;
+
   setPromptTemplatesJson(
     stringifyPromptTemplates({
       ...promptTemplates,
       system: {
         ...promptTemplates.system,
-        [key]: value,
+        [normalizedKey]: value,
+        chatAssistant: normalizedKey === 'agentChat' ? value : promptTemplates.system.chatAssistant,
       },
     }),
   );

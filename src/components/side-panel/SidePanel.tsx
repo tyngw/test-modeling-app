@@ -826,7 +826,6 @@ export function SidePanel({
                 <option value="agentElementGeneration">エージェント - 子要素生成</option>
                 <option value="agentFullHierarchyGeneration">エージェント - 全体構造再設計</option>
                 <option value="agentChat">エージェント - チャット操作</option>
-                <option value="chatAssistant">チャットアシスタント</option>
                 <option value="fullHierarchyOutputAppendix">出力形式補足</option>
               </select>
 

@@ -22,10 +22,11 @@ export const createChatUserPromptOnly = ({
 };
 
 /**
- * チャットアシスタント専用のシステムプロンプトを取得
+ * チャット操作用のシステムプロンプトを取得
+ * legacyのchatAssistant設定はagentChatへ統合して扱う
  */
 export const getChatSystemPrompt = (promptTemplates: PromptTemplates): string => {
-  return promptTemplates.system.chatAssistant;
+  return promptTemplates.system.agentChat;
 };
 
 /**
