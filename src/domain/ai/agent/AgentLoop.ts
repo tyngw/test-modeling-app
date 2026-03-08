@@ -10,6 +10,10 @@
 import { AgentContext, AgentMessage, AgentResult, AgentLoopConfig, LLMCallerFn } from './types';
 import { ToolRegistry } from './ToolRegistry';
 import { createAgentTools } from './AgentTools';
+import {
+  getAgentWorkflowFinalInstruction,
+  getAgentWorkflowStepInstruction,
+} from './AgentWorkflow';
 import { debugLog } from '../../../utils/debugLogHelpers';
 
 /** デフォルトのループ設定 */
@@ -36,7 +40,7 @@ export async function runAgentLoop(
   callLLM: LLMCallerFn,
   config: Partial<AgentLoopConfig> = {},
 ): Promise<AgentResult> {
-  const { maxSteps, onStepComplete } = { ...DEFAULT_CONFIG, ...config };
+  const { maxSteps, onStepComplete, workflowPreset } = { ...DEFAULT_CONFIG, ...config };
 
   // ツールレジストリの初期化
   const registry = new ToolRegistry();
@@ -58,13 +62,19 @@ export async function runAgentLoop(
     try {
       const isLastStep = step === maxSteps;
 
+      const workflowInstruction = getAgentWorkflowStepInstruction(workflowPreset, step);
+      if (workflowInstruction) {
+        messages.push({
+          role: 'user',
+          content: workflowInstruction,
+        });
+      }
+
       // 最終ステップではツール無しで最終回答を強制
       if (isLastStep) {
         messages.push({
           role: 'user',
-          content:
-            '【指示】これまでに収集した情報を基に、最終的な回答を生成してください。' +
-            'これ以上ツールを使用せず、必ず指定されたJSON形式で回答してください。',
+          content: getAgentWorkflowFinalInstruction(workflowPreset),
         });
       }
 

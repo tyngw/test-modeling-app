@@ -13,16 +13,35 @@ import { Element } from '../../domain/element/models/Element';
 import { AIOperation } from '../../domain/ai/models/AIOperation';
 import { SuggestionContext } from '../../domain/ai/models/SuggestionContext';
 import { AIResponseParser } from '../../domain/ai/services/AIResponseParser';
+import { FullHierarchyGenerationResult } from '../../domain/ai/services/AIResponseParser';
+import { HierarchicalGenerationItem } from '../../domain/ai/services/AIResponseParser';
 import { PromptBuilder } from '../../domain/ai/services/PromptBuilder';
+import { buildHierarchyFromSpecificationOutline } from '../../domain/ai/services/SpecificationHierarchyBuilder';
 import { IAIRepository, IConfigRepository } from '../../domain/ai/repositories/IAIRepository';
 import { runAgentLoop, AgentContext, LLMCallerFn } from '../../domain/ai/agent';
 import { createOpenAIAgentCaller } from '../../infrastructure/ai/OpenAIAgentCaller';
 import { createGeminiAgentCaller } from '../../infrastructure/ai/GeminiAgentCaller';
-import { AGENT_ELEMENT_GENERATION_PROMPT, AGENT_CHAT_PROMPT } from '../../config/agentSystemPrompt';
+import {
+  AGENT_ELEMENT_GENERATION_PROMPT,
+  AGENT_CHAT_PROMPT,
+  AGENT_FULL_HIERARCHY_GENERATION_PROMPT,
+} from '../../config/agentSystemPrompt';
 import { debugLog } from '../../utils/debugLogHelpers';
 
 /** エージェントループの最大ステップ数 */
 const AGENT_MAX_STEPS = 5;
+const FULL_GENERATION_AGENT_MAX_STEPS = 8;
+const FULL_GENERATION_MAX_ATTEMPTS = 3;
+
+const FULL_HIERARCHY_OUTPUT_APPENDIX = `
+【追加要件】最終回答は必ず以下のJSON形式のみで返してください。
+{
+  "rootText": "更新後のルート名",
+  "hierarchicalItems": [
+    { "text": "分類A", "level": 0, "originalLine": "- 分類A" }
+  ]
+}
+`.trim();
 
 /**
  * AI生成機能の応用サービス
@@ -50,7 +69,11 @@ export class AIGenerationService {
    * 要素生成を実行
    * ターゲット要素の子要素を仕様書を基に生成する
    */
-  async generateElements(targetElement: Element, currentStructure: string): Promise<string[]> {
+  async generateElements(
+    targetElement: Element,
+    currentStructure: string,
+    selectedSubtreeText = '',
+  ): Promise<string[]> {
     const apiKey = this.configRepository.getApiKey();
     const prompt = this.configRepository.getPrompt();
     const systemPrompt = this.configRepository.getSystemPromptTemplate();
@@ -67,10 +90,16 @@ export class AIGenerationService {
     // 選択要素に関連するセクションを抽出して、仕様書を事前加工
     const focusedPrompt = this.extractFocusedSpecification(prompt, targetElement.texts);
 
-    const context = this.buildAgentContext(focusedPrompt, currentStructure, {
-      id: targetElement.id,
-      texts: targetElement.texts,
-    });
+    const context = this.buildAgentContext(
+      focusedPrompt,
+      currentStructure,
+      {
+        id: targetElement.id,
+        texts: targetElement.texts,
+      },
+      undefined,
+      selectedSubtreeText,
+    );
 
     try {
       const callLLM = this.createAgentCaller(apiKey, modelType, apiProvider);
@@ -79,7 +108,7 @@ export class AIGenerationService {
         `選択要素「${targetElement.texts[0] || targetElement.id}」の子要素を仕様書に基づいて生成してください。`,
         context,
         callLLM,
-        { maxSteps: AGENT_MAX_STEPS },
+        { maxSteps: AGENT_MAX_STEPS, workflowPreset: 'default' },
       );
 
       if (result.finishReason === 'error' || !result.response) {
@@ -100,6 +129,143 @@ export class AIGenerationService {
       return this.generateElementsFallback(
         targetElement,
         currentStructure,
+        prompt,
+        apiKey,
+        modelType,
+        systemPrompt,
+      );
+    }
+  }
+
+  /**
+   * 要素全体を見直し、選択要素配下の完成した階層を生成する
+   */
+  async generateFullHierarchy(
+    targetElement: Element,
+    currentStructure: string,
+    selectedSubtreeText = '',
+  ): Promise<FullHierarchyGenerationResult> {
+    const apiKey = this.configRepository.getApiKey();
+    const prompt = this.configRepository.getPrompt();
+    const systemPrompt = this.configRepository.getSystemPromptTemplate();
+    const modelType = this.configRepository.getModelType();
+    const apiProvider = this.configRepository.getApiProvider();
+
+    if (!apiKey && apiProvider === 'gemini') {
+      throw new Error('APIキーが設定されていません。Gemini API キーを設定から登録してください。');
+    }
+    if (!prompt) {
+      throw new Error('プロンプトが設定されていません。');
+    }
+
+    const focusedPrompt = this.extractFocusedSpecification(prompt, targetElement.texts);
+    const context = this.buildAgentContext(
+      focusedPrompt,
+      currentStructure,
+      {
+        id: targetElement.id,
+        texts: targetElement.texts,
+      },
+      undefined,
+      selectedSubtreeText,
+    );
+
+    try {
+      const callLLM = this.createAgentCaller(apiKey, modelType, apiProvider);
+      let latestParsedResult: FullHierarchyGenerationResult | null = null;
+
+      for (let attempt = 0; attempt < FULL_GENERATION_MAX_ATTEMPTS; attempt++) {
+        const userPrompt =
+          attempt === 0
+            ? `選択要素「${targetElement.texts[0] || targetElement.id}」配下の要素階層全体を、一貫した分類軸で再設計してください。`
+            : this.promptBuilder.buildFullHierarchyRefinementPrompt(
+                new Element(
+                  targetElement.id,
+                  [latestParsedResult?.rootText || targetElement.texts[0] || targetElement.id],
+                  targetElement.x,
+                  targetElement.y,
+                  targetElement.width,
+                  targetElement.height,
+                  targetElement.sectionHeights,
+                  targetElement.editing,
+                  targetElement.selected,
+                  targetElement.visible,
+                  targetElement.tentative,
+                  targetElement.startMarker,
+                  targetElement.endMarker,
+                  targetElement.direction,
+                  targetElement.tempParentId,
+                ),
+                context.hierarchyDraftText || '',
+              );
+
+        const result = await runAgentLoop(
+          this.resolveFullHierarchySystemPrompt(systemPrompt),
+          userPrompt,
+          context,
+          callLLM,
+          {
+            maxSteps: FULL_GENERATION_AGENT_MAX_STEPS,
+            workflowPreset: 'full_generation',
+          },
+        );
+
+        if (result.finishReason === 'error' || !result.response) {
+          break;
+        }
+
+        latestParsedResult = this.responseParser.extractFullHierarchyResultFromText(
+          result.response,
+          latestParsedResult?.rootText || targetElement.texts[0] || targetElement.id,
+        );
+
+        context.hierarchyDraftText = this.createHierarchyDraftText(latestParsedResult);
+        if (context.selectedElement) {
+          context.selectedElement = {
+            ...context.selectedElement,
+            texts: [latestParsedResult.rootText],
+          };
+        }
+
+        if (!this.shouldRefineFullHierarchy(latestParsedResult, focusedPrompt)) {
+          return latestParsedResult;
+        }
+      }
+
+      if (latestParsedResult) {
+        if (this.shouldRefineFullHierarchy(latestParsedResult, focusedPrompt)) {
+          const outlineFallbackResult = buildHierarchyFromSpecificationOutline(
+            focusedPrompt,
+            latestParsedResult.rootText || targetElement.texts[0] || targetElement.id,
+          );
+
+          if (
+            this.scoreFullHierarchyQuality(outlineFallbackResult) >
+            this.scoreFullHierarchyQuality(latestParsedResult)
+          ) {
+            return outlineFallbackResult;
+          }
+        }
+
+        return latestParsedResult;
+      }
+
+      debugLog('[AIGenerationService] 全生成エージェントエラー: フォールバック実行');
+      return this.generateFullHierarchyFallback(
+        targetElement,
+        currentStructure,
+        selectedSubtreeText,
+        prompt,
+        apiKey,
+        modelType,
+        systemPrompt,
+      );
+    } catch (err) {
+      debugLog('[AIGenerationService] 全生成エージェント例外: フォールバック実行', err);
+      return this.generateFullHierarchyFallback(
+        targetElement,
+        currentStructure,
+        selectedSubtreeText,
         prompt,
         apiKey,
         modelType,
@@ -131,6 +297,8 @@ export class AIGenerationService {
       prompt || '',
       currentStructure,
       selectedElement ? { id: 'current', texts: [selectedElement] } : undefined,
+      undefined,
+      '',
     );
 
     try {
@@ -187,6 +355,7 @@ export class AIGenerationService {
       currentStructure,
       selectedElement ? { id: selectedElement.id, texts: selectedElement.texts } : undefined,
       parentElement ? { id: parentElement.id, texts: parentElement.texts } : undefined,
+      '',
     );
 
     const userPrompt = selectedElement
@@ -202,6 +371,7 @@ export class AIGenerationService {
         callLLM,
         {
           maxSteps: AGENT_MAX_STEPS,
+          workflowPreset: 'default',
         },
       );
 
@@ -282,8 +452,16 @@ export class AIGenerationService {
     structureText: string,
     selectedElement?: { id: string; texts: string[] },
     parentElement?: { id: string; texts: string[] },
+    selectedSubtreeText = '',
   ): AgentContext {
-    return { specificationText, structureText, selectedElement, parentElement };
+    return {
+      specificationText,
+      structureText,
+      selectedElement,
+      parentElement,
+      selectedSubtreeText,
+      hierarchyDraftText: selectedSubtreeText,
+    };
   }
 
   /**
@@ -293,6 +471,43 @@ export class AIGenerationService {
   private resolveElementGenerationSystemPrompt(systemPrompt: string): string {
     const trimmedSystemPrompt = systemPrompt.trim();
     return trimmedSystemPrompt.length > 0 ? trimmedSystemPrompt : AGENT_ELEMENT_GENERATION_PROMPT;
+  }
+
+  private resolveFullHierarchySystemPrompt(systemPrompt: string): string {
+    const trimmedSystemPrompt = systemPrompt.trim();
+    if (trimmedSystemPrompt.length === 0) {
+      return AGENT_FULL_HIERARCHY_GENERATION_PROMPT;
+    }
+
+    return `${AGENT_FULL_HIERARCHY_GENERATION_PROMPT}\n\n【追加のカスタム指示】\n${trimmedSystemPrompt}\n\n${FULL_HIERARCHY_OUTPUT_APPENDIX}`;
+  }
+
+  private shouldRefineFullHierarchy(
+    generationResult: FullHierarchyGenerationResult,
+    specificationText: string,
+  ): boolean {
+    const deepestLevel = generationResult.hierarchicalItems.reduce(
+      (maxLevel, item) => Math.max(maxLevel, item.level),
+      0,
+    );
+    const hasNumberedItems = /^\s*\d+\.\s+/m.test(specificationText);
+    const headingCount = (specificationText.match(/^#{1,6}\s+/gm) || []).length;
+    const sectionMarkerCount = (specificationText.match(/^≣\s+/gm) || []).length;
+    const isLongDocument = specificationText.length >= 2500;
+    const requiresDeepHierarchy = hasNumberedItems || headingCount + sectionMarkerCount >= 3 || isLongDocument;
+    const hasTooFewItems = isLongDocument && generationResult.hierarchicalItems.length < 8;
+
+    return requiresDeepHierarchy && (deepestLevel < 2 || hasTooFewItems);
+  }
+
+  private createHierarchyDraftText(generationResult: FullHierarchyGenerationResult): string {
+    const lines = generationResult.hierarchicalItems.map(
+      (item) => `${'  '.repeat(item.level)}- ${item.text}`,
+    );
+
+    return ['更新候補ルート:', `- ${generationResult.rootText}`, '', '更新候補サブツリー:', ...lines].join(
+      '\n',
+    );
   }
 
   /**
@@ -413,5 +628,63 @@ export class AIGenerationService {
       true,
     );
     return this.responseParser.parseSuggestions(response.response);
+  }
+
+  private async generateFullHierarchyFallback(
+    targetElement: Element,
+    currentStructure: string,
+    selectedSubtreeText: string,
+    prompt: string,
+    apiKey: string,
+    modelType: string,
+    systemPrompt: string,
+  ): Promise<FullHierarchyGenerationResult> {
+    const focusedPrompt = this.extractFocusedSpecification(prompt, targetElement.texts);
+
+    const userPrompt = this.promptBuilder.buildFullHierarchyGenerationPrompt(
+      targetElement,
+      focusedPrompt,
+      currentStructure,
+      selectedSubtreeText,
+    );
+
+    const result = await this.aiRepository.generateSingle(
+      userPrompt,
+      apiKey,
+      modelType,
+      true,
+      this.resolveFullHierarchySystemPrompt(systemPrompt),
+    );
+
+    const parsedResult = this.responseParser.extractFullHierarchyResultFromText(
+      result,
+      targetElement.texts[0] || targetElement.id,
+    );
+
+    if (this.shouldRefineFullHierarchy(parsedResult, focusedPrompt)) {
+      const outlineFallbackResult = buildHierarchyFromSpecificationOutline(
+        focusedPrompt,
+        parsedResult.rootText || targetElement.texts[0] || targetElement.id,
+      );
+
+      if (
+        this.scoreFullHierarchyQuality(outlineFallbackResult) >
+        this.scoreFullHierarchyQuality(parsedResult)
+      ) {
+        return outlineFallbackResult;
+      }
+    }
+
+    return parsedResult;
+  }
+
+  private scoreFullHierarchyQuality(generationResult: FullHierarchyGenerationResult): number {
+    const topLevelCount = generationResult.hierarchicalItems.filter((item) => item.level === 0).length;
+    const deepestLevel = generationResult.hierarchicalItems.reduce(
+      (maxLevel, item) => Math.max(maxLevel, item.level),
+      0,
+    );
+
+    return deepestLevel * 1000 + topLevelCount * 100 + generationResult.hierarchicalItems.length;
   }
 }

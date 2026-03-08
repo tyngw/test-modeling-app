@@ -96,6 +96,20 @@ export type AddElementAction =
         }>;
         onError?: (message: string) => void;
       };
+    }
+  | {
+      type: 'REPLACE_CHILDREN_WITH_HIERARCHY';
+      payload: {
+        targetNodeId: string;
+        rootText?: string;
+        hierarchicalItems: Array<{
+          text: string;
+          level: number;
+          originalLine: string;
+        }>;
+        onError?: (message: string) => void;
+        onSuccess?: () => void;
+      };
     };
 
 /** 要素の削除アクション */

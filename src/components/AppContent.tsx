@@ -82,7 +82,13 @@ const AppContent: React.FC = () => {
 
   // AI生成機能、サジェスト機能用
   // isLoading を isAILoading として受け取り、QuickMenuBar に渡す
-  const { handleAIClick, isLoading: isAILoading } = useAIGeneration({
+  const {
+    handleAIClick,
+    handleAIFullGenerationClick,
+    isAIBusy,
+    isChildGenerationLoading,
+    isFullGenerationLoading,
+  } = useAIGeneration({
     currentTab,
     dispatch,
   });
@@ -360,7 +366,10 @@ const AppContent: React.FC = () => {
           toggleHelp={toggleHelp}
           toggleSettings={toggleSettings}
           onAIClick={handleAIClick}
-          isAILoading={isAILoading}
+          onAIFullClick={handleAIFullGenerationClick}
+          isAILoading={isChildGenerationLoading}
+          isAIFullLoading={isFullGenerationLoading}
+          isAIDisabled={isAIBusy}
           onToggleSidePanel={toggleSidePanel}
           isSidePanelOpen={isSidePanelOpen}
           isEditorMode={editorMode}
@@ -376,6 +385,7 @@ const AppContent: React.FC = () => {
     currentTabId,
     toggleSettings,
     handleAIClick,
+    handleAIFullGenerationClick,
     handleLoadElements,
     handleSaveElements,
     addTab,
@@ -386,6 +396,9 @@ const AppContent: React.FC = () => {
     toggleSidePanel,
     isSidePanelOpen,
     environmentInfo,
+    isAIBusy,
+    isChildGenerationLoading,
+    isFullGenerationLoading,
   ]);
 
   return (

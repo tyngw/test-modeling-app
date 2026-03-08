@@ -5,6 +5,7 @@
 export { runAgentLoop } from './AgentLoop';
 export { createAgentTools } from './AgentTools';
 export { ToolRegistry } from './ToolRegistry';
+export type { AgentWorkflowPresetId } from './types';
 export type {
   AgentContext,
   AgentToolDefinition,

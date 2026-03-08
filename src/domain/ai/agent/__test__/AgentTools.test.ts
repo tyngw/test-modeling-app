@@ -46,8 +46,8 @@ describe('AgentTools', () => {
   const tools = createAgentTools();
 
   describe('createAgentTools', () => {
-    it('5つのツールを返す', () => {
-      expect(tools).toHaveLength(5);
+    it('8つのツールを返す', () => {
+      expect(tools).toHaveLength(8);
     });
 
     it('すべてのツールが必須プロパティを持つ', () => {
@@ -64,6 +64,9 @@ describe('AgentTools', () => {
       expect(names).toContain('search_spec');
       expect(names).toContain('get_spec_section');
       expect(names).toContain('get_spec_overview');
+      expect(names).toContain('get_selected_subtree');
+      expect(names).toContain('get_hierarchy_draft');
+      expect(names).toContain('set_hierarchy_draft');
       expect(names).toContain('get_structure');
       expect(names).toContain('get_element_details');
     });
@@ -177,6 +180,63 @@ describe('AgentTools', () => {
       const ctx = createTestContext({ structureText: '' });
       const result = structureTool.execute({}, ctx);
       expect(result).toContain('階層構造データがありません');
+    });
+  });
+
+  describe('get_selected_subtree', () => {
+    const subtreeTool = tools.find((t) => t.name === 'get_selected_subtree');
+
+    beforeEach(() => {
+      if (!subtreeTool) throw new Error('get_selected_subtree tool not found');
+    });
+
+    it('選択要素配下のサブツリーを返す', () => {
+      if (!subtreeTool) return;
+      const ctx = createTestContext({ selectedSubtreeText: '対象サブツリー:\n- ユーザー管理\n  - ログイン' });
+      const result = subtreeTool.execute({}, ctx);
+      expect(result).toContain('対象サブツリー');
+      expect(result).toContain('ログイン');
+    });
+
+    it('サブツリーがない場合はメッセージを返す', () => {
+      if (!subtreeTool) return;
+      const ctx = createTestContext({ selectedSubtreeText: '' });
+      const result = subtreeTool.execute({}, ctx);
+      expect(result).toContain('サブツリー情報はありません');
+    });
+  });
+
+  describe('hierarchy draft tools', () => {
+    const getDraftTool = tools.find((t) => t.name === 'get_hierarchy_draft');
+    const setDraftTool = tools.find((t) => t.name === 'set_hierarchy_draft');
+
+    beforeEach(() => {
+      if (!getDraftTool) throw new Error('get_hierarchy_draft tool not found');
+      if (!setDraftTool) throw new Error('set_hierarchy_draft tool not found');
+    });
+
+    it('保存した階層ドラフトを取得できる', () => {
+      if (!getDraftTool || !setDraftTool) return;
+
+      const ctx = createTestContext({ hierarchyDraftText: '' });
+      setDraftTool.execute({ draft: '- ユーザー管理\n  - ログイン' }, ctx);
+      const result = getDraftTool.execute({}, ctx);
+
+      expect(result).toContain('ユーザー管理');
+      expect(result).toContain('ログイン');
+    });
+
+    it('ドラフト未保存時はサブツリーを初期案として返す', () => {
+      if (!getDraftTool) return;
+
+      const ctx = createTestContext({
+        hierarchyDraftText: '',
+        selectedSubtreeText: '対象サブツリー:\n- ユーザー管理\n  - ログイン',
+      });
+      const result = getDraftTool.execute({}, ctx);
+
+      expect(result).toContain('初期ドラフト');
+      expect(result).toContain('ユーザー管理');
     });
   });
 

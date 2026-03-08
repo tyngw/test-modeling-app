@@ -7,6 +7,7 @@ export const tooltipTexts = {
   ADD: '新しい要素の追加',
   DELETE: '要素の削除',
   AI: 'AI機能',
+  AI_FULL: 'AI機能（全生成）',
   EXPAND: '展開',
   COLLAPSE: '折りたたみ',
   UNDO: '元に戻す',

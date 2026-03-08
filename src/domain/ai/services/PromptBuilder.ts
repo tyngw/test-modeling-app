@@ -114,6 +114,86 @@ ${structureText}
   }
 
   /**
+   * 全生成用のプロンプトを構築
+   */
+  buildFullHierarchyGenerationPrompt(
+    selectedElement: Element,
+    inputText: string,
+    structureText: string,
+    selectedSubtreeText: string,
+  ): string {
+    const selectedElementText = selectedElement.texts?.join(', ') || selectedElement.id;
+
+    return `以下の仕様書に基づいて、選択された要素「${selectedElementText}」配下の階層全体を一貫した分類軸で再設計してください。
+
+[現在の階層構造]
+\`\`\`
+${structureText}
+\`\`\`
+
+[対象サブツリー]
+\`\`\`
+${selectedSubtreeText || '対象サブツリー情報なし'}
+\`\`\`
+
+【重要】以下の仕様書に従って階層構造を作成することが目的です：
+\`\`\`
+${inputText}
+\`\`\`
+
+**要求事項：**
+1. 必要であれば選択要素名自体も、仕様書全体をより正確に表す名称へ更新してください
+2. 明示的な見出しがある場合は、抽象的な要約よりも原文の見出しを優先して採用してください
+3. 選択要素の直下から始まる全体階層を、一つの分類方針で再構成してください
+4. 同一階層では粒度と切り口を統一してください
+5. 既存構造に分類のぶれがある場合は、仕様書優先で整理し直してください
+6. 深さや件数に制限を設けず、本文中の論点・理由・例・補足を可能な限り階層上に配置してください
+7. 見出し → 番号付き項目 → 段落論点、のように原文が深い場合は3階層以上に自然に掘り下げてください
+
+**出力形式：**
+必ずJSON形式で回答してください：
+{
+  "rootText": "更新後のルート名",
+  "hierarchicalItems": [
+    { "text": "分類A", "level": 0, "originalLine": "- 分類A" },
+    { "text": "項目A-1", "level": 1, "originalLine": "  - 項目A-1" }
+  ]
+}`;
+  }
+
+  /**
+   * 全生成の再試行用プロンプトを構築
+   */
+  buildFullHierarchyRefinementPrompt(selectedElement: Element, currentDraftText: string): string {
+    const selectedElementText = selectedElement.texts?.join(', ') || selectedElement.id;
+
+    return `前回の全生成案では、階層の深さまたは網羅性が不足していました。選択要素「${selectedElementText}」配下の案を見直してください。
+
+[現在のドラフト]
+\`\`\`
+${currentDraftText || 'ドラフトなし'}
+\`\`\`
+
+**再検討ポイント：**
+1. 原文の見出し・番号付き項目・論点を優先し、要約しすぎないでください
+2. 入力文の情報が未配置のまま残らないよう、必要ならより深い階層へ分解してください
+3. 見出し → 節 → 論点 の3階層以上が成立する文書では、その深さを維持してください
+4. ルート名は、原文に明示見出しがあるならその見出しを優先して見直してください
+5. 必要なら get_hierarchy_draft / get_spec_section / search_spec を使って不足箇所を補ってください
+
+**出力形式：**
+必ずJSON形式で回答してください：
+{
+  "rootText": "更新後のルート名",
+  "hierarchicalItems": [
+    { "text": "分類A", "level": 0, "originalLine": "- 分類A" },
+    { "text": "項目A-1", "level": 1, "originalLine": "  - 項目A-1" },
+    { "text": "論点A-1-1", "level": 2, "originalLine": "    - 論点A-1-1" }
+  ]
+}`;
+  }
+
+  /**
    * コンテキスト初期化用のプロンプトを構築
    */
   buildContextInitializationPrompt(

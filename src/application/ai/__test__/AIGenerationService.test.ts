@@ -4,7 +4,10 @@ import type {
   IAIRepository,
   IConfigRepository,
 } from '../../../domain/ai/repositories/IAIRepository';
-import { AGENT_ELEMENT_GENERATION_PROMPT } from '../../../config/agentSystemPrompt';
+import {
+  AGENT_ELEMENT_GENERATION_PROMPT,
+  AGENT_FULL_HIERARCHY_GENERATION_PROMPT,
+} from '../../../config/agentSystemPrompt';
 
 const mockRunAgentLoop = jest.fn();
 
@@ -114,5 +117,38 @@ describe('AIGenerationService', () => {
       }),
     );
     expect(actualOptions).toEqual(expect.objectContaining({ maxSteps: 5 }));
+  });
+
+  it('全生成では専用のシステムプロンプトとワークフローを使う', async () => {
+    const service = new AIGenerationService(createAiRepository(), createConfigRepository('   '));
+
+    mockRunAgentLoop.mockResolvedValueOnce({
+      finishReason: 'complete',
+      response:
+        '{"rootText":"リスクベースドテストは嫌いです","hierarchicalItems":[{"text":"背景","level":0,"originalLine":"- 背景"}]}',
+      steps: 2,
+      messages: [],
+    });
+
+    const result = await service.generateFullHierarchy(createTargetElement(), 'root', 'subtree');
+
+    expect(mockRunAgentLoop).toHaveBeenCalledTimes(1);
+
+    const [actualSystemPrompt, actualUserPrompt, actualContext, , actualOptions] =
+      mockRunAgentLoop.mock.calls[0];
+
+    expect(actualSystemPrompt).toBe(AGENT_FULL_HIERARCHY_GENERATION_PROMPT);
+    expect(actualUserPrompt).toContain('配下の要素階層全体');
+    expect(actualContext).toEqual(
+      expect.objectContaining({
+        structureText: 'root',
+        selectedSubtreeText: 'subtree',
+      }),
+    );
+    expect(actualOptions).toEqual(
+      expect.objectContaining({ maxSteps: 8, workflowPreset: 'full_generation' }),
+    );
+    expect(result.rootText).toBe('リスクベースドテストは嫌いです');
+    expect(result.hierarchicalItems).toHaveLength(1);
   });
 });

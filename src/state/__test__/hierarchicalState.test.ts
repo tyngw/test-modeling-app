@@ -129,4 +129,38 @@ describe('Hierarchical Data State Management', () => {
       expect((finalState.hierarchicalData.root.children || []).length).toBe(0);
     }
   });
+
+  test('選択要素配下の階層全体を置き換えできることを確認する', () => {
+    const { result } = renderHook(() => useStore());
+    const { dispatch } = result.current;
+
+    act(() => {
+      dispatch({
+        type: 'REPLACE_CHILDREN_WITH_HIERARCHY',
+        payload: {
+          targetNodeId: '1',
+          rootText: '更新後ルート',
+          hierarchicalItems: [
+            { text: '分類A', level: 0, originalLine: '- 分類A' },
+            { text: '分類A-詳細1', level: 1, originalLine: '  - 分類A-詳細1' },
+            { text: '分類B', level: 0, originalLine: '- 分類B' },
+          ],
+        },
+      });
+    });
+
+    const state = result.current.state;
+    const rootChildren = state.hierarchicalData ? getChildrenFromHierarchy(state.hierarchicalData, '1') : [];
+
+    expect(rootChildren).toHaveLength(2);
+  expect(state.hierarchicalData?.root.data.texts[0]).toBe('更新後ルート');
+    expect(rootChildren[0].texts[0]).toBe('分類A');
+    expect(rootChildren[1].texts[0]).toBe('分類B');
+
+    if (state.hierarchicalData) {
+      const nestedChildren = getChildrenFromHierarchy(state.hierarchicalData, rootChildren[0].id);
+      expect(nestedChildren).toHaveLength(1);
+      expect(nestedChildren[0].texts[0]).toBe('分類A-詳細1');
+    }
+  });
 });
