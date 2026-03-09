@@ -36,13 +36,15 @@ export class ChatAssistantService {
 
     // プロンプトを作成
     const selectedElementText = selectedElement?.texts[0] || '未選択';
+    const promptTemplates = this.configRepository.getPromptTemplates();
     const chatUserPrompt = createChatUserPromptOnly({
       selectedElement: selectedElementText,
       currentStructure,
       userInput,
+      promptTemplates,
     });
 
-    const chatSystemPrompt = getChatSystemPrompt();
+    const chatSystemPrompt = getChatSystemPrompt(promptTemplates);
     const isFirstTurn = this.chatHistory.length === 0;
 
     // AI に指示を送信

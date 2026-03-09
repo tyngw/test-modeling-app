@@ -131,6 +131,18 @@ type AddHierarchicalElementsPayload = {
   onError?: (message: string) => void;
 };
 
+type ReplaceChildrenWithHierarchyPayload = {
+  targetNodeId: string;
+  rootText?: string;
+  hierarchicalItems: Array<{
+    text: string;
+    level: number;
+    originalLine: string;
+  }>;
+  onError?: (message: string) => void;
+  onSuccess?: () => void;
+};
+
 // 型ガード関数
 const isSelectElementPayload = (payload: unknown): payload is SelectElementPayload => {
   return (
@@ -355,6 +367,101 @@ const isPasteClipboardElementsPayload = (
     typeof (payload as Record<string, unknown>).targetElementId === 'string' &&
     typeof (payload as Record<string, unknown>).clipboardData === 'object'
   );
+};
+
+const isReplaceChildrenWithHierarchyPayload = (
+  payload: unknown,
+): payload is ReplaceChildrenWithHierarchyPayload => {
+  return (
+    typeof payload === 'object' &&
+    payload !== null &&
+    'targetNodeId' in payload &&
+    typeof (payload as Record<string, unknown>).targetNodeId === 'string' &&
+    (!('rootText' in payload) || typeof (payload as Record<string, unknown>).rootText === 'string') &&
+    'hierarchicalItems' in payload &&
+    Array.isArray((payload as Record<string, unknown>).hierarchicalItems) &&
+    ((payload as Record<string, unknown>).hierarchicalItems as unknown[]).every(
+      (item) =>
+        typeof item === 'object' &&
+        item !== null &&
+        typeof (item as Record<string, unknown>).text === 'string' &&
+        typeof (item as Record<string, unknown>).level === 'number' &&
+        typeof (item as Record<string, unknown>).originalLine === 'string',
+    )
+  );
+};
+
+const createHierarchicalElement = (
+  state: State,
+  text: string,
+  parentElement: Element,
+  idSeed: string,
+): Element => {
+  const elementWidth = calculateElementWidth([text], TEXTAREA_PADDING.HORIZONTAL);
+  const lines = wrapText(text || '', elementWidth, state.zoomRatio || 1).length;
+  const sectionHeight = Math.max(
+    SIZE.SECTION_HEIGHT * (state.zoomRatio || 1),
+    lines * DEFAULT_FONT_SIZE * LINE_HEIGHT_RATIO +
+      TEXTAREA_PADDING.VERTICAL * (state.zoomRatio || 1),
+  );
+  const totalHeight = Array(state.numberOfSections)
+    .fill(sectionHeight)
+    .reduce((sum, height) => sum + height, 0);
+
+  return {
+    ...createNewElement({
+      numSections: state.numberOfSections,
+      direction: parentElement.direction === 'none' ? 'right' : parentElement.direction,
+    }),
+    id: idSeed,
+    x: 0,
+    y: 0,
+    width: elementWidth,
+    height: totalHeight,
+    sectionHeights: Array(state.numberOfSections).fill(sectionHeight),
+    texts: Array(state.numberOfSections)
+      .fill('')
+      .map((_, index) => (index === 0 ? text : '')),
+    tentative: false,
+    editing: false,
+    selected: false,
+  };
+};
+
+const appendHierarchicalItemsToParent = (
+  state: State,
+  hierarchicalData: HierarchicalStructure,
+  parentElement: Element,
+  hierarchicalItems: AddHierarchicalElementsPayload['hierarchicalItems'],
+): HierarchicalStructure => {
+  let currentHierarchy = hierarchicalData;
+  const parentStack: Array<{ element: Element; level: number }> = [
+    { element: parentElement, level: -1 },
+  ];
+
+  hierarchicalItems.forEach((item, index) => {
+    while (parentStack.length > 0 && parentStack[parentStack.length - 1].level >= item.level) {
+      parentStack.pop();
+    }
+
+    const currentParent = parentStack[parentStack.length - 1];
+    if (!currentParent) {
+      return;
+    }
+
+    const newElement = createHierarchicalElement(
+      state,
+      item.text,
+      currentParent.element,
+      `${Date.now()}-${index}`,
+    );
+
+    const result = addElementToHierarchy(currentHierarchy, currentParent.element.id, newElement);
+    currentHierarchy = result.hierarchicalData;
+    parentStack.push({ element: newElement, level: item.level });
+  });
+
+  return currentHierarchy;
 };
 
 /**
@@ -1978,65 +2085,12 @@ const actionHandlers: Record<string, ActionHandler> = {
         return state;
       }
 
-      let currentHierarchy = state.hierarchicalData;
-
-      // 階層レベルごとに親要素を追跡するスタック
-      const parentStack: Array<{ element: Element; level: number }> = [
-        { element: baseParentElement, level: -1 },
-      ];
-
-      // 各階層アイテムを順次処理
-      for (let i = 0; i < hierarchicalItems.length; i++) {
-        const item = hierarchicalItems[i];
-        const { text, level } = item;
-
-        // 適切な親要素を決定（レベルに基づいてスタックを調整）
-        while (parentStack.length > 0 && parentStack[parentStack.length - 1].level >= level) {
-          parentStack.pop();
-        }
-
-        const parentInfo = parentStack[parentStack.length - 1];
-        if (!parentInfo) continue;
-
-        // 新しい要素を作成
-        const elementWidth = calculateElementWidth([text], TEXTAREA_PADDING.HORIZONTAL);
-        const lines = wrapText(text || '', elementWidth, state.zoomRatio || 1).length;
-        const sectionHeight = Math.max(
-          SIZE.SECTION_HEIGHT * (state.zoomRatio || 1),
-          lines * DEFAULT_FONT_SIZE * LINE_HEIGHT_RATIO +
-            TEXTAREA_PADDING.VERTICAL * (state.zoomRatio || 1),
-        );
-        const totalHeight = Array(state.numberOfSections)
-          .fill(sectionHeight)
-          .reduce((sum, h) => sum + h, 0);
-
-        const newElement: Element = {
-          ...createNewElement({
-            numSections: state.numberOfSections,
-            direction:
-              parentInfo.element.direction === 'none' ? 'right' : parentInfo.element.direction,
-          }),
-          id: `${Date.now()}-${i}`,
-          x: 0, // 自動調整される
-          y: 0, // 自動調整される
-          width: elementWidth,
-          height: totalHeight,
-          sectionHeights: Array(state.numberOfSections).fill(sectionHeight),
-          texts: Array(state.numberOfSections)
-            .fill('')
-            .map((_, index) => (index === 0 ? text : '')),
-          tentative: false,
-          editing: false,
-          selected: false,
-        };
-
-        // 階層構造に要素を追加
-        const result = addElementToHierarchy(currentHierarchy, parentInfo.element.id, newElement);
-        currentHierarchy = result.hierarchicalData;
-
-        // 新しい要素を親スタックに追加（子要素のため）
-        parentStack.push({ element: newElement, level });
-      }
+      const currentHierarchy = appendHierarchicalItemsToParent(
+        state,
+        state.hierarchicalData,
+        baseParentElement,
+        hierarchicalItems,
+      );
 
       // 位置調整を行い、階層構造を維持（階層構造ベース）
       const adjustedHierarchicalData = adjustElementPositionsFromHierarchy(
@@ -2056,6 +2110,81 @@ const actionHandlers: Record<string, ActionHandler> = {
       const adjustedElementsCache = createElementsMapFromHierarchy(adjustedHierarchicalData);
 
       debugLog(`[ADD_HIERARCHICAL_ELEMENTS] ${hierarchicalItems.length}個の階層要素を追加しました`);
+
+      return {
+        ...state,
+        hierarchicalData: adjustedHierarchicalData,
+        elementsCache: adjustedElementsCache,
+        cacheValid: true,
+      };
+    },
+  ),
+
+  REPLACE_CHILDREN_WITH_HIERARCHY: createSafeHandler(
+    isReplaceChildrenWithHierarchyPayload,
+    (state: State, payload: ReplaceChildrenWithHierarchyPayload) => {
+      if (!state.hierarchicalData) {
+        payload.onError?.('階層データが存在しません。');
+        return state;
+      }
+
+      const targetElement = findElementInHierarchy(state.hierarchicalData, payload.targetNodeId);
+      if (!targetElement) {
+        payload.onError?.('対象要素が見つかりません。');
+        return state;
+      }
+
+      saveHierarchicalSnapshot(state.hierarchicalData);
+
+      let currentHierarchy = state.hierarchicalData;
+      const renamedTargetElement = payload.rootText
+        ? {
+            ...targetElement,
+            texts: targetElement.texts.map((text, index) =>
+              index === 0 ? payload.rootText || text : text,
+            ),
+          }
+        : targetElement;
+
+      if (payload.rootText && payload.rootText !== targetElement.texts[0]) {
+        const updateResult = updateElementInHierarchy(
+          currentHierarchy,
+          payload.targetNodeId,
+          renamedTargetElement,
+        );
+        currentHierarchy = updateResult.hierarchicalData;
+      }
+
+      const currentChildren = getChildrenFromHierarchy(currentHierarchy, payload.targetNodeId);
+
+      for (const child of currentChildren) {
+        const result = deleteElementFromHierarchy(currentHierarchy, child.id);
+        currentHierarchy = result.hierarchicalData;
+      }
+
+      currentHierarchy = appendHierarchicalItemsToParent(
+        state,
+        currentHierarchy,
+        renamedTargetElement,
+        payload.hierarchicalItems,
+      );
+
+      const reselectionResult = setSelectionInHierarchy(currentHierarchy, [payload.targetNodeId]);
+      const adjustedHierarchicalData = adjustElementPositionsFromHierarchy(
+        reselectionResult.hierarchicalData,
+        () => state.numberOfSections,
+        state.layoutMode,
+        state.width || 0,
+        state.height || 0,
+      );
+
+      if (!adjustedHierarchicalData) {
+        payload.onError?.('全生成結果の位置調整に失敗しました。');
+        return state;
+      }
+
+      const adjustedElementsCache = createElementsMapFromHierarchy(adjustedHierarchicalData);
+      payload.onSuccess?.();
 
       return {
         ...state,

@@ -122,14 +122,6 @@ export async function setPrompt(prompt: string): Promise<void> {
   localStorageHelpers.setPrompt(prompt);
 }
 
-export async function getSystemPromptTemplate(): Promise<string> {
-  return localStorageHelpers.getSystemPromptTemplate();
-}
-
-export async function setSystemPromptTemplate(value: string): Promise<void> {
-  localStorageHelpers.setSystemPromptTemplate(value);
-}
-
 // モデルタイプ関連
 export async function getModelType(): Promise<string> {
   return localStorageHelpers.getModelType();

@@ -23,7 +23,13 @@ export interface AgentContext {
     id: string;
     texts: string[];
   };
+  /** 選択要素配下のサブツリー文字列 */
+  selectedSubtreeText?: string;
+  /** 全生成中に更新される階層ドラフト文字列 */
+  hierarchyDraftText?: string;
 }
+
+export type AgentWorkflowPresetId = 'default' | 'full_generation';
 
 /** ツール定義 **/
 export interface AgentToolDefinition {
@@ -81,6 +87,8 @@ export interface AgentLoopConfig {
   maxSteps: number;
   /** ステップ完了時のコールバック（デバッグ・進捗表示用） */
   onStepComplete?: (step: number, message: AgentMessage) => void;
+  /** OpenCode風の段階的ワークフローを適用するプリセット */
+  workflowPreset?: AgentWorkflowPresetId;
 }
 
 /** Agent ループの実行結果 */

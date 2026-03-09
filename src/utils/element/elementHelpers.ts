@@ -5,6 +5,7 @@ import { getMarkerType } from '../storage/localStorageHelpers';
 import { SIZE, NUMBER_OF_SECTIONS } from '../../config/elementSettings';
 import { NewElementOptions, ElementsMap } from '../../types/elementTypes';
 import { HierarchicalStructure, HierarchicalNode } from '../../types/hierarchicalTypes';
+import { findNodeInHierarchy } from '../hierarchical/hierarchicalConverter';
 import { getChildrenFromHierarchy as getChildrenFromHierarchyOriginal } from '../hierarchical/hierarchicalConverter';
 import { PROMPT_LIMITS } from '../../constants/promptLimits';
 
@@ -178,6 +179,40 @@ export const formatHierarchicalStructureForPrompt = (
   const structureText = formatNode(hierarchicalData.root);
 
   return `階層構造:\n${structureText}`;
+};
+
+/**
+ * 選択要素配下のサブツリーをAI向け文字列として表現する
+ */
+export const formatSelectedSubtreeForPrompt = (
+  hierarchicalData: HierarchicalStructure | null,
+  targetElementId: string,
+): string => {
+  if (!hierarchicalData) {
+    return '対象サブツリーがありません';
+  }
+
+  const targetNode = findNodeInHierarchy(hierarchicalData, targetElementId);
+  if (!targetNode) {
+    return '対象サブツリーが見つかりません';
+  }
+
+  const formatNode = (node: HierarchicalNode, depth = 0): string => {
+    const indent = '  '.repeat(depth);
+    const text = truncateText(
+      node.data.texts.filter((value) => value && value.trim()).join(', ') || '(テキストなし)',
+    );
+
+    let result = `${indent}- ID: ${node.data.id} | テキスト: "${text}"`;
+
+    if (node.children && node.children.length > 0) {
+      result += `\n${node.children.map((child) => formatNode(child, depth + 1)).join('\n')}`;
+    }
+
+    return result;
+  };
+
+  return `対象サブツリー:\n${formatNode(targetNode)}`;
 };
 
 /**

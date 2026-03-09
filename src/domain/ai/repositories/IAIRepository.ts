@@ -1,6 +1,7 @@
 // src/domain/ai/repositories/IAIRepository.ts
 
 import { ChatHistoryEntry } from '../models/SuggestionContext';
+import { PromptTemplates } from '../../../config/promptTemplates';
 
 export type ApiProvider = 'gemini' | 'openai';
 
@@ -57,9 +58,9 @@ export interface IConfigRepository {
   getPrompt(): string;
 
   /**
-   * システムプロンプトテンプレートを取得
+   * すべてのプロンプトテンプレートを取得
    */
-  getSystemPromptTemplate(): string;
+  getPromptTemplates(): PromptTemplates;
 
   /**
    * APIプロバイダーを取得（'gemini'|'openai'）

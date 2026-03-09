@@ -10,6 +10,7 @@ const MOCK_CONTEXT: AgentContext = {
   specificationText: '# テスト仕様\nテスト内容です。\n\n## 機能A\n機能Aの説明',
   structureText: 'ルート\n  要素1',
   selectedElement: { id: 'el-1', texts: ['要素1'] },
+  hierarchyDraftText: '',
 };
 
 describe('AgentLoop - runAgentLoop', () => {
@@ -160,5 +161,112 @@ describe('AgentLoop - runAgentLoop', () => {
     });
 
     expect(stepLog).toContain(1);
+  });
+
+  it('ワークフロープリセット指定時は段階指示をメッセージに含める', async () => {
+    const messageSnapshots: string[][] = [];
+    let callCount = 0;
+
+    const mockCallLLM: LLMCallerFn = async (messages) => {
+      callCount += 1;
+      messageSnapshots.push(
+        messages.filter((message) => message.role === 'user').map((message) => message.content),
+      );
+
+      if (callCount === 1) {
+        return {
+          content: '',
+          toolCalls: [
+            {
+              id: 'call_1',
+              type: 'function',
+              function: {
+                name: 'get_selected_subtree',
+                arguments: '{}',
+              },
+            },
+          ],
+        };
+      }
+
+      return {
+        content:
+          '{"rootText": "要素1の再整理", "hierarchicalItems": [{"text": "分類", "level": 0, "originalLine": "- 分類"}]}',
+        toolCalls: undefined,
+      };
+    };
+
+    await runAgentLoop('システム', '全生成', MOCK_CONTEXT, mockCallLLM, {
+      maxSteps: 3,
+      workflowPreset: 'full_generation',
+    });
+
+    expect(messageSnapshots[0].some((message) => message.includes('【ワークフロー: Explore】'))).toBe(
+      true,
+    );
+    expect(messageSnapshots[1].some((message) => message.includes('【ワークフロー: Analyze】'))).toBe(
+      true,
+    );
+  });
+
+  it('set_hierarchy_draft で保存したドラフトを後続ツールで参照できる', async () => {
+    let callCount = 0;
+
+    const draftContext: AgentContext = {
+      ...MOCK_CONTEXT,
+      hierarchyDraftText: '',
+    };
+
+    const mockCallLLM: LLMCallerFn = async (_messages, tools) => {
+      callCount += 1;
+
+      if (callCount === 1) {
+        return {
+          content: '',
+          toolCalls: [
+            {
+              id: 'call_set_draft',
+              type: 'function',
+              function: {
+                name: 'set_hierarchy_draft',
+                arguments: JSON.stringify({ draft: '- 章\n  - 項目' }),
+              },
+            },
+          ],
+        };
+      }
+
+      if (callCount === 2) {
+        expect(tools.some((tool) => tool.function.name === 'get_hierarchy_draft')).toBe(true);
+        return {
+          content: '',
+          toolCalls: [
+            {
+              id: 'call_get_draft',
+              type: 'function',
+              function: {
+                name: 'get_hierarchy_draft',
+                arguments: '{}',
+              },
+            },
+          ],
+        };
+      }
+
+      return {
+        content:
+          '{"rootText": "要素1の再整理", "hierarchicalItems": [{"text": "章", "level": 0, "originalLine": "- 章"},{"text":"項目","level":1,"originalLine":"  - 項目"}]}',
+        toolCalls: undefined,
+      };
+    };
+
+    const result = await runAgentLoop('システム', '全生成', draftContext, mockCallLLM, {
+      maxSteps: 4,
+      workflowPreset: 'full_generation',
+    });
+
+    expect(result.finishReason).toBe('complete');
+    expect(draftContext.hierarchyDraftText).toBe('- 章\n  - 項目');
+    expect(callCount).toBe(3);
   });
 });

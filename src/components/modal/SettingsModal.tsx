@@ -11,7 +11,6 @@ import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
 import { SETTINGS_TABS, SettingField as SettingFieldType } from '../../types/settings';
 import {
-  getSystemPromptTemplate,
   getModelType,
   getPrompt,
   getElementColor,
@@ -24,7 +23,6 @@ import {
   getCanvasBackgroundColor,
   getTextColor,
   getSelectedStrokeColor,
-  setSystemPromptTemplate,
   setModelType,
   setPrompt,
   setElementColor,
@@ -107,7 +105,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       loadedValues['apiKey'] = getApiKey();
 
       // 他の設定項目は同期的に取得
-      loadedValues['systemPromptTemplate'] = getSystemPromptTemplate();
       loadedValues['modelType'] = getModelType();
       loadedValues['prompt'] = getPrompt();
       loadedValues['apiProvider'] = getApiProvider();
@@ -245,9 +242,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     }
 
     // 他の設定は同期的に保存
-    const value = values['systemPromptTemplate'];
-    if (value !== undefined) setSystemPromptTemplate(String(value));
-
     const modelType = values['modelType'];
     if (modelType !== undefined) setModelType(String(modelType));
 

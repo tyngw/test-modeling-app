@@ -166,6 +166,44 @@ function getElementDetails(_args: Record<string, unknown>, context: AgentContext
   return result;
 }
 
+/** 選択要素配下のサブツリーを取得 */
+function getSelectedSubtree(_args: Record<string, unknown>, context: AgentContext): string {
+  if (!context.selectedElement) {
+    return '現在選択されている要素はありません。';
+  }
+
+  if (!context.selectedSubtreeText || context.selectedSubtreeText.trim().length === 0) {
+    return '選択要素配下のサブツリー情報はありません。';
+  }
+
+  return context.selectedSubtreeText;
+}
+
+/** 全生成中の階層ドラフトを取得 */
+function getHierarchyDraft(_args: Record<string, unknown>, context: AgentContext): string {
+  if (context.hierarchyDraftText && context.hierarchyDraftText.trim().length > 0) {
+    return context.hierarchyDraftText;
+  }
+
+  if (context.selectedSubtreeText && context.selectedSubtreeText.trim().length > 0) {
+    return `保存済みドラフトはまだありません。現在のサブツリーを初期ドラフトとして参照してください。\n\n${context.selectedSubtreeText}`;
+  }
+
+  return '保存済みの階層ドラフトはありません。';
+}
+
+/** 全生成中の階層ドラフトを保存 */
+function setHierarchyDraft(args: { draft?: string }, context: AgentContext): string {
+  const draft = typeof args.draft === 'string' ? args.draft.trim() : '';
+
+  if (!draft) {
+    return 'ドラフトの保存に失敗しました。draft 文字列を指定してください。';
+  }
+
+  context.hierarchyDraftText = draft;
+  return `階層ドラフトを保存しました。\n\n${draft}`;
+}
+
 // --- ツール定義をまとめて生成 ---
 
 /** 全Agentツール定義の配列を生成 */
@@ -215,6 +253,39 @@ export function createAgentTools(): AgentToolDefinition[] {
         '最初にこのツールで全体像を把握してから検索してください。',
       parameters: { type: 'object', properties: {} },
       execute: (args, ctx) => getSpecOverview(args, ctx),
+    },
+    {
+      name: 'get_selected_subtree',
+      description:
+        '現在選択されている要素を起点とした配下サブツリーのみを取得します。' +
+        '全体生成や構造の見直し時に優先して参照してください。',
+      parameters: { type: 'object', properties: {} },
+      execute: (args, ctx) => getSelectedSubtree(args, ctx),
+    },
+    {
+      name: 'get_hierarchy_draft',
+      description:
+        '全生成の途中で保存した階層ドラフトを取得します。' +
+        '見直し前に現在の案を再確認したい場合に使用してください。',
+      parameters: { type: 'object', properties: {} },
+      execute: (args, ctx) => getHierarchyDraft(args, ctx),
+    },
+    {
+      name: 'set_hierarchy_draft',
+      description:
+        '全生成の途中で組み立てた階層ドラフトを保存します。' +
+        'Build/Review の節目で呼び出し、後続ステップで get_hierarchy_draft から再確認してください。',
+      parameters: {
+        type: 'object',
+        properties: {
+          draft: {
+            type: 'string',
+            description: '保存したい階層ドラフトの全文。箇条書きやJSON文字列をそのまま渡せます。',
+          },
+        },
+        required: ['draft'],
+      },
+      execute: (args, ctx) => setHierarchyDraft(args as { draft?: string }, ctx),
     },
     {
       name: 'get_structure',

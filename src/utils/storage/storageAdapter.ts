@@ -56,9 +56,6 @@ export interface StorageAdapter {
   getPrompt(): Promise<string> | string;
   setPrompt(prompt: string): Promise<void> | void;
 
-  getSystemPromptTemplate(): Promise<string> | string;
-  setSystemPromptTemplate(value: string): Promise<void> | void;
-
   // モデルタイプ関連
   getModelType(): Promise<string> | string;
   setModelType(value: string): Promise<void> | void;
@@ -179,14 +176,6 @@ class LocalStorageAdapter implements StorageAdapter {
 
   setPrompt(prompt: string): void {
     localStorageHelpers.setPrompt(prompt);
-  }
-
-  getSystemPromptTemplate(): string {
-    return localStorageHelpers.getSystemPromptTemplate();
-  }
-
-  setSystemPromptTemplate(value: string): void {
-    localStorageHelpers.setSystemPromptTemplate(value);
   }
 
   getModelType(): string {
@@ -316,14 +305,6 @@ class VSCodeStorageAdapter implements StorageAdapter {
 
   async setPrompt(prompt: string): Promise<void> {
     await vscodeStorageHelpers.setPrompt(prompt);
-  }
-
-  async getSystemPromptTemplate(): Promise<string> {
-    return await vscodeStorageHelpers.getSystemPromptTemplate();
-  }
-
-  async setSystemPromptTemplate(value: string): Promise<void> {
-    await vscodeStorageHelpers.setSystemPromptTemplate(value);
   }
 
   async getModelType(): Promise<string> {

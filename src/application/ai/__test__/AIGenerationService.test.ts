@@ -4,7 +4,12 @@ import type {
   IAIRepository,
   IConfigRepository,
 } from '../../../domain/ai/repositories/IAIRepository';
-import { AGENT_ELEMENT_GENERATION_PROMPT } from '../../../config/agentSystemPrompt';
+import {
+  getAgentChatPrompt,
+  resolveElementGenerationSystemPrompt,
+  resolveFullHierarchySystemPrompt,
+} from '../../../config/agentSystemPrompt';
+import { getDefaultPromptTemplates } from '../../../config/promptTemplates';
 
 const mockRunAgentLoop = jest.fn();
 
@@ -48,11 +53,15 @@ function createAiRepository(): IAIRepository {
 }
 
 function createConfigRepository(systemPromptTemplate: string): IConfigRepository {
+  const promptTemplates = getDefaultPromptTemplates();
+  promptTemplates.system.customSystemPrompt = systemPromptTemplate;
+
   return {
     getApiKey: () => 'test-key',
     getModelType: () => 'test-model',
     getPrompt: () => '仕様書本文',
     getSystemPromptTemplate: () => systemPromptTemplate,
+    getPromptTemplates: () => promptTemplates,
     getApiProvider: () => 'openai',
     getApiEndpoint: () => 'http://localhost:1234/v1/chat/completions',
     getPresetApiEndpoint: () => 'http://localhost:1234/v1/chat/completions',
@@ -105,7 +114,9 @@ describe('AIGenerationService', () => {
     const [actualSystemPrompt, actualUserPrompt, actualContext, , actualOptions] =
       mockRunAgentLoop.mock.calls[0];
 
-    expect(actualSystemPrompt).toBe(AGENT_ELEMENT_GENERATION_PROMPT);
+    expect(actualSystemPrompt).toBe(
+      resolveElementGenerationSystemPrompt(createConfigRepository('   ').getPromptTemplates()),
+    );
     expect(actualUserPrompt).toContain('ソフトウェアテストのパラダイム');
     expect(actualContext).toEqual(
       expect.objectContaining({
@@ -114,5 +125,75 @@ describe('AIGenerationService', () => {
       }),
     );
     expect(actualOptions).toEqual(expect.objectContaining({ maxSteps: 5 }));
+  });
+
+  it('全生成では専用のシステムプロンプトとワークフローを使う', async () => {
+    const service = new AIGenerationService(createAiRepository(), createConfigRepository('   '));
+
+    mockRunAgentLoop.mockResolvedValueOnce({
+      finishReason: 'complete',
+      response:
+        '{"rootText":"リスクベースドテストは嫌いです","hierarchicalItems":[{"text":"背景","level":0,"originalLine":"- 背景"}]}',
+      steps: 2,
+      messages: [],
+    });
+
+    const result = await service.generateFullHierarchy(createTargetElement(), 'root', 'subtree');
+
+    expect(mockRunAgentLoop).toHaveBeenCalledTimes(1);
+
+    const [actualSystemPrompt, actualUserPrompt, actualContext, , actualOptions] =
+      mockRunAgentLoop.mock.calls[0];
+
+    expect(actualSystemPrompt).toBe(
+      resolveFullHierarchySystemPrompt(createConfigRepository('   ').getPromptTemplates()),
+    );
+    expect(actualUserPrompt).toContain('配下の要素階層全体');
+    expect(actualContext).toEqual(
+      expect.objectContaining({
+        structureText: 'root',
+        selectedSubtreeText: 'subtree',
+      }),
+    );
+    expect(actualOptions).toEqual(
+      expect.objectContaining({ maxSteps: 8, workflowPreset: 'full_generation' }),
+    );
+    expect(result.rootText).toBe('リスクベースドテストは嫌いです');
+    expect(result.hierarchicalItems).toHaveLength(1);
+  });
+
+  it('チャット操作ではAgenticなチャット用システムプロンプトを使う', async () => {
+    const service = new AIGenerationService(createAiRepository(), createConfigRepository('   '));
+
+    mockRunAgentLoop.mockResolvedValueOnce({
+      finishReason: 'complete',
+      response: '{"operations":[{"type":"ADD_ELEMENTS","targetId":"current","elements":["背景"]}]}',
+      steps: 2,
+      messages: [],
+    });
+
+    const result = await service.generateForChat('背景を追加して', 'root', '現在要素');
+
+    expect(mockRunAgentLoop).toHaveBeenCalledTimes(1);
+
+    const [actualSystemPrompt, actualUserPrompt, actualContext, , actualOptions] =
+      mockRunAgentLoop.mock.calls[0];
+
+    expect(actualSystemPrompt).toBe(
+      getAgentChatPrompt(createConfigRepository('   ').getPromptTemplates()),
+    );
+    expect(actualUserPrompt).toBe('背景を追加して');
+    expect(actualContext).toEqual(
+      expect.objectContaining({
+        structureText: 'root',
+        specificationText: '仕様書本文',
+        selectedElement: expect.objectContaining({
+          id: 'current',
+          texts: ['現在要素'],
+        }),
+      }),
+    );
+    expect(actualOptions).toEqual(expect.objectContaining({ maxSteps: 5 }));
+    expect(result).toHaveLength(1);
   });
 });

@@ -11,6 +11,7 @@ import PlaylistRemoveIcon from '@mui/icons-material/PlaylistRemove';
 import AutoFixOffIcon from '@mui/icons-material/AutoFixOff';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import AutoAwesomeMotionIcon from '@mui/icons-material/AutoAwesomeMotion';
 import ReviewsIcon from '@mui/icons-material/Reviews';
 import Tooltip from '@mui/material/Tooltip';
 import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
@@ -45,11 +46,14 @@ interface QuickMenuBarProps {
   toggleHelp: () => void;
   toggleSettings: () => void;
   onAIClick: () => void;
+  onAIFullClick: () => void;
   /** AIアシスタントパネルを開閉します */
   onToggleSidePanel: () => void;
   /** AIアシスタントパネルが開いているかどうか */
   isSidePanelOpen?: boolean;
   isAILoading?: boolean;
+  isAIFullLoading?: boolean;
+  isAIDisabled?: boolean;
   isEditorMode: boolean;
   isVSCodeExtension: boolean;
 }
@@ -71,9 +75,12 @@ const QuickMenuBar = ({
   toggleHelp,
   toggleSettings,
   onAIClick,
+  onAIFullClick,
   onToggleSidePanel,
   isSidePanelOpen = false,
   isAILoading,
+  isAIFullLoading,
+  isAIDisabled = false,
   isEditorMode,
   isVSCodeExtension: isExtension,
 }: QuickMenuBarProps) => {
@@ -224,12 +231,28 @@ const QuickMenuBar = ({
             />
             <IconButton
               tooltip={isAILoading ? 'AI生成中...' : tooltipTexts.AI}
-              onClick={isAILoading ? undefined : onAIClick}
+              onClick={isAIDisabled ? undefined : onAIClick}
               icon={isAILoading ? undefined : AutoAwesomeIcon}
               iconColor={theme.MENU_BAR.ICON_COLOR}
-              disabled={isAILoading}
+              disabled={isAIDisabled}
               customContent={
                 isAILoading ? (
+                  <CircularProgress
+                    size={20}
+                    thickness={4}
+                    sx={{ color: theme.MENU_BAR.ICON_COLOR }}
+                  />
+                ) : undefined
+              }
+            />
+            <IconButton
+              tooltip={isAIFullLoading ? 'AI全生成中...' : tooltipTexts.AI_FULL}
+              onClick={isAIDisabled ? undefined : onAIFullClick}
+              icon={isAIFullLoading ? undefined : AutoAwesomeMotionIcon}
+              iconColor={theme.MENU_BAR.ICON_COLOR}
+              disabled={isAIDisabled}
+              customContent={
+                isAIFullLoading ? (
                   <CircularProgress
                     size={20}
                     thickness={4}

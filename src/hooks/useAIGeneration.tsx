@@ -9,6 +9,7 @@ import { useSuggestion } from '../context/SuggestionContext';
 import { useToast } from '../context/ToastContext';
 import { ToastMessages } from '../constants/toastMessages';
 import { formatHierarchicalStructureForPrompt } from '../utils/element/elementHelpers';
+import { formatSelectedSubtreeForPrompt } from '../utils/element/elementHelpers';
 import { TabState } from '../types/tabTypes';
 import { Element } from '../types/types';
 import { Action } from '../types/actionTypes';
@@ -35,6 +36,7 @@ export function useAIGeneration({ currentTab, dispatch }: UseAIGenerationParams)
   const { addToast } = useToast();
   const { isSuggestionEnabled } = useSuggestion();
   const [isLoading, setIsLoading] = useState(false);
+  const [manualGenerationMode, setManualGenerationMode] = useState<'child' | 'full' | null>(null);
 
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -246,6 +248,7 @@ export function useAIGeneration({ currentTab, dispatch }: UseAIGenerationParams)
     }
 
     setIsLoading(true);
+    setManualGenerationMode('child');
 
     try {
       if (!currentTab) {
@@ -286,11 +289,18 @@ export function useAIGeneration({ currentTab, dispatch }: UseAIGenerationParams)
       const structureText = currentTab.state.hierarchicalData
         ? formatHierarchicalStructureForPrompt(currentTab.state.hierarchicalData)
         : '階層構造データがありません';
+      const selectedSubtreeText = currentTab.state.hierarchicalData
+        ? formatSelectedSubtreeForPrompt(currentTab.state.hierarchicalData, selectedElement.id)
+        : '対象サブツリー情報がありません';
 
       debugLog(`[AI] 要素生成開始`);
 
       // 応用サービスを使用して要素生成
-      const childNodes = await aiGenerationService.generateElements(domainElement, structureText);
+      const childNodes = await aiGenerationService.generateElements(
+        domainElement,
+        structureText,
+        selectedSubtreeText,
+      );
 
       if (childNodes.length === 0) {
         addToast(ToastMessages.aiNoResults, 'info');
@@ -322,6 +332,96 @@ export function useAIGeneration({ currentTab, dispatch }: UseAIGenerationParams)
       addToast(message, 'error');
     } finally {
       setIsLoading(false);
+      setManualGenerationMode(null);
+    }
+  }, [currentTab, dispatch, addToast, isLoading, aiGenerationService]);
+
+  const handleAIFullGenerationClick = useCallback(async () => {
+    if (isLoading) {
+      return;
+    }
+
+    setIsLoading(true);
+    setManualGenerationMode('full');
+
+    try {
+      if (!currentTab) {
+        return;
+      }
+
+      const selectedElements = currentTab.state.hierarchicalData
+        ? getSelectedElementsFromHierarchy(currentTab.state.hierarchicalData)
+        : [];
+      const selectedElement = selectedElements[0];
+
+      if (!selectedElement) {
+        addToast(ToastMessages.noSelect);
+        return;
+      }
+
+      const domainElement = new DomainElement(
+        selectedElement.id,
+        selectedElement.texts,
+        selectedElement.x,
+        selectedElement.y,
+        selectedElement.width,
+        selectedElement.height,
+        selectedElement.sectionHeights,
+        selectedElement.editing,
+        selectedElement.selected,
+        selectedElement.visible,
+        selectedElement.tentative,
+        selectedElement.startMarker,
+        selectedElement.endMarker,
+        selectedElement.direction,
+        selectedElement.tempParentId,
+      );
+
+      const structureText = currentTab.state.hierarchicalData
+        ? formatHierarchicalStructureForPrompt(currentTab.state.hierarchicalData)
+        : '階層構造データがありません';
+      const selectedSubtreeText = currentTab.state.hierarchicalData
+        ? formatSelectedSubtreeForPrompt(currentTab.state.hierarchicalData, selectedElement.id)
+        : '対象サブツリー情報がありません';
+
+      const generationResult = await aiGenerationService.generateFullHierarchy(
+        domainElement,
+        structureText,
+        selectedSubtreeText,
+      );
+
+      if (generationResult.hierarchicalItems.length === 0) {
+        addToast(ToastMessages.aiNoResults, 'info');
+        return;
+      }
+
+      dispatch({
+        type: 'REPLACE_CHILDREN_WITH_HIERARCHY',
+        payload: {
+          targetNodeId: selectedElement.id,
+          rootText: generationResult.rootText,
+          hierarchicalItems: generationResult.hierarchicalItems,
+          onError: (message: string) => {
+            debugLog(`[AI Full] リデューサーエラー: ${message}`);
+            addToast(message, 'warn');
+          },
+          onSuccess: () => {
+            addToast('AI全生成で配下の要素を更新しました。必要なら元に戻すで復元できます。', 'info');
+          },
+        },
+      });
+    } catch (error: unknown) {
+      debugLog(
+        `[AI Full] 予期しないエラー: ${error instanceof Error ? error.message : '不明なエラー'}`,
+      );
+      const message =
+        error instanceof Error
+          ? `予期しないエラーが発生しました: ${error.message}`
+          : '予期しないエラーが発生しました';
+      addToast(message, 'error');
+    } finally {
+      setIsLoading(false);
+      setManualGenerationMode(null);
     }
   }, [currentTab, dispatch, addToast, isLoading, aiGenerationService]);
 
@@ -634,11 +734,15 @@ export function useAIGeneration({ currentTab, dispatch }: UseAIGenerationParams)
 
   return {
     handleAIClick,
+    handleAIFullGenerationClick,
     handleAIClickForChat,
     handleSiblingNodeSuggestion,
     clearSuggestionContext,
     handleEndEditingSuggestion,
     isLoading,
+    isChildGenerationLoading: isLoading && manualGenerationMode === 'child',
+    isFullGenerationLoading: isLoading && manualGenerationMode === 'full',
+    isAIBusy: isLoading,
     suggestionState: aiGenerationService.getSuggestionState(),
   };
 }
