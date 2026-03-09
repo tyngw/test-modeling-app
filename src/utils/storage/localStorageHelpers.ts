@@ -360,35 +360,23 @@ export const getPrompt = (): string => getSetting(PROMPT_KEY, '');
 
 export const setPrompt = (prompt: string): void => setSetting(PROMPT_KEY, prompt);
 
-function readLegacyCustomSystemPrompt(): string {
-  return getSetting(SYSTEM_PROMPT_KEY, '');
-}
-
 export const getPromptTemplates = (): PromptTemplates => {
   const storedPromptTemplates = safeLocalStorage.getItem(PROMPT_TEMPLATES_KEY);
-  const legacyCustomSystemPrompt = readLegacyCustomSystemPrompt();
 
   if (!storedPromptTemplates) {
-    const migratedPromptTemplates = getDefaultPromptTemplates();
-    if (legacyCustomSystemPrompt.trim().length > 0)
-      migratedPromptTemplates.system.customSystemPrompt = legacyCustomSystemPrompt;
-
+    const defaultPromptTemplates = getDefaultPromptTemplates();
     safeLocalStorage.setItem(
       PROMPT_TEMPLATES_KEY,
-      stringifyPromptTemplates(migratedPromptTemplates),
+      stringifyPromptTemplates(defaultPromptTemplates),
     );
-    return migratedPromptTemplates;
+    return defaultPromptTemplates;
   }
 
   try {
-    return parsePromptTemplatesJson(storedPromptTemplates, {
-      legacyCustomSystemPrompt,
-    });
+    return parsePromptTemplatesJson(storedPromptTemplates);
   } catch (error) {
     debugLog('promptTemplates parse failed:', error);
     const fallbackPromptTemplates = getDefaultPromptTemplates();
-    if (legacyCustomSystemPrompt.trim().length > 0)
-      fallbackPromptTemplates.system.customSystemPrompt = legacyCustomSystemPrompt;
 
     safeLocalStorage.setItem(
       PROMPT_TEMPLATES_KEY,
@@ -401,25 +389,10 @@ export const getPromptTemplates = (): PromptTemplates => {
 export const getPromptTemplatesJson = (): string => stringifyPromptTemplates(getPromptTemplates());
 
 export const setPromptTemplatesJson = (value: string): void => {
-  const normalizedPromptTemplates = parsePromptTemplatesJson(value, {
-    legacyCustomSystemPrompt: readLegacyCustomSystemPrompt(),
-  });
+  const normalizedPromptTemplates = parsePromptTemplatesJson(value);
 
   setSetting(PROMPT_TEMPLATES_KEY, stringifyPromptTemplates(normalizedPromptTemplates));
 };
-
-export const getSystemPromptTemplate = (): string => getPromptTemplates().system.customSystemPrompt;
-
-export const setSystemPromptTemplate = (value: string): void =>
-  setPromptTemplatesJson(
-    stringifyPromptTemplates({
-      ...getPromptTemplates(),
-      system: {
-        ...getPromptTemplates().system,
-        customSystemPrompt: value,
-      },
-    }),
-  );
 
 /**
  * 編集可能なシステムプロンプトのキーを取得

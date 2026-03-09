@@ -58,11 +58,6 @@ export interface IConfigRepository {
   getPrompt(): string;
 
   /**
-   * システムプロンプトテンプレートを取得
-   */
-  getSystemPromptTemplate(): string;
-
-  /**
    * すべてのプロンプトテンプレートを取得
    */
   getPromptTemplates(): PromptTemplates;

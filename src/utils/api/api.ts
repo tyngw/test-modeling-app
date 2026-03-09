@@ -1,10 +1,5 @@
 import axios from 'axios';
-import {
-  getApiEndpoint,
-  getPromptTemplates,
-  getSystemPromptTemplate,
-  getApiProvider,
-} from '../storage/localStorageHelpers';
+import { getApiEndpoint, getPromptTemplates, getApiProvider } from '../storage/localStorageHelpers';
 import { resolveElementGenerationSystemPrompt } from '../../config/agentSystemPrompt';
 import { SuggestionResponse } from './schema';
 import { sanitizeApiResponse } from '../security/sanitization';
@@ -35,10 +30,7 @@ export const generateWithGeminiThread = async (
   if (provider === 'openai') {
     const endpoint = getApiEndpoint();
     const systemPrompt =
-      customSystemPrompt ||
-      resolveElementGenerationSystemPrompt(getPromptTemplates()) ||
-      getSystemPromptTemplate() ||
-      undefined;
+      customSystemPrompt || resolveElementGenerationSystemPrompt(getPromptTemplates()) || undefined;
 
     // Gemini形式のチャット履歴をOpenAI形式に変換
     const openaiHistory = convertGeminiToOpenAIHistory(chatHistory);
@@ -136,11 +128,10 @@ const generateWithGeminiThreadInternal = async (
       generationConfig,
     };
     if (includeSystemInstruction) {
-      const systemPrompt = customSystemPrompt || getSystemPromptTemplate();
       const resolvedSystemPrompt =
         customSystemPrompt || resolveElementGenerationSystemPrompt(getPromptTemplates());
       requestPayload.systemInstruction = {
-        parts: [{ text: resolvedSystemPrompt || systemPrompt }],
+        parts: [{ text: resolvedSystemPrompt }],
       };
     }
 
@@ -196,10 +187,7 @@ export const generateWithGemini = async (
   if (provider === 'openai') {
     const endpoint = getApiEndpoint();
     const systemPrompt =
-      customSystemPrompt ||
-      resolveElementGenerationSystemPrompt(getPromptTemplates()) ||
-      getSystemPromptTemplate() ||
-      undefined;
+      customSystemPrompt || resolveElementGenerationSystemPrompt(getPromptTemplates()) || undefined;
 
     return OpenAIApiAdapter.generateSingle(
       prompt,
@@ -321,7 +309,6 @@ export const generateElementSuggestions = async (
     // OpenAI互換APIの場合
     if (provider === 'openai') {
       const endpoint = getApiEndpoint();
-      const systemPrompt = getSystemPromptTemplate();
       const resolvedSystemPrompt = resolveElementGenerationSystemPrompt(getPromptTemplates());
 
       const response = await OpenAIApiAdapter.generateSingle(
@@ -330,7 +317,7 @@ export const generateElementSuggestions = async (
         modelType,
         endpoint,
         true, // forceJsonResponse
-        resolvedSystemPrompt || systemPrompt,
+        resolvedSystemPrompt,
       );
 
       return parseJsonSuggestionResponse(response);

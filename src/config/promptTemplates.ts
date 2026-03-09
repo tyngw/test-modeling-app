@@ -51,10 +51,7 @@ export function getDefaultPromptTemplates(): PromptTemplates {
   return clonePromptTemplates(defaultPromptTemplates);
 }
 
-export function normalizePromptTemplates(
-  rawValue: unknown,
-  _options?: { legacyCustomSystemPrompt?: string },
-): PromptTemplates {
+export function normalizePromptTemplates(rawValue: unknown): PromptTemplates {
   const defaultTemplates = getDefaultPromptTemplates();
   const overrides =
     rawValue && typeof rawValue === 'object'
@@ -83,12 +80,9 @@ export function normalizePromptTemplates(
   return templates;
 }
 
-export function parsePromptTemplatesJson(
-  promptTemplatesJsonText: string,
-  options?: { legacyCustomSystemPrompt?: string },
-): PromptTemplates {
+export function parsePromptTemplatesJson(promptTemplatesJsonText: string): PromptTemplates {
   const parsedValue = JSON.parse(promptTemplatesJsonText) as unknown;
-  return normalizePromptTemplates(parsedValue, options);
+  return normalizePromptTemplates(parsedValue);
 }
 
 export function stringifyPromptTemplates(promptTemplates: PromptTemplates): string {
