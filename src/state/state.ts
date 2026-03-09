@@ -377,7 +377,8 @@ const isReplaceChildrenWithHierarchyPayload = (
     payload !== null &&
     'targetNodeId' in payload &&
     typeof (payload as Record<string, unknown>).targetNodeId === 'string' &&
-    (!('rootText' in payload) || typeof (payload as Record<string, unknown>).rootText === 'string') &&
+    (!('rootText' in payload) ||
+      typeof (payload as Record<string, unknown>).rootText === 'string') &&
     'hierarchicalItems' in payload &&
     Array.isArray((payload as Record<string, unknown>).hierarchicalItems) &&
     ((payload as Record<string, unknown>).hierarchicalItems as unknown[]).every(
@@ -1938,7 +1939,7 @@ const actionHandlers: Record<string, ActionHandler> = {
         });
       }
     } else {
-      // 複数選択時：CUT_ELEMENTと同様のパターンで各要素を個別に処理
+      // 複数選択時：各要素を個別にClipboardDataとして保存
       const clipboardDataList: ClipboardData[] = [];
 
       selectedElements.forEach((selectedElement) => {
@@ -1948,38 +1949,8 @@ const actionHandlers: Record<string, ActionHandler> = {
         }
       });
 
-      // 複数要素を統合した仮想ルートを作成
       if (clipboardDataList.length > 0) {
-        const virtualRootElement: Element = {
-          id: 'virtual-root-' + Date.now(),
-          texts: ['複数要素のコピー'],
-          x: 0,
-          y: 0,
-          width: 200,
-          height: 30,
-          sectionHeights: [30],
-          selected: true,
-          editing: false,
-          visible: true,
-          tentative: false,
-          startMarker: 'none',
-          endMarker: 'none',
-          direction: 'none',
-          tempParentId: null,
-        };
-
-        const virtualSubtree: HierarchicalNode = {
-          data: virtualRootElement,
-          children: clipboardDataList.map((data) => data.subtree),
-        };
-
-        const combinedClipboardData: ClipboardData = {
-          type: 'copy',
-          rootElement: virtualRootElement,
-          subtree: virtualSubtree,
-        };
-
-        copyToClipboard(combinedClipboardData).catch((error) => {
+        copyToClipboard(clipboardDataList).catch((error) => {
           debugLog('Failed to copy multiple elements to clipboard:', error);
         });
       }
@@ -2203,8 +2174,6 @@ const actionHandlers: Record<string, ActionHandler> = {
     if (!selectedElement) return state;
 
     try {
-      const clipboardDataTyped = clipboardData as ClipboardData;
-
       // 階層構造のサブツリーを新しいIDで複製
       const cloneNodeWithNewIds = (
         sourceNode: HierarchicalNode,
@@ -2230,15 +2199,21 @@ const actionHandlers: Record<string, ActionHandler> = {
 
       let currentHierarchy = state.hierarchicalData;
 
-      // 複数要素のコピー（仮想ルート）かどうかを判定
-      const isMultipleElementsCopy = clipboardDataTyped.rootElement.id.startsWith('virtual-root-');
+      // 複数要素形式かどうかを判定
+      const isMultipleElements = Array.isArray(clipboardData);
 
-      if (isMultipleElementsCopy && clipboardDataTyped.subtree.children) {
-        // 複数要素の場合：仮想ルートの子要素を直接貼り付け
-        clipboardDataTyped.subtree.children.forEach((childNode, index) => {
-          const clonedChild = cloneNodeWithNewIds(childNode, index);
+      if (isMultipleElements) {
+        // 複数要素の場合：各要素を順に貼り付け
+        const clipboardDataArray = clipboardData as ClipboardData[];
 
-          const result = addElementToHierarchy(currentHierarchy, targetElementId, clonedChild.data);
+        clipboardDataArray.forEach((data, index) => {
+          const clonedSubtree = cloneNodeWithNewIds(data.subtree, index);
+
+          const result = addElementToHierarchy(
+            currentHierarchy,
+            targetElementId,
+            clonedSubtree.data,
+          );
           if (result.hierarchicalData) {
             currentHierarchy = result.hierarchicalData;
 
@@ -2259,11 +2234,12 @@ const actionHandlers: Record<string, ActionHandler> = {
               }
             };
 
-            addSubtreeToHierarchy(clonedChild.data.id, clonedChild);
+            addSubtreeToHierarchy(clonedSubtree.data.id, clonedSubtree);
           }
         });
       } else {
         // 単一要素の場合：従来の処理
+        const clipboardDataTyped = clipboardData as ClipboardData;
         const clonedSubtree = cloneNodeWithNewIds(clipboardDataTyped.subtree);
 
         const result = addElementToHierarchy(currentHierarchy, targetElementId, clonedSubtree.data);

@@ -16,15 +16,53 @@ export interface ClipboardData {
 // クリップボードでの要素データ識別用マーカー
 const CLIPBOARD_MARKER_COPY = '<!-- MODELING_APP_COPY_DATA:';
 const CLIPBOARD_MARKER_CUT = '<!-- MODELING_APP_CUT_DATA:';
+const CLIPBOARD_MARKER_MULTIPLE_COPY = '<!-- MODELING_APP_MULTIPLE_COPY_DATA:';
+const CLIPBOARD_MARKER_MULTIPLE_CUT = '<!-- MODELING_APP_MULTIPLE_CUT_DATA:';
 const CLIPBOARD_MARKER_END = ' -->';
 
 /**
  * クリップボードに保存された要素データを解析する（階層構造ベース）
  * @param clipboardText クリップボードのテキスト
- * @returns 解析された階層データとタイプ、またはnull
+ * @returns 解析された階層データとタイプ、またはnull。複数要素の場合はClipboardData[]を返す
  */
-const parseClipboardElementData = (clipboardText: string): ClipboardData | null => {
+const parseClipboardElementData = (
+  clipboardText: string,
+): ClipboardData | ClipboardData[] | null => {
   try {
+    // 複数要素形式をチェック
+    const isMultipleCopy = clipboardText.includes(CLIPBOARD_MARKER_MULTIPLE_COPY);
+    const isMultipleCut = clipboardText.includes(CLIPBOARD_MARKER_MULTIPLE_CUT);
+
+    if (isMultipleCopy || isMultipleCut) {
+      const marker = isMultipleCopy
+        ? CLIPBOARD_MARKER_MULTIPLE_COPY
+        : CLIPBOARD_MARKER_MULTIPLE_CUT;
+      const startIndex = clipboardText.indexOf(marker);
+      const endIndex = clipboardText.indexOf(CLIPBOARD_MARKER_END, startIndex);
+
+      if (startIndex === -1 || endIndex === -1) {
+        return null;
+      }
+
+      const dataStart = startIndex + marker.length;
+      const jsonData = clipboardText.substring(dataStart, endIndex);
+
+      try {
+        const parsedArray = JSON.parse(jsonData);
+        if (Array.isArray(parsedArray)) {
+          return parsedArray.map((item) => ({
+            type: isMultipleCopy ? ('copy' as const) : ('cut' as const),
+            rootElement: item.rootElement,
+            subtree: item.subtree,
+          }));
+        }
+      } catch (e) {
+        debugLog('Failed to parse multiple JSON data:', e);
+        return null;
+      }
+    }
+
+    // 単一要素形式
     let markerStart = '';
     let type: 'copy' | 'cut' = 'copy';
 
@@ -97,10 +135,10 @@ const parseClipboardElementData = (clipboardText: string): ClipboardData | null 
 
 /**
  * 階層構造データをクリップボード用のテキストに変換する
- * @param clipboardData クリップボードデータ
+ * @param clipboardData クリップボードデータ（単一または複数）
  * @returns クリップボード用のテキスト
  */
-const createClipboardText = (clipboardData: ClipboardData): string => {
+const createClipboardText = (clipboardData: ClipboardData | ClipboardData[]): string => {
   const getElementText = (node: HierarchicalNode, depth = 0): string => {
     const tabs = '\t'.repeat(depth);
     let result = `${tabs}${node.data.texts[0] || ''}`;
@@ -114,6 +152,37 @@ const createClipboardText = (clipboardData: ClipboardData): string => {
     return result;
   };
 
+  // 複数要素の場合
+  if (Array.isArray(clipboardData)) {
+    const textRepresentations: string[] = [];
+    clipboardData.forEach((data) => {
+      const text = getElementText(data.subtree);
+      if (text && text.trim() !== '') {
+        textRepresentations.push(text);
+      }
+    });
+
+    const textRepresentation = textRepresentations.join('\n');
+    if (!textRepresentation || textRepresentation.trim() === '') {
+      debugLog('createClipboardText: Generated text representation is empty');
+      return '';
+    }
+
+    const marker =
+      clipboardData[0]?.type === 'copy'
+        ? CLIPBOARD_MARKER_MULTIPLE_COPY
+        : CLIPBOARD_MARKER_MULTIPLE_CUT;
+    const elementData = JSON.stringify(
+      clipboardData.map((data) => ({
+        rootElement: data.rootElement,
+        subtree: data.subtree,
+      })),
+    );
+
+    return `${textRepresentation}\n\n${marker}${elementData}${CLIPBOARD_MARKER_END}`;
+  }
+
+  // 単一要素の場合
   const textRepresentation = getElementText(clipboardData.subtree);
   if (!textRepresentation || textRepresentation.trim() === '') {
     debugLog('createClipboardText: Generated text representation is empty');
@@ -180,10 +249,12 @@ export const getSelectedAndChildren = (
  * 要素をクリップボードにコピーする（階層構造ベース）
  * 要素データを特別なマーカーと共にクリップボードに保存
  *
- * @param clipboardData コピーするクリップボードデータ
+ * @param clipboardData コピーするクリップボードデータ（単一または複数）
  * @returns Promise<boolean> コピーが成功したかどうか
  */
-export const copyToClipboard = async (clipboardData: ClipboardData): Promise<boolean> => {
+export const copyToClipboard = async (
+  clipboardData: ClipboardData | ClipboardData[],
+): Promise<boolean> => {
   const textToCopy = createClipboardText(clipboardData);
 
   // 空のテキストの場合は失敗として扱う
@@ -209,15 +280,22 @@ export const copyToClipboard = async (clipboardData: ClipboardData): Promise<boo
 /**
  * 要素を切り取ってクリップボードに保存する（階層構造ベース）
  *
- * @param clipboardData 切り取るクリップボードデータ
+ * @param clipboardData 切り取るクリップボードデータ（単一または複数）
  * @returns Promise<boolean> 切り取りが成功したかどうか
  */
-export const cutToClipboard = async (clipboardData: ClipboardData): Promise<boolean> => {
+export const cutToClipboard = async (
+  clipboardData: ClipboardData | ClipboardData[],
+): Promise<boolean> => {
   // 切り取り用にタイプを変更
-  const cutData: ClipboardData = {
-    ...clipboardData,
-    type: 'cut',
-  };
+  const cutData: ClipboardData | ClipboardData[] = Array.isArray(clipboardData)
+    ? clipboardData.map((data) => ({
+        ...data,
+        type: 'cut' as const,
+      }))
+    : {
+        ...clipboardData,
+        type: 'cut',
+      };
 
   const textToCopy = createClipboardText(cutData);
 
@@ -276,16 +354,29 @@ const fallbackCopyToClipboard = (text: string): Promise<boolean> => {
 /**
  * クリップボードから保存されたコピー要素を取得する（階層構造ベース）
  *
- * @returns 保存されたクリップボードデータ、存在しない場合はnull
+ * @returns 保存されたクリップボードデータ（単一または複数）、存在しない場合はnull
  */
-export const getGlobalCopiedElements = async (): Promise<ClipboardData | null> => {
+export const getGlobalCopiedElements = async (): Promise<
+  ClipboardData | ClipboardData[] | null
+> => {
   try {
     const clipboardText = await navigator.clipboard.readText();
     const parsed = parseClipboardElementData(clipboardText);
 
-    if (parsed && parsed.type === 'copy') {
-      return parsed;
+    if (!parsed) return null;
+
+    if (Array.isArray(parsed)) {
+      // 複数要素形式で、すべてcopyタイプかチェック
+      if (parsed.every((item) => item.type === 'copy')) {
+        return parsed;
+      }
+    } else {
+      // 単一要素形式
+      if (parsed.type === 'copy') {
+        return parsed;
+      }
     }
+
     return null;
   } catch (e) {
     debugLog('Failed to read clipboard for copied elements:', e);
@@ -296,16 +387,27 @@ export const getGlobalCopiedElements = async (): Promise<ClipboardData | null> =
 /**
  * クリップボードから保存された切り取り要素を取得する（階層構造ベース）
  *
- * @returns 保存されたクリップボードデータ、存在しない場合はnull
+ * @returns 保存されたクリップボードデータ（単一または複数）、存在しない場合はnull
  */
-export const getGlobalCutElements = async (): Promise<ClipboardData | null> => {
+export const getGlobalCutElements = async (): Promise<ClipboardData | ClipboardData[] | null> => {
   try {
     const clipboardText = await navigator.clipboard.readText();
     const parsed = parseClipboardElementData(clipboardText);
 
-    if (parsed && parsed.type === 'cut') {
-      return parsed;
+    if (!parsed) return null;
+
+    if (Array.isArray(parsed)) {
+      // 複数要素形式で、すべてcutタイプかチェック
+      if (parsed.every((item) => item.type === 'cut')) {
+        return parsed;
+      }
+    } else {
+      // 単一要素形式
+      if (parsed.type === 'cut') {
+        return parsed;
+      }
     }
+
     return null;
   } catch (e) {
     debugLog('Failed to read clipboard for cut elements:', e);
@@ -399,7 +501,11 @@ export const parseHierarchicalText = (
  */
 export const getClipboardDataForPaste = async (): Promise<{
   type: 'clipboard' | 'elements';
-  data: string[] | ClipboardData | Array<{ text: string; level: number; originalLine: string }>;
+  data:
+    | string[]
+    | ClipboardData
+    | ClipboardData[]
+    | Array<{ text: string; level: number; originalLine: string }>;
 } | null> => {
   try {
     const clipboardText = await navigator.clipboard.readText();
