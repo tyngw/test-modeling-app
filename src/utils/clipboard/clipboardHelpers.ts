@@ -134,6 +134,40 @@ const parseClipboardElementData = (
 };
 
 /**
+ * Elementからレイアウト情報（x, y, width, height, sectionHeights）を除外したバージョンを作成
+ * クリップボード保存時は復元可能な情報のみを保持する
+ * @param element 要素
+ * @returns レイアウト情報を除外した要素
+ */
+const stripLayoutInfo = (
+  element: Element,
+): Omit<Element, 'x' | 'y' | 'width' | 'height' | 'sectionHeights'> & {
+  x?: never;
+  y?: never;
+  width?: never;
+  height?: never;
+  sectionHeights?: never;
+} => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { x, y, width, height, sectionHeights, ...rest } = element;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return rest as any;
+};
+
+/**
+ * 階層構造ノードからレイアウト情報を除外したバージョンを作成
+ * @param node 階層ノード
+ * @returns レイアウト情報を除外した階層ノード
+ */
+const stripLayoutInfoFromNode = (node: HierarchicalNode): HierarchicalNode => {
+  return {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    data: stripLayoutInfo(node.data) as any,
+    children: node.children ? node.children.map(stripLayoutInfoFromNode) : undefined,
+  };
+};
+
+/**
  * 階層構造データをクリップボード用のテキストに変換する
  * @param clipboardData クリップボードデータ（単一または複数）
  * @returns クリップボード用のテキスト
@@ -172,10 +206,12 @@ const createClipboardText = (clipboardData: ClipboardData | ClipboardData[]): st
       clipboardData[0]?.type === 'copy'
         ? CLIPBOARD_MARKER_MULTIPLE_COPY
         : CLIPBOARD_MARKER_MULTIPLE_CUT;
+    // レイアウト情報を削除したバージョンをクリップボードに保存
     const elementData = JSON.stringify(
       clipboardData.map((data) => ({
-        rootElement: data.rootElement,
-        subtree: data.subtree,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        rootElement: stripLayoutInfo(data.rootElement) as any,
+        subtree: stripLayoutInfoFromNode(data.subtree),
       })),
     );
 
@@ -190,9 +226,11 @@ const createClipboardText = (clipboardData: ClipboardData | ClipboardData[]): st
   }
 
   const marker = clipboardData.type === 'copy' ? CLIPBOARD_MARKER_COPY : CLIPBOARD_MARKER_CUT;
+  // レイアウト情報を削除したバージョンをクリップボードに保存
   const elementData = JSON.stringify({
-    rootElement: clipboardData.rootElement,
-    subtree: clipboardData.subtree,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    rootElement: stripLayoutInfo(clipboardData.rootElement) as any,
+    subtree: stripLayoutInfoFromNode(clipboardData.subtree),
   });
 
   return `${textRepresentation}\n\n${marker}${elementData}${CLIPBOARD_MARKER_END}`;
