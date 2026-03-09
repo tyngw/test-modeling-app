@@ -106,7 +106,7 @@ export function SidePanel({
   const [inputText, setInputText] = useState('');
   const [promptText, setPromptText] = useState('');
   const [selectedSystemPromptKey, setSelectedSystemPromptKey] =
-    useState<keyof PromptTemplates['system']>('customSystemPrompt');
+    useState<keyof PromptTemplates['system']>('agentElementGeneration');
   const [selectedSystemPrompt, setSelectedSystemPrompt] = useState('');
   const [systemPromptError, setSystemPromptError] = useState('');
   const [isSaved, setIsSaved] = useState(false);
@@ -822,7 +822,6 @@ export function SidePanel({
                   e.target.style.borderColor = '#e5e7eb';
                 }}
               >
-                <option value="customSystemPrompt">カスタムシステムプロンプト</option>
                 <option value="agentElementGeneration">エージェント - 子要素生成</option>
                 <option value="agentFullHierarchyGeneration">エージェント - 全体構造再設計</option>
                 <option value="agentChat">エージェント - チャット操作</option>

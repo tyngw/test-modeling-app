@@ -3,7 +3,6 @@ import promptTemplatesJson from './promptTemplates.json';
 export interface PromptTemplates {
   version: number;
   system: {
-    customSystemPrompt: string;
     agentElementGeneration: string;
     agentFullHierarchyGeneration: string;
     agentChat: string;
@@ -54,7 +53,7 @@ export function getDefaultPromptTemplates(): PromptTemplates {
 
 export function normalizePromptTemplates(
   rawValue: unknown,
-  options?: { legacyCustomSystemPrompt?: string },
+  _options?: { legacyCustomSystemPrompt?: string },
 ): PromptTemplates {
   const defaultTemplates = getDefaultPromptTemplates();
   const overrides =
@@ -67,11 +66,6 @@ export function normalizePromptTemplates(
     system: mergeStringRecord(defaultTemplates.system, overrides?.system),
     user: mergeStringRecord(defaultTemplates.user, overrides?.user),
   };
-
-  const legacyCustomSystemPrompt = options?.legacyCustomSystemPrompt?.trim();
-  if (legacyCustomSystemPrompt && templates.system.customSystemPrompt.trim().length === 0) {
-    templates.system.customSystemPrompt = legacyCustomSystemPrompt;
-  }
 
   const rawSystemTemplates = overrides?.system;
   const hasLegacyChatOverride =

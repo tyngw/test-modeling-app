@@ -425,7 +425,6 @@ export const setSystemPromptTemplate = (value: string): void =>
  * 編集可能なシステムプロンプトのキーを取得
  */
 export const getSystemPromptKeys = (): (keyof PromptTemplates['system'])[] => [
-  'customSystemPrompt',
   'agentElementGeneration',
   'agentFullHierarchyGeneration',
   'agentChat',
