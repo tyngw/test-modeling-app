@@ -80,12 +80,12 @@ const canvasBackgroundStyle = {
 
 // Canvas領域のコンテナスタイル
 // right は CSS カスタムプロパティ --app-side-panel-width でサイドパネル幅を反映
+// left と right を両方指定すると自動的に幅が計算されるため width は指定しない
 const canvasContainerStyle = {
   position: 'absolute' as const,
   top: HEADER_HEIGHT,
   left: 0,
   right: 'var(--app-side-panel-width, 0px)',
-  minWidth: '100%',
   minHeight: 'calc(100vh - ' + HEADER_HEIGHT + 'px)',
   overflow: 'auto',
 };

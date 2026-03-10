@@ -101,8 +101,12 @@ const AppContent: React.FC = () => {
   }, []);
 
   // サイドパネル幅を CSS カスタムプロパティに反映
+  // パネル開閉時に直接CSS変数を設定することで、SidePanelコンポーネントレンダリング前に
+  // レイアウトを調整し、開閉直後のスクロール問題を解避
   useEffect(() => {
-    if (!isSidePanelOpen) {
+    if (isSidePanelOpen) {
+      document.documentElement.style.setProperty('--app-side-panel-width', '360px');
+    } else {
       document.documentElement.style.setProperty('--app-side-panel-width', '0px');
     }
   }, [isSidePanelOpen]);
