@@ -13,7 +13,7 @@
 //   - メッセージフォーマット変換が必要（user/model/functionCall/functionResponse）
 //   - API キーはクエリパラメータに付与
 
-import axios from 'axios';
+import { post } from '../../utils/http/httpClient';
 import {
   AgentMessage,
   ToolCall,
@@ -209,11 +209,9 @@ export function createGeminiAgentCaller(apiKey: string, modelType: string): LLMC
 
     const endpoint = `${GEMINI_BASE_URL}/${modelType}:generateContent?key=${apiKey}`;
 
-    const response = await axios.post(endpoint, requestBody, {
-      headers: { 'Content-Type': 'application/json' },
-    });
+    const response = await post(endpoint, requestBody);
 
-    const candidate = response.data?.candidates?.[0];
+    const candidate = (response.data as any)?.candidates?.[0];
     const parts: GeminiPart[] = candidate?.content?.parts || [];
 
     // ファンクションコールが含まれている場合
