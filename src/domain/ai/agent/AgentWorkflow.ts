@@ -1,15 +1,16 @@
 // src/domain/ai/agent/AgentWorkflow.ts
 
-export type AgentWorkflowPresetId = 'default' | 'full_generation'
+// eslint-disable-next-line camelcase
+export type AgentWorkflowPresetId = 'default' | 'full_generation';
 
 type AgentWorkflowPreset = {
-  stepInstructions: string[]
-  finalInstruction: string
-}
+  stepInstructions: string[];
+  finalInstruction: string;
+};
 
 const DEFAULT_FINAL_INSTRUCTION =
   '【指示】これまでに収集した情報を基に、最終的な回答を生成してください。' +
-  'これ以上ツールを使用せず、必ず指定されたJSON形式で回答してください。'
+  'これ以上ツールを使用せず、必ず指定されたJSON形式で回答してください。';
 
 const WORKFLOW_PRESETS: Record<AgentWorkflowPresetId, AgentWorkflowPreset> = {
   default: {
@@ -20,6 +21,7 @@ const WORKFLOW_PRESETS: Record<AgentWorkflowPresetId, AgentWorkflowPreset> = {
     ],
     finalInstruction: DEFAULT_FINAL_INSTRUCTION,
   },
+  // eslint-disable-next-line camelcase
   full_generation: {
     stepInstructions: [
       '【ワークフロー: Explore】まず対象要素・対象サブツリー・仕様書概要・現在構造を確認してください。このステップでは全体像の把握を優先し、まだ最終回答しないでください。入力文のどの部分がルート名・章・下位項目に相当するかを洗い出してください。',
@@ -33,28 +35,25 @@ const WORKFLOW_PRESETS: Record<AgentWorkflowPresetId, AgentWorkflowPreset> = {
       '【指示】これまでに収集した情報を基に、対象要素名の更新結果と配下の完成した階層案を最終出力してください。' +
       'これ以上ツールを使用せず、必ず rootText と hierarchicalItems を含むJSONのみで回答してください。',
   },
-}
+};
 
 export function getAgentWorkflowStepInstruction(
   workflowPreset: AgentWorkflowPresetId | undefined,
   step: number,
 ): string | null {
-  if (!workflowPreset)
-    return null
+  if (!workflowPreset) return null;
 
-  const preset = WORKFLOW_PRESETS[workflowPreset]
-  if (!preset)
-    return null
+  const preset = WORKFLOW_PRESETS[workflowPreset];
+  if (!preset) return null;
 
-  const index = Math.min(step - 1, preset.stepInstructions.length - 1)
-  return preset.stepInstructions[index] ?? null
+  const index = Math.min(step - 1, preset.stepInstructions.length - 1);
+  return preset.stepInstructions[index] ?? null;
 }
 
 export function getAgentWorkflowFinalInstruction(
   workflowPreset: AgentWorkflowPresetId | undefined,
 ): string {
-  if (!workflowPreset)
-    return DEFAULT_FINAL_INSTRUCTION
+  if (!workflowPreset) return DEFAULT_FINAL_INSTRUCTION;
 
-  return WORKFLOW_PRESETS[workflowPreset]?.finalInstruction ?? DEFAULT_FINAL_INSTRUCTION
+  return WORKFLOW_PRESETS[workflowPreset]?.finalInstruction ?? DEFAULT_FINAL_INSTRUCTION;
 }

@@ -293,7 +293,10 @@ export class AIResponseParser {
       try {
         const jsonData = JSON.parse(candidate);
         const rootText = this.extractRootText(jsonData, currentRootText);
-        const hierarchicalItems = this.extractHierarchicalItemsFromJsonData(jsonData, currentRootText);
+        const hierarchicalItems = this.extractHierarchicalItemsFromJsonData(
+          jsonData,
+          currentRootText,
+        );
 
         if (rootText || hierarchicalItems.length > 0) {
           return {
@@ -400,8 +403,7 @@ export class AIResponseParser {
 
     return items
       .map((item) => {
-        if (typeof item !== 'object' || item === null)
-          return null;
+        if (typeof item !== 'object' || item === null) return null;
 
         const text = String((item as Record<string, unknown>).text || '').trim();
         const levelValue = Number((item as Record<string, unknown>).level ?? 0);
@@ -409,8 +411,7 @@ export class AIResponseParser {
         const originalLineValue = (item as Record<string, unknown>).originalLine;
         const originalLine = typeof originalLineValue === 'string' ? originalLineValue : '';
 
-        if (!text)
-          return null;
+        if (!text) return null;
 
         return {
           text,
@@ -422,8 +423,7 @@ export class AIResponseParser {
   }
 
   private flattenTreeNodes(tree: unknown, depth = 0): HierarchicalGenerationItem[] {
-    if (!tree)
-      return [];
+    if (!tree) return [];
 
     if (Array.isArray(tree)) {
       return tree.flatMap((item) => this.flattenTreeNodes(item, depth));
@@ -454,7 +454,10 @@ export class AIResponseParser {
     const cleanedResult = text.replace(/^\s*[\n\r]+|[\n\r]+\s*$/g, '').trim();
 
     const content = cleanedResult.includes('```')
-      ? cleanedResult.replace(/```[a-zA-Z]*\n?/g, '').replace(/```/g, '').trim()
+      ? cleanedResult
+          .replace(/```[a-zA-Z]*\n?/g, '')
+          .replace(/```/g, '')
+          .trim()
       : cleanedResult;
 
     const lines = content
@@ -470,12 +473,10 @@ export class AIResponseParser {
     const parsed = lines
       .map((line) => {
         const match = line.match(/^(\s*)(?:[-*+]\s+|\d+\.\s+)?(.+)$/);
-        if (!match)
-          return null;
+        if (!match) return null;
 
         const text = match[2].trim().replace(/^['"`]+|['"`]+$/g, '');
-        if (!text || text === 'hierarchicalItems')
-          return null;
+        if (!text || text === 'hierarchicalItems') return null;
 
         const level = Math.max(0, Math.floor(match[1].length / 2));
         return {

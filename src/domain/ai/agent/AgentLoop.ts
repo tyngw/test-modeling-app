@@ -10,10 +10,7 @@
 import { AgentContext, AgentMessage, AgentResult, AgentLoopConfig, LLMCallerFn } from './types';
 import { ToolRegistry } from './ToolRegistry';
 import { createAgentTools } from './AgentTools';
-import {
-  getAgentWorkflowFinalInstruction,
-  getAgentWorkflowStepInstruction,
-} from './AgentWorkflow';
+import { getAgentWorkflowFinalInstruction, getAgentWorkflowStepInstruction } from './AgentWorkflow';
 import { debugLog } from '../../../utils/debugLogHelpers';
 
 /** デフォルトのループ設定 */

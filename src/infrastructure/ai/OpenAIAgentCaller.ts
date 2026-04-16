@@ -28,6 +28,7 @@ interface OpenAIToolCallResponse {
   choices?: Array<{
     message?: {
       content?: string | null;
+      // eslint-disable-next-line camelcase
       tool_calls?: ToolCall[];
     };
     finish_reason?: string;

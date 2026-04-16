@@ -201,12 +201,12 @@ describe('AgentLoop - runAgentLoop', () => {
       workflowPreset: 'full_generation',
     });
 
-    expect(messageSnapshots[0].some((message) => message.includes('【ワークフロー: Explore】'))).toBe(
-      true,
-    );
-    expect(messageSnapshots[1].some((message) => message.includes('【ワークフロー: Analyze】'))).toBe(
-      true,
-    );
+    expect(
+      messageSnapshots[0].some((message) => message.includes('【ワークフロー: Explore】')),
+    ).toBe(true);
+    expect(
+      messageSnapshots[1].some((message) => message.includes('【ワークフロー: Analyze】')),
+    ).toBe(true);
   });
 
   it('set_hierarchy_draft で保存したドラフトを後続ツールで参照できる', async () => {

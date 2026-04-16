@@ -192,7 +192,9 @@ describe('AgentTools', () => {
 
     it('選択要素配下のサブツリーを返す', () => {
       if (!subtreeTool) return;
-      const ctx = createTestContext({ selectedSubtreeText: '対象サブツリー:\n- ユーザー管理\n  - ログイン' });
+      const ctx = createTestContext({
+        selectedSubtreeText: '対象サブツリー:\n- ユーザー管理\n  - ログイン',
+      });
       const result = subtreeTool.execute({}, ctx);
       expect(result).toContain('対象サブツリー');
       expect(result).toContain('ログイン');

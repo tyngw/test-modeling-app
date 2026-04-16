@@ -173,11 +173,14 @@ export class OpenAIApiAdapter {
       // - ローカルLLM: CORS/CSP制約を回避
       // - クラウドAPI(OpenAI等): CSP制約を回避し、ブラウザから直接アクセスすることで引き起こされる
       //   セキュリティ問題を防止（api.openai.com等がCSPでブロックされる可能性）
-      const response = await post<{ choices?: Array<{ message?: { content?: string } }> }>('/api/ai/generate', {
-        endpoint,
-        payload: requestPayload,
-        apiKey,
-      });
+      const response = await post<{ choices?: Array<{ message?: { content?: string } }> }>(
+        '/api/ai/generate',
+        {
+          endpoint,
+          payload: requestPayload,
+          apiKey,
+        },
+      );
 
       const rawTextResponse = response.data.choices?.[0]?.message?.content || '';
       // Thinking modelの場合、responseの中に思考過程が含まれているので、フィルタリング
@@ -326,11 +329,14 @@ export class OpenAIApiAdapter {
       // - ローカルLLM: CORS/CSP制約を回避
       // - クラウドAPI(OpenAI等): CSP制約を回避し、ブラウザから直接アクセスすることで引き起こされる
       //   セキュリティ問題を防止（api.openai.com等がCSPでブロックされる可能性）
-      const response = await post<{ choices?: Array<{ message?: { content?: string } }> }>('/api/ai/generate', {
-        endpoint,
-        payload: requestPayload,
-        apiKey,
-      });
+      const response = await post<{ choices?: Array<{ message?: { content?: string } }> }>(
+        '/api/ai/generate',
+        {
+          endpoint,
+          payload: requestPayload,
+          apiKey,
+        },
+      );
 
       const rawTextResponse = response.data.choices?.[0]?.message?.content || '';
       // Thinking modelの場合、responseの中に思考過程が含まれているので、フィルタリング
