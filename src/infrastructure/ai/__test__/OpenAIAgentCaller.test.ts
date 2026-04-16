@@ -30,6 +30,7 @@ describe('createOpenAIAgentCaller', () => {
   beforeEach(() => jest.clearAllMocks())
 
   it('/api/ai/generate プロキシへ POST する', async () => {
+    // eslint-disable-next-line camelcase
     mockFetch.mockResolvedValue(makeFetchSuccess({
       choices: [{ message: { content: 'ok', tool_calls: undefined } }],
     }))
@@ -58,6 +59,7 @@ describe('createOpenAIAgentCaller', () => {
     const toolCalls = [
       { id: 'tc1', type: 'function', function: { name: 'my_tool', arguments: '{"x":1}' } },
     ]
+    // eslint-disable-next-line camelcase
     mockFetch.mockResolvedValue(makeFetchSuccess({
       choices: [{ message: { content: null, tool_calls: toolCalls } }],
     }))

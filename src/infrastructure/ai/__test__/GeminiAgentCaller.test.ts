@@ -77,7 +77,9 @@ describe('createGeminiAgentCaller', () => {
     const caller = createGeminiAgentCaller('key', 'model')
     const result = await caller([userMsg], [])
     expect(result.toolCalls).toHaveLength(1)
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     expect(result.toolCalls![0].function.name).toBe('my_func')
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const parsedArgs = JSON.parse(result.toolCalls![0].function.arguments)
     expect(parsedArgs).toEqual({ a: 1 })
   })
