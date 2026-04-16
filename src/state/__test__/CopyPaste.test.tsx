@@ -352,12 +352,11 @@ describe('切り取り、コピー、貼り付け操作', () => {
 
     if (clipboardData) {
       const copiedData = JSON.parse(clipboardData);
-      // 複数要素のコピーの場合、仮想ルートが作成される
-      expect(copiedData).toHaveProperty('type', 'copy');
-      expect(copiedData).toHaveProperty('rootElement');
-      expect(copiedData).toHaveProperty('subtree');
-      expect(copiedData.rootElement.id).toMatch(/^virtual-root-/);
-      expect(copiedData.subtree.children).toHaveLength(2);
+      // 複数要素のコピーの場合、配列形式で保存される
+      expect(Array.isArray(copiedData)).toBe(true);
+      expect(copiedData).toHaveLength(2);
+      expect(copiedData[0]).toHaveProperty('type', 'copy');
+      expect(copiedData[1]).toHaveProperty('type', 'copy');
     }
 
     // ルート要素を選択して貼り付け
