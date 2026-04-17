@@ -1,4 +1,4 @@
-import axios from 'axios';
+import { post, isHttpError } from '../http/httpClient';
 import { getApiEndpoint, getPromptTemplates, getApiProvider } from '../storage/localStorageHelpers';
 import { resolveElementGenerationSystemPrompt } from '../../config/agentSystemPrompt';
 import { SuggestionResponse } from './schema';
@@ -139,13 +139,9 @@ const generateWithGeminiThreadInternal = async (
       debugLog('[Geminiスレッドリクエスト] 送信内容:', JSON.stringify(requestPayload, null, 2));
     }
 
-    const response = await axios.post(endpoint, requestPayload, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    const response = await post(endpoint, requestPayload);
 
-    const rawTextResponse = response.data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const rawTextResponse = (response.data as any).candidates?.[0]?.content?.parts?.[0]?.text || '';
     const sanitizedResponse = sanitizeApiResponse(rawTextResponse) as string;
 
     // レスポンスを履歴に追加
@@ -162,10 +158,10 @@ const generateWithGeminiThreadInternal = async (
       updatedHistory: finalHistory,
     };
   } catch (error) {
-    if (axios.isAxiosError(error)) {
+    if (isHttpError(error)) {
       if (error.response?.status === 400) {
         throw new Error(
-          `API リクエストエラー: ${error.response?.data?.error?.message || 'リクエストの形式が正しくありません'}`,
+          `API リクエストエラー: ${(error.response?.data as any)?.error?.message || 'リクエストの形式が正しくありません'}`,
         );
       }
     }
@@ -259,14 +255,10 @@ const generateWithGeminiInternal = async (
       debugLog('[Geminiリクエスト] 送信内容:', JSON.stringify(requestPayload, null, 2));
     }
     // API送信
-    const response = await axios.post(endpoint, requestPayload, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    const response = await post(endpoint, requestPayload);
 
     // テキストレスポンスの取得とサニタイゼーション
-    const rawTextResponse = response.data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const rawTextResponse = (response.data as any).candidates?.[0]?.content?.parts?.[0]?.text || '';
 
     // AIレスポンスのセキュリティチェックとサニタイゼーション
     const sanitizedResponse = sanitizeApiResponse(rawTextResponse) as string;
@@ -274,21 +266,10 @@ const generateWithGeminiInternal = async (
     // debugLog('Sanitized response:', sanitizedResponse);
     return sanitizedResponse;
   } catch (error) {
-    // // console.error('Gemini API Error:', error);
-
-    // より詳細なエラー情報を表示
-    if (axios.isAxiosError(error)) {
-      // // console.error('Response status:', error.response?.status);
-      // // console.error('Response data:', error.response?.data);
-      // // console.error('Request config:', {
-      //   url: error.config?.url,
-      //   method: error.config?.method,
-      //   headers: error.config?.headers,
-      // });
-
+    if (isHttpError(error)) {
       if (error.response?.status === 400) {
         throw new Error(
-          `API リクエストエラー: ${error.response?.data?.error?.message || 'リクエストの形式が正しくありません'}`,
+          `API リクエストエラー: ${(error.response?.data as any)?.error?.message || 'リクエストの形式が正しくありません'}`,
         );
       }
     }
@@ -344,35 +325,27 @@ const generateElementSuggestionsGemini = async (
     const systemPrompt = resolveElementGenerationSystemPrompt(getPromptTemplates());
 
     // JSON形式のレスポンスを要求するリクエスト
-    const response = await axios.post(
-      endpoint,
-      {
-        contents: [
-          {
-            role: 'user',
-            parts: [{ text: prompt }],
-          },
-        ],
-        systemInstruction: {
-          parts: [{ text: systemPrompt }],
+    const response = await post(endpoint, {
+      contents: [
+        {
+          role: 'user',
+          parts: [{ text: prompt }],
         },
-        generationConfig: {
-          temperature: 0.2,
-          topP: 0.8,
-          topK: 40,
-          maxOutputTokens: 1024,
-          responseMimeType: 'application/json',
-        },
+      ],
+      systemInstruction: {
+        parts: [{ text: systemPrompt }],
       },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      generationConfig: {
+        temperature: 0.2,
+        topP: 0.8,
+        topK: 40,
+        maxOutputTokens: 1024,
+        responseMimeType: 'application/json',
       },
-    );
+    });
 
     const rawJsonText =
-      response.data.candidates?.[0]?.content?.parts?.[0]?.text || '{"suggestions":[]}';
+      (response.data as any).candidates?.[0]?.content?.parts?.[0]?.text || '{"suggestions":[]}';
 
     return parseJsonSuggestionResponse(rawJsonText);
   } catch (error) {

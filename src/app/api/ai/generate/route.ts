@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import axios from 'axios';
+import { post, isHttpError } from '../../../../utils/http/httpClient';
 
 /**
  * ローカルLLMサーバーへのプロキシエンドポイント
@@ -99,17 +99,17 @@ export async function POST(request: NextRequest) {
       headers.Authorization = `Bearer ${apiKey}`;
     }
 
-    const response = await axios.post(endpoint, payload, { headers });
+    const response = await post(endpoint, payload, { headers });
 
     return NextResponse.json(response.data);
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('[API Route Error]', error);
 
-    if (axios.isAxiosError(error)) {
+    if (isHttpError(error)) {
       const status = error.response?.status || 500;
-      const errorMessage = error.response?.data?.error?.message || error.message;
-      const errorData = error.response?.data;
+      const errorMessage = (error.response?.data as any)?.error?.message || error.message;
+      const errorData = error.response?.data as any;
 
       // コンテキスト超過エラーの特別対応
       if (

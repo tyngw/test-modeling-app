@@ -32,9 +32,7 @@ const collectAllElements = (hierarchical: HierarchicalStructure): Element[] => {
 };
 
 // Helper function to find all overlapping pairs
-const findOverlappingPairs = (
-  elements: Element[],
-): Array<{ e1: Element; e2: Element }> => {
+const findOverlappingPairs = (elements: Element[]): Array<{ e1: Element; e2: Element }> => {
   const overlaps: Array<{ e1: Element; e2: Element }> = [];
 
   for (let i = 0; i < elements.length; i++) {
@@ -330,7 +328,9 @@ const testManyChildren = (): boolean => {
   if (overlaps.length > 0) {
     console.error(`  FAIL: Found ${overlaps.length} overlapping element pairs`);
     overlaps.forEach(({ e1, e2 }) => {
-      console.error(`    "${e1.texts[0]}" (y:${e1.y.toFixed(1)}-${(e1.y + e1.height).toFixed(1)}) overlaps with "${e2.texts[0]}" (y:${e2.y.toFixed(1)}-${(e2.y + e2.height).toFixed(1)})`);
+      console.error(
+        `    "${e1.texts[0]}" (y:${e1.y.toFixed(1)}-${(e1.y + e1.height).toFixed(1)}) overlaps with "${e2.texts[0]}" (y:${e2.y.toFixed(1)}-${(e2.y + e2.height).toFixed(1)})`,
+      );
     });
     return false;
   }
@@ -350,9 +350,7 @@ const testVaryingHeights = (): boolean => {
       children: [
         {
           data: createElement('tall', ['tall'], 200, 100),
-          children: [
-            { data: createElement('tall-child', ['tall-child'], 150, 80), children: [] },
-          ],
+          children: [{ data: createElement('tall-child', ['tall-child'], 150, 80), children: [] }],
         },
         {
           data: createElement('short', ['short'], 50, 24.4),

@@ -1,6 +1,6 @@
 {
-    "kiroAgent.configureMCP": "Disabled",
-    "chat.tools.terminal.autoApprove": {
-        "npx ts-node": true
-    }
+  "kiroAgent.configureMCP": "Disabled",
+  "chat.tools.terminal.autoApprove": {
+    "npx ts-node": true
+  }
 }

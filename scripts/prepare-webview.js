@@ -6,7 +6,7 @@ const path = require('path');
 
 function prepareWebviewHTML() {
   const htmlPath = path.join(__dirname, '../extension/webview/index.html');
-  
+
   if (!fs.existsSync(htmlPath)) {
     console.error('❌ index.html が見つかりません');
     process.exit(1);
@@ -172,7 +172,7 @@ function prepareWebviewHTML() {
   // トレードオフ: extension.tsで実行時に全パスを完全なWebview URIに置き換えることで、
   //              webpackの内部実装に依存せず、堅牢なパス解決を実現
   // 注意: ここでは意図的にパスを書き換えない（extension.tsで処理）
-  
+
   // VSCodeテーマ変数を追加
   const vscodeStyles = `
     <style>
@@ -213,23 +213,23 @@ function prepareWebviewHTML() {
  */
 function patchWebpackRuntime() {
   const chunksDir = path.join(__dirname, '../extension/webview/_next/static/chunks');
-  
+
   if (!fs.existsSync(chunksDir)) {
     return;
   }
 
   // webpack-*.js ファイルを検索
   const files = fs.readdirSync(chunksDir);
-  const webpackFiles = files.filter(f => f.startsWith('webpack-') && f.endsWith('.js'));
+  const webpackFiles = files.filter((f) => f.startsWith('webpack-') && f.endsWith('.js'));
 
   if (webpackFiles.length === 0) {
     return;
   }
 
-  webpackFiles.forEach(filename => {
+  webpackFiles.forEach((filename) => {
     const filePath = path.join(chunksDir, filename);
     let content = fs.readFileSync(filePath, 'utf8');
-    
+
     // r.p="/_next/" を window.__webpack_public_path__ || "/_next/" に置換
     // これにより、グローバル変数が設定されていればそれを使い、なければデフォルト値を使う
     const originalPattern = /r\.p\s*=\s*"\/(_next\/)"/;
@@ -243,4 +243,3 @@ function patchWebpackRuntime() {
 // スクリプト実行
 prepareWebviewHTML();
 patchWebpackRuntime();
-

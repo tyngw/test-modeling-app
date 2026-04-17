@@ -10,7 +10,7 @@
 // すべてのリクエストは /api/ai/generate（Next.js API Route）を経由し、
 // CORS/CSP 制約を回避する（既存アーキテクチャを踏襲）
 
-import axios from 'axios';
+import { post } from '../../utils/http/httpClient';
 import {
   AgentMessage,
   ToolCall,
@@ -28,6 +28,7 @@ interface OpenAIToolCallResponse {
   choices?: Array<{
     message?: {
       content?: string | null;
+      // eslint-disable-next-line camelcase
       tool_calls?: ToolCall[];
     };
     finish_reason?: string;
@@ -111,7 +112,7 @@ export function createOpenAIAgentCaller(
     }
 
     // /api/ai/generate プロキシ経由で送信
-    const response = await axios.post<OpenAIToolCallResponse>('/api/ai/generate', {
+    const response = await post<OpenAIToolCallResponse>('/api/ai/generate', {
       endpoint,
       payload,
       apiKey,

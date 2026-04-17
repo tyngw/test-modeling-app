@@ -13,6 +13,8 @@ export function getAgentChatPrompt(promptTemplates: PromptTemplates): string {
 }
 
 export function resolveElementGenerationSystemPrompt(promptTemplates: PromptTemplates): string {
+  const custom = promptTemplates.system.customSystemPrompt?.trim();
+  if (custom) return custom;
   return getAgentElementGenerationPrompt(promptTemplates);
 }
 

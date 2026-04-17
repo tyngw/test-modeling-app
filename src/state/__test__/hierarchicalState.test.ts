@@ -150,10 +150,12 @@ describe('Hierarchical Data State Management', () => {
     });
 
     const state = result.current.state;
-    const rootChildren = state.hierarchicalData ? getChildrenFromHierarchy(state.hierarchicalData, '1') : [];
+    const rootChildren = state.hierarchicalData
+      ? getChildrenFromHierarchy(state.hierarchicalData, '1')
+      : [];
 
     expect(rootChildren).toHaveLength(2);
-  expect(state.hierarchicalData?.root.data.texts[0]).toBe('更新後ルート');
+    expect(state.hierarchicalData?.root.data.texts[0]).toBe('更新後ルート');
     expect(rootChildren[0].texts[0]).toBe('分類A');
     expect(rootChildren[1].texts[0]).toBe('分類B');
 

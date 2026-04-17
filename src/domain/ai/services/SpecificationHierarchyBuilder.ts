@@ -1,7 +1,4 @@
-import {
-  FullHierarchyGenerationResult,
-  HierarchicalGenerationItem,
-} from './AIResponseParser';
+import { FullHierarchyGenerationResult, HierarchicalGenerationItem } from './AIResponseParser';
 
 function normalizeText(text: string): string {
   return text.replace(/\s+/g, '').trim().toLowerCase();
@@ -13,8 +10,7 @@ function extractHeadingText(line: string): string {
 
 function shouldSkipLine(line: string): boolean {
   const trimmed = line.trim();
-  if (!trimmed)
-    return true;
+  if (!trimmed) return true;
 
   return (
     /^@/.test(trimmed) ||
@@ -31,14 +27,16 @@ function summarizeParagraph(line: string): string {
   return firstSentence.slice(0, 60).trim();
 }
 
-function selectRelevantSpecificationText(specificationText: string, fallbackRootText: string): string {
+function selectRelevantSpecificationText(
+  specificationText: string,
+  fallbackRootText: string,
+): string {
   const lines = specificationText.split('\n');
   const rootKey = normalizeText(fallbackRootText);
 
   for (let index = 0; index < lines.length; index++) {
     const line = lines[index].trim();
-    if (!/^(#{1,6}\s+|≣\s+)/.test(line))
-      continue;
+    if (!/^(#{1,6}\s+|≣\s+)/.test(line)) continue;
 
     if (normalizeText(line).includes(rootKey)) {
       return lines.slice(index).join('\n');
@@ -52,7 +50,10 @@ export function buildHierarchyFromSpecificationOutline(
   specificationText: string,
   fallbackRootText: string,
 ): FullHierarchyGenerationResult {
-  const relevantSpecificationText = selectRelevantSpecificationText(specificationText, fallbackRootText);
+  const relevantSpecificationText = selectRelevantSpecificationText(
+    specificationText,
+    fallbackRootText,
+  );
   const lines = relevantSpecificationText.split('\n');
 
   let rootText = fallbackRootText;
@@ -63,12 +64,10 @@ export function buildHierarchyFromSpecificationOutline(
 
   const pushItem = (text: string, level: number) => {
     const normalizedText = text.trim();
-    if (!normalizedText)
-      return;
+    if (!normalizedText) return;
 
     const previousItem = hierarchicalItems[hierarchicalItems.length - 1];
-    if (previousItem?.text === normalizedText && previousItem.level === level)
-      return;
+    if (previousItem?.text === normalizedText && previousItem.level === level) return;
 
     hierarchicalItems.push({
       text: normalizedText,
@@ -79,8 +78,7 @@ export function buildHierarchyFromSpecificationOutline(
 
   for (const rawLine of lines) {
     const line = rawLine.trim();
-    if (shouldSkipLine(line))
-      continue;
+    if (shouldSkipLine(line)) continue;
 
     if (/^##\s+/.test(line) && !hasResolvedRoot) {
       rootText = extractHeadingText(line);

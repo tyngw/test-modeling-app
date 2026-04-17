@@ -406,7 +406,10 @@ export function useAIGeneration({ currentTab, dispatch }: UseAIGenerationParams)
             addToast(message, 'warn');
           },
           onSuccess: () => {
-            addToast('AI全生成で配下の要素を更新しました。必要なら元に戻すで復元できます。', 'info');
+            addToast(
+              'AI全生成で配下の要素を更新しました。必要なら元に戻すで復元できます。',
+              'info',
+            );
           },
         },
       });

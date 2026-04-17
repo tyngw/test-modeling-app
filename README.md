@@ -14,6 +14,7 @@ This application allows you to describe test architectures using a notation simi
 4. Open `http://localhost:3000` in your web browser
 
 Alternatively, to run the production build:
+
 ```bash
 npm run build
 npm start
@@ -66,11 +67,13 @@ The app is available at [https://tyngw.github.io/test-modeling-app/](https://tyn
 This app can automatically reconstruct hierarchical structures from indented text pasted from the clipboard.
 
 #### How to Use
+
 1. Copy text with a hierarchical structure (such as an outline or bulleted list)
 2. Paste it into the app (`Ctrl + V` or `⌘ + V`)
 3. Parent-child relationships are automatically created based on indentation
 
 #### Example
+
 ```
 Parent Item
   Child Item 1
@@ -79,7 +82,9 @@ Parent Item
 ```
 
 #### Result
+
 - Parent Item
+
   - Child Item 1
     - Grandchild Item 1
   - Child Item 2
@@ -95,11 +100,13 @@ Parent Item
 This app manages element hierarchy and display order using two mechanisms.
 
 ### 1. Hierarchical Data Structure
+
 - Elements are managed in a hierarchical tree structure (`HierarchicalStructure`)
 - Each parent element has a `children` array that maintains the **actual order** of child elements
 - This structure is the **single source of truth** for element order and relationships
 
 ### 2. Display Order Logic
+
 - Element display positions are calculated by Y coordinate
 - The order of the `children` array in the hierarchy determines the **logical order**
 - When adding or moving elements, they are first inserted into the hierarchy, then positions are recalculated
@@ -107,12 +114,15 @@ This app manages element hierarchy and display order using two mechanisms.
 ### 3. Order Determination During Drag & Drop
 
 #### between mode (dropping between elements)
+
 1. **Order Calculation**:
+
    - Uses the order of the `children` array in the hierarchy, not Y coordinate
    - Calculates insertion position from siblings of `prevElement` and `nextElement`
    - Maintains consistency between logical order and physical placement
 
 2. **Position Calculation**:
+
    - `insertY`: Calculates Y coordinate for display position
    - `insertX`: Calculates X coordinate from parent or inherited direction
    - `baseOrder`: Determined by position in the hierarchy array
@@ -130,6 +140,7 @@ This app manages element hierarchy and display order using two mechanisms.
 - **Layout Calculation**: Always respects the order of the `children` array
 
 ### 5. Debugging and Verification
+
 - Check `state.hierarchicalData` in browser DevTools to verify actual order
 - Compare display and data order for consistency
 - If hierarchy cannot be obtained, the `getChildren` function returns a consistently sorted list by ID
@@ -143,17 +154,20 @@ This ensures that element order is never broken, and logical hierarchy always ma
 Element hierarchy and order management follow these specifications:
 
 ##### Hierarchy Order Management
+
 - **The order of the `children` array in the hierarchical structure is the only official order**
 - This array order is preserved even when saving to LocalStorage
 - Y coordinate for display is calculated based on the order of the `children` array
 - There is no `order` property; order is determined purely by array index
 
 ##### Adding Elements (ADD_ELEMENT / ADD_SIBLING_ELEMENT)
+
 - New elements are added to the **end** of the parent's `children` array
 - On screen, they appear below existing children
 - LocalStorage hierarchy and display order always match
 
 ##### Changing Order by Drag & Drop
+
 - **between mode**: When dropping between elements, inserts at the exact index in the `children` array
   - Insert after `prevElement` or at the position of `nextElement`
   - Always uses the `children` array as the basis for order, not visual order or Y coordinate
@@ -161,6 +175,7 @@ Element hierarchy and order management follow these specifications:
 - The `moveElementInHierarchy` function manages order precisely via array `splice`
 
 ##### Order Consistency
+
 - The order of the `children` array in the hierarchy is **the single correct order**
 - All operations (add, move, copy & paste) maintain this order
 - Y coordinate is only for display calculation, not for determining order
@@ -175,11 +190,13 @@ This application can be used not only as a regular web app, but also as a Visual
 ### Building and Installing the Extension
 
 1. **Build the extension**
+
    ```bash
    npm run build:extension
    ```
 
 2. **Run the extension in development mode in VSCode**
+
    - Open this project in VSCode
    - Press `F5` or select "Run Extension" from the "Run and Debug" panel
    - A new VSCode window (Extension Development Host) will open
@@ -192,17 +209,20 @@ This application can be used not only as a regular web app, but also as a Visual
 ### Features of the VSCode Extension Version
 
 #### Integrated File Operations
+
 - **Save within workspace**: Diagram data is saved as files in your workspace
 - **Real-time saving**: Edits are automatically saved as JSON or Markdown files
 - **File history**: Leverage VSCode's file history features
 - **Multiple formats**: Supports both JSON (full data model) and Markdown (hierarchical text format)
 
 #### Integrated Settings
+
 - **Integration with VSCode settings**: App settings are managed via VSCode's settings system
 - **Automatic theme application**: App theme changes according to VSCode's theme
 - **Workspace-specific settings**: Different settings can be kept for each project
 
 #### Developer Features
+
 - **Project integration**: Manage code and modeling diagrams in the same workspace
 - **Git integration**: Diagram files can be included in version control
 - **Extensibility**: Can be integrated with other VSCode extensions
