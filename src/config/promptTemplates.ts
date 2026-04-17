@@ -8,6 +8,7 @@ export interface PromptTemplates {
     agentChat: string;
     chatAssistant: string;
     fullHierarchyOutputAppendix: string;
+    customSystemPrompt?: string;
   };
   user: {
     elementGenerationWithContext: string;
