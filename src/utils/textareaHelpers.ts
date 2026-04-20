@@ -6,9 +6,29 @@ import {
   DEFAULT_FONT_FAMILY,
 } from '../config/elementSettings';
 
+/**
+ * Jest の jsdom では HTMLCanvasElement#getContext('2d') が null のことがある。
+ * node-canvas に依存せず、テキスト幅の下限互換（幅 ≒ 文字列長）だけを返す。
+ */
+const createStub2DContextForTests = (): CanvasRenderingContext2D => {
+  let fontValue = `${DEFAULT_FONT_SIZE}px ${DEFAULT_FONT_FAMILY}`;
+  return {
+    get font() {
+      return fontValue;
+    },
+    set font(value: string) {
+      fontValue = value;
+    },
+    measureText: (text: string) => ({ width: String(text).length }),
+  } as unknown as CanvasRenderingContext2D;
+};
+
 const createTextMeasurementContext = (): CanvasRenderingContext2D => {
   const canvas = document.createElement('canvas');
-  const context = canvas.getContext('2d');
+  let context = canvas.getContext('2d');
+  if (!context && process.env.NODE_ENV === 'test') {
+    context = createStub2DContextForTests();
+  }
   if (!context) {
     throw new Error('Failed to get 2D context from canvas');
   }

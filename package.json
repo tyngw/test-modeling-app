@@ -12,7 +12,6 @@
     "@testing-library/user-event": "^14.5.2",
     "@types/crypto-js": "^4.2.2",
     "@types/react-dom": "^19.0.4",
-    "canvas": "^2.11.2",
     "crypto-js": "^4.2.0",
     "next": "^15.5.10",
     "node-polyfill-webpack-plugin": "^4.1.0",
