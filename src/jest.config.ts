@@ -2,6 +2,7 @@
 import type { Config } from '@jest/types';
 
 const config: Config.InitialOptions = {
+  rootDir: '..',
   preset: 'ts-jest',
   testEnvironment: 'jsdom',
   testEnvironmentOptions: {
@@ -13,6 +14,7 @@ const config: Config.InitialOptions = {
   transform: {
     '^.+\\.tsx?$': 'ts-jest',
   },
+  roots: ['<rootDir>/src'],
   setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
   testTimeout: 10000,
   bail: false,
