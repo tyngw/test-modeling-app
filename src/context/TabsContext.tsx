@@ -13,7 +13,6 @@ import React, {
 import { Element as DiagramElement } from '../types/types';
 import { State } from '../state/state';
 import { createElementsMapFromHierarchy } from '../utils/hierarchical/hierarchicalConverter';
-import { v4 as uuidv4 } from 'uuid';
 import { DEFAULT_POSITION, NUMBER_OF_SECTIONS, SIZE } from '../config/elementSettings';
 import { createNewElement } from '../utils/element/elementHelpers';
 import { convertLegacyElement } from '../utils/file/fileHelpers';
@@ -23,6 +22,7 @@ import { convertFlatToHierarchical } from '../utils/hierarchical/hierarchicalCon
 import { debugLog } from '../utils/debugLogHelpers';
 import { isVSCodeExtension, isVSCodeEditorMode } from '../utils/environment/environmentDetector';
 import { HierarchicalStructure } from '../types/hierarchicalTypes';
+import { generateId } from '../utils/id/idGenerator';
 
 const TabsContext = createContext<TabsContextValue | undefined>(undefined);
 
@@ -75,7 +75,7 @@ const createInitialTabState = (currentSections?: number): TabState => {
     debugLog('createInitialTabState - using fallback hierarchicalData:', fallbackHierarchicalData);
 
     return {
-      id: uuidv4(),
+      id: generateId(),
       name: '無題',
       isSaved: false,
       lastSavedElements: JSON.stringify({ [newRootId]: rootElement }),
@@ -92,7 +92,7 @@ const createInitialTabState = (currentSections?: number): TabState => {
   }
 
   return {
-    id: uuidv4(),
+    id: generateId(),
     name: '無題',
     isSaved: false,
     lastSavedElements: JSON.stringify({ [newRootId]: rootElement }),
@@ -113,7 +113,7 @@ const createInitialTabState = (currentSections?: number): TabState => {
 // 前提: 拡張機能が常にファイルデータを送信する
 const createEmptyTabState = (): TabState => {
   const emptyTab: TabState = {
-    id: uuidv4(),
+    id: generateId(),
     name: '読み込み中...',
     isSaved: true,
     lastSavedElements: '{}',
