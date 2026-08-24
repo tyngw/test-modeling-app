@@ -12,19 +12,17 @@
     "@testing-library/user-event": "^14.5.2",
     "@types/crypto-js": "^4.2.2",
     "@types/react-dom": "^19.0.4",
-    "canvas": "^2.11.2",
     "crypto-js": "^4.2.0",
-    "next": "^16.2.6",
+    "next": "^16.3.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-ga4": "^2.1.0",
     "stream-http": "^3.2.0",
-    "uuid": "^9.0.1",
     "web-vitals": "^3.5.2"
   },
   "overrides": {
     "nth-check": "2.1.1",
-    "postcss": "8.5.14"
+    "postcss": "8.5.26"
   },
   "scripts": {
     "dev": "next dev",
@@ -65,7 +63,7 @@
     "@testing-library/dom": "^10.4.0",
     "@testing-library/react": "^16.2.0",
     "@types/jest": "^29.5.14",
-    "@types/uuid": "^10.0.0",
+    "@types/react": "^19.2.18",
     "eslint": "^8.57.1",
     "eslint-config-next": "^15.3.3",
     "eslint-config-prettier": "^10.1.5",

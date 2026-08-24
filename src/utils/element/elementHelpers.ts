@@ -1,6 +1,5 @@
 // src/utils/element/elementHelpers.ts
 import { Element, MarkerType } from '../../types/types';
-import { v4 as uuidv4 } from 'uuid';
 import { getMarkerType } from '../storage/localStorageHelpers';
 import { SIZE, NUMBER_OF_SECTIONS } from '../../config/elementSettings';
 import { NewElementOptions, ElementsMap } from '../../types/elementTypes';
@@ -8,6 +7,7 @@ import { HierarchicalStructure, HierarchicalNode } from '../../types/hierarchica
 import { findNodeInHierarchy } from '../hierarchical/hierarchicalConverter';
 import { getChildrenFromHierarchy as getChildrenFromHierarchyOriginal } from '../hierarchical/hierarchicalConverter';
 import { PROMPT_LIMITS } from '../../constants/promptLimits';
+import { generateId } from '../id/idGenerator';
 
 /**
  * 新しい要素を作成する
@@ -29,7 +29,7 @@ export const createNewElement = ({
   const markerType = getMarkerType();
 
   return {
-    id: uuidv4(),
+    id: generateId(),
     texts: Array(numSections).fill(''),
     x: 0,
     y: 0,
